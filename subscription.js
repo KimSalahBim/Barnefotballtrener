@@ -48,7 +48,7 @@ class SubscriptionService {
         .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybe.Single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
         throw error;
