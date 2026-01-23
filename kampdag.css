@@ -1,0 +1,116 @@
+/* kampdag.css – kun for Kampdag-fanen */
+
+#kampdag .kampdag-output{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+#kampdag .kd-card{
+  background:#fff;
+  border-radius:15px;
+  padding:20px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.05);
+  border-left:4px solid var(--egge-blue);
+}
+
+#kampdag .kd-card h4{
+  margin:0 0 10px 0;
+  color:var(--gray-800);
+  font-size:16px;
+}
+
+#kampdag .kd-list{
+  margin:0;
+  padding-left:18px;
+  color:var(--gray-700);
+}
+
+#kampdag .kd-line{
+  color:var(--gray-700);
+  line-height:1.5;
+}
+
+#kampdag .kd-badge{
+  display:inline-block;
+  margin-left:8px;
+  padding:3px 10px;
+  border-radius:999px;
+  background:var(--gray-100);
+  color:var(--gray-700);
+  font-size:12px;
+  font-weight:700;
+}
+
+/* Modern keeper card */
+#kampdag .kd-keeper-card{
+  background:#fff;
+  border:1px solid var(--gray-100);
+  border-radius:14px;
+  padding:14px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.04);
+}
+
+#kampdag .kd-keeper-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+
+#kampdag .kd-keeper-left{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+#kampdag .kd-keeper-right{
+  min-width:140px;
+}
+
+#kampdag .kd-mini-label{
+  display:block;
+  font-size:12px;
+  font-weight:700;
+  color:var(--gray-600);
+  margin-bottom:6px;
+}
+
+#kampdag .kd-keeper-panel{
+  margin-top:12px;
+  background:var(--gray-50);
+  border:1px solid var(--gray-100);
+  border-radius:12px;
+  padding:12px;
+}
+
+#kampdag .kd-keeper-rows{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+#kampdag .kd-keeper-row{
+  display:grid;
+  grid-template-columns: 1fr 140px;
+  gap:10px;
+  align-items:end;
+  padding:10px;
+  border-radius:12px;
+  background:#fff;
+  border:1px solid var(--gray-100);
+}
+
+#kampdag .kd-keeper-cell select,
+#kampdag .kd-keeper-cell input{
+  width:100%;
+}
+
+@media (max-width: 520px){
+  #kampdag .kd-keeper-row{
+    grid-template-columns:1fr;
+  }
+  #kampdag .kd-keeper-right{
+    min-width:auto;
+  }
+}
