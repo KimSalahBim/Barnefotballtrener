@@ -6,19 +6,19 @@
 const CONFIG = {
   // Supabase
   supabase: {
-    url: 'DIN_SUPABASE_URL_HER', // Hent fra Supabase Dashboard -> Project Settings -> API
-    anonKey: 'DIN_SUPABASE_ANON_KEY_HER' // Hent fra samme sted
+    url: 'https://jxteosjxgrblasksfeyu.supabase.co', // Hent fra Supabase Dashboard -> Project Settings -> API
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4dGVvc2p4Z3JibGFza3NmZXl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTE1ODMsImV4cCI6MjA4NDc2NzU4M30.4VhLfxcX0PCkUeK9aYrTrfmTwESH9zOyx4sY61lIZ9w' // Hent fra samme sted
   },
 
   // Stripe
   stripe: {
-    publishableKey: 'DIN_STRIPE_PUBLISHABLE_KEY_HER' // Hent fra Stripe Dashboard
+    publishableKey: 'pk_test_51SssHuD5NzOLeQriVmf4JpQl1R6oXiK2BGjlYt5SQHwCfmRp6K5bW0o2tiJs4BeWBvsC8NQeUMZKjlCr9ZwvAmA900ktL0vICe' // Hent fra Stripe Dashboard
   },
 
   // Prisplaner (Stripe Price IDs)
   prices: {
     month: {
-      id: 'price_XXXXX', // Fyll inn etter du har opprettet produktet i Stripe
+      id: 'price_1SssQbD5NzOLeQrihuah3dHE', // Fyll inn etter du har opprettet produktet i Stripe
       amount: 25,
       currency: 'NOK',
       interval: 'month',
@@ -26,7 +26,7 @@ const CONFIG = {
       description: '25 kr per måned'
     },
     year: {
-      id: 'price_XXXXX',
+      id: 'price_1SsskZD5NzOLeQri0c4i879y',
       amount: 199,
       currency: 'NOK',
       interval: 'year',
@@ -34,7 +34,7 @@ const CONFIG = {
       description: '199 kr per år (spar 33%)'
     },
     lifetime: {
-      id: 'price_XXXXX',
+      id: 'price_1SssnID5NzOLeQri9vOKcXmO',
       amount: 599,
       currency: 'NOK',
       interval: 'one_time',
