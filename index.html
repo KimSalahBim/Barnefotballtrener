@@ -66,8 +66,252 @@
   </div>
 
   <!-- PRICING PAGE -->
-  <div id="pricingPage" style="display:none;">
-    <!-- Prissiden lastes fra pricing.html eller lages dynamisk -->
+  <!-- PRICING PAGE -->
+  <div id="pricingPage" class="pricing-page" style="display:none;">
+    <div class="pricing-container">
+      <!-- Header -->
+      <div class="pricing-header">
+        <div class="pricing-logo">
+          <span style="font-size: 48px;">⚽</span>
+        </div>
+        <h1>Velg din plan</h1>
+        <p>Start din gratis 7-dagers prøveperiode i dag</p>
+      </div>
+
+      <!-- Trial Banner -->
+      <div class="trial-banner">
+        <i class="fas fa-gift"></i>
+        <span>Alle planer inkluderer 7 dager gratis prøveperiode</span>
+      </div>
+
+      <!-- Pricing Cards -->
+      <div class="pricing-cards">
+        <!-- Månedlig -->
+        <div class="pricing-card">
+          <div class="card-header">
+            <h3>Månedlig</h3>
+            <div class="price">
+              <span class="amount">25</span>
+              <span class="currency">kr/mnd</span>
+            </div>
+          </div>
+          <div class="card-features">
+            <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
+            <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
+            <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
+            <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
+            <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
+          </div>
+          <button class="btn-select" data-plan="month" data-price-id="price_month">
+            Start gratis prøveperiode
+          </button>
+          <div class="card-note">Avbryt når som helst</div>
+        </div>
+
+        <!-- Årlig (POPULAR) -->
+        <div class="pricing-card popular">
+          <div class="badge-popular">Mest populær</div>
+          <div class="card-header">
+            <h3>Årlig</h3>
+            <div class="price">
+              <span class="amount">199</span>
+              <span class="currency">kr/år</span>
+            </div>
+            <div class="savings">Spar 33%</div>
+          </div>
+          <div class="card-features">
+            <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
+            <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
+            <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
+            <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
+            <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
+            <div class="feature"><i class="fas fa-star"></i> Prioritert support</div>
+          </div>
+          <button class="btn-select primary" data-plan="year" data-price-id="price_year">
+            Start gratis prøveperiode
+          </button>
+          <div class="card-note">Kun 17 kr/mnd</div>
+        </div>
+
+        <!-- Livstid -->
+        <div class="pricing-card premium">
+          <div class="card-header">
+            <h3>Livstid</h3>
+            <div class="price">
+              <span class="amount">599</span>
+              <span class="currency">kr</span>
+            </div>
+            <div class="savings">Best verdi</div>
+          </div>
+          <div class="card-features">
+            <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
+            <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
+            <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
+            <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
+            <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
+            <div class="feature"><i class="fas fa-infinity"></i> Livstidstilgang</div>
+            <div class="feature"><i class="fas fa-crown"></i> Premium support</div>
+          </div>
+          <button class="btn-select" data-plan="lifetime" data-price-id="price_lifetime">
+            Kjøp nå
+          </button>
+          <div class="card-note">Engangsbetaling</div>
+        </div>
+      </div>
+
+      <!-- Team & Club Section -->
+      <div class="team-section">
+        <h2>For team og klubber</h2>
+        
+        <div class="team-cards">
+          <!-- Team -->
+          <div class="team-card">
+            <div class="team-icon">👥</div>
+            <h3>Team-lisens</h3>
+            <p class="team-quantity">3-9 trenere</p>
+            <div class="team-price">
+              <span class="amount">479</span>
+              <span class="currency">kr/person</span>
+            </div>
+            <div class="team-discount">20% rabatt</div>
+            <ul class="team-features">
+              <li>Livstidstilgang for alle</li>
+              <li>Sentralt administrasjonspanel</li>
+              <li>Delt spillerdatabase</li>
+            </ul>
+            <button class="btn-contact" onclick="showTeamContactForm()">
+              Kontakt oss
+            </button>
+          </div>
+
+          <!-- Klubb -->
+          <div class="team-card club">
+            <div class="team-icon">🏆</div>
+            <h3>Klubb-lisens</h3>
+            <p class="team-quantity">10+ trenere</p>
+            <div class="team-price">
+              <span class="amount">Fra 401</span>
+              <span class="currency">kr/person</span>
+            </div>
+            <div class="team-discount">33% rabatt</div>
+            <ul class="team-features">
+              <li>Velg årlig eller livstid</li>
+              <li>Dedikert klubb-portal</li>
+              <li>Sentralisert brukerstyring</li>
+              <li>Prioritert support</li>
+              <li>Tilpasset opplæring</li>
+            </ul>
+            <button class="btn-contact" onclick="showClubContactForm()">
+              Få tilbud
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ -->
+      <div class="faq-section">
+        <h2>Ofte stilte spørsmål</h2>
+        <div class="faq-grid">
+          <div class="faq-item">
+            <h4><i class="fas fa-question-circle"></i> Hvordan fungerer prøveperioden?</h4>
+            <p>Du får full tilgang i 7 dager helt gratis. Ingen betalingsinfo kreves før prøveperioden er over.</p>
+          </div>
+          <div class="faq-item">
+            <h4><i class="fas fa-question-circle"></i> Kan jeg bytte plan senere?</h4>
+            <p>Ja, du kan oppgradere eller nedgradere når som helst. Endringen trer i kraft umiddelbart.</p>
+          </div>
+          <div class="faq-item">
+            <h4><i class="fas fa-question-circle"></i> Hvordan betaler jeg?</h4>
+            <p>Vi aksepterer alle vanlige betalingskort, Vipps og Apple Pay via Stripe.</p>
+          </div>
+          <div class="faq-item">
+            <h4><i class="fas fa-question-circle"></i> Hva skjer når jeg avbryter?</h4>
+            <p>Du beholder tilgang til slutten av betalingsperioden. All data lagres i 30 dager.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Back to Login -->
+      <div class="back-to-login">
+        <button onclick="authService.showLoginScreen()" class="btn-back">
+          <i class="fas fa-arrow-left"></i> Tilbake til innlogging
+        </button>
+      </div>
+    </div>
+
+    <!-- Team Contact Modal -->
+    <div id="teamContactModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <span class="modal-close" onclick="closeTeamContactForm()">&times;</span>
+        <h2>Team-lisens forespørsel</h2>
+        <form id="teamContactForm" class="contact-form">
+          <div class="form-group">
+            <label>Navn *</label>
+            <input type="text" name="name" required>
+          </div>
+          <div class="form-group">
+            <label>E-post *</label>
+            <input type="email" name="email" required>
+          </div>
+          <div class="form-group">
+            <label>Telefon</label>
+            <input type="tel" name="phone">
+          </div>
+          <div class="form-group">
+            <label>Antall trenere *</label>
+            <input type="number" name="quantity" min="3" max="9" required>
+          </div>
+          <div class="form-group">
+            <label>Melding</label>
+            <textarea name="message" rows="4"></textarea>
+          </div>
+          <button type="submit" class="btn-submit">Send forespørsel</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Club Contact Modal -->
+    <div id="clubContactModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <span class="modal-close" onclick="closeClubContactForm()">&times;</span>
+        <h2>Klubb-lisens forespørsel</h2>
+        <form id="clubContactForm" class="contact-form">
+          <div class="form-group">
+            <label>Klubbnavn *</label>
+            <input type="text" name="clubName" required>
+          </div>
+          <div class="form-group">
+            <label>Kontaktperson *</label>
+            <input type="text" name="name" required>
+          </div>
+          <div class="form-group">
+            <label>E-post *</label>
+            <input type="email" name="email" required>
+          </div>
+          <div class="form-group">
+            <label>Telefon</label>
+            <input type="tel" name="phone">
+          </div>
+          <div class="form-group">
+            <label>Antall trenere *</label>
+            <input type="number" name="quantity" min="10" required>
+          </div>
+          <div class="form-group">
+            <label>Ønsket plan *</label>
+            <select name="planType" required>
+              <option value="">Velg...</option>
+              <option value="yearly">Årlig (133 kr/person/år)</option>
+              <option value="lifetime">Livstid (401 kr/person)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Melding</label>
+            <textarea name="message" rows="4"></textarea>
+          </div>
+          <button type="submit" class="btn-submit">Send forespørsel</button>
+        </form>
+      </div>
+    </div>
   </div>
 
   <!-- HOVEDAPP -->
