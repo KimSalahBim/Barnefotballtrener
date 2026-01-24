@@ -216,11 +216,32 @@ class SubscriptionService {
     }).format(amount);
   }
 
-  // Beregn besparelse
+// Beregn besparelse
   calculateSavings(monthlyPrice, yearlyPrice) {
     const yearlyMonthly = yearlyPrice / 12;
     const savings = ((monthlyPrice - yearlyMonthly) / monthlyPrice) * 100;
     return Math.round(savings);
+  }
+
+  // Åpne Stripe Customer Portal
+  async manageSubscription() {
+    try {
+      const user = authService.getUser();
+      
+      if (!user) {
+        alert('Du må være logget inn');
+        return;
+      }
+
+      alert('Sender deg til Stripe for å administrere abonnement...');
+      
+      // Her må vi først hente portal-lenke fra Stripe
+      // For nå: send til support
+      window.location.href = 'mailto:support@barnefotballtrener.no?subject=Administrer abonnement';
+    } catch (error) {
+      console.error('Error opening portal:', error);
+      alert('Kunne ikke åpne abonnementshåndtering');
+    }
   }
 }
 
