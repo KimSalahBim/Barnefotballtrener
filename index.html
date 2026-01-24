@@ -329,8 +329,11 @@
           <span id="subscriptionText">Pro</span>
         </div>
 
-        <button id="refreshBtn" class="icon-btn" type="button" title="Oppdater" onclick="location.reload()">
+<button id="refreshBtn" class="icon-btn" type="button" title="Oppdater" onclick="location.reload()">
           <i class="fas fa-rotate-right"></i>
+        </button>
+        <button id="manageSubscriptionBtn" class="icon-btn" type="button" title="Administrer abonnement" onclick="subscriptionService.manageSubscription()">
+          <i class="fas fa-gear"></i>
         </button>
         <button id="logoutBtn" class="icon-btn" type="button" title="Logg ut">
           <i class="fas fa-right-from-bracket"></i>
