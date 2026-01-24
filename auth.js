@@ -1,6 +1,19 @@
 // Barnefotballtrener - Autentisering (Supabase)
 // ================================================
 
+// Noen nettlesere/enheter kan kaste AbortError fra interne Supabase-auth operasjoner (f.eks. Web Locks/fetch som avbrytes).
+// Vi vil ikke la det ta ned hele appen.
+if (!window.__bf_aborterror_guard) {
+  window.__bf_aborterror_guard = true;
+  window.addEventListener('unhandledrejection', (event) => {
+    const r = event.reason;
+    if (r && (r.name === 'AbortError' || /aborted/i.test(String(r.message)))) {
+      console.warn('ℹ️ Ignorerer ufanget AbortError fra underliggende bibliotek:', r);
+      event.preventDefault();
+    }
+  });
+}
+
 class AuthService {
   constructor() {
     this.supabase = null;
@@ -44,6 +57,11 @@ this.supabase = createClient(
   CONFIG.supabase.anonKey,
   {
     auth: {
+      // Workaround for Supabase Auth lock-related hangs/aborts in some browsers/devices.
+      // By providing a no-op lock, we bypass Web Locks API usage.
+      lock: async (name, acquireTimeout, fn) => {
+        return await fn();
+      },
       storage: safeStorage,
       persistSession: true,
       autoRefreshToken: true,
