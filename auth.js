@@ -20,9 +20,38 @@ class AuthService {
     }
 
     const { createClient } = window.supabase;
-    this.supabase = createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey);
-    
-    console.log('✅ Supabase client opprettet');
+    // Robust storage: fall back to in-memory if localStorage is blocked (Tracking Prevention / private mode)
+const _memoryStore = {};
+const memoryStorage = {
+  getItem: (k) => (Object.prototype.hasOwnProperty.call(_memoryStore, k) ? _memoryStore[k] : null),
+  setItem: (k, v) => { _memoryStore[k] = String(v); },
+  removeItem: (k) => { delete _memoryStore[k]; }
+};
+const safeStorage = {
+  getItem(key) {
+    try { return window.localStorage.getItem(key); } catch (e) { return memoryStorage.getItem(key); }
+  },
+  setItem(key, value) {
+    try { window.localStorage.setItem(key, value); } catch (e) { memoryStorage.setItem(key, value); }
+  },
+  removeItem(key) {
+    try { window.localStorage.removeItem(key); } catch (e) { memoryStorage.removeItem(key); }
+  }
+};
+
+this.supabase = createClient(
+  CONFIG.supabase.url,
+  CONFIG.supabase.anonKey,
+  {
+    auth: {
+      storage: safeStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  }
+);
+console.log('✅ Supabase client opprettet');
 
     // Håndter OAuth callback først
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -30,16 +59,45 @@ class AuthService {
       console.log('🔑 OAuth callback detektert - behandler...');
     }
 
-    // Sjekk session
-    const { data: { session }, error } = await this.supabase.auth.getSession();
-    
-    if (error) {
+    // Sjekk session (med retry hvis nettleseren avbryter fetch under OAuth-callback)
+let session = null;
+let error = null;
+
+try {
+  const res = await this.supabase.auth.getSession();
+  session = res?.data?.session ?? null;
+  error = res?.error ?? null;
+} catch (e) {
+  console.error('❌ getSession kastet feil:', e);
+  // Edge/Safari kan avbryte første kall under redirect/callback (AbortError).
+  if (e && (e.name === 'AbortError' || /aborted/i.test(String(e.message)))) {
+    await new Promise(r => setTimeout(r, 300));
+    try {
+      const res2 = await this.supabase.auth.getSession();
+      session = res2?.data?.session ?? null;
+      error = res2?.error ?? null;
+    } catch (e2) {
+      console.error('❌ getSession retry feilet:', e2);
+      error = e2;
+    }
+  } else {
+    error = e;
+  }
+}
+if (error) {
       console.error('❌ Session error:', error);
     }
     
     if (session) {
       console.log('✅ Bruker allerede logget inn:', session.user.email);
       this.currentUser = session.user;
+      // Rydd opp i URL-hash etter OAuth (hindrer at callback behandles på nytt ved refresh)
+      try {
+        const h = window.location.hash || '';
+        if (h.includes('access_token') || h.includes('refresh_token') || h.includes('type=recovery')) {
+          history.replaceState(null, document.title, window.location.pathname + window.location.search);
+        }
+      } catch (e) {}
       await this.handleSignIn(session.user);
     } else {
       console.log('ℹ️ Ingen aktiv session');
