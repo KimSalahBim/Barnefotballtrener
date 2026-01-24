@@ -218,35 +218,127 @@ class AuthService {
     if (mainApp) mainApp.style.display = 'none';
     if (pricingPage) {
       pricingPage.style.display = 'block';
-      // Last inn pricing.html hvis det ikke er lastet
-      this.loadPricingPage();
+      
+      // Initialiser pricing knapper
+      setTimeout(() => {
+        this.initPricingButtons();
+      }, 100);
     }
   }
 
-  // Last inn pricing.html innhold
-  async loadPricingPage() {
-    const pricingPage = document.getElementById('pricingPage');
-    if (!pricingPage || pricingPage.innerHTML.trim().length > 0) return;
-
-    try {
-      console.log('📄 Laster pricing.html...');
-      const response = await fetch('pricing.html');
-      const html = await response.text();
-      pricingPage.innerHTML = html;
+  // Initialiser pricing-knapper
+  initPricingButtons() {
+    console.log('💳 Initialiserer pricing buttons');
+    
+    const selectButtons = document.querySelectorAll('.btn-select');
+    console.log(`Fant ${selectButtons.length} knapper`);
+    
+    if (selectButtons.length === 0) {
+      console.warn('⚠️ Ingen pricing-knapper funnet!');
+      return;
+    }
+    
+    selectButtons.forEach(btn => {
+      // Fjern gamle event listeners
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
       
-      // Initialiser pricing hvis scriptet finnes
-      if (typeof initPricing === 'function') {
-        console.log('💳 Initialiserer pricing');
-        initPricing();
+      newBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const planType = newBtn.getAttribute('data-plan');
+        const priceId = newBtn.getAttribute('data-price-id');
+        
+        console.log(`✨ Knapp klikket: ${planType}, priceId: ${priceId}`);
+        await this.handlePlanSelection(planType, priceId);
+      });
+    });
+    
+    console.log('✅ Pricing buttons initialisert');
+  }
+
+  // Håndter planvalg
+  async handlePlanSelection(planType, priceId) {
+    try {
+      console.log('🔍 Håndterer planvalg:', planType);
+      
+      const user = this.getUser();
+      
+      if (!user) {
+        console.log('❌ Ingen bruker');
+        alert('Du må være logget inn først');
+        this.showLoginScreen();
+        return;
+      }
+
+      console.log('✅ Bruker funnet:', user.email);
+
+      // Sjekk subscription
+      const subscription = await subscriptionService.checkSubscription(user.id);
+      console.log('📊 Subscription:', subscription);
+      
+      if (subscription.canStartTrial && CONFIG.trial.enabled) {
+        console.log('🎁 Starter trial...');
+        const result = await subscriptionService.startTrial(user.id, planType);
+        
+        if (result.success) {
+          alert(`Gratulerer! Din ${CONFIG.trial.days}-dagers prøveperiode har startet! 🎉`);
+          setTimeout(() => {
+            this.showMainApp();
+          }, 1000);
+        } else {
+          alert('Noe gikk galt. Prøv igjen.');
+        }
+      } else {
+        console.log('💳 Går til betaling...');
+        await this.startCheckout(planType, priceId, user);
       }
     } catch (error) {
-      console.error('❌ Kunne ikke laste pricing.html:', error);
-      pricingPage.innerHTML = `
-        <div style="padding: 40px; text-align: center;">
-          <h2>Velg abonnement</h2>
-          <p>Vennligst velg et abonnement for å fortsette.</p>
-        </div>
-      `;
+      console.error('❌ Feil:', error);
+      alert('En feil oppstod. Prøv igjen senere.');
+    }
+  }
+
+  // Start checkout
+  async startCheckout(planType, priceId, user) {
+    try {
+      console.log('💳 Starter checkout:', planType);
+      alert('Videresender til betaling...');
+      
+      await subscriptionService.init();
+      
+      if (!subscriptionService.stripe) {
+        throw new Error('Stripe not initialized');
+      }
+
+      const actualPriceId = CONFIG.prices[planType]?.id || priceId;
+      console.log('Price ID:', actualPriceId);
+
+      if (!actualPriceId) {
+        throw new Error('Invalid price ID');
+      }
+
+      const { error } = await subscriptionService.stripe.redirectToCheckout({
+        lineItems: [{
+          price: actualPriceId,
+          quantity: 1,
+        }],
+        mode: planType === 'lifetime' ? 'payment' : 'subscription',
+        successUrl: `${window.location.origin}/?success=true`,
+        cancelUrl: `${window.location.origin}/?canceled=true`,
+        customerEmail: user.email,
+        clientReferenceId: user.id,
+        metadata: {
+          user_id: user.id,
+          plan_type: planType
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('❌ Checkout error:', error);
+      alert(`Kunne ikke starte betaling: ${error.message}`);
     }
   }
 
