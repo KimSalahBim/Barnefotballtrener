@@ -1,6 +1,6 @@
 // Barnefotballtrener - kampdag.js
 // Kampdag: oppmøte -> start/benk -> bytteplan med roligere bytter og bedre spilletidsfordeling.
-// Krever global variabel "players" fra app.js.
+// Bruker global variabel "window.players" (Array) som settes av core.js.
 
 (function () {
   // ------------------------------
@@ -8,6 +8,13 @@
   // ------------------------------
   function $(id) { return document.getElementById(id); }
   function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+  function getPlayersArray() {
+    const raw = window.players;
+    if (Array.isArray(raw)) return raw;
+    if (raw && Array.isArray(raw.players)) return raw.players;
+    return [];
+  }
 
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (m) => ({
@@ -49,6 +56,16 @@
 
     bindKampdagUI();
     renderKampdagPlayers();
+
+    // Re-render når spillerlisten oppdateres (fra core.js)
+    window.addEventListener('players:updated', () => {
+      try {
+        kdSelected = new Set(getPlayersArray().map(p => p.id));
+        renderKampdagPlayers();
+      } catch (e) {
+        console.error('Kampdag: kunne ikke oppdatere spillere', e);
+      }
+    });
     refreshKeeperUI();
     updateKampdagCounts();
   });
@@ -75,7 +92,7 @@
     });
 
     if (selectAllBtn) selectAllBtn.addEventListener('click', () => {
-      kdSelected = new Set((window.players || []).map(p => p.id));
+      kdSelected = new Set(getPlayersArray().map(p => p.id));
       renderKampdagPlayers();
       refreshKeeperUI();
     });
@@ -120,7 +137,7 @@
     const container = $('kdPlayerSelection');
     if (!container) return;
 
-    const list = (window.players || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'nb'));
+    const list = getPlayersArray().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'nb'));
 
     container.innerHTML = list.map(p => {
       const checked = kdSelected.has(p.id) ? 'checked' : '';
@@ -260,7 +277,7 @@
   // Plan generation helpers
   // ------------------------------
   function getPresentPlayers() {
-    const all = window.players || [];
+    const all = getPlayersArray();
     return all.filter(p => kdSelected.has(p.id));
   }
 
