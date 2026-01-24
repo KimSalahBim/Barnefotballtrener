@@ -273,7 +273,15 @@ if (error) {
     const pricingPage = document.getElementById('pricingPage');
     
     if (passwordProtection) passwordProtection.style.display = 'none';
-    if (mainApp) mainApp.style.display = 'block';
+    if (mainApp) {
+      mainApp.style.display = 'block';
+      // Robust visibility (prevents blank screen if CSS/animation gets stuck)
+      mainApp.style.opacity = '1';
+      mainApp.style.visibility = 'visible';
+      mainApp.style.pointerEvents = 'auto';
+      requestAnimationFrame(() => { try { mainApp.style.opacity = '1'; } catch (e) {} });
+      setTimeout(() => { try { mainApp.style.opacity = '1'; } catch (e) {} }, 800);
+    }
     if (pricingPage) pricingPage.style.display = 'none';
 
     // Initialiser appen hvis ikke allerede gjort
