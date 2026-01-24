@@ -3,13 +3,18 @@
 
 // Håndter prisvalg
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('💳 Pricing page loaded');
+  
   // Bind klikk på alle "Velg"-knapper
   const selectButtons = document.querySelectorAll('.btn-select');
+  console.log(`Found ${selectButtons.length} select buttons`);
+  
   selectButtons.forEach(btn => {
     btn.addEventListener('click', async () => {
       const planType = btn.getAttribute('data-plan');
       const priceId = btn.getAttribute('data-price-id');
       
+      console.log(`Button clicked: ${planType}, priceId: ${priceId}`);
       await handlePlanSelection(planType, priceId);
     });
   });
@@ -26,18 +31,25 @@ document.addEventListener('DOMContentLoaded', () => {
 // Håndter planvalg
 async function handlePlanSelection(planType, priceId) {
   try {
+    console.log('🔍 Handling plan selection:', planType);
+    
     const user = authService.getUser();
     
     if (!user) {
+      console.log('❌ No user found');
       showNotification('Du må være logget inn først', 'error');
       authService.showLoginScreen();
       return;
     }
 
+    console.log('✅ User found:', user.email);
+
     // Sjekk om bruker kan starte trial
     const subscription = await subscriptionService.checkSubscription(user.id);
+    console.log('📊 Subscription status:', subscription);
     
     if (subscription.canStartTrial && CONFIG.trial.enabled) {
+      console.log('🎁 Starting trial...');
       // Start trial
       const result = await subscriptionService.startTrial(user.id, planType);
       
@@ -50,63 +62,77 @@ async function handlePlanSelection(planType, priceId) {
         showNotification('Noe gikk galt. Prøv igjen.', 'error');
       }
     } else {
+      console.log('💳 Going to payment...');
       // Gå direkte til betaling
-      await startCheckout(priceId, user);
+      await startCheckout(planType, priceId, user);
     }
   } catch (error) {
-    console.error('Error handling plan selection:', error);
+    console.error('❌ Error handling plan selection:', error);
     showNotification('En feil oppstod. Prøv igjen senere.', 'error');
   }
 }
 
 // Start Stripe Checkout
-async function startCheckout(priceId, user) {
+async function startCheckout(planType, priceId, user) {
   try {
+    console.log('💳 Starting checkout for:', planType, priceId);
     showNotification('Videresender til betaling...', 'info');
     
-    const result = await subscriptionService.createCheckoutSession(
-      priceId,
-      user.id,
-      user.email
-    );
+    // Initialiser Stripe
+    await subscriptionService.init();
     
-    if (!result.success) {
-      throw new Error(result.error);
+    if (!subscriptionService.stripe) {
+      throw new Error('Stripe not initialized');
+    }
+
+    // Få riktig price ID fra CONFIG
+    const actualPriceId = CONFIG.prices[planType]?.id || priceId;
+    console.log('Using price ID:', actualPriceId);
+
+    if (!actualPriceId) {
+      throw new Error('Invalid price ID');
+    }
+
+    // Redirect direkte til Stripe Checkout
+    const { error } = await subscriptionService.stripe.redirectToCheckout({
+      lineItems: [{
+        price: actualPriceId,
+        quantity: 1,
+      }],
+      mode: planType === 'lifetime' ? 'payment' : 'subscription',
+      successUrl: `${window.location.origin}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${window.location.origin}/?canceled=true`,
+      customerEmail: user.email,
+      clientReferenceId: user.id,
+      metadata: {
+        user_id: user.id,
+        plan_type: planType
+      }
+    });
+
+    if (error) {
+      throw error;
     }
   } catch (error) {
-    console.error('Checkout error:', error);
-    showNotification('Kunne ikke starte betalingsprosessen. Prøv igjen.', 'error');
+    console.error('❌ Checkout error:', error);
+    showNotification(`Kunne ikke starte betalingsprosessen: ${error.message}`, 'error');
   }
 }
 
 // Håndter vellykket betaling
 async function handleSuccessfulPayment() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const sessionId = urlParams.get('session_id');
+  console.log('✅ Handling successful payment');
   
-  if (!sessionId) {
-    showNotification('Betaling fullført! 🎉', 'success');
-    setTimeout(() => {
-      authService.showMainApp();
-    }, 2000);
-    return;
-  }
-
-  try {
-    const result = await subscriptionService.handleSuccessfulPayment(sessionId);
+  showNotification('Betaling fullført! Velkommen! 🎉', 'success');
+  
+  // Vent litt før vi redirecter
+  setTimeout(() => {
+    // Fjern query params fra URL
+    window.history.replaceState({}, document.title, window.location.pathname);
     
-    if (result.success) {
-      showNotification('Betaling fullført! Velkommen! 🎉', 'success');
-      setTimeout(() => {
-        authService.showMainApp();
-      }, 2000);
-    } else {
-      showNotification('Kunne ikke bekrefte betalingen. Kontakt support.', 'error');
-    }
-  } catch (error) {
-    console.error('Payment confirmation error:', error);
-    showNotification('En feil oppstod. Kontakt support.', 'error');
-  }
+    // Gå til hovedapp
+    authService.showMainApp();
+  }, 2000);
 }
 
 // Vis team kontaktskjema
@@ -160,23 +186,27 @@ async function handleTeamContact(formData) {
       name: formData.get('name'),
       email: formData.get('email'),
       phone: formData.get('phone'),
-      quantity: formData.get('quantity'),
+      quantity: parseInt(formData.get('quantity')),
       message: formData.get('message'),
-      timestamp: new Date().toISOString()
+      created_at: new Date().toISOString()
     };
 
-    // Send til din backend/database
-    // For nå: logg og vis melding
     console.log('Team contact:', data);
+    
+    // Send til Supabase
+    if (authService.supabase) {
+      const { error } = await authService.supabase
+        .from('contact_requests')
+        .insert([data]);
+      
+      if (error) throw error;
+    }
     
     showNotification('Takk! Vi kontakter deg snart.', 'success');
     closeTeamContactForm();
     
     // Reset form
     document.getElementById('teamContactForm').reset();
-
-    // I produksjon: send til Supabase eller email-service
-    // await sendContactRequest(data);
   } catch (error) {
     console.error('Team contact error:', error);
     showNotification('Kunne ikke sende forespørsel. Prøv igjen.', 'error');
@@ -188,26 +218,32 @@ async function handleClubContact(formData) {
   try {
     const data = {
       type: 'club',
-      clubName: formData.get('clubName'),
+      club_name: formData.get('clubName'),
       name: formData.get('name'),
       email: formData.get('email'),
       phone: formData.get('phone'),
-      quantity: formData.get('quantity'),
-      planType: formData.get('planType'),
+      quantity: parseInt(formData.get('quantity')),
+      plan_type: formData.get('planType'),
       message: formData.get('message'),
-      timestamp: new Date().toISOString()
+      created_at: new Date().toISOString()
     };
 
     console.log('Club contact:', data);
+    
+    // Send til Supabase
+    if (authService.supabase) {
+      const { error } = await authService.supabase
+        .from('contact_requests')
+        .insert([data]);
+      
+      if (error) throw error;
+    }
     
     showNotification('Takk! Vi sender deg et tilbud snart.', 'success');
     closeClubContactForm();
     
     // Reset form
     document.getElementById('clubContactForm').reset();
-
-    // I produksjon: send til Supabase eller email-service
-    // await sendContactRequest(data);
   } catch (error) {
     console.error('Club contact error:', error);
     showNotification('Kunne ikke sende forespørsel. Prøv igjen.', 'error');
@@ -216,6 +252,8 @@ async function handleClubContact(formData) {
 
 // Hjelpefunksjon for notifikasjoner
 function showNotification(message, type = 'info') {
+  console.log(`📢 Notification: ${message} (${type})`);
+  
   // Bruk eksisterende notification-system hvis tilgjengelig
   if (typeof window.showNotification === 'function') {
     window.showNotification(message, type);
@@ -236,13 +274,14 @@ function showNotification(message, type = 'info') {
     color: white;
     font-weight: 600;
     z-index: 10000;
-    animation: slideInRight 0.3s ease;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
   `;
   
   document.body.appendChild(notification);
   
   setTimeout(() => {
-    notification.style.animation = 'slideOutRight 0.3s ease';
+    notification.style.opacity = '0';
+    notification.style.transition = 'opacity 0.3s';
     setTimeout(() => notification.remove(), 300);
   }, 3000);
 }
