@@ -351,10 +351,13 @@
   function renderLogo() {
     const el = $('logoContainer');
     if (!el) return;
-    el.innerHTML = `<div style="display:flex; align-items:center; gap:10px;">
-      <div style="font-size:22px;">⚽</div>
-      <div style="font-weight:800; letter-spacing:0.2px;">Barnefotballtrener</div>
-    </div>`;
+    el.innerHTML = `
+  <div class="app-title">
+    <img src="icon-192.png" alt="Barnefotballtrener" class="app-logo" />
+    <div class="app-name">Barnefotballtrener</div>
+  </div>
+`;
+
   }
 
   function renderAll() {
