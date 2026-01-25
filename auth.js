@@ -305,7 +305,7 @@ class AuthService {
       mainApp.style.visibility = 'visible';
       mainApp.style.pointerEvents = 'auto';
     }
-}
+
     try {
       if (typeof window.initApp === 'function') {
         console.log('🚀 Initialiserer app');
@@ -317,6 +317,7 @@ class AuthService {
       console.error('❌ initApp feilet:', e);
     }
   }
+
 
 
 
