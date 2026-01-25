@@ -1,12 +1,12 @@
 // Barnefotballtrener - auth.js
 // ===================================================
-// Robust Supabase OAuth + UI switching (login/pricing/app)
-// - Fikser "Google-knapp gjør ingenting" på mobil (binder klikk)
-// - Guard mot AbortError (Web Locks / fetch abort)
-// - DEV bypass for spesifikke eposter (hopper over plan/pricing)
+// - Fikser "Fortsett med Google" på iPhone (binder #googleSignInBtn)
+// - Guard mot AbortError
+// - Enkel lock for å redusere race i session
+// - DEV bypass: kimruneholmvik@gmail.com hopper over plan/pricing
 
 // -------------------------------
-// AbortError guard (ikke krasj appen)
+// AbortError guard
 // -------------------------------
 if (!window.__bf_aborterror_guard) {
   window.__bf_aborterror_guard = true;
@@ -20,7 +20,7 @@ if (!window.__bf_aborterror_guard) {
 }
 
 // -------------------------------
-// DEV / ADMIN BYPASS (test)
+// DEV bypass
 // -------------------------------
 const DEV_BYPASS_EMAILS = ['kimruneholmvik@gmail.com'];
 function isDevBypassUser(user) {
@@ -29,7 +29,7 @@ function isDevBypassUser(user) {
 }
 
 // -------------------------------
-// Config (Vercel env via window.ENV eller globals)
+// Supabase config
 // -------------------------------
 const SUPABASE_URL =
   (window.ENV && window.ENV.SUPABASE_URL) ||
@@ -49,9 +49,6 @@ const loginScreen = document.getElementById('passwordProtection');
 const mainApp = document.getElementById('mainApp');
 const pricingPage = document.getElementById('pricingPage');
 
-// -------------------------------
-// Safe storage helpers (Edge/Tracking prevention)
-// -------------------------------
 function safeStorageGet(key) {
   try { return localStorage.getItem(key); } catch { return null; }
 }
@@ -62,9 +59,6 @@ function safeStorageRemove(key) {
   try { localStorage.removeItem(key); return true; } catch { return false; }
 }
 
-// -------------------------------
-// AuthService
-// -------------------------------
 class AuthService {
   constructor() {
     this.supabase = null;
@@ -103,7 +97,7 @@ class AuthService {
 
         console.log('✅ Supabase client opprettet');
 
-        // Hent session med retry og lock (reduser AbortError / race)
+        // Session med retry+lock
         let session = null;
         try {
           session = await this.getSessionWithRetry();
@@ -120,7 +114,7 @@ class AuthService {
           this.showLoginScreen();
         }
 
-        // Lytt på auth-endringer
+        // Auth events
         this.supabase.auth.onAuthStateChange(async (event, sess) => {
           console.log('🔄 Auth state changed:', event);
 
@@ -178,7 +172,7 @@ class AuthService {
 
   async acquireLock() {
     const now = Date.now();
-    const ttl = 10_000; // 10s
+    const ttl = 10_000;
     const raw = safeStorageGet(this.lockKey);
     const val = raw ? Number(raw) : 0;
 
@@ -186,7 +180,6 @@ class AuthService {
       await new Promise((r) => setTimeout(r, 350));
       return this.acquireLock();
     }
-
     safeStorageSet(this.lockKey, String(now));
   }
 
@@ -203,8 +196,6 @@ class AuthService {
         return data?.session || null;
       } catch (error) {
         console.error('❌ getSession kastet feil:', error);
-
-        // retry 1
         await new Promise((r) => setTimeout(r, 400));
         const { data, error: err2 } = await this.supabase.auth.getSession();
         if (err2) throw err2;
@@ -219,7 +210,7 @@ class AuthService {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
 
-      // iOS/Safari: sørg for redirectTo peker på samme origin/path
+      // iOS/Safari: redirectTo må være samme origin + path
       const redirectTo = window.location.origin + window.location.pathname;
 
       const { error } = await this.supabase.auth.signInWithOAuth({
@@ -235,26 +226,11 @@ class AuthService {
     }
   }
 
-  async signOut() {
-    try {
-      if (!this.supabase) throw new Error('Supabase ikke initialisert');
-      const { error } = await this.supabase.auth.signOut();
-      if (error) throw error;
-      this.currentUser = null;
-      this.showLoginScreen();
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Sign out error:', error);
-      return { success: false, error: error?.message || String(error) };
-    }
-  }
-
   async handleSignIn(user) {
     this.currentUser = user;
 
-    // DEV BYPASS: Kim går alltid rett til appen uten planvalg
     if (isDevBypassUser(user)) {
-      console.log('🔓 DEV BYPASS aktiv - hopper over pricing/subscription for:', user.email);
+      console.log('🔓 DEV BYPASS aktiv - hopper over plan/pricing:', user.email);
       this.showMainApp();
       return;
     }
@@ -271,9 +247,7 @@ class AuthService {
       const subscription = await subscriptionService.checkSubscription(user.id);
       console.log('📊 Subscription status:', subscription);
 
-      if (subscription?.active) {
-        this.showMainApp();
-      } else if (subscription?.trial) {
+      if (subscription?.active || subscription?.trial) {
         this.showMainApp();
       } else {
         this.showPricingPage();
@@ -307,7 +281,6 @@ class AuthService {
       mainApp.style.pointerEvents = 'auto';
     }
 
-    // Start appen
     try {
       if (typeof window.initApp === 'function') {
         console.log('🚀 Initialiserer app');
@@ -326,61 +299,40 @@ const authService = new AuthService();
 window.authService = authService;
 
 // -------------------------------
-// Google-knapp binding (fikser "skjer ingenting" på mobil)
+// Bind #googleSignInBtn (eksakt)
 // -------------------------------
-function bindGoogleLoginButton() {
-  // Finn knappen uansett hvordan den er laget i HTML
-  const candidates = [
-    document.getElementById('googleLoginBtn'),
-    document.getElementById('googleSignInBtn'),
-    document.getElementById('btnGoogle'),
-    document.getElementById('loginWithGoogle'),
-    document.querySelector('.google-btn'),
-    document.querySelector('[data-provider="google"]'),
-    ...Array.from(document.querySelectorAll('button')).filter((b) =>
-      (b.textContent || '').toLowerCase().includes('google')
-    ),
-  ].filter(Boolean);
-
-  if (!candidates.length) {
-    console.warn('⚠️ Fant ingen Google-login knapp i DOM');
+function bindGoogleButton() {
+  const btn = document.getElementById('googleSignInBtn');
+  if (!btn) {
+    console.warn('⚠️ Fant ikke #googleSignInBtn i DOM');
     return;
   }
+  if (btn.__bf_bound_google) return;
+  btn.__bf_bound_google = true;
 
-  candidates.forEach((btn) => {
-    if (btn.__bf_bound_google) return;
-    btn.__bf_bound_google = true;
+  btn.style.pointerEvents = 'auto';
+  btn.style.cursor = 'pointer';
 
-    btn.style.pointerEvents = 'auto';
-    btn.style.cursor = 'pointer';
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('➡️ Google-knapp klikket, starter OAuth...');
+    const res = await authService.signInWithGoogle();
+    if (!res?.success) {
+      console.error('❌ Google-login feilet:', res?.error);
+      window.showNotification?.('Innlogging feilet. Prøv igjen.', 'error');
+    }
+  }, { passive: false });
 
-    btn.addEventListener(
-      'click',
-      async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        console.log('➡️ Klikk på Google-login, starter OAuth...');
-        const res = await authService.signInWithGoogle();
-        if (!res?.success) {
-          console.error('❌ Google-login feilet:', res?.error);
-          // showNotification er valgfritt (hvis du har den)
-          window.showNotification?.('Innlogging feilet. Prøv igjen.', 'error');
-        }
-      },
-      { passive: false }
-    );
-  });
-
-  console.log('✅ Google-login knapp bundet:', candidates.length);
+  console.log('✅ Google-knapp bundet (#googleSignInBtn)');
 }
 
 // -------------------------------
-// Init når DOM er klar
+// Boot
 // -------------------------------
 function bootAuth() {
   console.log('📄 DOM ready - initialiserer auth');
-  bindGoogleLoginButton();
+  bindGoogleButton();
   authService.init();
 }
 
