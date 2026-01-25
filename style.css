@@ -1351,3 +1351,30 @@ body {
     transform: translateY(0);
     box-shadow: none;
 }
+
+:root{
+  --brand-green:#456C4B;
+  --brand-orange:#E88B2C;
+  --brand-dark:#153F30;
+  --brand-ink:#07292A;
+  --brand-sand:#E2DE95;
+}
+
+.app-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.app-logo{
+  width:28px;
+  height:28px;
+  border-radius:8px;
+  object-fit:cover;
+  box-shadow:0 6px 18px rgba(7,41,42,0.18);
+}
+
+.app-name{
+  font-weight:800;
+  letter-spacing:0.2px;
+}
