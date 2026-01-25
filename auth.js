@@ -225,6 +225,52 @@ class AuthService {
       return { success: false, error: error?.message || String(error) };
     }
   }
+  async signOut() {
+    try {
+      if (!this.supabase) throw new Error('Supabase ikke initialisert');
+
+      // Hvis du har lock-funksjoner i filen din, bruk dem.
+      if (typeof this.acquireLock === 'function') await this.acquireLock();
+
+      const { error } = await this.supabase.auth.signOut();
+      if (error) throw error;
+
+      this.currentUser = null;
+
+      // UI fallback (auth-state lytter tar ofte over, men dette er trygt)
+      this.showLoginScreen();
+
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      return { success: false, error: error?.message || String(error) };
+    } finally {
+      if (typeof this.releaseLock === 'function') this.releaseLock();
+    }
+  }
+  async signOut() {
+    try {
+      if (!this.supabase) throw new Error('Supabase ikke initialisert');
+
+      // Bruk samme lock-mekanisme som resten av auth-flyten
+      if (typeof this.acquireLock === 'function') await this.acquireLock();
+
+      const { error } = await this.supabase.auth.signOut();
+      if (error) throw error;
+
+      this.currentUser = null;
+
+      // UI fallback – trygt selv om auth-state listener også oppdaterer
+      this.showLoginScreen();
+
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      return { success: false, error: error?.message || String(error) };
+    } finally {
+      if (typeof this.releaseLock === 'function') this.releaseLock();
+    }
+  }
 
   async handleSignIn(user) {
     this.currentUser = user;
