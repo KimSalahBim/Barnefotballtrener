@@ -61,6 +61,7 @@ function safeStorageRemove(key) {
 
 class AuthService {
   constructor() {
+    this._mainShown = false;
     this.supabase = null;
     this.currentUser = null;
     this.initPromise = null;
