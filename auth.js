@@ -297,9 +297,9 @@ this._mainShown = false;
   }
 
 showMainApp() {
-  // ✅ Guard: ikke init app flere ganger
+  // Hindrer at appen initieres flere ganger (f.eks. pga flere SIGNED_IN-events)
   if (this._mainShown) {
-    console.log('ℹ️ MainApp allerede vist – hopper over init');
+    console.log('ℹ️ showMainApp: allerede vist - hopper over init');
     return;
   }
   this._mainShown = true;
@@ -325,6 +325,7 @@ showMainApp() {
     console.error('❌ initApp feilet:', e);
   }
 }
+
 } // ✅ VIKTIG: Lukker class AuthService
 
 
