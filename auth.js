@@ -6,12 +6,67 @@
 if (!window.__bf_aborterror_guard) {
   window.__bf_aborterror_guard = true;
   window.addEventListener('unhandledrejection', (event) => {
-    const r = event.reason;
-    if (r && (r.name === 'AbortError' || /aborted/i.test(String(r.message)))) {
-      console.warn('ℹ️ Ignorerer ufanget AbortError fra underliggende bibliotek:', r);
-      event.preventDefault();
+    const msg = String(event?.reason?.message || event?.reason || '');
+    if (msg.includes('AbortError') || msg.includes('signal is aborted')) {
+      console.warn('⚠️ Ignorerer AbortError fra intern auth:', event.reason);
+      event.preventDefault?.();
     }
   });
+}
+
+// --- DEV / ADMIN BYPASS ---
+// Brukes for å slippe betalings-/abonnementsskjerm for utvalgte e-poster (f.eks. under testing).
+// Viktig: Dette er en "hard bypass" på klientsiden. Fjern før offentlig lansering dersom du ikke vil ha gratis tilgang.
+const DEV_BYPASS_EMAILS = ['kimruneholmvik@gmail.com'];
+
+function isDevBypassUser(user) {
+  const email = (user?.email || '').toLowerCase().trim();
+  return DEV_BYPASS_EMAILS.includes(email);
+}
+
+// Konfigurasjon - HENTES FRA ENV (Vercel) via window.ENV eller fallback
+const SUPABASE_URL =
+  (window.ENV && window.ENV.SUPABASE_URL) ||
+  window.SUPABASE_URL ||
+  '';
+
+// Bruk ANON_KEY (public) i frontend, aldri service_role
+const SUPABASE_ANON_KEY =
+  (window.ENV && (window.ENV.SUPABASE_ANON_KEY || window.ENV.SUPABASE_ANON)) ||
+  window.SUPABASE_ANON_KEY ||
+  window.SUPABASE_ANON ||
+  '';
+
+// UI-elementer
+const loginScreen = document.getElementById('passwordProtection');
+const mainApp = document.getElementById('mainApp');
+const pricingPage = document.getElementById('pricingPage');
+
+// Liten hjelpefunksjon for trygg localStorage
+function safeStorageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function safeStorageRemove(key) {
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 class AuthService {
@@ -19,188 +74,205 @@ class AuthService {
     this.supabase = null;
     this.currentUser = null;
     this.initialized = false;
+    this.initPromise = null;
+    this.lockKey = 'bf_auth_lock_v1';
   }
 
-  // Initialiser Supabase
   async init() {
-    if (this.initialized) return;
+    if (this.initPromise) return this.initPromise;
 
-    console.log('🔐 Initialiserer AuthService...');
+    this.initPromise = (async () => {
+      console.log('🔐 Initialiserer AuthService...');
 
-    // Last inn Supabase fra CDN
-    if (!window.supabase) {
-      await this.loadSupabaseScript();
-    }
-
-    const { createClient } = window.supabase;
-    // Robust storage: fall back to in-memory if localStorage is blocked (Tracking Prevention / private mode)
-const _memoryStore = {};
-const memoryStorage = {
-  getItem: (k) => (Object.prototype.hasOwnProperty.call(_memoryStore, k) ? _memoryStore[k] : null),
-  setItem: (k, v) => { _memoryStore[k] = String(v); },
-  removeItem: (k) => { delete _memoryStore[k]; }
-};
-const safeStorage = {
-  getItem(key) {
-    try { return window.localStorage.getItem(key); } catch (e) { return memoryStorage.getItem(key); }
-  },
-  setItem(key, value) {
-    try { window.localStorage.setItem(key, value); } catch (e) { memoryStorage.setItem(key, value); }
-  },
-  removeItem(key) {
-    try { window.localStorage.removeItem(key); } catch (e) { memoryStorage.removeItem(key); }
-  }
-};
-
-this.supabase = createClient(
-  CONFIG.supabase.url,
-  CONFIG.supabase.anonKey,
-  {
-    auth: {
-      // Workaround for Supabase Auth lock-related hangs/aborts in some browsers/devices.
-      // By providing a no-op lock, we bypass Web Locks API usage.
-      lock: async (name, acquireTimeout, fn) => {
-        return await fn();
-      },
-      storage: safeStorage,
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  }
-);
-console.log('✅ Supabase client opprettet');
-
-    // Håndter OAuth callback først
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    if (hashParams.get('access_token')) {
-      console.log('🔑 OAuth callback detektert - behandler...');
-    }
-
-    // Sjekk session (med retry hvis nettleseren avbryter fetch under OAuth-callback)
-let session = null;
-let error = null;
-
-try {
-  const res = await this.supabase.auth.getSession();
-  session = res?.data?.session ?? null;
-  error = res?.error ?? null;
-} catch (e) {
-  console.error('❌ getSession kastet feil:', e);
-  // Edge/Safari kan avbryte første kall under redirect/callback (AbortError).
-  if (e && (e.name === 'AbortError' || /aborted/i.test(String(e.message)))) {
-    await new Promise(r => setTimeout(r, 300));
-    try {
-      const res2 = await this.supabase.auth.getSession();
-      session = res2?.data?.session ?? null;
-      error = res2?.error ?? null;
-    } catch (e2) {
-      console.error('❌ getSession retry feilet:', e2);
-      error = e2;
-    }
-  } else {
-    error = e;
-  }
-}
-if (error) {
-      console.error('❌ Session error:', error);
-    }
-    
-    if (session) {
-      console.log('✅ Bruker allerede logget inn:', session.user.email);
-      this.currentUser = session.user;
-      // Rydd opp i URL-hash etter OAuth (hindrer at callback behandles på nytt ved refresh)
       try {
-        const h = window.location.hash || '';
-        if (h.includes('access_token') || h.includes('refresh_token') || h.includes('type=recovery')) {
-          history.replaceState(null, document.title, window.location.pathname + window.location.search);
+        await this.loadSupabaseScript();
+
+        if (!window.supabase) {
+          console.error('❌ Supabase library ikke lastet!');
+          this.showLoginScreen();
+          return;
         }
-      } catch (e) {}
-      await this.handleSignIn(session.user);
-    } else {
-      console.log('ℹ️ Ingen aktiv session');
-      this.showLoginScreen();
-    }
 
-    // Lytt til auth state endringer
-    this.supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event);
-      
-      if (event === 'SIGNED_IN' && session) {
-        console.log('✅ Bruker logget inn:', session.user.email);
-        this.currentUser = session.user;
-        await this.handleSignIn(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        console.log('👋 Bruker logget ut');
-        this.currentUser = null;
-        this.handleSignOut();
-      } else if (event === 'TOKEN_REFRESHED') {
-        console.log('🔄 Token refreshed');
-        this.currentUser = session?.user || null;
-      } else if (event === 'USER_UPDATED') {
-        console.log('👤 User updated');
-        this.currentUser = session?.user || null;
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+          console.error('❌ Mangler Supabase config (URL/ANON_KEY)');
+          this.showLoginScreen();
+          return;
+        }
+
+        this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+          },
+        });
+
+        console.log('✅ Supabase client opprettet');
+
+        // OAuth callback-detektering (hash/query)
+        const url = new URL(window.location.href);
+        const hasOAuthParams =
+          url.searchParams.get('code') ||
+          url.searchParams.get('access_token') ||
+          url.hash.includes('access_token') ||
+          url.hash.includes('code=');
+
+        if (hasOAuthParams) {
+          console.log('🔑 OAuth callback detektert - behandler...');
+        }
+
+        // Hent session med retry (AbortError kan skje)
+        let session = null;
+        try {
+          session = await this.getSessionWithRetry();
+        } catch (e) {
+          console.warn('⚠️ getSessionWithRetry feilet:', e);
+        }
+
+        if (session?.user) {
+          this.currentUser = session.user;
+          console.log('✅ Bruker allerede logget inn:', session.user.email);
+          await this.handleSignIn(session.user);
+        } else {
+          console.log('ℹ️ Ingen aktiv session');
+          this.showLoginScreen();
+        }
+
+        // Lytt på auth-endringer
+        this.supabase.auth.onAuthStateChange(async (event, sess) => {
+          console.log('🔄 Auth state changed:', event);
+
+          if (event === 'SIGNED_IN' && sess?.user) {
+            console.log('✅ Bruker logget inn:', sess.user.email);
+            await this.handleSignIn(sess.user);
+          }
+
+          if (event === 'SIGNED_OUT') {
+            console.log('👋 Bruker logget ut');
+            this.currentUser = null;
+            this.showLoginScreen();
+          }
+        });
+
+        this.initialized = true;
+        console.log('✅ AuthService initialisert');
+      } catch (error) {
+        console.error('❌ Auth init feilet:', error);
+        this.showLoginScreen();
       }
-    });
+    })();
 
-    this.initialized = true;
-    console.log('✅ AuthService initialisert');
+    return this.initPromise;
   }
 
-  // Last inn Supabase script
-  loadSupabaseScript() {
+  async loadSupabaseScript() {
+    // Ikke last flere ganger
+    if (window.supabase) return;
+
+    console.log('📦 Laster Supabase script...');
+
     return new Promise((resolve, reject) => {
-      if (window.supabase) {
-        resolve();
+      const existing = document.querySelector('script[data-supabase-script="1"]');
+      if (existing) {
+        existing.addEventListener('load', resolve);
+        existing.addEventListener('error', reject);
         return;
       }
 
-      console.log('📦 Laster Supabase script...');
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      script.src = 'https://unpkg.com/@supabase/supabase-js@2';
+      script.async = true;
+      script.defer = true;
+      script.setAttribute('data-supabase-script', '1');
       script.onload = () => {
         console.log('✅ Supabase script lastet');
         resolve();
       };
-      script.onerror = (err) => {
-        console.error('❌ Kunne ikke laste Supabase script:', err);
-        reject(err);
+      script.onerror = (e) => {
+        console.error('❌ Kunne ikke laste Supabase script', e);
+        reject(e);
       };
       document.head.appendChild(script);
     });
   }
 
-  // Logg inn med Google
+  async acquireLock() {
+    // Enkel lock i localStorage for å unngå samtidige init-race som kan trigge AbortError i noen miljøer
+    const now = Date.now();
+    const ttl = 10_000; // 10s
+    const raw = safeStorageGet(this.lockKey);
+    const val = raw ? Number(raw) : 0;
+
+    if (val && now - val < ttl) {
+      // Lock er "tatt" nylig, vent litt
+      await new Promise((r) => setTimeout(r, 350));
+      return this.acquireLock();
+    }
+
+    safeStorageSet(this.lockKey, String(now));
+  }
+
+  releaseLock() {
+    safeStorageRemove(this.lockKey);
+  }
+
+  async getSessionWithRetry() {
+    await this.acquireLock();
+
+    try {
+      // første forsøk
+      try {
+        const { data, error } = await this.supabase.auth.getSession();
+        if (error) throw error;
+        return data?.session || null;
+      } catch (error) {
+        console.error('❌ getSession kastet feil:', error);
+
+        // retry 1
+        await new Promise((r) => setTimeout(r, 400));
+        try {
+          const { data, error: err2 } = await this.supabase.auth.getSession();
+          if (err2) throw err2;
+          return data?.session || null;
+        } catch (error2) {
+          console.error('❌ getSession retry feilet:', error2);
+          throw error2;
+        }
+      }
+    } finally {
+      this.releaseLock();
+    }
+  }
+
   async signInWithGoogle() {
     try {
-      console.log('🔐 Starter Google sign-in...');
-      
-      const { data, error } = await this.supabase.auth.signInWithOAuth({
+      if (!this.supabase) throw new Error('Supabase ikke initialisert');
+
+      const redirectTo = window.location.origin + window.location.pathname;
+
+      const { error } = await this.supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: window.location.origin
-        }
+        options: { redirectTo },
       });
 
-      if (error) {
-        console.error('❌ Google sign-in error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('✅ Google sign-in startet (redirecter...)');
       return { success: true };
     } catch (error) {
-      console.error('❌ Google sign-in failed:', error);
+      console.error('❌ Sign in error:', error);
       return { success: false, error: error.message };
     }
   }
 
-  // Logg ut
   async signOut() {
     try {
-      console.log('👋 Logger ut...');
+      if (!this.supabase) throw new Error('Supabase ikke initialisert');
+
       const { error } = await this.supabase.auth.signOut();
       if (error) throw error;
+
+      this.currentUser = null;
+      this.showLoginScreen();
       console.log('✅ Utlogging vellykket');
       return { success: true };
     } catch (error) {
@@ -212,8 +284,16 @@ if (error) {
   // Håndter innlogging
   async handleSignIn(user) {
     this.currentUser = user;
+
+    // DEV bypass: Kim (og evt. andre i listen) skal alltid inn i hovedappen uten abonnement/planvalg
+    if (isDevBypassUser(user)) {
+      console.log('🔓 DEV BYPASS aktiv - hopper over subscription/prisside for:', user.email);
+      this.showMainApp();
+      return;
+    }
+
     console.log('🔍 Sjekker subscription for bruker:', user.id);
-    
+
     try {
       // Sjekk om subscriptionService finnes
       if (typeof subscriptionService === 'undefined') {
@@ -225,7 +305,7 @@ if (error) {
       // Sjekk om bruker har et aktivt abonnement
       const subscription = await subscriptionService.checkSubscription(user.id);
       console.log('📊 Subscription status:', subscription);
-      
+
       if (subscription.active) {
         console.log('✅ Aktivt abonnement - viser hovedapp');
         this.showMainApp();
@@ -244,199 +324,48 @@ if (error) {
     }
   }
 
-  // Håndter utlogging
-  handleSignOut() {
-    this.currentUser = null;
-    localStorage.removeItem('fotballLoggedIn');
-    localStorage.removeItem('fotballLoginTime');
-    console.log('🔓 Viser innloggingsskjerm');
-    this.showLoginScreen();
-  }
-
-  // Vis innloggingsskjerm
   showLoginScreen() {
-    console.log('📱 Viser login screen');
-    const passwordProtection = document.getElementById('passwordProtection');
-    const mainApp = document.getElementById('mainApp');
-    const pricingPage = document.getElementById('pricingPage');
-    
-    if (passwordProtection) passwordProtection.style.display = 'flex';
-    if (mainApp) mainApp.style.display = 'none';
+    if (loginScreen) loginScreen.style.display = 'flex';
     if (pricingPage) pricingPage.style.display = 'none';
+    if (mainApp) mainApp.style.display = 'none';
   }
 
-  // Vis hovedapp
+  showPricingPage() {
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (pricingPage) pricingPage.style.display = 'block';
+    if (mainApp) mainApp.style.display = 'none';
+  }
+
   showMainApp() {
-    console.log('📱 Viser hovedapp');
-    const passwordProtection = document.getElementById('passwordProtection');
-    const mainApp = document.getElementById('mainApp');
-    const pricingPage = document.getElementById('pricingPage');
-    
-    if (passwordProtection) passwordProtection.style.display = 'none';
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (pricingPage) pricingPage.style.display = 'none';
+
     if (mainApp) {
       mainApp.style.display = 'block';
-      // Robust visibility (prevents blank screen if CSS/animation gets stuck)
+
+      // Viktig: sørg for at appen faktisk blir synlig og får layout (noen miljøer kan "henge" på opacity/anim)
       mainApp.style.opacity = '1';
       mainApp.style.visibility = 'visible';
       mainApp.style.pointerEvents = 'auto';
-      requestAnimationFrame(() => { try { mainApp.style.opacity = '1'; } catch (e) {} });
-      setTimeout(() => { try { mainApp.style.opacity = '1'; } catch (e) {} }, 800);
     }
-    if (pricingPage) pricingPage.style.display = 'none';
 
-    // Initialiser appen hvis ikke allerede gjort
-    if (typeof initApp === 'function' && !window.appInitialized) {
-      console.log('🚀 Initialiserer app');
-      initApp();
-    }
-  }
-
-  // Vis prisside
-  showPricingPage() {
-    console.log('💳 Viser prisside');
-    const passwordProtection = document.getElementById('passwordProtection');
-    const mainApp = document.getElementById('mainApp');
-    const pricingPage = document.getElementById('pricingPage');
-    
-    if (passwordProtection) passwordProtection.style.display = 'none';
-    if (mainApp) mainApp.style.display = 'none';
-    if (pricingPage) {
-      pricingPage.style.display = 'block';
-      
-      // Initialiser pricing knapper
-      setTimeout(() => {
-        this.initPricingButtons();
-      }, 100);
-    }
-  }
-
-  // Initialiser pricing-knapper
-  initPricingButtons() {
-    console.log('💳 Initialiserer pricing buttons');
-    
-    const selectButtons = document.querySelectorAll('.btn-select');
-    console.log(`Fant ${selectButtons.length} knapper`);
-    
-    if (selectButtons.length === 0) {
-      console.warn('⚠️ Ingen pricing-knapper funnet!');
-      return;
-    }
-    
-    selectButtons.forEach(btn => {
-      // Fjern gamle event listeners
-      const newBtn = btn.cloneNode(true);
-      btn.parentNode.replaceChild(newBtn, btn);
-      
-      newBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const planType = newBtn.getAttribute('data-plan');
-        const priceId = newBtn.getAttribute('data-price-id');
-        
-        console.log(`✨ Knapp klikket: ${planType}, priceId: ${priceId}`);
-        await this.handlePlanSelection(planType, priceId);
-      });
-    });
-    
-    console.log('✅ Pricing buttons initialisert');
-  }
-
-  // Håndter planvalg
-  async handlePlanSelection(planType, priceId) {
+    // Start appen
     try {
-      console.log('🔍 Håndterer planvalg:', planType);
-      
-      const user = this.getUser();
-      
-      if (!user) {
-        console.log('❌ Ingen bruker');
-        alert('Du må være logget inn først');
-        this.showLoginScreen();
-        return;
-      }
-
-      console.log('✅ Bruker funnet:', user.email);
-
-      // Sjekk subscription
-      const subscription = await subscriptionService.checkSubscription(user.id);
-      console.log('📊 Subscription:', subscription);
-      
-      if (subscription.canStartTrial && CONFIG.trial.enabled) {
-        console.log('🎁 Starter trial...');
-        const result = await subscriptionService.startTrial(user.id, planType);
-        
-        if (result.success) {
-          alert(`Gratulerer! Din ${CONFIG.trial.days}-dagers prøveperiode har startet! 🎉`);
-          setTimeout(() => {
-            this.showMainApp();
-          }, 1000);
-        } else {
-          alert('Noe gikk galt. Prøv igjen.');
-        }
+      if (typeof window.initApp === 'function') {
+        console.log('🚀 Initialiserer app');
+        window.initApp();
       } else {
-        console.log('💳 Går til betaling...');
-        await this.startCheckout(planType, priceId, user);
+        console.warn('⚠️ initApp finnes ikke på window');
       }
-    } catch (error) {
-      console.error('❌ Feil:', error);
-      alert('En feil oppstod. Prøv igjen senere.');
+    } catch (e) {
+      console.error('❌ initApp feilet:', e);
     }
   }
 
-  // Start checkout
-  async startCheckout(planType, priceId, user) {
-    try {
-      console.log('💳 Starter checkout:', planType);
-      alert('Videresender til betaling...');
-      
-      await subscriptionService.init();
-      
-      if (!subscriptionService.stripe) {
-        throw new Error('Stripe not initialized');
-      }
-
-      const actualPriceId = CONFIG.prices[planType]?.id || priceId;
-      console.log('Price ID:', actualPriceId);
-
-      if (!actualPriceId) {
-        throw new Error('Invalid price ID');
-      }
-
-      const { error } = await subscriptionService.stripe.redirectToCheckout({
-        lineItems: [{
-          price: actualPriceId,
-          quantity: 1,
-        }],
-        mode: planType === 'lifetime' ? 'payment' : 'subscription',
-        successUrl: `${window.location.origin}/?success=true`,
-        cancelUrl: `${window.location.origin}/?canceled=true`,
-        customerEmail: user.email,
-        clientReferenceId: user.id,
-        metadata: {
-          user_id: user.id,
-          plan_type: planType
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      console.error('❌ Checkout error:', error);
-      alert(`Kunne ikke starte betaling: ${error.message}`);
-    }
+  getUserEmail() {
+    return this.currentUser?.email || null;
   }
 
-  // Er bruker logget inn?
-  isAuthenticated() {
-    return !!this.currentUser;
-  }
-
-  // Hent nåværende bruker
-  getUser() {
-    return this.currentUser;
-  }
-
-  // Hent bruker-ID
   getUserId() {
     return this.currentUser?.id || null;
   }
