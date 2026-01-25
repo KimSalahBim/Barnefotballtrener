@@ -1,123 +1,206 @@
-// Barnefotballtrener - auth-ui.js (MOBIL-FIKS)
-// ===========================================
-// Mål: Google-knappen skal ALLTID reagere på iPhone/Safari.
-// - Binder #googleSignInBtn eksplisitt
-// - Bruker både click og touchend
-// - Viser spinner/disable for synlig respons
-// - Bruker alert som fallback ved feil (slik at det ikke føles som "ingenting skjer")
+// Barnefotballtrener - Auth UI Handler
+// ================================================
+// Håndterer UI for innlogging, logout og subscription status
+// Robust for mobil (Safari) ved å bruke event-delegering for logout.
 
 (function () {
   'use strict';
 
-  function $(id) {
-    return document.getElementById(id);
+  document.addEventListener('DOMContentLoaded', initAuthUI);
+
+  async function initAuthUI() {
+    // Vent litt på at authService blir tilgjengelig
+    await waitForAuthService(3000);
+
+    setupGoogleSignIn();
+    setupLegacyLogin();
+    setupLogoutDelegation(); // <-- viktig: robust på mobil
+    setupSubscriptionBadge();
   }
 
-  function setButtonLoading(btn, loading) {
+  async function waitForAuthService(timeoutMs) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (window.authService && typeof window.authService.signInWithGoogle === 'function') return true;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return false;
+  }
+
+  // -----------------------------
+  // Google Sign In
+  // -----------------------------
+  function setupGoogleSignIn() {
+    const btn = document.getElementById('googleSignInBtn');
     if (!btn) return;
 
-    if (!btn.__bf_original_html) {
-      btn.__bf_original_html = btn.innerHTML;
-    }
+    // Unngå dobbel-binding
+    if (btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
 
-    if (loading) {
+    const handler = async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
       btn.disabled = true;
-      btn.style.opacity = '0.8';
-      btn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:10px;">
-        <span style="display:inline-block; width:16px; height:16px; border:2px solid rgba(0,0,0,0.2); border-top-color: rgba(0,0,0,0.7); border-radius:50%; animation: bfspin 0.8s linear infinite;"></span>
-        Logger inn...
-      </span>`;
-    } else {
-      btn.disabled = false;
-      btn.style.opacity = '';
-      btn.innerHTML = btn.__bf_original_html;
-    }
+      const original = btn.innerHTML;
+      btn.innerHTML = '<span>Logger inn...</span>';
+
+      try {
+        if (!window.authService) throw new Error('AuthService mangler');
+        const result = await window.authService.signInWithGoogle();
+        if (!result || result.success === false) {
+          throw new Error(result?.error || 'Login failed');
+        }
+      } catch (error) {
+        console.error('Google sign in error:', error);
+        notify('Kunne ikke logge inn med Google. Prøv igjen.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
+    };
+
+    // click + touchend for mobil
+    btn.addEventListener('click', handler, { passive: false });
+    btn.addEventListener('touchend', handler, { passive: false });
   }
 
-  function ensureSpinnerCss() {
-    if (document.getElementById('bfspin-style')) return;
-    const style = document.createElement('style');
-    style.id = 'bfspin-style';
-    style.textContent = `@keyframes bfspin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }`;
-    document.head.appendChild(style);
+  // -----------------------------
+  // Legacy Login (gammel passord-metode)
+  // -----------------------------
+  function setupLegacyLogin() {
+    const btn = document.getElementById('legacyLoginBtn');
+    if (!btn) return;
+
+    if (btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+
+    btn.addEventListener('click', () => {
+      const pwd = prompt('Skriv passord:');
+      if (pwd === '1234') {
+        try {
+          localStorage.setItem('fotballLoggedIn', 'true');
+          localStorage.setItem('fotballLoginTime', String(Date.now()));
+        } catch (e) {}
+
+        const err = document.getElementById('passwordError');
+        if (err) err.style.display = 'none';
+
+        if (window.authService && typeof window.authService.showMainApp === 'function') {
+          window.authService.showMainApp();
+        }
+
+        if (typeof window.initApp === 'function' && !window.appInitialized) {
+          window.initApp();
+        }
+      } else {
+        const errorEl = document.getElementById('passwordError');
+        if (errorEl) {
+          errorEl.textContent = 'Feil passord. Prøv igjen.';
+          errorEl.style.display = 'block';
+        }
+      }
+    });
   }
 
-  async function startGoogleLogin(btn) {
+  // -----------------------------
+  // Logout (robust på mobil)
+  // -----------------------------
+  function setupLogoutDelegation() {
+    // Vi lytter på dokumentet og sjekker om klikk/touch kom fra logout-knappen
+    const matchesLogout = (target) => {
+      if (!target) return null;
+      return target.closest('#logoutBtn, [data-action="logout"], .logout-btn');
+    };
+
+    const doLogout = async (ev) => {
+      const btn = matchesLogout(ev.target);
+      if (!btn) return;
+
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      // Unngå dobbel-trigger (click + touchend)
+      if (btn.dataset.locked === '1') return;
+      btn.dataset.locked = '1';
+      setTimeout(() => (btn.dataset.locked = '0'), 600);
+
+      const ok = window.confirm('Er du sikker på at du vil logge ut?');
+      if (!ok) return;
+
+      try {
+        if (!window.authService || typeof window.authService.signOut !== 'function') {
+          throw new Error('authService.signOut mangler');
+        }
+
+        await window.authService.signOut();
+
+        // Valgfritt, men ofte nødvendig for å få UI “rent” på iOS:
+        // reload sikrer at session + view resettes
+        notify('Logget ut', 'info');
+        setTimeout(() => window.location.reload(), 150);
+      } catch (error) {
+        console.error('Logout error:', error);
+        notify('Kunne ikke logge ut. Prøv igjen.', 'error');
+      }
+    };
+
+    document.addEventListener('click', doLogout, true);
+    document.addEventListener('touchend', doLogout, true);
+  }
+
+  // -----------------------------
+  // Subscription Badge
+  // -----------------------------
+  async function setupSubscriptionBadge() {
+    const badge = document.getElementById('subscriptionBadge');
+    const text = document.getElementById('subscriptionText');
+    if (!badge || !text) return;
+
     try {
-      ensureSpinnerCss();
-      setButtonLoading(btn, true);
-
-      // Sørg for at authService finnes
-      if (typeof window.authService === 'undefined' && typeof authService === 'undefined') {
-        throw new Error('authService finnes ikke (auth.js lastes ikke?)');
+      const user = window.authService?.getUser?.();
+      if (!user) {
+        badge.style.display = 'none';
+        return;
       }
 
-      // Noen ganger ligger den på window, andre ganger som global
-      const svc = window.authService || authService;
-
-      // Sørg for init før OAuth (så supabase client finnes)
-      if (typeof svc.init === 'function') {
-        await svc.init();
+      const subscription = await window.subscriptionService?.checkSubscription?.(user.id);
+      if (!subscription) {
+        badge.style.display = 'none';
+        return;
       }
 
-      if (typeof svc.signInWithGoogle !== 'function') {
-        throw new Error('signInWithGoogle() finnes ikke på authService');
+      if (subscription.trial) {
+        badge.className = 'subscription-badge trial';
+        text.textContent = `Trial`;
+        badge.style.display = 'flex';
+      } else if (subscription.active) {
+        badge.className = 'subscription-badge active';
+        text.textContent = 'Pro';
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
       }
-
-      const res = await svc.signInWithGoogle();
-
-      // Hvis OAuth redirect starter riktig, vil siden navigere bort.
-      // Hvis vi får error uten redirect:
-      if (res && res.success === false) {
-        throw new Error(res.error || 'Innlogging feilet');
-      }
-    } catch (err) {
-      console.error('Google login error:', err);
-      setButtonLoading(btn, false);
-
-      // Bruk alert så du SER at noe skjedde
-      alert('Innlogging feilet: ' + (err?.message || String(err)));
+    } catch (e) {
+      console.error('Error loading subscription badge:', e);
+      badge.style.display = 'none';
     }
   }
 
-  function bindGoogleButton() {
-    const btn = $('googleSignInBtn');
-    if (!btn) {
-      console.warn('Fant ikke #googleSignInBtn');
+  // -----------------------------
+  // Notification helper
+  // -----------------------------
+  function notify(message, type = 'info') {
+    if (typeof window.showNotification === 'function') {
+      window.showNotification(message, type);
       return;
     }
+    const el = document.getElementById('notification');
+    if (!el) return;
 
-    // Gjør det ekstra klikkbart på iOS
-    btn.style.pointerEvents = 'auto';
-    btn.style.cursor = 'pointer';
-    btn.style.position = btn.style.position || 'relative';
-    btn.style.zIndex = btn.style.zIndex || '1001';
-
-    if (btn.__bf_bound) return;
-    btn.__bf_bound = true;
-
-    // CLICK
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      startGoogleLogin(btn);
-    }, { passive: false });
-
-    // TOUCH (iOS)
-    btn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      startGoogleLogin(btn);
-    }, { passive: false });
-
-    console.log('✅ Google-knapp bundet (click + touchend)');
+    el.textContent = message;
+    el.className = `notification ${type}`;
+    el.style.display = 'block';
+    setTimeout(() => (el.style.display = 'none'), 2600);
   }
-
-  // Boot
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindGoogleButton);
-  } else {
-    bindGoogleButton();
-  }
-
 })();
