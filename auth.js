@@ -317,6 +317,11 @@ class AuthService {
       console.error('❌ initApp feilet:', e);
     }
   }
+} // ✅ VIKTIG: Lukker class AuthService
+
+// Global instans
+const authService = new AuthService();
+window.authService = authService;
 
 
 
