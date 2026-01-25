@@ -457,7 +457,7 @@
       <div id="training" class="tab-content">
         <div class="tab-header">
           <h2><i class="fas fa-running"></i> Trening</h2>
-          <p class="tab-description">Opprett balanserte treningsgrupper basert på ferdighetsnivå.</p>
+          <p class="tab-description">Lag differensierte treningsgrupper basert på ferdighetsnivå (beste sammen, neste beste sammen, osv.).</p>
         </div>
 
         <div class="settings-card">
@@ -487,10 +487,19 @@
       <div id="match" class="tab-content">
         <div class="tab-header">
           <h2><i class="fas fa-futbol"></i> Kamp</h2>
-          <p class="tab-description">Del spillerne i to jevne lag for kamp.</p>
+          <p class="tab-description">Del spillerne i jevne lag basert på ferdighetsnivå.</p>
         </div>
 
         <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-label">Antall lag:</div>
+            <div class="number-control">
+              <button class="number-btn minus" type="button" onclick="changeNumber('matchTeams', -1)">−</button>
+              <input type="number" id="matchTeams" class="number-input" value="2" min="2" max="6">
+              <button class="number-btn plus" type="button" onclick="changeNumber('matchTeams', 1)">+</button>
+            </div>
+          </div>
+
           <div class="selection-header">
             <div class="selection-title">Velg spillere (<span id="matchCount">0</span>)</div>
           </div>
