@@ -317,3 +317,36 @@
   .password-icon{ width: 86px; height: 86px; border-radius: 20px; }
   .login-logo{ width: 68px; height: 68px; }
 }
+
+/* ---- FINAL OVERRIDE: Google-knapp (tving designet) ---- */
+button#googleSignInBtn.btn-google{
+  width: 100%;
+  padding: 14px 18px;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 18px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  font-size: 16px;
+  font-weight: 750;
+  color: #0b1220;
+
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.10);
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+button#googleSignInBtn.btn-google:hover{
+  border-color: rgba(15, 23, 42, 0.20);
+  transform: translateY(-1px);
+  box-shadow: 0 18px 46px rgba(2, 6, 23, 0.16);
+}
+
+button#googleSignInBtn.btn-google:active{
+  transform: translateY(0);
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.10);
+}
