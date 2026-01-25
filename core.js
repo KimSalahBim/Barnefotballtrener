@@ -301,7 +301,7 @@
           <div class="player-details">
             <div class="player-name">${escapeHtml(p.name)}</div>
             <div class="player-meta">
-              ${state.settings.useSkill ? `Nivå ${p.skill} · ` : ''}${p.goalie ? '🧤 Keeper' : '⚽ Utespiller'}
+              ${p.goalie ? '🧤 Keeper' : '⚽ Utespiller'}
             </div>
           </div>
         </label>
@@ -328,7 +328,7 @@
           <div class="player-details">
             <div class="player-name">${escapeHtml(p.name)}</div>
             <div class="player-meta">
-              ${state.settings.useSkill ? `Nivå ${p.skill} · ` : ''}${p.goalie ? '🧤 Keeper' : '⚽ Utespiller'}
+              ${p.goalie ? '🧤 Keeper' : '⚽ Utespiller'}
             </div>
           </div>
         </label>
