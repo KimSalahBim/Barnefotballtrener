@@ -22,7 +22,11 @@ if (!window.__bf_aborterror_guard) {
 // -------------------------------
 // DEV bypass
 // -------------------------------
-const DEV_BYPASS_EMAILS = ['kimruneholmvik@gmail.com'];
+const DEV_BYPASS_EMAILS = [
+  'kimruneholmvik@gmail.com',
+  'katrinenordseth@gmail.com',
+];
+
 function isDevBypassUser(user) {
   const email = (user?.email || '').toLowerCase().trim();
   return DEV_BYPASS_EMAILS.includes(email);
