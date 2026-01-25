@@ -319,16 +319,14 @@ class AuthService {
   }
 } // ✅ VIKTIG: Lukker class AuthService
 
-// Global instans
-const authService = new AuthService();
-window.authService = authService;
 
 
+// Global instans (idempotent – tåler at fila lastes flere ganger)
+window.authService = window.authService || new AuthService();
 
+// Bruk "var" så det ikke krasjer om scriptet evalueres på nytt
+var authService = window.authService;
 
-// Global instans
-const authService = new AuthService();
-window.authService = authService;
 
 // -------------------------------
 // Bind #googleSignInBtn (eksakt)
