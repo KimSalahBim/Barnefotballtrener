@@ -1,8 +1,13 @@
-// Barnefotballtrener - Autentisering (Supabase)
-// ================================================
+// Barnefotballtrener - auth.js
+// ===================================================
+// Robust Supabase OAuth + UI switching (login/pricing/app)
+// - Fikser "Google-knapp gjør ingenting" på mobil (binder klikk)
+// - Guard mot AbortError (Web Locks / fetch abort)
+// - DEV bypass for spesifikke eposter (hopper over plan/pricing)
 
-// Noen nettlesere/enheter kan kaste AbortError fra interne Supabase-auth operasjoner (f.eks. Web Locks/fetch som avbrytes).
-// Vi vil ikke la det ta ned hele appen.
+// -------------------------------
+// AbortError guard (ikke krasj appen)
+// -------------------------------
 if (!window.__bf_aborterror_guard) {
   window.__bf_aborterror_guard = true;
   window.addEventListener('unhandledrejection', (event) => {
@@ -14,66 +19,56 @@ if (!window.__bf_aborterror_guard) {
   });
 }
 
-// --- DEV / ADMIN BYPASS ---
-// Brukes for å slippe betalings-/abonnementsskjerm for utvalgte e-poster (f.eks. under testing).
-// Viktig: Dette er en "hard bypass" på klientsiden. Fjern før offentlig lansering dersom du ikke vil ha gratis tilgang.
+// -------------------------------
+// DEV / ADMIN BYPASS (test)
+// -------------------------------
 const DEV_BYPASS_EMAILS = ['kimruneholmvik@gmail.com'];
-
 function isDevBypassUser(user) {
   const email = (user?.email || '').toLowerCase().trim();
   return DEV_BYPASS_EMAILS.includes(email);
 }
 
-// Konfigurasjon - HENTES FRA ENV (Vercel) via window.ENV eller fallback
+// -------------------------------
+// Config (Vercel env via window.ENV eller globals)
+// -------------------------------
 const SUPABASE_URL =
   (window.ENV && window.ENV.SUPABASE_URL) ||
   window.SUPABASE_URL ||
   '';
 
-// Bruk ANON_KEY (public) i frontend, aldri service_role
 const SUPABASE_ANON_KEY =
   (window.ENV && (window.ENV.SUPABASE_ANON_KEY || window.ENV.SUPABASE_ANON)) ||
   window.SUPABASE_ANON_KEY ||
   window.SUPABASE_ANON ||
   '';
 
-// UI-elementer
+// -------------------------------
+// DOM refs
+// -------------------------------
 const loginScreen = document.getElementById('passwordProtection');
 const mainApp = document.getElementById('mainApp');
 const pricingPage = document.getElementById('pricingPage');
 
-// Liten hjelpefunksjon for trygg localStorage
+// -------------------------------
+// Safe storage helpers (Edge/Tracking prevention)
+// -------------------------------
 function safeStorageGet(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch (e) {
-    return null;
-  }
+  try { return localStorage.getItem(key); } catch { return null; }
 }
-
 function safeStorageSet(key, value) {
-  try {
-    localStorage.setItem(key, value);
-    return true;
-  } catch (e) {
-    return false;
-  }
+  try { localStorage.setItem(key, value); return true; } catch { return false; }
 }
-
 function safeStorageRemove(key) {
-  try {
-    localStorage.removeItem(key);
-    return true;
-  } catch (e) {
-    return false;
-  }
+  try { localStorage.removeItem(key); return true; } catch { return false; }
 }
 
+// -------------------------------
+// AuthService
+// -------------------------------
 class AuthService {
   constructor() {
     this.supabase = null;
     this.currentUser = null;
-    this.initialized = false;
     this.initPromise = null;
     this.lockKey = 'bf_auth_lock_v1';
   }
@@ -92,7 +87,6 @@ class AuthService {
           this.showLoginScreen();
           return;
         }
-
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
           console.error('❌ Mangler Supabase config (URL/ANON_KEY)');
           this.showLoginScreen();
@@ -109,19 +103,7 @@ class AuthService {
 
         console.log('✅ Supabase client opprettet');
 
-        // OAuth callback-detektering (hash/query)
-        const url = new URL(window.location.href);
-        const hasOAuthParams =
-          url.searchParams.get('code') ||
-          url.searchParams.get('access_token') ||
-          url.hash.includes('access_token') ||
-          url.hash.includes('code=');
-
-        if (hasOAuthParams) {
-          console.log('🔑 OAuth callback detektert - behandler...');
-        }
-
-        // Hent session med retry (AbortError kan skje)
+        // Hent session med retry og lock (reduser AbortError / race)
         let session = null;
         try {
           session = await this.getSessionWithRetry();
@@ -154,7 +136,6 @@ class AuthService {
           }
         });
 
-        this.initialized = true;
         console.log('✅ AuthService initialisert');
       } catch (error) {
         console.error('❌ Auth init feilet:', error);
@@ -166,7 +147,6 @@ class AuthService {
   }
 
   async loadSupabaseScript() {
-    // Ikke last flere ganger
     if (window.supabase) return;
 
     console.log('📦 Laster Supabase script...');
@@ -197,14 +177,12 @@ class AuthService {
   }
 
   async acquireLock() {
-    // Enkel lock i localStorage for å unngå samtidige init-race som kan trigge AbortError i noen miljøer
     const now = Date.now();
     const ttl = 10_000; // 10s
     const raw = safeStorageGet(this.lockKey);
     const val = raw ? Number(raw) : 0;
 
     if (val && now - val < ttl) {
-      // Lock er "tatt" nylig, vent litt
       await new Promise((r) => setTimeout(r, 350));
       return this.acquireLock();
     }
@@ -218,9 +196,7 @@ class AuthService {
 
   async getSessionWithRetry() {
     await this.acquireLock();
-
     try {
-      // første forsøk
       try {
         const { data, error } = await this.supabase.auth.getSession();
         if (error) throw error;
@@ -230,14 +206,9 @@ class AuthService {
 
         // retry 1
         await new Promise((r) => setTimeout(r, 400));
-        try {
-          const { data, error: err2 } = await this.supabase.auth.getSession();
-          if (err2) throw err2;
-          return data?.session || null;
-        } catch (error2) {
-          console.error('❌ getSession retry feilet:', error2);
-          throw error2;
-        }
+        const { data, error: err2 } = await this.supabase.auth.getSession();
+        if (err2) throw err2;
+        return data?.session || null;
       }
     } finally {
       this.releaseLock();
@@ -248,6 +219,7 @@ class AuthService {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
 
+      // iOS/Safari: sørg for redirectTo peker på samme origin/path
       const redirectTo = window.location.origin + window.location.pathname;
 
       const { error } = await this.supabase.auth.signInWithOAuth({
@@ -256,38 +228,33 @@ class AuthService {
       });
 
       if (error) throw error;
-
       return { success: true };
     } catch (error) {
-      console.error('❌ Sign in error:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Google sign-in error:', error);
+      return { success: false, error: error?.message || String(error) };
     }
   }
 
   async signOut() {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
-
       const { error } = await this.supabase.auth.signOut();
       if (error) throw error;
-
       this.currentUser = null;
       this.showLoginScreen();
-      console.log('✅ Utlogging vellykket');
       return { success: true };
     } catch (error) {
       console.error('❌ Sign out error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || String(error) };
     }
   }
 
-  // Håndter innlogging
   async handleSignIn(user) {
     this.currentUser = user;
 
-    // DEV bypass: Kim (og evt. andre i listen) skal alltid inn i hovedappen uten abonnement/planvalg
+    // DEV BYPASS: Kim går alltid rett til appen uten planvalg
     if (isDevBypassUser(user)) {
-      console.log('🔓 DEV BYPASS aktiv - hopper over subscription/prisside for:', user.email);
+      console.log('🔓 DEV BYPASS aktiv - hopper over pricing/subscription for:', user.email);
       this.showMainApp();
       return;
     }
@@ -295,31 +262,24 @@ class AuthService {
     console.log('🔍 Sjekker subscription for bruker:', user.id);
 
     try {
-      // Sjekk om subscriptionService finnes
       if (typeof subscriptionService === 'undefined') {
         console.warn('⚠️ subscriptionService ikke funnet - viser prisside');
         this.showPricingPage();
         return;
       }
 
-      // Sjekk om bruker har et aktivt abonnement
       const subscription = await subscriptionService.checkSubscription(user.id);
       console.log('📊 Subscription status:', subscription);
 
-      if (subscription.active) {
-        console.log('✅ Aktivt abonnement - viser hovedapp');
+      if (subscription?.active) {
         this.showMainApp();
-      } else if (subscription.trial) {
-        console.log('🎁 Trial-periode aktiv - viser hovedapp');
+      } else if (subscription?.trial) {
         this.showMainApp();
       } else {
-        console.log('💳 Ingen aktiv subscription - viser prisside');
         this.showPricingPage();
       }
     } catch (error) {
       console.error('❌ Subscription check failed:', error);
-      // Vis prisside hvis subscription-sjekk feiler
-      console.log('⚠️ Feil ved subscription-sjekk - viser prisside');
       this.showPricingPage();
     }
   }
@@ -342,8 +302,6 @@ class AuthService {
 
     if (mainApp) {
       mainApp.style.display = 'block';
-
-      // Viktig: sørg for at appen faktisk blir synlig og får layout (noen miljøer kan "henge" på opacity/anim)
       mainApp.style.opacity = '1';
       mainApp.style.visibility = 'visible';
       mainApp.style.pointerEvents = 'auto';
@@ -361,26 +319,73 @@ class AuthService {
       console.error('❌ initApp feilet:', e);
     }
   }
-
-  getUserEmail() {
-    return this.currentUser?.email || null;
-  }
-
-  getUserId() {
-    return this.currentUser?.id || null;
-  }
 }
 
-// Opprett global instans
+// Global instans
 const authService = new AuthService();
+window.authService = authService;
 
-// Initialiser når DOM er klar
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log('📄 DOM ready - initialiserer auth');
-    authService.init();
+// -------------------------------
+// Google-knapp binding (fikser "skjer ingenting" på mobil)
+// -------------------------------
+function bindGoogleLoginButton() {
+  // Finn knappen uansett hvordan den er laget i HTML
+  const candidates = [
+    document.getElementById('googleLoginBtn'),
+    document.getElementById('googleSignInBtn'),
+    document.getElementById('btnGoogle'),
+    document.getElementById('loginWithGoogle'),
+    document.querySelector('.google-btn'),
+    document.querySelector('[data-provider="google"]'),
+    ...Array.from(document.querySelectorAll('button')).filter((b) =>
+      (b.textContent || '').toLowerCase().includes('google')
+    ),
+  ].filter(Boolean);
+
+  if (!candidates.length) {
+    console.warn('⚠️ Fant ingen Google-login knapp i DOM');
+    return;
+  }
+
+  candidates.forEach((btn) => {
+    if (btn.__bf_bound_google) return;
+    btn.__bf_bound_google = true;
+
+    btn.style.pointerEvents = 'auto';
+    btn.style.cursor = 'pointer';
+
+    btn.addEventListener(
+      'click',
+      async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('➡️ Klikk på Google-login, starter OAuth...');
+        const res = await authService.signInWithGoogle();
+        if (!res?.success) {
+          console.error('❌ Google-login feilet:', res?.error);
+          // showNotification er valgfritt (hvis du har den)
+          window.showNotification?.('Innlogging feilet. Prøv igjen.', 'error');
+        }
+      },
+      { passive: false }
+    );
   });
-} else {
-  console.log('📄 DOM allerede ready - initialiserer auth');
+
+  console.log('✅ Google-login knapp bundet:', candidates.length);
+}
+
+// -------------------------------
+// Init når DOM er klar
+// -------------------------------
+function bootAuth() {
+  console.log('📄 DOM ready - initialiserer auth');
+  bindGoogleLoginButton();
   authService.init();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootAuth);
+} else {
+  bootAuth();
 }
