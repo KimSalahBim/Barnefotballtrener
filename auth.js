@@ -286,13 +286,15 @@ this._mainShown = false;
 
   showLoginScreen() {
 this._mainShown = false;
+    
     if (loginScreen) loginScreen.style.display = 'flex';
     if (pricingPage) pricingPage.style.display = 'none';
     if (mainApp) mainApp.style.display = 'none';
   }
 
   showPricingPage() {
-this._mainShown = false;    
+this._mainShown = false;  
+    
     if (loginScreen) loginScreen.style.display = 'none';
     if (pricingPage) pricingPage.style.display = 'block';
     if (mainApp) mainApp.style.display = 'none';
