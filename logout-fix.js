@@ -1,126 +1,90 @@
 // logout-fix.js
-// Robust logout for iOS/Safari (Tracking Prevention) + Supabase
+// Legger til authService.signOut() slik at auth-ui.js sin logout fungerer.
+// Skal lastes ETTER auth.js og auth-ui.js (helt nederst i index.html).
+
 (function () {
   'use strict';
 
-  function $(id) { return document.getElementById(id); }
-
-  function safeNotify(msg, type) {
-    try {
-      if (typeof window.showNotification === 'function') {
-        window.showNotification(msg, type || 'info');
-        return;
-      }
-    } catch (_) {}
-    // fallback
-    console.log(msg);
-  }
-
-  function getSupabaseClient() {
-    // prøv vanlige globale navn
-    return (
+  async function supabaseSignOutMaybe() {
+    // Prøver flere mulige steder du kan ha klienten liggende
+    const svc = window.authService;
+    const client =
+      (svc && (svc.supabase || svc.supabaseClient)) ||
       window.supabaseClient ||
-      window._supabaseClient ||
-      (window.authService && (window.authService.supabaseClient || window.authService.supabase)) ||
-      null
-    );
-  }
+      window.supabase;
 
-  async function trySignOut() {
-    const client = getSupabaseClient();
     if (client && client.auth && typeof client.auth.signOut === 'function') {
       await client.auth.signOut();
-      return true;
-    }
-    if (window.authService && typeof window.authService.signOut === 'function') {
-      await window.authService.signOut();
       return true;
     }
     return false;
   }
 
-  function clearLocalAuthAndAppData() {
-    // 1) Fjern appdata (bft:...)
+  function clearLocalMaybe() {
+    // Ikke aggressiv: vi prøver, men tåler Tracking Prevention
     try {
-      const toRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k) continue;
-        if (k.startsWith('bft:')) toRemove.push(k);
-      }
-      toRemove.forEach((k) => localStorage.removeItem(k));
-    } catch (_) {}
-
-    // 2) Fjern supabase tokens (best effort)
+      // Fjern kun app-relatert, ikke alt
+      const keys = [
+        'bf_players',
+        'bf_app_state',
+        'bf_training',
+        'bf_match',
+        'bf_liga',
+        'bf_kampdag',
+        'players',
+        'appState',
+        'ligaState',
+        'kampdagState'
+      ];
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch (e) {}
     try {
-      const toRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k) continue;
-        if (
-          k.startsWith('sb-') ||
-          k.includes('supabase') ||
-          k.includes('auth-token') ||
-          k.includes('refresh_token') ||
-          k.includes('access_token')
-        ) {
-          toRemove.push(k);
-        }
-      }
-      toRemove.forEach((k) => localStorage.removeItem(k));
-    } catch (_) {}
+      sessionStorage.removeItem('supabase.auth.token');
+    } catch (e) {}
   }
 
-  function showLoginScreenFallback() {
-    try {
-      if (window.authService && typeof window.authService.showLoginScreen === 'function') {
-        window.authService.showLoginScreen();
-        return;
-      }
-    } catch (_) {}
+  function ensureSignOut() {
+    const svc = window.authService;
+    if (!svc) return false;
 
-    // fallback: vis login-skjerm ved å bytte display
-    const main = $('mainApp');
-    const login = $('passwordProtection');
-    const pricing = $('pricingPage');
-    if (main) main.style.display = 'none';
-    if (pricing) pricing.style.display = 'none';
-    if (login) login.style.display = 'flex';
-  }
+    if (typeof svc.signOut === 'function') return true;
 
-  function bind() {
-    const btn = $('logoutBtn');
-    if (!btn) return;
-
-    const handler = async (ev) => {
+    // Legg til metoden auth-ui.js forventer
+    svc.signOut = async function () {
       try {
-        ev.preventDefault();
-        ev.stopImmediatePropagation();
-      } catch (_) {}
-
-      const ok = window.confirm('Er du sikker på at du vil logge ut?');
-      if (!ok) return;
-
-      try {
-        await trySignOut();
+        await supabaseSignOutMaybe();
       } catch (e) {
-        // iOS/Safari kan feile her – vi fortsetter uansett
-        console.warn('signOut feilet (fortsetter):', e);
+        // Vi logger, men lar flyten gå videre
+        console.warn('Supabase signOut feilet (fortsetter):', e);
       }
 
-      clearLocalAuthAndAppData();
-      showLoginScreenFallback();
-      safeNotify('Logget ut', 'success');
+      clearLocalMaybe();
+
+      // Vis login igjen hvis metoden finnes – ellers fallback
+      if (typeof svc.showLoginScreen === 'function') {
+        svc.showLoginScreen();
+      } else {
+        // hard fallback
+        window.location.href = window.location.origin + window.location.pathname;
+      }
     };
 
-    // capture=true for å overstyre evt. eksisterende handler som feiler
-    btn.addEventListener('click', handler, true);
-    btn.addEventListener('touchend', handler, true);
+    console.log('✅ logout-fix: authService.signOut() lagt til');
+    return true;
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bind);
-  } else {
-    bind();
+  function init() {
+    ensureSignOut();
+    // Vi trenger ikke re-binde knappen – auth-ui.js har allerede handler.
+    // Vi bare sørger for at signOut() finnes.
   }
+
+  // Kjør flere ganger for sikkerhet (pga last/async)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  setTimeout(init, 250);
+  setTimeout(init, 1000);
 })();
