@@ -1,25 +1,125 @@
-/* Barnefotballtrener - Auth & Subscription Styles */
+/* Barnefotballtrener - Auth & Subscription Styles
+   Tema: bruker farger inspirert av logo (oransje/gul + grønn)
+*/
 
-/* Google Sign In Button */
+/* ------------------------------
+   Theme tokens (logo-inspirert)
+--------------------------------- */
+:root{
+  --bf-orange: #f39a1f;
+  --bf-yellow: #ffd24a;
+  --bf-green:  #2e8b57;
+  --bf-deep:   #0f3d2e;
+
+  --bf-ink:    #0f172a;
+  --bf-muted:  #64748b;
+
+  --bf-border: rgba(15, 23, 42, 0.14);
+  --bf-shadow: 0 14px 36px rgba(2, 6, 23, 0.12);
+  --bf-shadow-soft: 0 10px 26px rgba(2, 6, 23, 0.10);
+
+  --bf-radius-lg: 18px;
+  --bf-radius-md: 14px;
+}
+
+/* ------------------------------
+   Login box / header
+--------------------------------- */
+.password-box {
+  background: #fff;
+  padding: 40px;
+  border-radius: 22px;
+  box-shadow: 0 22px 70px rgba(2, 6, 23, 0.16);
+  max-width: 460px;
+  width: 100%;
+  animation: slideUp 0.45s ease;
+}
+
+.password-header{
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.password-icon{
+  width: 92px;
+  height: 92px;
+  margin: 0 auto 18px;
+  border-radius: 22px;
+
+  /* “kortet” bak logoen – lett logo-inspirert */
+  background: linear-gradient(135deg,
+    rgba(243, 154, 31, 0.16),
+    rgba(46, 139, 87, 0.14)
+  );
+  border: 1px solid rgba(15, 23, 42, 0.08);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: 0 14px 34px rgba(2, 6, 23, 0.10);
+}
+
+.login-logo{
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 10px 18px rgba(2, 6, 23, 0.10));
+}
+
+.password-header h1{
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--bf-ink);
+  margin: 0 0 8px;
+}
+
+.password-header p{
+  font-size: 16px;
+  color: var(--bf-muted);
+  margin: 0;
+}
+
+/* ------------------------------
+   Google button (moderne, “proff”)
+--------------------------------- */
 .btn-google{
   width: 100%;
-  padding: 12px 16px;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.14);
-  border-radius: 14px;
+  padding: 14px 18px;
+  background: #ffffff;
+
+  /* subtil “brand” outline */
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: var(--bf-radius-lg);
 
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
 
   font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
+  font-weight: 750;
+  color: #0b1220;
 
   cursor: pointer;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.08);
-  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, border-color 120ms ease;
+  box-shadow: var(--bf-shadow-soft);
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, background 120ms ease;
+  position: relative;
+  isolation: isolate;
+}
+
+/* “gradient ring” (logo-farger) */
+.btn-google::before{
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(243,154,31,0.65), rgba(255,210,74,0.55), rgba(46,139,87,0.60));
+  z-index: -1;
+  opacity: 0.0;
+  transition: opacity 160ms ease;
 }
 
 .btn-google svg{
@@ -29,236 +129,191 @@
 }
 
 .btn-google:hover{
-  background: #fafafa;
-  border-color: rgba(0,0,0,0.22);
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.20);
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+  box-shadow: 0 18px 46px rgba(2, 6, 23, 0.16);
+}
+
+.btn-google:hover::before{
+  opacity: 0.95; /* ring aktiveres på hover */
 }
 
 .btn-google:active{
-  transform: translateY(0);
-  box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+  transform: translateY(0px);
+  box-shadow: var(--bf-shadow-soft);
 }
 
-.btn-google:disabled{
-  opacity: 0.55;
+.btn-google:focus{
+  outline: none;
+}
+
+/* synlig tastaturfokus uten å “bråke” */
+.btn-google:focus-visible{
+  outline: 3px solid rgba(243,154,31,0.30);
+  outline-offset: 3px;
+}
+
+/* Disabled / loading */
+.btn-google:disabled,
+.btn-google.loading{
+  opacity: 0.60;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
-
-.btn-google svg {
-  flex-shrink: 0;
+.btn-google.loading{
+  pointer-events: none;
 }
 
-/* Divider */
-.divider {
+/* ------------------------------
+   Divider (hvis du bruker den et sted)
+--------------------------------- */
+.divider{
   display: flex;
   align-items: center;
-  margin: 20px 0;
-  color: var(--gray-500);
-  font-size: 14px;
+  margin: 18px 0 0;
+  color: rgba(100,116,139,0.9);
+  font-size: 13px;
 }
 
 .divider::before,
-.divider::after {
-  content: '';
+.divider::after{
+  content:'';
   flex: 1;
   height: 1px;
-  background: var(--gray-200);
+  background: rgba(15, 23, 42, 0.10);
 }
 
-.divider span {
-  padding: 0 15px;
+.divider span{
+  padding: 0 12px;
 }
 
-/* Subscription Badge */
-.subscription-badge {
+/* ------------------------------
+   Subscription badge (hvis i bruk)
+--------------------------------- */
+.subscription-badge{
   display: none;
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 700;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
   white-space: nowrap;
-  transition: all 0.3s ease;
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
-.subscription-badge.active {
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  color: #1f2937;
+.subscription-badge.active{
+  background: linear-gradient(135deg, var(--bf-yellow), var(--bf-orange));
+  color: #0b1220;
 }
 
-.subscription-badge.trial {
-  background: linear-gradient(135deg, var(--egge-blue), var(--egge-light-blue));
-  color: white;
+.subscription-badge.trial{
+  background: linear-gradient(135deg, rgba(46,139,87,1), rgba(15,61,46,1));
+  color: #fff;
 }
 
-.subscription-badge:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+.subscription-badge:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.18);
 }
 
-.subscription-badge i {
+.subscription-badge i{
   font-size: 14px;
 }
 
-/* Password Box Improvements */
-.password-box {
-  background: white;
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  max-width: 420px;
-  width: 100%;
-  animation: slideUp 0.5s ease;
-}
-
-.password-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.password-icon {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 20px;
-  background: linear-gradient(135deg, var(--egge-blue), var(--egge-light-blue));
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  box-shadow: 0 10px 30px rgba(13, 71, 161, 0.3);
-}
-
-.password-header h1 {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--gray-900);
-  margin-bottom: 8px;
-}
-
-.password-header p {
-  font-size: 16px;
-  color: var(--gray-600);
-}
-
-.small-text {
+/* ------------------------------
+   Small text / links
+--------------------------------- */
+.small-text{
   font-size: 13px;
-  color: var(--gray-600);
-  line-height: 1.5;
+  color: rgba(100,116,139,1);
+  line-height: 1.55;
 }
 
-.small-text a {
-  color: var(--egge-blue);
+.small-text a{
+  color: var(--bf-green);
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.small-text a:hover {
+.small-text a:hover{
   text-decoration: underline;
 }
 
-/* Secondary Button (for legacy login) */
-.btn-secondary {
+/* ------------------------------
+   Secondary button (hvis i bruk)
+--------------------------------- */
+.btn-secondary{
   width: 100%;
-  padding: 12px 20px;
+  padding: 12px 18px;
   background: transparent;
-  border: 2px solid var(--gray-300);
-  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: var(--bf-radius-md);
   font-size: 15px;
-  font-weight: 600;
-  color: var(--gray-700);
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.90);
   cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
+
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, border-color 120ms ease;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.btn-secondary:hover {
-  background: var(--gray-50);
-  border-color: var(--gray-400);
+.btn-secondary:hover{
+  background: rgba(2, 6, 23, 0.03);
+  border-color: rgba(15, 23, 42, 0.26);
   transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.12);
 }
 
-.btn-secondary i {
-  font-size: 14px;
+.btn-secondary:active{
+  transform: translateY(0);
+  box-shadow: none;
 }
 
-/* Mobile Adjustments */
-@media (max-width: 480px) {
-  .password-box {
-    padding: 30px 20px;
-  }
-
-  .password-header h1 {
-    font-size: 24px;
-  }
-
-  .btn-google,
-  .btn-secondary {
-    font-size: 14px;
-    padding: 12px 16px;
-  }
-
-  .subscription-badge {
-    font-size: 11px;
-    padding: 4px 8px;
-  }
-}
-
-/* Loading State */
-.btn-google.loading,
-.btn-secondary.loading {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.btn-google.loading i,
-.btn-secondary.loading i {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Error Message Styling */
-.error-message {
+/* ------------------------------
+   Error message
+--------------------------------- */
+.error-message{
   background: #FEE2E2;
   border: 1px solid #FCA5A5;
   color: #991B1B;
-  padding: 12px 16px;
-  border-radius: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
-  margin-top: 15px;
+  font-weight: 600;
+  margin-top: 14px;
   display: none;
 }
 
-.error-message.show {
+.error-message.show{
   display: block;
-  animation: shake 0.4s ease;
+  animation: shake 0.35s ease;
 }
 
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-10px); }
-  75% { transform: translateX(10px); }
+/* ------------------------------
+   Animations / responsive
+--------------------------------- */
+@keyframes slideUp{
+  from{ transform: translateY(10px); opacity: 0; }
+  to{ transform: translateY(0px); opacity: 1; }
 }
-.login-logo{
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  display: block;
+
+@keyframes shake{
+  0%,100%{ transform: translateX(0); }
+  25%{ transform: translateX(-8px); }
+  75%{ transform: translateX(8px); }
+}
+
+@media (max-width: 480px){
+  .password-box{ padding: 30px 18px; }
+  .password-header h1{ font-size: 26px; }
+  .btn-google{ font-size: 15px; padding: 13px 16px; }
+  .password-icon{ width: 86px; height: 86px; border-radius: 20px; }
+  .login-logo{ width: 68px; height: 68px; }
 }
