@@ -295,28 +295,35 @@ class AuthService {
     if (mainApp) mainApp.style.display = 'none';
   }
 
-  showMainApp() {
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (pricingPage) pricingPage.style.display = 'none';
-
-    if (mainApp) {
-      mainApp.style.display = 'block';
-      mainApp.style.opacity = '1';
-      mainApp.style.visibility = 'visible';
-      mainApp.style.pointerEvents = 'auto';
-    }
-
-    try {
-      if (typeof window.initApp === 'function') {
-        console.log('🚀 Initialiserer app');
-        window.initApp();
-      } else {
-        console.warn('⚠️ initApp finnes ikke på window');
-      }
-    } catch (e) {
-      console.error('❌ initApp feilet:', e);
-    }
+showMainApp() {
+  // ✅ Guard: ikke init app flere ganger
+  if (this._mainShown) {
+    console.log('ℹ️ MainApp allerede vist – hopper over init');
+    return;
   }
+  this._mainShown = true;
+
+  if (loginScreen) loginScreen.style.display = 'none';
+  if (pricingPage) pricingPage.style.display = 'none';
+
+  if (mainApp) {
+    mainApp.style.display = 'block';
+    mainApp.style.opacity = '1';
+    mainApp.style.visibility = 'visible';
+    mainApp.style.pointerEvents = 'auto';
+  }
+
+  try {
+    if (typeof window.initApp === 'function') {
+      console.log('🚀 Initialiserer app');
+      window.initApp();
+    } else {
+      console.warn('⚠️ initApp finnes ikke på window');
+    }
+  } catch (e) {
+    console.error('❌ initApp feilet:', e);
+  }
+}
 } // ✅ VIKTIG: Lukker class AuthService
 
 
