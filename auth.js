@@ -239,9 +239,6 @@ class AuthService {
 
       this.currentUser = null;
 
-      // Viktig: reset "main shown"-guard så initApp kan kjøres ved neste innlogging
-      this._mainShown = false;
-
       // UI fallback – trygt selv om auth-state listener også oppdaterer
       this.showLoginScreen();
 
@@ -287,18 +284,12 @@ class AuthService {
   }
 
   showLoginScreen() {
-    // Reset guard når vi viser login
-    this._mainShown = false;
-
     if (loginScreen) loginScreen.style.display = 'flex';
     if (pricingPage) pricingPage.style.display = 'none';
     if (mainApp) mainApp.style.display = 'none';
   }
 
   showPricingPage() {
-    // Reset guard når vi viser prisside
-    this._mainShown = false;
-
     if (loginScreen) loginScreen.style.display = 'none';
     if (pricingPage) pricingPage.style.display = 'block';
     if (mainApp) mainApp.style.display = 'none';
@@ -315,13 +306,6 @@ class AuthService {
       mainApp.style.pointerEvents = 'auto';
     }
 
-    // Guard: unngå at initApp kjøres flere ganger pga flere SIGNED_IN-events
-    if (this._mainShown) {
-      console.log('ℹ️ showMainApp: app allerede initialisert – hopper over initApp');
-      return;
-    }
-    this._mainShown = true;
-
     try {
       if (typeof window.initApp === 'function') {
         console.log('🚀 Initialiserer app');
@@ -333,6 +317,7 @@ class AuthService {
       console.error('❌ initApp feilet:', e);
     }
   }
+
 
 
 // Global instans
