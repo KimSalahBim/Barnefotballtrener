@@ -206,7 +206,7 @@ class AuthService {
     }
   }
 
-  async signInWithGoogle() {
+    async signInWithGoogle() {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
 
@@ -225,29 +225,7 @@ class AuthService {
       return { success: false, error: error?.message || String(error) };
     }
   }
-  async signOut() {
-    try {
-      if (!this.supabase) throw new Error('Supabase ikke initialisert');
 
-      // Hvis du har lock-funksjoner i filen din, bruk dem.
-      if (typeof this.acquireLock === 'function') await this.acquireLock();
-
-      const { error } = await this.supabase.auth.signOut();
-      if (error) throw error;
-
-      this.currentUser = null;
-
-      // UI fallback (auth-state lytter tar ofte over, men dette er trygt)
-      this.showLoginScreen();
-
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-      return { success: false, error: error?.message || String(error) };
-    } finally {
-      if (typeof this.releaseLock === 'function') this.releaseLock();
-    }
-  }
   async signOut() {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
@@ -303,6 +281,7 @@ class AuthService {
       this.showPricingPage();
     }
   }
+
 
   showLoginScreen() {
     if (loginScreen) loginScreen.style.display = 'flex';
