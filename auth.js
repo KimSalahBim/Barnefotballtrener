@@ -238,6 +238,7 @@ class AuthService {
       if (error) throw error;
 
       this.currentUser = null;
+this._mainShown = false;
 
       // UI fallback – trygt selv om auth-state listener også oppdaterer
       this.showLoginScreen();
