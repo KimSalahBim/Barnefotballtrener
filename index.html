@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="auth-styles.css">
   <link rel="stylesheet" href="pricing.css">
   <link rel="stylesheet" href="kampdag.css">
+  <link rel="stylesheet" href="competitions.css">
 </head>
 
 <body>
@@ -346,6 +347,9 @@
       <button class="nav-btn" data-tab="kampdag" type="button">
         <i class="fas fa-clipboard-list"></i> Kampdag
       </button>
+      <button class="nav-btn" data-tab="competitions" type="button">
+  <i class="fas fa-medal"></i> Konkurranser
+</button>
       <button class="nav-btn" data-tab="liga" type="button">
         <i class="fas fa-trophy"></i> Liga
       </button>
@@ -639,7 +643,23 @@
         <div id="kdLineup" class="results-container"></div>
         <div id="kdPlan" class="results-container"></div>
       </div>
+<!-- KONKURRANSER TAB -->
+<div id="competitions" class="tab-content">
+  <div class="tab-header">
+    <h2><i class="fas fa-medal"></i> Konkurranser</h2>
+    <p class="tab-description">
+      Mesternes mester: velg deltakere, legg inn øvelser og registrer plasseringer – poengsummer oppdateres automatisk.
+    </p>
+  </div>
 
+  <div class="settings-card">
+    <p class="small-text" style="opacity:0.85;">
+      (Kommer snart) Her bygger vi opp konkurranser med historikk per måned og år.
+    </p>
+  </div>
+</div>
+
+      
       <!-- LIGA TAB -->
       <div id="liga" class="tab-content">
         <div class="tab-header">
@@ -702,6 +722,7 @@
 <script src="subscription.js"></script>
 <script src="core.js"></script>
 <script src="kampdag.js"></script>
+<script src="competitions.js"></script>
 <script src="auth-ui.js"></script>
 <script src="logout-fix.js"></script>
 </body>
