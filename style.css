@@ -1378,3 +1378,96 @@ body {
   font-weight:800;
   letter-spacing:0.2px;
 }
+/* =========================================================
+   Mobile: kompakt toppmeny (chips) med logofarger
+   Gjelder hele appen (alle faner), kun på mobil
+   ========================================================= */
+@media (max-width: 640px) {
+  :root{
+    /* Logo-inspirerte aksentfarger (juster om du vil) */
+    --bft-orange: #F28C1B;
+    --bft-orange-2: #FFB000;
+    --bft-green: #2E7D32;
+    --bft-green-2: #1F6D3A;
+
+    --bft-nav-bg: rgba(255,255,255,0.92);
+    --bft-nav-border: rgba(0,0,0,0.06);
+    --bft-text: #0f172a;
+    --bft-muted: rgba(15,23,42,0.62);
+  }
+
+  /* Selve menycontaineren */
+  .app-nav{
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+
+    padding: 10px 12px;
+    margin: 10px 12px 14px;
+
+    background: var(--bft-nav-bg);
+    border: 1px solid var(--bft-nav-border);
+    border-radius: 18px;
+
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+  .app-nav::-webkit-scrollbar{ display:none; } /* Chrome/Safari */
+
+  /* Nav-knappene (chips) */
+  .app-nav .nav-btn{
+    flex: 0 0 auto;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 10px 14px;
+    min-height: 40px;
+
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: rgba(255,255,255,0.95);
+
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+
+    color: var(--bft-text);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+    white-space: nowrap;
+  }
+
+  /* Ikoner litt mer “app” */
+  .app-nav .nav-btn i,
+  .app-nav .nav-btn .fa,
+  .app-nav .nav-btn .fas,
+  .app-nav .nav-btn .far,
+  .app-nav .nav-btn .fab{
+    font-size: 16px;
+    opacity: .95;
+  }
+
+  /* Aktiv fane – gradient med logo-følelse */
+  .app-nav .nav-btn.active,
+  .app-nav .nav-btn[aria-current="page"]{
+    background: linear-gradient(90deg, var(--bft-orange) 0%, var(--bft-orange-2) 35%, var(--bft-green) 100%);
+    border-color: rgba(0,0,0,0.06);
+    color: #ffffff;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.14);
+  }
+
+  /* Hover/trykk (mobil) */
+  .app-nav .nav-btn:active{
+    transform: scale(0.98);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+  }
+
+  /* Litt mindre luft i toppen slik at innholdet kommer høyere opp */
+  .top-bar{
+    margin-bottom: 10px;
+  }
+}
