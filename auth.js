@@ -69,31 +69,8 @@ class AuthService {
     this.supabase = null;
     this.currentUser = null;
     this.initPromise = null;
-    this.lockKey = 'bf_auth_lock_v1'
+    this.lockKey = 'bf_auth_lock_v1';
   }
-
-  getUserId() {
-    return this.currentUser?.id || null;
-  }
-
-  async getUser() {
-    if (this.currentUser) return this.currentUser;
-
-    try {
-      if (typeof this.getSessionWithRetry === 'function') {
-        const session = await this.getSessionWithRetry();
-        const user = session?.user || null;
-        if (user) this.currentUser = user;
-        return user;
-      }
-    } catch (e) {}
-
-    return null;
-  }
-
-  // ...resten av metodene som allerede finnes i AuthService
-}
-
 
   async init() {
     if (this.initPromise) return this.initPromise;
