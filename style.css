@@ -1455,3 +1455,30 @@ body {
   /* Litt mindre luft i toppen */
   .top-bar{ margin-bottom: 10px; }
 }
+/* Strammere "Bruk ferdighetsnivå"-boks (kun denne) */
+@media (max-width: 640px) {
+  /* selve kortet */
+  .settings-card {
+    padding: 12px 14px !important;
+    margin-bottom: 10px !important;
+    border-radius: 16px !important;
+  }
+
+  /* raden inni */
+  .settings-card .settings-row {
+    gap: 10px !important;
+  }
+
+  /* overskriften "Bruk ferdighetsnivå" (den er inline style i HTML, så vi må overstyre) */
+  .settings-card .settings-row > div:first-child > div:first-child {
+    font-size: 15px !important;
+    line-height: 1.15 !important;
+  }
+
+  /* hint-teksten */
+  #skillToggleHint {
+    font-size: 12.5px !important;
+    line-height: 1.2 !important;
+    margin-top: 2px !important;
+  }
+}
