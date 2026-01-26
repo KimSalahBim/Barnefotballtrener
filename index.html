@@ -511,9 +511,15 @@
           </div>
 
           <div class="selection-header">
-            <div class="selection-title">Velg spillere (<span id="matchCount">0</span>)</div>
-          </div>
-          <div id="matchSelection" class="player-selection"></div>
+  <div class="selection-title">Velg spillere (<span id="matchCount">0</span>)</div>
+
+  <div class="selection-actions">
+    <button id="matchSelectAllBtn" class="btn-small" type="button">Velg alle</button>
+    <button id="matchClearAllBtn" class="btn-small" type="button">Fjern alle</button>
+  </div>
+</div>
+
+<div id="matchSelection" class="player-selection"></div>
 
           <button id="createMatchTeamsBtn" class="btn-primary" type="button">
             <i class="fas fa-balance-scale"></i> Lag lag
