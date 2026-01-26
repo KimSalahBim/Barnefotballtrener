@@ -291,7 +291,7 @@
       <div class="comp-card">
         <h3>Opprett ny konkurranse</h3>
         <p class="comp-help">
-          <strong>Mesternes mester</strong>: Velg deltakere, legg inn øvelser og registrերից registrer plasseringer.
+          <strong>Mesternes mester</strong>: Velg deltakere, legg inn øvelser og registrer plasseringer.
           Poengsummer oppdateres automatisk.
         </p>
 
