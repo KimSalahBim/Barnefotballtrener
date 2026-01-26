@@ -325,14 +325,26 @@
 
           <div class="comp-panel">
             <h4>3) Poengstruktur</h4>
-            <label class="comp-radio">
-              <input type="radio" name="compScoring" value="rank" checked>
-              <span><strong>Plasseringspoeng</strong> (ved N deltakere får 1. plass N poeng, 2. plass N-1 osv.)</span>
-            </label>
-            <label class="comp-radio">
-              <input type="radio" name="compScoring" value="321">
-              <span><strong>3–2–1</strong> (1. plass 3, 2. plass 2, 3. plass 1)</span>
-            </label>
+        <label class="comp-radio">
+  <input type="radio" name="compScoring" value="rank" checked>
+  <span>
+    <strong>Plasseringspoeng</strong><br>
+    <span class="comp-muted">
+      Eksempel: Ved <strong>5 deltakere</strong> får vinneren <strong>5 poeng</strong>, nr. 2 får <strong>4</strong>, nr. 3 får <strong>3</strong> – helt ned til sisteplass.
+    </span>
+  </span>
+</label>
+
+<label class="comp-radio">
+  <input type="radio" name="compScoring" value="321">
+  <span>
+    <strong>3–2–1</strong><br>
+    <span class="comp-muted">
+      Vinneren får <strong>3 poeng</strong>, nr. 2 får <strong>2</strong>, nr. 3 får <strong>1</strong>. Resten får <strong>0</strong>.
+    </span>
+  </span>
+</label>
+    
 
             <div class="comp-row">
               <label class="comp-label">Navn på konkurransen (valgfritt)</label>
