@@ -1523,3 +1523,23 @@ body {
     opacity: 0.85;
   }
 }
+.selection-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.selection-actions{
+  display:flex;
+  gap:10px;
+}
+
+.btn-small{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,0.08);
+  background:#fff;
+  font-weight:700;
+  font-size:14px;
+}
