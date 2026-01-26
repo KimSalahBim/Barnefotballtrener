@@ -784,7 +784,45 @@
       showNotification('Lagdeling klar', 'success');
     });
   }
+function setupSelectionBulkButtons() {
+  const trainingAll = $('trainingSelectAllBtn');
+  const trainingNone = $('trainingClearAllBtn');
+  const matchAll = $('matchSelectAllBtn');
+  const matchNone = $('matchClearAllBtn');
 
+  // kun aktive spillere skal kunne velges
+  const selectableIds = () => state.players.filter(p => p.active).map(p => p.id);
+
+  if (trainingAll) {
+    trainingAll.addEventListener('click', () => {
+      state.selection.training = new Set(selectableIds());
+      renderSelections();
+    });
+  }
+
+  if (trainingNone) {
+    trainingNone.addEventListener('click', () => {
+      state.selection.training = new Set();
+      renderSelections();
+    });
+  }
+
+  if (matchAll) {
+    matchAll.addEventListener('click', () => {
+      state.selection.match = new Set(selectableIds());
+      renderSelections();
+    });
+  }
+
+  if (matchNone) {
+    matchNone.addEventListener('click', () => {
+      state.selection.match = new Set();
+      renderSelections();
+    });
+  }
+}
+
+  
   function setupLigaUI() {
     const teamsInput = $('ligaTeams');
     const roundsInput = $('ligaRounds');
