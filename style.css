@@ -1482,3 +1482,44 @@ body {
     margin-top: 2px !important;
   }
 }
+/* --------------------------------------------
+   MOBIL: spiller-velger i 2 kolonner (Training/Kamp/Kampdag)
+   Endrer kun layout – ikke funksjon
+-------------------------------------------- */
+@media (max-width: 640px) {
+  /* Selve boksen som inneholder spillerlista */
+  .player-selection {
+    padding: 14px 14px;
+    max-height: 260px;          /* lavere boks = mer plass til resten av siden */
+    overflow-y: auto;
+    scrollbar-width: none;      /* Firefox */
+  }
+  .player-selection::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  /* Gjør innholdet til grid med 2 kolonner */
+  .player-selection {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  /* Hvert “spiller-kort” i lista */
+  .player-checkbox-item {
+    margin: 0;                  /* viktig: ellers blir det rare mellomrom */
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  /* Litt strammere typografi */
+  .player-checkbox-item .player-name {
+    font-size: 14px;
+    line-height: 1.1;
+  }
+  .player-checkbox-item .player-position {
+    font-size: 12px;
+    opacity: 0.85;
+  }
+}
