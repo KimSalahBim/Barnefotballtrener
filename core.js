@@ -1154,6 +1154,7 @@ function setupSelectionBulkButtons() {
     setupPlayersUI();
     setupTrainingUI();
     setupMatchUI();
+    setupSelectionBulkButtons();
     setupLigaUI();
 
     renderAll();
