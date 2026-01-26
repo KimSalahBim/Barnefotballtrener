@@ -72,6 +72,10 @@ class AuthService {
     this.lockKey = 'bf_auth_lock_v1';
   }
 
+  getUserId() {
+    return this.currentUser?.id || null;
+  }
+
   async init() {
     if (this.initPromise) return this.initPromise;
 
