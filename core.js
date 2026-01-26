@@ -747,6 +747,29 @@
   function setupTrainingUI() {
     const btn = $('createGroupsBtn');
     if (!btn) return;
+  // Velg alle / Fjern alle (Trening)
+  const selectAllBtn = $('trainingSelectAllBtn');
+  const clearAllBtn  = $('trainingClearAllBtn');
+
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', () => {
+      const activeIds = state.players
+        .filter(p => p.active)
+        .map(p => p.id);
+
+      state.selection.training = new Set(activeIds);
+      renderSelections(); // oppdaterer UI + teller
+      showNotification('Valgte alle aktive spillere', 'success');
+    });
+  }
+
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener('click', () => {
+      state.selection.training = new Set();
+      renderSelections();
+      showNotification('Fjernet alle valgte spillere', 'success');
+    });
+  }
 
     btn.addEventListener('click', () => {
       const players = getSelectedPlayers(state.selection.training);
@@ -773,6 +796,29 @@
   function setupMatchUI() {
     const btn = $('createMatchTeamsBtn');
     if (!btn) return;
+  // Velg alle / Fjern alle (Kamp)
+  const selectAllBtn = $('matchSelectAllBtn');
+  const clearAllBtn  = $('matchClearAllBtn');
+
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', () => {
+      const activeIds = state.players
+        .filter(p => p.active)
+        .map(p => p.id);
+
+      state.selection.match = new Set(activeIds);
+      renderSelections();
+      showNotification('Valgte alle aktive spillere', 'success');
+    });
+  }
+
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener('click', () => {
+      state.selection.match = new Set();
+      renderSelections();
+      showNotification('Fjernet alle valgte spillere', 'success');
+    });
+  }
 
     btn.addEventListener('click', () => {
       const players = getSelectedPlayers(state.selection.match);
