@@ -359,18 +359,19 @@ showMainApp() {
 
 } // ✅ VIKTIG: Lukker class AuthService
 
-
-// ----------------------------------------------------
-// Global instans (idempotent – tåler at fila lastes flere ganger)
-// ----------------------------------------------------
+// -------------------------------
+// Global instans (idempotent)
+// -------------------------------
 window.authService = window.authService || new AuthService();
-const authService = window.authService;
+
+// VIKTIG: bruk "var" slik at andre scripts (subscription.js / logout-fix.js)
+// kan referere til "authService" som en global variabel.
+// (const/let blir ikke window.authService i browser på samme måte)
+var authService = window.authService;
 
 // -------------------------------
 // Bind #googleSignInBtn (eksakt)
-// -------------------------------;
-
-
+// -------------------------------
 function bindGoogleButton() {
   const btn = document.getElementById('googleSignInBtn');
   if (!btn) {
@@ -383,16 +384,29 @@ function bindGoogleButton() {
   btn.style.pointerEvents = 'auto';
   btn.style.cursor = 'pointer';
 
-  btn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('➡️ Google-knapp klikket, starter OAuth...');
-    const res = await authService.signInWithGoogle();
-    if (!res?.success) {
-      console.error('❌ Google-login feilet:', res?.error);
-      window.showNotification?.('Innlogging feilet. Prøv igjen.', 'error');
-    }
-  }, { passive: false });
+  btn.addEventListener(
+    'click',
+    async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      console.log('🟦 Google-knapp klikket, starter OAuth...');
+      try {
+        const res = await authService.signInWithGoogle(e);
+
+        // signInWithGoogle redirecter ofte -> da kommer vi aldri hit.
+        // Men hvis den returnerer et resultat, kan vi logge feil.
+        if (res && res.success === false) {
+          console.error('❌ Google-login feilet:', res.error);
+          window.showNotification?.('Innlogging feilet. Prøv igjen.', 'error');
+        }
+      } catch (err) {
+        console.error('❌ Google-login exception:', err);
+        window.showNotification?.('Innlogging feilet. Prøv igjen.', 'error');
+      }
+    },
+    { passive: false }
+  );
 
   console.log('✅ Google-knapp bundet (#googleSignInBtn)');
 }
@@ -400,10 +414,10 @@ function bindGoogleButton() {
 // -------------------------------
 // Boot
 // -------------------------------
-function bootAuth() {
-  console.log('📄 DOM ready - initialiserer auth');
+async function bootAuth() {
+  console.log('🟦 DOM ready - initialiserer auth');
   bindGoogleButton();
-  authService.init();
+  await authService.init();
 }
 
 if (document.readyState === 'loading') {
@@ -411,3 +425,4 @@ if (document.readyState === 'loading') {
 } else {
   bootAuth();
 }
+
