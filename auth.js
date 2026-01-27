@@ -75,6 +75,25 @@ class AuthService {
   getUserId() {
     return this.currentUser?.id || null;
   }
+  async getUser() {
+    // 1) Hvis vi allerede har bruker i minne
+    if (this.currentUser) return this.currentUser;
+
+    // 2) Prøv å hente session via eksisterende retry-funksjon
+    try {
+      if (typeof this.getSessionWithRetry === 'function') {
+        const session = await this.getSessionWithRetry();
+        const user = session?.user || null;
+        if (user) this.currentUser = user;
+        return user;
+      }
+    } catch (e) {
+      // Ignorer – vi returnerer null under
+    }
+
+    // 3) Hvis vi ikke får tak i bruker
+    return null;
+  }
 
   async init() {
     if (this.initPromise) return this.initPromise;
