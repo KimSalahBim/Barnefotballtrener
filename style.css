@@ -1543,3 +1543,70 @@ body {
   font-weight:700;
   font-size:14px;
 }
+/* --- Modal (Abonnement) --- */
+.hidden { display: none !important; }
+
+.bf-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.bf-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(4px);
+}
+
+.bf-modal__panel {
+  position: relative;
+  width: min(560px, 92vw);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  overflow: hidden;
+}
+
+.bf-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 10px 16px;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+
+.bf-modal__header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.bf-modal__body {
+  padding: 14px 16px;
+}
+
+.bf-modal__footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(0,0,0,.06);
+  flex-wrap: wrap;
+}
+
+.bf-subcard {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.03);
+}
+
+.bf-subrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
