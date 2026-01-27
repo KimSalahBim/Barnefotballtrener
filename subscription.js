@@ -33,3 +33,25 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();
 })();
+// Global instans (må være global fordi index/andre scripts kan referere til subscriptionService)
+window.subscriptionService = window.subscriptionService || new SubscriptionService();
+var subscriptionService = window.subscriptionService;
+
+// (Valgfritt men anbefalt) Bind tannhjul-knappen også via JS, så du ikke er avhengig av inline onclick
+function bindManageSubscriptionBtn() {
+  const btn = document.getElementById('manageSubscriptionBtn');
+  if (!btn) return;
+  if (btn.__bf_bound_manage) return;
+  btn.__bf_bound_manage = true;
+
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    subscriptionService.manageSubscription();
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindManageSubscriptionBtn);
+} else {
+  bindManageSubscriptionBtn();
+}
