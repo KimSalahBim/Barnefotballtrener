@@ -425,4 +425,3 @@ if (document.readyState === 'loading') {
 } else {
   bootAuth();
 }
-
