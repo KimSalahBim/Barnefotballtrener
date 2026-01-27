@@ -17,6 +17,50 @@ class SubscriptionService {
     }
 
     this.stripe = window.Stripe(CONFIG.stripe.publishableKey);
+    // ---------- UI binding (tannhjul + modal) ----------
+
+// 1) Tannhjul-knapp -> åpne modal
+const gearBtn = document.getElementById('manageSubscriptionBtn');
+if (gearBtn) {
+  gearBtn.addEventListener('click', async () => {
+    await this.manageSubscription();
+  });
+}
+
+// 2) Lukk-knapper/backdrop som har data-close="subscriptionModal"
+document.querySelectorAll('[data-close="subscriptionModal"]').forEach(el => {
+  el.addEventListener('click', () => {
+    const modal = document.getElementById('subscriptionModal');
+    if (modal) modal.classList.add('hidden');
+  });
+});
+
+// 3) “Se planer”-knapp i modal
+const openPricing = document.getElementById('openPricingFromModal');
+if (openPricing) {
+  openPricing.addEventListener('click', () => {
+    const modal = document.getElementById('subscriptionModal');
+    if (modal) modal.classList.add('hidden');
+
+    const pricing = document.getElementById('pricingPage');
+    if (pricing) pricing.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+// 4) “Kopiér support-epost”-knapp i modal
+const copyBtn = document.getElementById('copySupportEmailBtn');
+if (copyBtn) {
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText('support@barnefotballtrener.no');
+      if (typeof showNotification === 'function') showNotification('Kopiert: support@barnefotballtrener.no', 'success');
+      else alert('Kopiert: support@barnefotballtrener.no');
+    } catch {
+      alert('Kunne ikke kopiere. E-post: support@barnefotballtrener.no');
+    }
+  });
+}
+
     this.initialized = true;
   }
 
