@@ -360,17 +360,17 @@ showMainApp() {
 } // ✅ VIKTIG: Lukker class AuthService
 
 
-
+// ----------------------------------------------------
 // Global instans (idempotent – tåler at fila lastes flere ganger)
+// ----------------------------------------------------
 window.authService = window.authService || new AuthService();
-
-// Bruk "var" så det ikke krasjer om scriptet evalueres på nytt
-var authService = window.authService;
-
+const authService = window.authService;
 
 // -------------------------------
 // Bind #googleSignInBtn (eksakt)
-// -------------------------------
+// -------------------------------;
+
+
 function bindGoogleButton() {
   const btn = document.getElementById('googleSignInBtn');
   if (!btn) {
