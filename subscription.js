@@ -1,314 +1,62 @@
-// Barnefotballtrener - Abonnementshåndtering
-// ================================================
+// subscription.js — løsning 2 (intern abonnementsside)
+// Ingen Stripe. Ingen mailto. Bare vis/skjul pricingPage.
 
-class SubscriptionService {
-  constructor() {
-    this.stripe = null;
-    this.initialized = false;
-  }
+(function () {
+  function $(id) { return document.getElementById(id); }
 
-  // Initialiser Stripe
-  async init() {
-    if (this.initialized) return;
+  function show(el) { if (el) el.style.display = 'block'; }
+  function hide(el) { if (el) el.style.display = 'none'; }
 
-    // Last inn Stripe
-    if (!window.Stripe) {
-      await this.loadStripeScript();
-    }
+  function openPricing() {
+    const mainApp = $('mainApp');
+    const pricingPage = $('pricingPage');
 
-    this.stripe = window.Stripe(CONFIG.stripe.publishableKey);
-    // ---------- UI binding (tannhjul + modal) ----------
-
-// 1) Tannhjul-knapp -> åpne modal
-const gearBtn = document.getElementById('manageSubscriptionBtn');
-if (gearBtn) {
-  gearBtn.addEventListener('click', async () => {
-    await this.manageSubscription();
-  });
-}
-
-// 2) Lukk-knapper/backdrop som har data-close="subscriptionModal"
-document.querySelectorAll('[data-close="subscriptionModal"]').forEach(el => {
-  el.addEventListener('click', () => {
-    const modal = document.getElementById('subscriptionModal');
-    if (modal) modal.classList.add('hidden');
-  });
-});
-
-// 3) “Se planer”-knapp i modal
-const openPricing = document.getElementById('openPricingFromModal');
-if (openPricing) {
-  openPricing.addEventListener('click', () => {
-    const modal = document.getElementById('subscriptionModal');
-    if (modal) modal.classList.add('hidden');
-
-    const pricing = document.getElementById('pricingPage');
-    if (pricing) pricing.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-}
-
-// 4) “Kopiér support-epost”-knapp i modal
-const copyBtn = document.getElementById('copySupportEmailBtn');
-if (copyBtn) {
-  copyBtn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText('support@barnefotballtrener.no');
-      if (typeof showNotification === 'function') showNotification('Kopiert: support@barnefotballtrener.no', 'success');
-      else alert('Kopiert: support@barnefotballtrener.no');
-    } catch {
-      alert('Kunne ikke kopiere. E-post: support@barnefotballtrener.no');
-    }
-  });
-}
-
-    this.initialized = true;
-  }
-
-  // Last inn Stripe script
-  loadStripeScript() {
-    return new Promise((resolve, reject) => {
-      if (window.Stripe) {
-        resolve();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = 'https://js.stripe.com/v3/';
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  }
-
-  // Sjekk abonnementsstatus for bruker
-  async checkSubscription(userId) {
-    try {
-      if (!authService.supabase) {
-        throw new Error('Supabase not initialized');
-      }
-
-      // Hent fra subscriptions-tabellen
-      const { data, error } = await authService.supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
-        throw error;
-      }
-
-      // Hvis ingen subscription, sjekk om trial er tilgjengelig
-      if (!data) {
-        return {
-          active: false,
-          trial: false,
-          canStartTrial: true,
-          plan: null
-        };
-      }
-
-      const now = new Date();
-      const expiresAt = data.expires_at ? new Date(data.expires_at) : null;
-      const trialEndsAt = data.trial_ends_at ? new Date(data.trial_ends_at) : null;
-
-      // Sjekk om trial er aktiv
-      if (data.status === 'trialing' && trialEndsAt && trialEndsAt > now) {
-        return {
-          active: false,
-          trial: true,
-          trialEndsAt: trialEndsAt,
-          canStartTrial: false,
-          plan: data.plan_type,
-          daysLeft: Math.ceil((trialEndsAt - now) / (1000 * 60 * 60 * 24))
-        };
-      }
-
-      // Sjekk om abonnement er aktivt
-      const isActive = data.status === 'active' && (!expiresAt || expiresAt > now);
-
-      return {
-        active: isActive,
-        trial: false,
-        canStartTrial: false,
-        plan: data.plan_type,
-        expiresAt: expiresAt,
-        status: data.status
-      };
-
-    } catch (error) {
-      console.error('Error checking subscription:', error);
-      return {
-        active: false,
-        trial: false,
-        canStartTrial: true,
-        error: error.message
-      };
-    }
-  }
-
-  // Start trial
-  async startTrial(userId, planType) {
-    try {
-      if (!authService.supabase) {
-        throw new Error('Supabase not initialized');
-      }
-
-      const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + CONFIG.trial.days);
-
-      const { data, error } = await authService.supabase
-        .from('subscriptions')
-        .insert([
-          {
-            user_id: userId,
-            status: 'trialing',
-            plan_type: planType,
-            trial_ends_at: trialEndsAt.toISOString(),
-            created_at: new Date().toISOString()
-          }
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return { success: true, data };
-    } catch (error) {
-      console.error('Error starting trial:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Opprett Stripe Checkout-sesjon
-  async createCheckoutSession(priceId, userId, email) {
-    try {
-      // Dette må kalles via din backend/edge function
-      // For nå viser vi bare hvordan det skal settes opp
-      
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId,
-          userId,
-          email,
-          successUrl: `${window.location.origin}/?success=true`,
-          cancelUrl: `${window.location.origin}/?canceled=true`
-        })
-      });
-
-      const session = await response.json();
-      
-      // Redirect til Stripe Checkout
-      const result = await this.stripe.redirectToCheckout({
-        sessionId: session.id
-      });
-
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Håndter vellyket betaling
-  async handleSuccessfulPayment(sessionId) {
-    try {
-      // Hent session-detaljer
-      const response = await fetch(`/api/checkout-session?session_id=${sessionId}`);
-      const session = await response.json();
-
-      // Oppdater subscription i database
-      const userId = authService.getUserId();
-      if (!userId) throw new Error('User not authenticated');
-
-      const { error } = await authService.supabase
-        .from('subscriptions')
-        .upsert([
-          {
-            user_id: userId,
-            status: 'active',
-            stripe_customer_id: session.customer,
-            stripe_subscription_id: session.subscription,
-            plan_type: session.metadata.plan_type,
-            expires_at: session.metadata.expires_at,
-            updated_at: new Date().toISOString()
-          }
-        ]);
-
-      if (error) throw error;
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error handling payment:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Formater pris
-  formatPrice(amount, currency = 'NOK') {
-    return new Intl.NumberFormat('nb-NO', {
-      style: 'currency',
-      currency: currency
-    }).format(amount);
-  }
-
-// Beregn besparelse
-  calculateSavings(monthlyPrice, yearlyPrice) {
-    const yearlyMonthly = yearlyPrice / 12;
-    const savings = ((monthlyPrice - yearlyMonthly) / monthlyPrice) * 100;
-    return Math.round(savings);
-  }
-
-// Åpne abonnement / innstillinger i app (modal)
-async manageSubscription() {
-  try {
-    // 1) Hent bruker (VIKTIG: await!)
-    const user = await authService.getUser?.();
-
-    if (!user) {
-      alert('Du må være logget inn');
+    if (!pricingPage) {
+      alert('Fant ikke abonnements-siden (pricingPage).');
       return;
     }
 
-    // 2) Finn modal-elementene
-    const modal = document.getElementById('subscriptionModal');
-    if (!modal) {
-      alert('Fant ikke abonnementsvinduet (subscriptionModal). Sjekk at du limte inn HTML i index.html.');
-      return;
+    hide(mainApp);
+    show(pricingPage);
+  }
+
+  function closePricing() {
+    const mainApp = $('mainApp');
+    const pricingPage = $('pricingPage');
+
+    hide(pricingPage);
+    show(mainApp);
+  }
+
+  function bind() {
+    // 1) Finn tannhjul-knappen
+    // Bytt ID her hvis din heter noe annet:
+    const gearBtn = $('manageSubscriptionBtn') || $('subscriptionBtn') || $('settingsBtn');
+
+    if (gearBtn) {
+      gearBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openPricing();
+      });
+    } else {
+      console.warn('⚠️ Fant ikke tannhjul-knapp (manageSubscriptionBtn/settingsBtn).');
     }
 
-    const userLine = document.getElementById('subscriptionUserLine');
-    const statusEl = document.getElementById('subscriptionStatus');
-    const planEl = document.getElementById('subscriptionPlan');
-
-    // 3) Fyll inn enkel info (du kan gjøre dette “smartere” senere)
-    if (userLine) userLine.textContent = `Innlogget som: ${user.email || 'ukjent e-post'}`;
-    if (statusEl) statusEl.textContent = 'Aktiv (dev)';   // eller “Ukjent” foreløpig
-    if (planEl) planEl.textContent = 'Standard';          // eller “Free/Pro” senere
-
-    // 4) Åpne modal
-    modal.classList.remove('hidden');
-  } catch (error) {
-    console.error('Error opening subscription modal:', error);
-    alert('Kunne ikke åpne abonnementshåndtering');
+    // 2) Tilbake-knapp på pricingPage
+    const closeBtn = $('closePricingBtn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        closePricing();
+      });
+    } else {
+      console.warn('⚠️ Fant ikke closePricingBtn på pricingPage.');
+    }
   }
-}
 
-
-// Opprett global instans
-const subscriptionService = new SubscriptionService();
-
-// Initialiser når DOM er klar
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => subscriptionService.init());
-} else {
-  subscriptionService.init();
-}
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bind);
+  } else {
+    bind();
+  }
+})();
