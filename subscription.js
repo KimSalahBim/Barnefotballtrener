@@ -223,27 +223,41 @@ class SubscriptionService {
     return Math.round(savings);
   }
 
-  // Åpne Stripe Customer Portal
-  async manageSubscription() {
-    try {
-      const user = authService.getUser();
-      
-      if (!user) {
-        alert('Du må være logget inn');
-        return;
-      }
+// Åpne abonnement / innstillinger i app (modal)
+async manageSubscription() {
+  try {
+    // 1) Hent bruker (VIKTIG: await!)
+    const user = await authService.getUser?.();
 
-      alert('Sender deg til Stripe for å administrere abonnement...');
-      
-      // Her må vi først hente portal-lenke fra Stripe
-      // For nå: send til support
-      window.location.href = 'mailto:support@barnefotballtrener.no?subject=Administrer abonnement';
-    } catch (error) {
-      console.error('Error opening portal:', error);
-      alert('Kunne ikke åpne abonnementshåndtering');
+    if (!user) {
+      alert('Du må være logget inn');
+      return;
     }
+
+    // 2) Finn modal-elementene
+    const modal = document.getElementById('subscriptionModal');
+    if (!modal) {
+      alert('Fant ikke abonnementsvinduet (subscriptionModal). Sjekk at du limte inn HTML i index.html.');
+      return;
+    }
+
+    const userLine = document.getElementById('subscriptionUserLine');
+    const statusEl = document.getElementById('subscriptionStatus');
+    const planEl = document.getElementById('subscriptionPlan');
+
+    // 3) Fyll inn enkel info (du kan gjøre dette “smartere” senere)
+    if (userLine) userLine.textContent = `Innlogget som: ${user.email || 'ukjent e-post'}`;
+    if (statusEl) statusEl.textContent = 'Aktiv (dev)';   // eller “Ukjent” foreløpig
+    if (planEl) planEl.textContent = 'Standard';          // eller “Free/Pro” senere
+
+    // 4) Åpne modal
+    modal.classList.remove('hidden');
+  } catch (error) {
+    console.error('Error opening subscription modal:', error);
+    alert('Kunne ikke åpne abonnementshåndtering');
   }
 }
+
 
 // Opprett global instans
 const subscriptionService = new SubscriptionService();
