@@ -373,9 +373,13 @@ var authService = window.authService;
 // Bind #googleSignInBtn (eksakt)
 // -------------------------------
 function bindGoogleButton() {
-  const btn = document.getElementById('googleSignInBtn');
+  // Støtt begge ID-er (for å unngå at Google-login ryker pga mismatch)
+  const btn =
+    document.getElementById('googleSignInBtn') ||
+    document.getElementById('googleSignInBtnn');
+
   if (!btn) {
-    console.warn('⚠️ Fant ikke #googleSignInBtn i DOM');
+    console.warn('⚠️ Fant ikke #googleSignInBtn eller #googleSignInBtnn i DOM');
     return;
   }
   if (btn.__bf_bound_google) return;
@@ -408,7 +412,78 @@ function bindGoogleButton() {
     { passive: false }
   );
 
-  console.log('✅ Google-knapp bundet (#googleSignInBtn)');
+  console.log('✅ Google-knapp bundet');
+}
+
+function bindMagicLink() {
+  const emailInput = document.getElementById('magicLinkEmail');
+  const btn = document.getElementById('magicLinkBtn');
+  const hint = document.getElementById('magicLinkHint');
+
+  // Hvis HTML ikke finnes (f.eks. eldre index), gjør ingenting
+  if (!emailInput || !btn) {
+    console.warn('⚠️ Fant ikke magic link elementer (#magicLinkEmail / #magicLinkBtn)');
+    return;
+  }
+
+  if (btn.__bf_bound_magic) return;
+  btn.__bf_bound_magic = true;
+
+  btn.style.pointerEvents = 'auto';
+  btn.style.cursor = 'pointer';
+
+  async function sendLink() {
+    const email = String(emailInput.value || '').trim();
+
+    if (!email || !email.includes('@')) {
+      window.showNotification?.('Skriv inn en gyldig e-postadresse.', 'error');
+      emailInput.focus();
+      return;
+    }
+
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.textContent = 'Sender...';
+
+    try {
+      // Krever at authService.signInWithMagicLink finnes (vi legger den inn i neste steg)
+      const res = await authService.signInWithMagicLink(email);
+
+      if (res?.success) {
+        if (hint) {
+          hint.textContent = 'Sjekk e-posten din og klikk på lenka for å logge inn ✅';
+        }
+        window.showNotification?.('Innloggingslenke sendt. Sjekk e-posten.', 'success');
+      } else {
+        window.showNotification?.(res?.error || 'Kunne ikke sende lenke. Prøv igjen.', 'error');
+      }
+    } catch (err) {
+      console.error('❌ Magic link exception:', err);
+      window.showNotification?.('Kunne ikke sende lenke. Prøv igjen.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = oldText;
+    }
+  }
+
+  btn.addEventListener(
+    'click',
+    async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await sendLink();
+    },
+    { passive: false }
+  );
+
+  emailInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      btn.click();
+    }
+  });
+
+  console.log('✅ Magic link bundet (#magicLinkBtn)');
 }
 
 // -------------------------------
@@ -417,6 +492,7 @@ function bindGoogleButton() {
 async function bootAuth() {
   console.log('🟦 DOM ready - initialiserer auth');
   bindGoogleButton();
+  bindMagicLink();
   await authService.init();
 }
 
