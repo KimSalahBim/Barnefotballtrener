@@ -210,28 +210,37 @@
   document.addEventListener(
     'click',
     (e) => {
+      const target = e.target;
+
       // 1) Tannhjul i toppmeny
-      const gear = e.target.closest('#manageSubscriptionBtn');
+      const gear = target && target.closest ? target.closest('#manageSubscriptionBtn') : null;
       if (gear) {
         e.preventDefault();
+        e.stopPropagation();
         openSettings();
         return;
       }
 
-      // 2) NY: "Administrer abonnement" i modalen -> Stripe portal
-      const portalBtn = e.target.closest('#managePortalBtn');
+      // 2) "Administrer abonnement" i modalen -> Stripe portal
+      const portalBtn = target && target.closest ? target.closest('#managePortalBtn') : null;
       if (portalBtn) {
         e.preventDefault();
+        e.stopPropagation();
         openStripeCustomerPortal();
         return;
       }
 
       // 3) Close-knapper (valgfritt)
-      const closeBtn = e.target.closest(
-        '#closePricingBtn, #closeSubscriptionBtn, .close-subscription, [data-close="subscriptionModal"]'
-      );
+      const closeBtn =
+        target && target.closest
+          ? target.closest(
+              '#closePricingBtn, #closeSubscriptionBtn, .close-subscription, [data-close="subscriptionModal"]'
+            )
+          : null;
+
       if (closeBtn) {
         e.preventDefault();
+        e.stopPropagation();
         closeSettings();
         return;
       }
@@ -243,6 +252,39 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSettings();
   });
+
+  // ------------------------------------------------
+  // Backwards compatibility / alias (VIKTIG!)
+  // Gjør at auth.js kan kalle subscriptionService.checkSubscription(...)
+  // selv om denne fila bruker andre metodenavn.
+  // ------------------------------------------------
+  try {
+    const svc = (window.subscriptionService = window.subscriptionService || {});
+
+    // Hvis denne fila har checkSubscriptionStatus / getSubscription etc,
+    // lag et alias som heter checkSubscription (som auth.js forventer).
+    if (typeof svc.checkSubscription !== 'function') {
+      if (typeof svc.checkSubscriptionStatus === 'function') {
+        svc.checkSubscription = svc.checkSubscriptionStatus.bind(svc);
+      } else if (typeof svc.getSubscription === 'function') {
+        svc.checkSubscription = svc.getSubscription.bind(svc);
+      } else if (typeof svc.check === 'function') {
+        svc.checkSubscription = svc.check.bind(svc);
+      }
+    }
+
+    // Lite debug-hint så du ser hva som faktisk finnes
+    console.log('🧩 subscriptionService metoder:', {
+      hasCheckSubscription: typeof svc.checkSubscription === 'function',
+      hasCheckSubscriptionStatus: typeof svc.checkSubscriptionStatus === 'function',
+      hasGetSubscription: typeof svc.getSubscription === 'function',
+      hasStartTrial: typeof svc.startTrial === 'function',
+      hasCreatePortalSession: typeof svc.createPortalSession === 'function',
+      hasOpenStripeCustomerPortal: typeof window.openStripeCustomerPortal === 'function',
+    });
+  } catch (err) {
+    console.warn('⚠️ Kunne ikke sette alias for subscriptionService:', err);
+  }
 
   // Debug (kan fjernes senere)
   console.log('✅ subscription.js lastet: SubscriptionUI klar (inkl. portal)');
