@@ -307,36 +307,62 @@ class AuthService {
   }
 
   async handleSignIn(user) {
-    this.currentUser = user;
+  this.currentUser = user;
 
-    if (isDevBypassUser(user)) {
-      console.log('🔓 DEV BYPASS aktiv - hopper over plan/pricing:', user.email);
-      this.showMainApp();
+  // DEV BYPASS
+  if (typeof isDevBypassUser === 'function' && isDevBypassUser(user)) {
+    console.log('🔓 DEV BYPASS aktiv - hopper over plan/pricing:', user.email);
+    this.showMainApp();
+    return;
+  }
+
+  console.log('🔍 Sjekker subscription for bruker:', user.id);
+
+  try {
+    // Hent fra window for å unngå scope/overskriving
+    const svc = window.subscriptionService;
+
+    // Hvis subscriptionService ikke finnes -> vis prisside
+    if (!svc) {
+      console.warn('⚠️ subscriptionService mangler - viser prisside');
+      this.showPricingPage();
       return;
     }
 
-    console.log('🔍 Sjekker subscription for bruker:', user.id);
+    // Finn riktig metode (støtter flere navn)
+    const checkFn =
+      (typeof svc.checkSubscription === 'function' && svc.checkSubscription) ||
+      (typeof svc.checkSubscriptionStatus === 'function' && svc.checkSubscriptionStatus) ||
+      (typeof svc.getSubscription === 'function' && svc.getSubscription) ||
+      null;
 
-    try {
-      if (typeof subscriptionService === 'undefined') {
-        console.warn('⚠️ subscriptionService ikke funnet - viser prisside');
-        this.showPricingPage();
-        return;
-      }
+    // Finnes ingen sjekk-metode -> vis prisside (men ikke krasj)
+    if (!checkFn) {
+      console.warn('⚠️ subscriptionService finnes, men ingen check-funksjon - viser prisside');
+      this.showPricingPage();
+      return;
+    }
 
-      const subscription = await subscriptionService.checkSubscription(user.id);
-      console.log('📊 Subscription status:', subscription);
+    const subscription = await checkFn.call(svc, user.id);
+    console.log('📊 Subscription status:', subscription);
 
-      if (subscription?.active || subscription?.trial) {
-        this.showMainApp();
-      } else {
-        this.showPricingPage();
-      }
-    } catch (error) {
-      console.error('❌ Subscription check failed:', error);
+    const isActive =
+      subscription?.active === true ||
+      subscription?.trial === true ||
+      subscription?.status === 'active' ||
+      subscription?.status === 'trialing';
+
+    if (isActive) {
+      this.showMainApp();
+    } else {
       this.showPricingPage();
     }
+  } catch (error) {
+    console.error('❌ Subscription check failed:', error);
+    this.showPricingPage();
   }
+}
+
 
   showLoginScreen() {
 this._mainShown = false;
