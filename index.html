@@ -77,148 +77,127 @@
     </div>
   </div>
 
-  <!-- PRICING PAGE -->
-  <div id="pricingPage" class="pricing-page" style="display:none;">
-    <button id="closePricingBtn" class="btn-secondary" type="button">Tilbake</button>
-    <div class="pricing-container">
-      <!-- Header -->
-      <div class="pricing-header">
-        <div class="pricing-logo">
-          <span style="font-size: 48px;">⚽</span>
+<!-- PRICING PAGE -->
+<div id="pricingPage" class="pricing-page" style="display:none;">
+  <button id="closePricingBtn" class="btn-secondary" type="button">Tilbake</button>
+
+  <div class="pricing-container">
+    <!-- Header -->
+    <div class="pricing-header">
+      <div class="pricing-logo">
+        <span style="font-size: 48px;">⚽</span>
+      </div>
+      <h1>Velg din plan</h1>
+      <p>Start din gratis 7-dagers prøveperiode i dag</p>
+    </div>
+
+    <!-- Trial Banner -->
+    <div class="trial-banner">
+      <i class="fas fa-gift"></i>
+      <span>Alle planer inkluderer 7 dager gratis prøveperiode</span>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="pricing-cards">
+      <!-- Månedlig -->
+      <div class="pricing-card">
+        <div class="card-header">
+          <h3>Månedlig</h3>
+          <div class="price">
+            <span class="amount">25</span>
+            <span class="currency">kr/mnd</span>
+          </div>
         </div>
-        <h1>Velg din plan</h1>
-        <p>Start din gratis 7-dagers prøveperiode i dag</p>
+
+        <div class="card-features">
+          <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
+          <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
+          <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
+          <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
+          <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
+        </div>
+
+        <button
+          type="button"
+          class="btn-select"
+          data-plan="month"
+          data-price-id="price_1SssQbD5NzOLeQrihuah3dHE"
+        >
+          Start gratis prøveperiode
+        </button>
+
+        <div class="card-note">Avbryt når som helst</div>
       </div>
 
-      <!-- Trial Banner -->
-      <div class="trial-banner">
-        <i class="fas fa-gift"></i>
-        <span>Alle planer inkluderer 7 dager gratis prøveperiode</span>
+      <!-- Årlig (POPULAR) -->
+      <div class="pricing-card popular">
+        <div class="badge-popular">Mest populær</div>
+
+        <div class="card-header">
+          <h3>Årlig</h3>
+          <div class="price">
+            <span class="amount">199</span>
+            <span class="currency">kr/år</span>
+          </div>
+          <div class="savings">Spar 33%</div>
+        </div>
+
+        <div class="card-features">
+          <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
+          <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
+          <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
+          <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
+          <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
+          <div class="feature"><i class="fas fa-star"></i> Prioritert support</div>
+        </div>
+
+        <button
+          type="button"
+          class="btn-select primary"
+          data-plan="year"
+          data-price-id="price_1SsskZD5NzOLeQri0c4i879y"
+        >
+          Start gratis prøveperiode
+        </button>
+
+        <div class="card-note">Kun 17 kr/mnd</div>
       </div>
 
-      <!-- Pricing Cards -->
-      <div class="pricing-cards">
-        <!-- Månedlig -->
-        <div class="pricing-card">
-          <div class="card-header">
-            <h3>Månedlig</h3>
-            <div class="price">
-              <span class="amount">25</span>
-              <span class="currency">kr/mnd</span>
-            </div>
+      <!-- Livstid -->
+      <div class="pricing-card premium">
+        <div class="card-header">
+          <h3>Livstid</h3>
+          <div class="price">
+            <span class="amount">599</span>
+            <span class="currency">kr</span>
           </div>
-          <div class="card-features">
-            <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
-            <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
-            <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
-            <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
-            <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
-          </div>
-          <button class="btn-select" data-plan="month" data-price-id="price_month">
-            Start gratis prøveperiode
-          </button>
-          <div class="card-note">Avbryt når som helst</div>
+          <div class="savings">Best verdi</div>
         </div>
 
-        <!-- Årlig (POPULAR) -->
-        <div class="pricing-card popular">
-          <div class="badge-popular">Mest populær</div>
-          <div class="card-header">
-            <h3>Årlig</h3>
-            <div class="price">
-              <span class="amount">199</span>
-              <span class="currency">kr/år</span>
-            </div>
-            <div class="savings">Spar 33%</div>
-          </div>
-          <div class="card-features">
-            <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
-            <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
-            <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
-            <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
-            <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
-            <div class="feature"><i class="fas fa-star"></i> Prioritert support</div>
-          </div>
-          <button class="btn-select primary" data-plan="year" data-price-id="price_year">
-            Start gratis prøveperiode
-          </button>
-          <div class="card-note">Kun 17 kr/mnd</div>
+        <div class="card-features">
+          <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
+          <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
+          <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
+          <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
+          <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
+          <div class="feature"><i class="fas fa-infinity"></i> Livstidstilgang</div>
+          <div class="feature"><i class="fas fa-crown"></i> Premium support</div>
         </div>
 
-        <!-- Livstid -->
-        <div class="pricing-card premium">
-          <div class="card-header">
-            <h3>Livstid</h3>
-            <div class="price">
-              <span class="amount">599</span>
-              <span class="currency">kr</span>
-            </div>
-            <div class="savings">Best verdi</div>
-          </div>
-          <div class="card-features">
-            <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
-            <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
-            <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
-            <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
-            <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
-            <div class="feature"><i class="fas fa-infinity"></i> Livstidstilgang</div>
-            <div class="feature"><i class="fas fa-crown"></i> Premium support</div>
-          </div>
-          <button class="btn-select" data-plan="lifetime" data-price-id="price_lifetime">
-            Kjøp nå
-          </button>
-          <div class="card-note">Engangsbetaling</div>
-        </div>
+        <button
+          type="button"
+          class="btn-select"
+          data-plan="lifetime"
+          data-price-id="price_1SssnID5NzOLeQri9vOKcXmO"
+        >
+          Kjøp nå
+        </button>
+
+        <div class="card-note">Engangsbetaling</div>
       </div>
-
-      <!-- Team & Club Section -->
-      <div class="team-section">
-        <h2>For team og klubber</h2>
-        
-        <div class="team-cards">
-          <!-- Team -->
-          <div class="team-card">
-            <div class="team-icon">👥</div>
-            <h3>Team-lisens</h3>
-            <p class="team-quantity">3-9 trenere</p>
-            <div class="team-price">
-              <span class="amount">479</span>
-              <span class="currency">kr/person</span>
-            </div>
-            <div class="team-discount">20% rabatt</div>
-            <ul class="team-features">
-              <li>Livstidstilgang for alle</li>
-              <li>Sentralt administrasjonspanel</li>
-              <li>Delt spillerdatabase</li>
-            </ul>
-            <button class="btn-contact" onclick="showTeamContactForm()">
-              Kontakt oss
-            </button>
-          </div>
-
-          <!-- Klubb -->
-          <div class="team-card club">
-            <div class="team-icon">🏆</div>
-            <h3>Klubb-lisens</h3>
-            <p class="team-quantity">10+ trenere</p>
-            <div class="team-price">
-              <span class="amount">Fra 401</span>
-              <span class="currency">kr/person</span>
-            </div>
-            <div class="team-discount">33% rabatt</div>
-            <ul class="team-features">
-              <li>Velg årlig eller livstid</li>
-              <li>Dedikert klubb-portal</li>
-              <li>Sentralisert brukerstyring</li>
-              <li>Prioritert support</li>
-              <li>Tilpasset opplæring</li>
-            </ul>
-            <button class="btn-contact" onclick="showClubContactForm()">
-              Få tilbud
-            </button>
-          </div>
-        </div>
-      </div>
+    </div>
+  </div>
+</div>
 
       <!-- FAQ -->
       <div class="faq-section">
