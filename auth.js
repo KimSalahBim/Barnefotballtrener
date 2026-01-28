@@ -234,7 +234,7 @@ class AuthService {
     }
   }
 
-  async signInWithGoogle() {
+    async signInWithGoogle() {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
 
@@ -254,6 +254,33 @@ class AuthService {
     }
   }
 
+  // ✅ Magic link (OTP) login for alle e-postadresser (hotmail, icloud, osv.)
+  async signInWithMagicLink(email) {
+    try {
+      if (!this.supabase) throw new Error('Supabase ikke initialisert');
+
+      const cleanEmail = String(email || '').trim();
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        return { success: false, error: 'Ugyldig e-postadresse' };
+      }
+
+      // Stabilt på Safari: samme origin + path
+      const emailRedirectTo = window.location.origin + window.location.pathname;
+
+      const { error } = await this.supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: { emailRedirectTo },
+      });
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Magic link error:', error);
+      return { success: false, error: error?.message || String(error) };
+    }
+  }
+
   async signOut() {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
@@ -265,7 +292,7 @@ class AuthService {
       if (error) throw error;
 
       this.currentUser = null;
-this._mainShown = false;
+      this._mainShown = false;
 
       // UI fallback – trygt selv om auth-state listener også oppdaterer
       this.showLoginScreen();
