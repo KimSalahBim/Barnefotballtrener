@@ -134,6 +134,77 @@
   // Bakoverkompatibilitet: noen steder forventer subscriptionService.manageSubscription()
   window.subscriptionService = window.subscriptionService || {};
   window.subscriptionService.manageSubscription = openSettings;
+  // --- Compatibility layer for auth.js / pricing.js ---
+  // Ensure subscriptionService has the functions other files expect.
+
+  // NB: window.subscriptionService finnes allerede over – vi bare fyller på API-et.
+
+  window.subscriptionService.checkSubscription =
+    window.subscriptionService.checkSubscription ||
+    (async function (userId) {
+      // Try a backend endpoint if you have one:
+      try {
+        const token = await getAccessToken();
+        const resp = await fetch('/api/subscription-status', {
+          method: 'GET',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (resp.ok) return await resp.json();
+      } catch (_) {}
+
+      // Fallback: assume no active subscription/trial (forces pricing UI)
+      return { active: false, trial: false, canStartTrial: true };
+    });
+
+  window.subscriptionService.startTrial =
+    window.subscriptionService.startTrial ||
+    (async function (userId, planType) {
+      // If you have an endpoint, call it. Otherwise fallback to "success:false"
+      try {
+        const token = await getAccessToken();
+        const resp = await fetch('/api/start-trial', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ userId, planType }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok)
+          return { success: false, error: data?.error || 'Kunne ikke starte trial' };
+        return { success: true, ...data };
+      } catch (e) {
+        return { success: false, error: e?.message || String(e) };
+      }
+    });
+
+  window.subscriptionService.init =
+    window.subscriptionService.init ||
+    (async function () {
+      // Initialize Stripe.js using CONFIG.stripe.publishableKey
+      try {
+        if (window.subscriptionService.stripe) return;
+
+        const key = window.CONFIG?.stripe?.publishableKey;
+        if (!key) throw new Error('Mangler CONFIG.stripe.publishableKey');
+
+        // Ensure Stripe.js is loaded
+        if (typeof window.Stripe !== 'function') {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://js.stripe.com/v3/';
+            s.onload = resolve;
+            s.onerror = () => reject(new Error('Kunne ikke laste Stripe.js'));
+            document.head.appendChild(s);
+          });
+        }
+
+        window.subscriptionService.stripe = window.Stripe(key);
+      } catch (e) {
+        console.error('❌ subscriptionService.init failed:', e);
+      }
+    });
 
   // Robust: funker selv om knapper renderes på nytt / DOM endrer seg
   document.addEventListener(
