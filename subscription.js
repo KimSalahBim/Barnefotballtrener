@@ -27,6 +27,8 @@
 
     // 1) Foretrekk modal hvis den finnes
     if (modal) {
+      // VIKTIG: .hidden kan være display:none !important og må fjernes
+      modal.classList.remove('hidden');
       show(modal, 'flex');
       return;
     }
@@ -47,7 +49,12 @@
     const pricingPage = $('pricingPage');
     const mainApp = $('mainApp');
 
-    if (modal) hide(modal);
+    if (modal) {
+      hide(modal);
+      // legg tilbake hidden for å matche HTML sin default state
+      modal.classList.add('hidden');
+    }
+
     if (pricingPage) hide(pricingPage);
     if (mainApp) show(mainApp, 'block');
   }
@@ -149,7 +156,9 @@
       }
 
       // 3) Close-knapper (valgfritt)
-      const closeBtn = e.target.closest('#closePricingBtn, #closeSubscriptionBtn, .close-subscription, [data-close="subscriptionModal"]');
+      const closeBtn = e.target.closest(
+        '#closePricingBtn, #closeSubscriptionBtn, .close-subscription, [data-close="subscriptionModal"]'
+      );
       if (closeBtn) {
         e.preventDefault();
         closeSettings();
