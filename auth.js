@@ -402,7 +402,10 @@ class AuthService {
 
   // UI
   showLoginScreen() {
+    document.body.classList.add('gated');
     lockScroll();
+    window.scrollTo(0, 0);
+
     this._mainShown = false;
 
     const { loginScreen, pricingPage, mainApp } = this._refs();
@@ -412,7 +415,10 @@ class AuthService {
   }
 
   showPricingPage() {
+    document.body.classList.add('gated');
     lockScroll();
+    window.scrollTo(0, 0);
+
     this._mainShown = false;
 
     const { loginScreen, pricingPage, mainApp } = this._refs();
@@ -421,38 +427,41 @@ class AuthService {
     if (mainApp) mainApp.style.display = 'none';
   }
 
-  showMainApp() {
-    unlockScroll();
+showMainApp() {
+  document.body.classList.remove('gated');
+  unlockScroll();
 
-    if (this._mainShown) {
-      console.log('ℹ️ showMainApp: allerede vist - hopper over init');
-      return;
+  const { loginScreen, pricingPage, mainApp } = this._refs();
+
+  // Sørg for riktig UI hver gang, selv om init ikke skal kjøres på nytt
+  if (loginScreen) loginScreen.style.display = 'none';
+  if (pricingPage) pricingPage.style.display = 'none';
+  if (mainApp) {
+    mainApp.style.display = 'block';
+    mainApp.style.opacity = '1';
+    mainApp.style.visibility = 'visible';
+    mainApp.style.pointerEvents = 'auto';
+  }
+
+  // Hindre at initApp kjøres flere ganger
+  if (this._mainShown) {
+    console.log('ℹ️ showMainApp: allerede vist - hopper over init');
+    return;
+  }
+  this._mainShown = true;
+
+  try {
+    if (typeof window.initApp === 'function') {
+      console.log('🚀 Initialiserer app');
+      window.initApp();
+    } else {
+      console.warn('⚠️ initApp finnes ikke på window');
     }
-    this._mainShown = true;
-
-    const { loginScreen, pricingPage, mainApp } = this._refs();
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (pricingPage) pricingPage.style.display = 'none';
-
-    if (mainApp) {
-      mainApp.style.display = 'block';
-      mainApp.style.opacity = '1';
-      mainApp.style.visibility = 'visible';
-      mainApp.style.pointerEvents = 'auto';
-    }
-
-    try {
-      if (typeof window.initApp === 'function') {
-        console.log('🚀 Initialiserer app');
-        window.initApp();
-      } else {
-        console.warn('⚠️ initApp finnes ikke på window');
-      }
-    } catch (e) {
-      console.error('❌ initApp feilet:', e);
-    }
+  } catch (e) {
+    console.error('❌ initApp feilet:', e);
   }
 }
+
 
 // -------------------------------
 // Global instance
