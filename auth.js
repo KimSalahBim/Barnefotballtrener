@@ -441,6 +441,13 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
   window.authService = window.authService || new AuthService();
   window.AuthService = window.authService; // compat for andre filer (subscription.js m.fl.)
   var authService = window.authService;
+  // Expose a public wrapper so other files can reliably fetch session/token
+if (typeof authService.getSessionWithRetry !== 'function') {
+  authService.getSessionWithRetry = async function () {
+    return await authService._getSessionWithRetry();
+  };
+}
+
 
   // -------------------------------
   // Bind UI handlers (ONE TIME)
