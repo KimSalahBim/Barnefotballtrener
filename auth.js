@@ -444,7 +444,8 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
   // Expose a public wrapper so other files can reliably fetch session/token
 if (typeof authService.getSessionWithRetry !== 'function') {
   authService.getSessionWithRetry = async function () {
-    return await authService._getSessionWithRetry();
+    const { data } = await authService._getSessionWithRetry();
+    return data?.session || null; // <-- returner session direkte
   };
 }
 
