@@ -491,7 +491,27 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
       console.error('❌ initApp feilet:', e);
     }
   };
+  
+  // ------------------------------------------------
+  // Small public helpers (used by core.js / others)
+  // ------------------------------------------------
+  AuthService.prototype.getUserId = function () {
+    try {
+      return this.currentUser && this.currentUser.id ? this.currentUser.id : null;
+    } catch (e) {
+      return null;
+    }
+  };
 
+  AuthService.prototype.getUser = function () {
+    try {
+      return this.currentUser || null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  
   // -------------------------------
   // Create/replace global instance
   // -------------------------------
