@@ -158,7 +158,7 @@ export default async function handler(req, res) {
         lifetime: false,
         plan: sub.plan,
         current_period_end: sub.current_period_end,
-        canStartTrial: !trialUsed,
+        canStartTrial: false,
       });
     }
 
