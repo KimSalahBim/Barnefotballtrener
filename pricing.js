@@ -1,24 +1,30 @@
-// Barnefotballtrener - Pricing Page + Magic Link Logic
-// =====================================================
+// Barnefotballtrener - Pricing + Magic Link Logic (ROBUST)
+// =======================================================
+// Denne fila håndterer:
+// 1) Planvalg (.btn-select)
+// 2) Magic link (OTP) login (#magicLinkEmail + #magicLinkBtn) med cooldown/rate-limit-beskyttelse
+// 3) Stripe success/cancel query params
+//
+// Viktig: Vi binder magic link med CAPTURE og stopImmediatePropagation()
+// slik at evt. tidligere handlers (f.eks. i auth.js) ikke dobbel-sender.
 
-(() => {
+(function () {
   'use strict';
 
   // -------------------------------
-  // Helpers
+  // Utils
   // -------------------------------
   function log(...args) {
     console.log(...args);
   }
 
   function showNotification(message, type = 'info') {
-    log(`📢 Notification: ${message} (${type})`);
-
-    // Bruk eksisterende notification-system hvis tilgjengelig
-    if (typeof window.showNotification === 'function') {
-      window.showNotification(message, type);
-      return;
-    }
+    try {
+      if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+        return;
+      }
+    } catch (_) {}
 
     // Fallback
     const notification = document.createElement('div');
@@ -28,415 +34,376 @@
       position: fixed;
       top: 20px;
       right: 20px;
-      padding: 15px 25px;
+      padding: 14px 20px;
       border-radius: 12px;
       background: ${type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#3B82F6'};
       color: white;
       font-weight: 600;
       z-index: 10000;
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      max-width: 320px;
+      line-height: 1.25;
     `;
-
     document.body.appendChild(notification);
 
     setTimeout(() => {
       notification.style.opacity = '0';
       notification.style.transition = 'opacity 0.3s';
       setTimeout(() => notification.remove(), 300);
-    }, 3000);
+    }, 3200);
   }
 
-  function getAuthService() {
-    return window.authService || null;
-  }
-
-  function getSubscriptionService() {
-    // Viktig: i din kode har du brukt subscriptionService (ikke subscriptionsService)
-    return window.subscriptionService || null;
-  }
-
-  function getSupabaseClient() {
-    // Fallback: authService.supabase -> window.supabase
-    const a = getAuthService();
-    if (a?.supabase) return a.supabase;
-    if (window.supabase) return window.supabase;
-    return null;
-  }
-
-  function cleanEmail(email) {
-    return String(email || '').trim();
-  }
-
-  // -------------------------------
-  // Session/token helpers
-  // -------------------------------
-  async function getAccessToken() {
-    // 1) Prefer: authService.getSessionWithRetry() hvis den finnes
-    try {
-      const a = getAuthService();
-      if (a?.getSessionWithRetry) {
-        const s = await a.getSessionWithRetry();
-        if (s?.access_token) return s.access_token;
-        if (s?.session?.access_token) return s.session.access_token;
-      }
-    } catch (_) {}
-
-    // 2) Fallback: supabase.auth.getSession()
-    try {
-      const sb = getSupabaseClient();
-      if (sb?.auth?.getSession) {
-        const { data } = await sb.auth.getSession();
-        const token = data?.session?.access_token;
-        if (token) return token;
-      }
-    } catch (_) {}
-
-    return null;
+  function safeTrim(v) {
+    return String(v || '').trim();
   }
 
   async function getCurrentUser() {
-    // 1) Sync user fra authService hvis den finnes
     try {
-      const a = getAuthService();
-      if (a?.getUser) {
-        const u = a.getUser(); // i din kode ser denne ut til å være sync
-        if (u) return u;
-      }
-      if (a?.currentUser) return a.currentUser;
-    } catch (_) {}
-
-    // 2) Fallback: supabase.auth.getSession()
-    try {
-      const sb = getSupabaseClient();
-      if (sb?.auth?.getSession) {
-        const { data } = await sb.auth.getSession();
-        const u = data?.session?.user || null;
-        if (u) return u;
+      if (window.authService) {
+        // Støtt både async og sync varianter
+        if (typeof window.authService.getUser === 'function') {
+          const u = window.authService.getUser();
+          return u && typeof u.then === 'function' ? await u : u;
+        }
+        if (window.authService.currentUser) return window.authService.currentUser;
       }
     } catch (_) {}
-
     return null;
   }
 
-  // -------------------------------
-  // Magic link binding + cooldown
-  // -------------------------------
-  const MAGIC_COOLDOWN_MS = 35_000; // 35s for å unngå rate limit
-  const MAGIC_STORAGE_KEY = 'bf_magiclink_last_sent_at';
-
-  function getMagicCooldownRemaining() {
-    try {
-      const last = Number(localStorage.getItem(MAGIC_STORAGE_KEY) || '0');
-      const diff = Date.now() - last;
-      return Math.max(0, MAGIC_COOLDOWN_MS - diff);
-    } catch (_) {
-      return 0;
-    }
-  }
-
-  function setMagicCooldownNow() {
-    try {
-      localStorage.setItem(MAGIC_STORAGE_KEY, String(Date.now()));
-    } catch (_) {}
-  }
-
-  function setBtnDisabled(btn, disabled) {
-    if (!btn) return;
-    btn.disabled = !!disabled;
-    btn.style.opacity = disabled ? '0.7' : '1';
-    btn.style.cursor = disabled ? 'not-allowed' : 'pointer';
-    btn.style.pointerEvents = disabled ? 'none' : 'auto';
-  }
-
-  async function sendMagicLink() {
-    const a = getAuthService();
-    const sb = getSupabaseClient();
-    const emailInput = document.getElementById('magicLinkEmail');
-    const btn = document.getElementById('magicLinkBtn');
-
-    const email = cleanEmail(emailInput?.value);
-
-    if (!email || !email.includes('@')) {
-      showNotification('Skriv inn en gyldig e-postadresse.', 'error');
-      return;
-    }
-
-    const remaining = getMagicCooldownRemaining();
-    if (remaining > 0) {
-      const secs = Math.ceil(remaining / 1000);
-      showNotification(`Vent litt – du kan sende ny lenke om ${secs}s.`, 'info');
-      return;
-    }
-
-    if (!a && !sb) {
-      showNotification('Innlogging er ikke klar (auth mangler). Oppdater siden.', 'error');
-      return;
-    }
-
-    setBtnDisabled(btn, true);
-    showNotification('Sender innloggingslenke…', 'info');
-
-    try {
-      // Bruk din authService-metode hvis den finnes
-      if (a?.signInWithMagicLink) {
-        const res = await a.signInWithMagicLink(email);
-        if (!res?.success) {
-          throw new Error(res?.error || 'Kunne ikke sende innloggingslenke');
-        }
-      } else {
-        // Fallback direkte mot supabase client
-        if (!sb?.auth?.signInWithOtp) throw new Error('Supabase auth er ikke tilgjengelig');
-
-        // Safari/iOS: bruk samme origin + path
-        const emailRedirectTo = window.location.origin + window.location.pathname;
-
-        const { error } = await sb.auth.signInWithOtp({
-          email,
-          options: { emailRedirectTo },
-        });
-        if (error) throw error;
-      }
-
-      setMagicCooldownNow();
-      showNotification('Innloggingslenke sendt. Sjekk e-posten (og søppelpost).', 'success');
-    } catch (err) {
-      const msg = err?.message || String(err);
-
-      // Spesifikk håndtering av rate limit
-      if (String(msg).toLowerCase().includes('rate') || String(msg).includes('429')) {
-        setMagicCooldownNow(); // sett cooldown uansett for å hindre spam-klikk
-        showNotification('Du har sendt for mange lenker. Vent litt og prøv igjen.', 'error');
-      } else {
-        showNotification(`Kunne ikke sende lenke: ${msg}`, 'error');
-      }
-      console.error('❌ Magic link error:', err);
-    } finally {
-      // re-enable etter en liten pause (også ved feil)
-      setTimeout(() => setBtnDisabled(btn, false), 1200);
-    }
-  }
-
-  function bindMagicLinkUI() {
-    const btn = document.getElementById('magicLinkBtn');
-    const input = document.getElementById('magicLinkEmail');
-
-    if (!btn || !input) {
-      // Ikke på alle sider
-      return;
-    }
-
-    if (btn.__bf_bound_magic) return;
-    btn.__bf_bound_magic = true;
-
-    btn.addEventListener(
-      'click',
-      async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        await sendMagicLink();
-      },
-      { passive: false }
-    );
-
-    // Enter i input sender
-    if (!input.__bf_bound_enter) {
-      input.__bf_bound_enter = true;
-      input.addEventListener('keydown', async (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          await sendMagicLink();
-        }
-      });
-    }
-
-    // Vis cooldown-status hvis aktiv
-    const remaining = getMagicCooldownRemaining();
-    if (remaining > 0) {
-      const secs = Math.ceil(remaining / 1000);
-      showNotification(`Du kan sende ny lenke om ${secs}s.`, 'info');
-    }
-
-    log('✅ Magic link bundet (#magicLinkBtn)');
+  function getSubscriptionService() {
+    return window.subscriptionService || null;
   }
 
   // -------------------------------
-  // Pricing / checkout
+  // Stripe return handling
   // -------------------------------
-  async function handlePlanSelection(planType) {
+  function handleStripeReturnParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (urlParams.get('success') === 'true') {
+      showNotification('Betaling fullført! Velkommen! 🎉', 'success');
+
+      setTimeout(() => {
+        // Fjern query params fra URL (behold hash)
+        const cleanUrl =
+          window.location.origin +
+          window.location.pathname +
+          (window.location.hash || '');
+        window.history.replaceState({}, document.title, cleanUrl);
+
+        // Til hovedapp
+        try {
+          window.authService?.showMainApp?.();
+        } catch (_) {}
+      }, 1500);
+    } else if (urlParams.get('canceled') === 'true') {
+      showNotification('Betaling avbrutt. Du kan prøve igjen når som helst.', 'info');
+
+      setTimeout(() => {
+        const cleanUrl =
+          window.location.origin +
+          window.location.pathname +
+          (window.location.hash || '');
+        window.history.replaceState({}, document.title, cleanUrl);
+      }, 800);
+    }
+  }
+
+  // -------------------------------
+  // Pricing / plan selection
+  // -------------------------------
+  async function handlePlanSelection(planType, priceId) {
     try {
       log('🔍 Handling plan selection:', planType);
 
       const user = await getCurrentUser();
-      const a = getAuthService();
-      const svc = getSubscriptionService();
-
       if (!user) {
-        showNotification('Du må være logget inn først.', 'error');
-        a?.showLoginScreen?.();
+        log('❌ No user found');
+        showNotification('Du må være logget inn først', 'error');
+        try {
+          window.authService?.showLoginScreen?.();
+        } catch (_) {}
         return;
       }
 
-      // Trial-logikk (kun hvis du har det skrudd på og metodene finnes)
-      try {
-        const cfg = window.CONFIG;
-        const canTrial =
-          !!cfg?.trial?.enabled &&
-          typeof svc?.checkSubscription === 'function' &&
-          typeof svc?.startTrial === 'function';
+      log('✅ User found:', user.email);
 
-        if (canTrial) {
-          const sub = await svc.checkSubscription(user.id);
-          if (sub?.canStartTrial) {
-            const result = await svc.startTrial(user.id, planType);
-            if (result?.success) {
-              showNotification(`Gratulerer! Din ${cfg.trial.days}-dagers prøveperiode har startet! 🎉`, 'success');
-              setTimeout(() => a?.showMainApp?.(), 800);
-              return;
-            }
-            // hvis trial feiler: fall gjennom til checkout
-          }
-        }
-      } catch (_) {
-        // Ignorer trial-feil og gå videre til checkout
+      const svc = getSubscriptionService();
+      if (!svc) {
+        showNotification('Abonnementstjeneste er ikke lastet. Oppdater siden.', 'error');
+        return;
       }
 
-      // Ellers -> Stripe checkout via backend
-      await startCheckout(planType);
+      // Finn checkSubscription (robust på navnevariasjoner)
+      const checkFn =
+        (typeof svc.checkSubscription === 'function' && svc.checkSubscription) ||
+        (typeof svc.checkSubscriptionStatus === 'function' && svc.checkSubscriptionStatus) ||
+        (typeof svc.getSubscription === 'function' && svc.getSubscription) ||
+        null;
+
+      let subscription = null;
+      if (checkFn) {
+        subscription = await checkFn.call(svc, user.id);
+      }
+
+      log('📊 Subscription status:', subscription);
+
+      const trialEnabled = !!(window.CONFIG && window.CONFIG.trial && window.CONFIG.trial.enabled);
+      const canStartTrial = !!(subscription && subscription.canStartTrial);
+
+      if (trialEnabled && canStartTrial && typeof svc.startTrial === 'function') {
+        log('🎁 Starting trial...');
+        const result = await svc.startTrial(user.id, planType);
+
+        if (result && result.success) {
+          const days = window.CONFIG?.trial?.days || 7;
+          showNotification(`Gratulerer! Din ${days}-dagers prøveperiode har startet! 🎉`, 'success');
+          setTimeout(() => {
+            window.authService?.showMainApp?.();
+          }, 1200);
+          return;
+        }
+
+        showNotification('Noe gikk galt. Prøv igjen.', 'error');
+        return;
+      }
+
+      // Ellers: gå til betaling
+      await startCheckout(planType, priceId, user);
     } catch (error) {
       console.error('❌ Error handling plan selection:', error);
       showNotification('En feil oppstod. Prøv igjen senere.', 'error');
     }
   }
 
-  async function startCheckout(planType) {
+  async function startCheckout(planType, priceId, user) {
     try {
-      showNotification('Videresender til betaling…', 'info');
+      log('💳 Starting checkout for:', planType, priceId);
+      showNotification('Videresender til betaling...', 'info');
 
       const svc = getSubscriptionService();
-      if (!svc?.init || !svc?.stripe) {
-        // init kan sette stripe
-        if (svc?.init) await svc.init();
-      }
+      if (!svc) throw new Error('subscriptionService mangler');
 
-      if (!svc?.stripe) {
+      if (typeof svc.init === 'function') await svc.init();
+
+      if (!svc.stripe || typeof svc.stripe.redirectToCheckout !== 'function') {
         throw new Error('Stripe er ikke initialisert');
       }
 
-      const token = await getAccessToken();
-      if (!token) {
-        showNotification('Du må være logget inn først.', 'error');
-        getAuthService()?.showLoginScreen?.();
-        return;
+      // Hent riktig priceId fra CONFIG hvis den finnes
+      const cfgPriceId = window.CONFIG?.prices?.[planType]?.id;
+      const actualPriceId = cfgPriceId || priceId;
+
+      log('Using price ID:', actualPriceId);
+
+      if (!actualPriceId) {
+        throw new Error('Ugyldig price ID');
       }
 
-      const resp = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+      // Hold oss på samme path (typisk "/") og la hash være ok
+      const basePath = window.location.origin + window.location.pathname;
+
+      const { error } = await svc.stripe.redirectToCheckout({
+        lineItems: [{ price: actualPriceId, quantity: 1 }],
+        mode: planType === 'lifetime' ? 'payment' : 'subscription',
+        successUrl: `${basePath}?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${basePath}?canceled=true`,
+        customerEmail: user.email,
+        clientReferenceId: user.id,
+        // metadata i Checkout krever normalt at dette settes server-side ved session creation,
+        // men vi lar det stå her (skader ikke om Stripe ignorerer det på client redirect).
+        metadata: {
+          user_id: user.id,
+          plan_type: planType,
         },
-        body: JSON.stringify({ planType }),
       });
 
-      let data = {};
-      try {
-        data = await resp.json();
-      } catch (_) {}
-
-      if (!resp.ok || !data?.sessionId) {
-        console.error('Checkout session error:', data);
-        throw new Error(data?.error || 'Kunne ikke starte betalingsprosessen');
-      }
-
-      const { error } = await svc.stripe.redirectToCheckout({ sessionId: data.sessionId });
       if (error) throw error;
     } catch (error) {
       console.error('❌ Checkout error:', error);
-      showNotification(`Kunne ikke starte betalingsprosessen: ${error?.message || error}`, 'error');
+      showNotification(`Kunne ikke starte betalingsprosessen: ${error.message}`, 'error');
     }
   }
 
-  async function handleSuccessfulPayment() {
-    showNotification('Betaling fullført! Velkommen! 🎉', 'success');
-    setTimeout(() => {
-      window.history.replaceState({}, document.title, window.location.pathname);
-      getAuthService()?.showMainApp?.();
-    }, 900);
+  function bindPlanButtons() {
+    const selectButtons = document.querySelectorAll('.btn-select');
+    log(`Found ${selectButtons.length} select buttons`);
+
+    selectButtons.forEach((btn) => {
+      if (btn.__bf_bound_plan) return;
+      btn.__bf_bound_plan = true;
+
+      btn.addEventListener(
+        'click',
+        async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const planType = btn.getAttribute('data-plan');
+          const priceId = btn.getAttribute('data-price-id');
+
+          log(`Button clicked: ${planType}, priceId: ${priceId}`);
+          await handlePlanSelection(planType, priceId);
+        },
+        { passive: false }
+      );
+    });
   }
 
   // -------------------------------
-  // Bindings
+  // Magic link (OTP) login - robust cooldown
   // -------------------------------
-  function bindPricingButtons() {
-    // Event delegation: funker selv om kort/knapper renderes på nytt
-    if (document.__bf_bound_pricing_clicks) return;
-    document.__bf_bound_pricing_clicks = true;
+  const COOLDOWN_SECONDS_DEFAULT = 60; // Supabase ga deg "after 49 seconds" -> vi bruker 60 for å være safe
 
-    document.addEventListener(
-      'click',
-      async (e) => {
-        const btn = e.target?.closest?.('.btn-select');
-        if (!btn) return;
+  function cooldownKeyForEmail(email) {
+    const safe = encodeURIComponent(String(email || '').toLowerCase().trim());
+    return `bf_magic_cooldown_until__${safe}`;
+  }
 
-        e.preventDefault();
-        e.stopPropagation();
+  function getCooldownUntil(email) {
+    try {
+      const key = cooldownKeyForEmail(email);
+      const v = localStorage.getItem(key);
+      const n = v ? parseInt(v, 10) : 0;
+      return Number.isFinite(n) ? n : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
 
-        const planType = btn.getAttribute('data-plan'); // month | year | lifetime
-        if (!planType) {
-          showNotification('Fant ikke plan-type på knappen.', 'error');
-          return;
+  function setCooldown(email, seconds) {
+    try {
+      const key = cooldownKeyForEmail(email);
+      const until = Date.now() + Math.max(5, seconds) * 1000;
+      localStorage.setItem(key, String(until));
+      return until;
+    } catch (_) {
+      return Date.now() + Math.max(5, seconds) * 1000;
+    }
+  }
+
+  function parseWaitSecondsFromErrorMessage(msg) {
+    // Eksempel fra Supabase: "you can only request this after 49 seconds."
+    const m = String(msg || '').match(/after\s+(\d+)\s+seconds?/i);
+    if (m && m[1]) {
+      const s = parseInt(m[1], 10);
+      if (Number.isFinite(s) && s > 0) return s;
+    }
+    return null;
+  }
+
+  function bindMagicLink() {
+    const emailInput = document.getElementById('magicLinkEmail');
+    const btn = document.getElementById('magicLinkBtn');
+    const hint = document.getElementById('magicLinkHint');
+
+    if (!emailInput || !btn) {
+      log('ℹ️ Magic link elementer finnes ikke på denne siden (#magicLinkEmail / #magicLinkBtn).');
+      return;
+    }
+
+    if (btn.__bf_bound_magic_pricing) return;
+    btn.__bf_bound_magic_pricing = true;
+
+    btn.style.pointerEvents = 'auto';
+    btn.style.cursor = 'pointer';
+
+    function setHint(text) {
+      if (hint) hint.textContent = text;
+    }
+
+    function setButtonState(disabled, text) {
+      btn.disabled = !!disabled;
+      if (text) btn.textContent = text;
+    }
+
+    async function sendMagicLink() {
+      const email = safeTrim(emailInput.value);
+
+      if (!email || !email.includes('@')) {
+        showNotification('Skriv inn en gyldig e-postadresse.', 'error');
+        emailInput.focus();
+        return;
+      }
+
+      const until = getCooldownUntil(email);
+      const now = Date.now();
+      if (until && now < until) {
+        const remaining = Math.ceil((until - now) / 1000);
+        showNotification(`Vent ${remaining}s før du sender en ny lenke.`, 'info');
+        setButtonState(true, `Vent ${remaining}s...`);
+        setTimeout(() => {
+          // Ikke spam UI – bare “slipp” knappen etter litt
+          setButtonState(false, 'Send innloggingslenke');
+        }, Math.min(remaining, 10) * 1000);
+        return;
+      }
+
+      // Guard: lås alltid i minst 60s for å unngå 429 pga dobbelklikk / dobbel-binding
+      setCooldown(email, COOLDOWN_SECONDS_DEFAULT);
+
+      setButtonState(true, 'Sender...');
+      try {
+        if (!window.authService || typeof window.authService.signInWithMagicLink !== 'function') {
+          throw new Error('authService.signInWithMagicLink finnes ikke');
         }
 
-        log(`💳 Plan button clicked: ${planType}`);
-        await handlePlanSelection(planType);
+        const res = await window.authService.signInWithMagicLink(email);
+
+        if (res && res.success) {
+          setHint('Sjekk e-posten din og klikk på lenka for å logge inn ✅');
+          showNotification('Innloggingslenke sendt. Sjekk e-posten.', 'success');
+        } else {
+          // Hvis Supabase svarer med "after XX seconds", juster cooldown riktig
+          const errMsg = res?.error || 'Kunne ikke sende lenke.';
+          const wait = parseWaitSecondsFromErrorMessage(errMsg);
+          if (wait) setCooldown(email, Math.max(wait, COOLDOWN_SECONDS_DEFAULT));
+          showNotification(errMsg, 'error');
+        }
+      } catch (err) {
+        const msg = err?.message || String(err);
+        const wait = parseWaitSecondsFromErrorMessage(msg);
+        if (wait) setCooldown(email, Math.max(wait, COOLDOWN_SECONDS_DEFAULT));
+        console.error('❌ Magic link exception:', err);
+        showNotification(msg.includes('after')
+          ? msg
+          : 'Kunne ikke sende lenke. Prøv igjen om litt.', 'error');
+      } finally {
+        setButtonState(false, 'Send innloggingslenke');
+      }
+    }
+
+    // CAPTURE + stopImmediatePropagation => hindrer at auth.js sin click-handler også sender
+    btn.addEventListener(
+      'click',
+      async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        await sendMagicLink();
       },
-      { passive: false }
+      { capture: true, passive: false }
     );
-  }
 
-  function bindStripeReturnHandlers() {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === 'true') {
-      handleSuccessfulPayment();
-    } else if (urlParams.get('canceled') === 'true') {
-      showNotification('Betaling avbrutt. Du kan prøve igjen når som helst.', 'info');
-    }
-  }
-
-  // Team/Club modaler (trygt: gjør ingenting hvis de ikke finnes)
-  function bindContactFormsIfPresent() {
-    const teamForm = document.getElementById('teamContactForm');
-    if (teamForm && !teamForm.__bf_bound) {
-      teamForm.__bf_bound = true;
-      teamForm.addEventListener('submit', async (e) => {
+    emailInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
         e.preventDefault();
-        showNotification('Kontakt-skjema er ikke aktivert ennå.', 'info');
-      });
-    }
+        btn.click();
+      }
+    });
 
-    const clubForm = document.getElementById('clubContactForm');
-    if (clubForm && !clubForm.__bf_bound) {
-      clubForm.__bf_bound = true;
-      clubForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        showNotification('Kontakt-skjema er ikke aktivert ennå.', 'info');
-      });
-    }
+    log('✅ Magic link bundet (pricing.js) (#magicLinkBtn)');
   }
 
   // -------------------------------
   // Boot
   // -------------------------------
   function boot() {
-    log('💳 pricing.js loaded');
-    bindPricingButtons();
-    bindStripeReturnHandlers();
-    bindMagicLinkUI();
-    bindContactFormsIfPresent();
-
-    // Debug
-    const count = document.querySelectorAll('.btn-select').length;
-    log(`Found ${count} select buttons`);
+    log('💳 Pricing.js loaded');
+    bindPlanButtons();
+    bindMagicLink();
+    handleStripeReturnParams();
   }
 
   if (document.readyState === 'loading') {
