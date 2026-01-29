@@ -300,7 +300,6 @@ function bindMagicLink() {
   const emailInput = document.getElementById('magicLinkEmail');
   const btn = document.getElementById('magicLinkBtn');
   const hint = document.getElementById('magicLinkHint');
-  ...
 }
 
 
