@@ -189,17 +189,29 @@ if (trialActive) {
 }
 
 
-
+    var trialIso2 = null;
+    try {
+      trialIso2 = trialEndsAt ? trialEndsAt.toISOString() : null;
+    } catch (e) {
+      trialIso2 = null;
+    }
 
     return res.status(200).json({
       active: false,
       trial: false,
       lifetime: false,
       plan: null,
-      trial_ends_at: trialEndsAt?.toISOString() || null,
+
+      // ✅ konsistent for frontend (modal/pricing)
+      current_period_end: trialIso2,
+
+      // behold for debug/kompat
+      trial_ends_at: trialIso2,
+
       canStartTrial: !trialUsed,
       reason: trialUsed ? "trial_expired" : "no_access",
     });
+
   } catch (e) {
     console.error("subscription-status error:", e);
     return res.status(500).json({ error: "Server error" });
