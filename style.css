@@ -1641,3 +1641,20 @@ body.lock-scroll {
 body.gated #mainApp {
   display: none !important;
 }
+/* ---------- Gating / scroll lock (iOS-safe) ---------- */
+html.gated,
+body.gated {
+  height: 100%;
+  overflow: hidden !important;
+}
+
+body.gated {
+  position: fixed;
+  width: 100%;
+  left: 0;
+  top: 0;
+
+  /* iOS/Safari: hindrer "bounce"/pull-to-refresh inni body */
+  overscroll-behavior: none;
+  touch-action: none;
+}
