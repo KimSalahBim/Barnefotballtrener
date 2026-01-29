@@ -439,6 +439,7 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
   // Create/replace global instance
   // -------------------------------
   window.authService = new AuthService();
+  window.AuthService = window.authService; // compat for andre filer (subscription.js m.fl.)
   var authService = window.authService;
 
   // -------------------------------
