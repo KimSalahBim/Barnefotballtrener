@@ -293,14 +293,14 @@
     return null;
   }
 
-function bindMagicLink() {
-  // Magic link håndteres kun av auth.js (unngå dobbel binding)
-  return;
+  function bindMagicLink() {
+    // Magic link håndteres kun av auth.js (unngå dobbel binding)
+    return;
 
-  const emailInput = document.getElementById('magicLinkEmail');
-  const btn = document.getElementById('magicLinkBtn');
-  const hint = document.getElementById('magicLinkHint');
-}
+    const emailInput = document.getElementById('magicLinkEmail');
+    const btn = document.getElementById('magicLinkBtn');
+    const hint = document.getElementById('magicLinkHint');
+
 
 
     if (!emailInput || !btn) {
