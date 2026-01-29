@@ -147,7 +147,7 @@ export default async function handler(req, res) {
         trial: false,
         lifetime: true,
         plan: "lifetime",
-        canStartTrial: !trialUsed,
+        canStartTrial: false,
       });
     }
 
