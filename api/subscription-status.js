@@ -163,15 +163,29 @@ export default async function handler(req, res) {
     }
 
     if (trialActive) {
+      var trialIso = null;
+      try {
+        trialIso = trialEndsAt ? trialEndsAt.toISOString() : null;
+      } catch (e) {
+        trialIso = null;
+      }
+
       return res.status(200).json({
         active: false,
         trial: true,
         lifetime: false,
         plan: accessRow?.trial_plan || null,
-        trial_ends_at: trialEndsAt?.toISOString() || null,
+
+        // ✅ Frontend forventer dette feltet (modal/pricing)
+        current_period_end: trialIso,
+
+        // (valgfritt, men fint å beholde)
+        trial_ends_at: trialIso,
+
         canStartTrial: false,
       });
     }
+
 
     return res.status(200).json({
       active: false,
