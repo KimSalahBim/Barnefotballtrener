@@ -1,330 +1,324 @@
-// Barnefotballtrener - auth.js (REPLACEMENT FILE)
-// ===================================================
-// - Robust Supabase Auth (Google OAuth + Magic link/OTP)
-// - Én autoritativ auth-flyt (ingen dobbeltbinding)
-// - Stabil på iOS/Safari + scroll-lock
-// - Paywall basert på subscriptionService.checkSubscription() (token-basert)
-// - Anti-spam/cooldown for magic link (reduserer 429)
-// - Guards mot doble init-kall
+// Barnefotballtrener - auth.js (robust, no optional chaining) v2
+// =============================================================
 
-// -------------------------------
-// AbortError guard (støy fra intern auth)
-// -------------------------------
-if (!window.__bf_aborterror_guard) {
-  window.__bf_aborterror_guard = true;
-  window.addEventListener('unhandledrejection', (event) => {
-    const msg = String(event?.reason?.message || event?.reason || '');
-    if (msg.includes('AbortError') || msg.includes('signal is aborted')) {
-      console.warn('⚠️ Ignorerer AbortError fra intern auth:', event.reason);
-      event.preventDefault?.();
-    }
-  });
-}
+(function () {
+  // AbortError guard (støy fra intern auth / fetch aborts)
+  if (!window.__bf_aborterror_guard) {
+    window.__bf_aborterror_guard = true;
+    window.addEventListener('unhandledrejection', function (event) {
+      try {
+        var reason = event && event.reason;
+        var msg = String((reason && reason.message) || reason || '');
+        if (msg.indexOf('AbortError') !== -1 || msg.indexOf('signal is aborted') !== -1) {
+          console.warn('⚠️ Ignorerer AbortError fra intern auth:', reason);
+          if (event && typeof event.preventDefault === 'function') event.preventDefault();
+        }
+      } catch (e) {}
+    });
+  }
 
-// -------------------------------
-// DEV bypass (DISABLED)
-// -------------------------------
-const DEV_BYPASS_ENABLED = false;
-const DEV_BYPASS_EMAILS = [
-  'kimruneholmvik@gmail.com',
-  'katrinenordseth@gmail.com',
-];
-function isDevBypassUser(user) {
-  const email = (user?.email || '').toLowerCase().trim();
-  return DEV_BYPASS_EMAILS.includes(email);
-}
+  // Prevent multiple boots/files
+  if (window.__bf_auth_file_loaded_v2) return;
+  window.__bf_auth_file_loaded_v2 = true;
 
-// -------------------------------
-// Safe storage helpers
-// -------------------------------
-function safeStorageGet(key) {
-  try { return localStorage.getItem(key); } catch { return null; }
-}
-function safeStorageSet(key, value) {
-  try { localStorage.setItem(key, value); return true; } catch { return false; }
-}
-function safeStorageRemove(key) {
-  try { localStorage.removeItem(key); return true; } catch { return false; }
-}
+  // -------------------------------
+  // Small helpers
+  // -------------------------------
+  function notify(msg, type) {
+    try {
+      if (typeof window.showNotification === 'function') {
+        window.showNotification(msg, type);
+      }
+    } catch (e) {}
+  }
 
-// -------------------------------
-// iOS-safe scroll lock
-// -------------------------------
-function lockScroll() {
-  const y = window.scrollY || window.pageYOffset || 0;
-  document.documentElement.classList.add('lock-scroll');
-  document.body.classList.add('lock-scroll');
+  function safeGetStorage(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+  function safeSetStorage(key, value) {
+    try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+  }
+  function safeRemoveStorage(key) {
+    try { localStorage.removeItem(key); return true; } catch (e) { return false; }
+  }
 
-  // Inline fallback (iOS)
-  document.body.style.position = 'fixed';
-  document.body.style.width = '100%';
-  document.body.style.top = `-${y}px`;
-  document.body.style.overflow = 'hidden';
-  document.body.dataset.scrollY = String(y);
-}
+  function readEnv(key) {
+    try {
+      if (window.ENV && window.ENV[key]) return window.ENV[key];
+      if (window.env && window.env[key]) return window.env[key];
+      if (window[key]) return window[key];
+    } catch (e) {}
+    return '';
+  }
 
-function unlockScroll() {
-  const y = parseInt(document.body.dataset.scrollY || '0', 10) || 0;
-  document.documentElement.classList.remove('lock-scroll');
-  document.body.classList.remove('lock-scroll');
+  // -------------------------------
+  // Scroll lock (iOS-safe)
+  // -------------------------------
+  function lockScroll() {
+    var y = window.scrollY || window.pageYOffset || 0;
 
-  document.body.style.position = '';
-  document.body.style.width = '';
-  document.body.style.top = '';
-  document.body.style.overflow = '';
-  delete document.body.dataset.scrollY;
+    document.documentElement.classList.add('lock-scroll');
+    document.body.classList.add('lock-scroll');
 
-  window.scrollTo(0, y);
-}
+    // Inline fallback for iOS
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = '-' + y + 'px';
+    document.body.style.overflow = 'hidden';
+    document.body.dataset.scrollY = String(y);
+  }
 
-// -------------------------------
-// Supabase config (public) – støtter flere varianter
-// -------------------------------
-function readEnv(key) {
-  return (
-    (window.ENV && window.ENV[key]) ||
-    (window.env && window.env[key]) ||
-    window[key] ||
-    ''
-  );
-}
+  function unlockScroll() {
+    var y = parseInt(document.body.dataset.scrollY || '0', 10) || 0;
 
-const SUPABASE_URL =
-  readEnv('SUPABASE_URL') ||
-  readEnv('VITE_SUPABASE_URL') ||
-  '';
+    document.documentElement.classList.remove('lock-scroll');
+    document.body.classList.remove('lock-scroll');
 
-const SUPABASE_ANON_KEY =
-  readEnv('SUPABASE_ANON_KEY') ||
-  readEnv('SUPABASE_ANON') ||
-  readEnv('VITE_SUPABASE_ANON_KEY') ||
-  readEnv('VITE_SUPABASE_ANON') ||
-  '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.top = '';
+    document.body.style.overflow = '';
+    delete document.body.dataset.scrollY;
 
-// -------------------------------
-// AuthService
-// -------------------------------
-class AuthService {
-  constructor() {
+    window.scrollTo(0, y);
+  }
+
+  window.__bf_lockScroll = lockScroll;
+  window.__bf_unlockScroll = unlockScroll;
+
+  // -------------------------------
+  // Supabase config (public)
+  // -------------------------------
+  var SUPABASE_URL = readEnv('SUPABASE_URL') || readEnv('VITE_SUPABASE_URL') || '';
+  var SUPABASE_ANON_KEY =
+    readEnv('SUPABASE_ANON_KEY') ||
+    readEnv('SUPABASE_ANON') ||
+    readEnv('VITE_SUPABASE_ANON_KEY') ||
+    readEnv('VITE_SUPABASE_ANON') ||
+    '';
+
+  // -------------------------------
+  // AuthService
+  // -------------------------------
+  function AuthService() {
+    this.supabase = null;
+    this.currentUser = null;
+
+    this._initPromise = null;
     this._mainShown = false;
     this._handlingSignIn = false;
 
-    this.supabase = null;
-    this.currentUser = null;
-    this.initPromise = null;
-
-    this.lockKey = 'bf_auth_lock_v1';
+    this._lockKey = 'bf_auth_lock_v1';
   }
 
-  // DOM refs (robust hvis script lastes før DOM)
-  _refs() {
+  AuthService.prototype._refs = function () {
     return {
       loginScreen: document.getElementById('passwordProtection'),
-      mainApp: document.getElementById('mainApp'),
       pricingPage: document.getElementById('pricingPage'),
+      mainApp: document.getElementById('mainApp')
     };
-  }
+  };
 
-  async init() {
-    if (this.initPromise) return this.initPromise;
+  AuthService.prototype._acquireLock = async function () {
+    var ttl = 10000;
+    var maxWait = 8000;
+    var start = Date.now();
 
-    this.initPromise = (async () => {
-      console.log('🔐 Initialiserer AuthService...');
+    while (true) {
+      var now = Date.now();
+      var raw = safeGetStorage(this._lockKey);
+      var val = raw ? Number(raw) : 0;
 
-      try {
-        await this.loadSupabaseScript();
-
-        if (!window.supabase) {
-          console.error('❌ Supabase library ikke lastet (window.supabase mangler)');
-          this.showLoginScreen();
-          return;
-        }
-        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-          console.error('❌ Mangler Supabase config (URL/ANON_KEY)');
-          this.showLoginScreen();
-          return;
-        }
-
-        this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true,
-          },
-        });
-
-        console.log('✅ Supabase client opprettet');
-
-        let session = null;
-        try { session = await this.getSessionWithRetry(); } catch {}
-
-        if (session?.user) {
-          this.currentUser = session.user;
-          console.log('✅ Bruker allerede logget inn:', session.user.email);
-          await this.handleSignIn(session.user);
-        } else {
-          console.log('ℹ️ Ingen aktiv session');
-          this.showLoginScreen();
-        }
-
-        this.supabase.auth.onAuthStateChange(async (event, sess) => {
-          console.log('🔄 Auth state changed:', event);
-
-          if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && sess?.user) {
-            await this.handleSignIn(sess.user);
-          }
-
-          if (event === 'SIGNED_OUT') {
-            console.log('👋 Bruker logget ut');
-            this.currentUser = null;
-            this._mainShown = false;
-            this.showLoginScreen();
-          }
-        });
-
-        console.log('✅ AuthService initialisert');
-      } catch (error) {
-        console.error('❌ Auth init feilet:', error);
-        this.showLoginScreen();
+      if (!val || now - val >= ttl) {
+        safeSetStorage(this._lockKey, String(now));
+        return;
       }
-    })();
 
-    return this.initPromise;
-  }
+      if (now - start >= maxWait) {
+        console.warn('⚠️ acquireLock timeout – fortsetter likevel');
+        return;
+      }
 
-  async loadSupabaseScript() {
+      await new Promise(function (r) { setTimeout(r, 250); });
+    }
+  };
+
+  AuthService.prototype._releaseLock = function () {
+    safeRemoveStorage(this._lockKey);
+  };
+
+  AuthService.prototype._loadSupabaseScript = async function () {
     if (window.supabase) return;
 
     console.log('📦 Laster Supabase script...');
 
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector('script[data-supabase-script="1"]');
+    return new Promise(function (resolve, reject) {
+      var existing = document.querySelector('script[data-supabase-script="1"]');
       if (existing) {
         existing.addEventListener('load', resolve);
         existing.addEventListener('error', reject);
         return;
       }
 
-      const script = document.createElement('script');
-      // ✅ UMD build for vanilla JS
+      var script = document.createElement('script');
       script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
       script.async = true;
       script.defer = true;
       script.setAttribute('data-supabase-script', '1');
 
-      script.onload = () => {
+      script.onload = function () {
         console.log('✅ Supabase script lastet');
         resolve();
       };
-      script.onerror = (e) => {
+      script.onerror = function (e) {
         console.error('❌ Kunne ikke laste Supabase script', e);
         reject(e);
       };
 
       document.head.appendChild(script);
     });
-  }
+  };
 
-  // Lock for å redusere race conditions
-  async acquireLock() {
-    const ttl = 10_000;
-    const maxWait = 8_000;
-    const start = Date.now();
+  AuthService.prototype._getSessionWithRetry = async function () {
+    var self = this;
+    if (!self.supabase) return null;
 
-    while (true) {
-      const now = Date.now();
-      const raw = safeStorageGet(this.lockKey);
-      const val = raw ? Number(raw) : 0;
-
-      if (!val || now - val >= ttl) {
-        safeStorageSet(this.lockKey, String(now));
-        return;
-      }
-      if (now - start >= maxWait) {
-        console.warn('⚠️ acquireLock timeout – fortsetter likevel');
-        return;
-      }
-      await new Promise((r) => setTimeout(r, 250));
-    }
-  }
-
-  releaseLock() {
-    safeStorageRemove(this.lockKey);
-  }
-
-  async getSessionWithRetry() {
-    if (!this.supabase) return null;
-
-    await this.acquireLock();
+    await self._acquireLock();
     try {
       try {
-        const { data, error } = await this.supabase.auth.getSession();
-        if (error) throw error;
-        return data?.session || null;
-      } catch (error) {
-        console.warn('⚠️ getSession feilet, retry:', error);
-        await new Promise((r) => setTimeout(r, 350));
-        const { data, error: err2 } = await this.supabase.auth.getSession();
-        if (err2) throw err2;
-        return data?.session || null;
+        var r1 = await self.supabase.auth.getSession();
+        if (r1 && r1.error) throw r1.error;
+        return (r1 && r1.data && r1.data.session) ? r1.data.session : null;
+      } catch (e1) {
+        console.warn('⚠️ getSession feilet, retry:', e1);
+        await new Promise(function (r) { setTimeout(r, 350); });
+        var r2 = await self.supabase.auth.getSession();
+        if (r2 && r2.error) throw r2.error;
+        return (r2 && r2.data && r2.data.session) ? r2.data.session : null;
       }
     } finally {
-      this.releaseLock();
+      self._releaseLock();
     }
-  }
+  };
 
-  // Sign-in methods
-  async signInWithGoogle() {
+  AuthService.prototype.init = async function () {
+    var self = this;
+    if (self._initPromise) return self._initPromise;
+
+    self._initPromise = (async function () {
+      console.log('🟦 DOM ready - initialiserer auth');
+
+      try {
+        await self._loadSupabaseScript();
+
+        if (!window.supabase) {
+          console.error('❌ Supabase library ikke lastet (window.supabase mangler)');
+          self.showLoginScreen();
+          return;
+        }
+
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+          console.error('❌ Mangler Supabase config (SUPABASE_URL / SUPABASE_ANON_KEY)');
+          self.showLoginScreen();
+          return;
+        }
+
+        self.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+          }
+        });
+
+        console.log('✅ Supabase client opprettet');
+
+        var session = null;
+        try { session = await self._getSessionWithRetry(); } catch (e) {}
+
+        if (session && session.user) {
+          self.currentUser = session.user;
+          console.log('✅ Bruker allerede logget inn:', session.user.email);
+          await self.handleSignIn(session.user);
+        } else {
+          self.showLoginScreen();
+        }
+
+        self.supabase.auth.onAuthStateChange(async function (event, sess) {
+          console.log('🔄 Auth state changed:', event);
+
+          if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && sess && sess.user) {
+            await self.handleSignIn(sess.user);
+          }
+
+          if (event === 'SIGNED_OUT') {
+            console.log('👋 Bruker logget ut');
+            self.currentUser = null;
+            self._mainShown = false;
+            self.showLoginScreen();
+          }
+        });
+
+        console.log('✅ AuthService initialisert');
+      } catch (err) {
+        console.error('❌ Auth init feilet:', err);
+        self.showLoginScreen();
+      }
+    })();
+
+    return self._initPromise;
+  };
+
+  AuthService.prototype.signInWithGoogle = async function () {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
 
-      const redirectTo = window.location.origin + window.location.pathname;
+      var redirectTo = window.location.origin + window.location.pathname;
 
-      const { error } = await this.supabase.auth.signInWithOAuth({
+      var res = await this.supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo },
+        options: { redirectTo: redirectTo }
       });
 
-      if (error) throw error;
+      if (res && res.error) throw res.error;
       return { success: true };
     } catch (error) {
       console.error('❌ Google sign-in error:', error);
-      return { success: false, error: error?.message || String(error) };
+      return { success: false, error: (error && error.message) || String(error) };
     }
-  }
+  };
 
-  async signInWithMagicLink(email) {
+  AuthService.prototype.signInWithMagicLink = async function (email) {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
 
-      const cleanEmail = String(email || '').trim();
-      if (!cleanEmail || !cleanEmail.includes('@')) {
+      var cleanEmail = String(email || '').trim();
+      if (!cleanEmail || cleanEmail.indexOf('@') === -1) {
         return { success: false, error: 'Ugyldig e-postadresse' };
       }
 
-      const emailRedirectTo = window.location.origin + window.location.pathname;
+      var emailRedirectTo = window.location.origin + window.location.pathname;
 
-      const { error } = await this.supabase.auth.signInWithOtp({
+      var res = await this.supabase.auth.signInWithOtp({
         email: cleanEmail,
-        options: { emailRedirectTo },
+        options: { emailRedirectTo: emailRedirectTo }
       });
 
-      if (error) throw error;
+      if (res && res.error) throw res.error;
       return { success: true };
     } catch (error) {
       console.error('❌ Magic link error:', error);
-      return { success: false, error: error?.message || String(error) };
+      return { success: false, error: (error && error.message) || String(error) };
     }
-  }
+  };
 
-  async signOut() {
+  AuthService.prototype.signOut = async function () {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
 
-      await this.acquireLock();
-
-      const { error } = await this.supabase.auth.signOut();
-      if (error) throw error;
+      await this._acquireLock();
+      var res = await this.supabase.auth.signOut();
+      if (res && res.error) throw res.error;
 
       this.currentUser = null;
       this._mainShown = false;
@@ -333,265 +327,251 @@ class AuthService {
       return { success: true };
     } catch (error) {
       console.error('❌ Logout error:', error);
-      return { success: false, error: error?.message || String(error) };
+      return { success: false, error: (error && error.message) || String(error) };
     } finally {
-      this.releaseLock();
+      this._releaseLock();
     }
-  }
+  };
 
-  // Access gate
-  async handleSignIn(user) {
+  AuthService.prototype.handleSignIn = async function (user) {
     if (this._handlingSignIn) return;
     this._handlingSignIn = true;
 
     try {
       this.currentUser = user;
 
-      if (DEV_BYPASS_ENABLED && isDevBypassUser(user)) {
-        console.log('🔥 DEV BYPASS aktiv - hopper over plan/pricing:', user.email);
-        this.showMainApp();
-        return;
-      }
+      console.log('🔎 Sjekker subscription for bruker:', user && user.id);
 
-      console.log('🔎 Sjekker subscription for bruker:', user?.id);
-
-      const svc = window.subscriptionService;
+      var svc = window.subscriptionService;
       if (!svc || typeof svc.checkSubscription !== 'function') {
         console.warn('⚠️ subscriptionService.checkSubscription mangler - viser prisside');
         this.showPricingPage();
         return;
       }
 
-      const status = await svc.checkSubscription();
+      var status = await svc.checkSubscription();
       console.log('📊 Subscription status:', status);
 
-      const hasAccess = !!(status?.active || status?.trial || status?.lifetime);
+      var hasAccess = !!(status && (status.active || status.trial || status.lifetime));
 
-      if (hasAccess) {
-        this.showMainApp();
-
-        // Trial auto-lås (serverstyrt recheck)
-        if (status?.trial && status?.trial_ends_at) {
-          const msLeft = new Date(status.trial_ends_at).getTime() - Date.now();
-          if (msLeft > 0) {
-            setTimeout(async () => {
-              try {
-                const refreshed = await svc.checkSubscription();
-                const stillHasAccess = !!(refreshed?.active || refreshed?.trial || refreshed?.lifetime);
-                if (!stillHasAccess) {
-                  this._mainShown = false;
-                  this.showPricingPage();
-                  alert('Prøveperioden er utløpt. Velg en plan for å fortsette.');
-                }
-              } catch (e) {
-                console.warn('⚠️ Trial recheck feilet:', e);
-              }
-            }, Math.min(msLeft + 1000, 2147483000));
-          }
-        }
-      } else {
-        this.showPricingPage();
-      }
-    } catch (error) {
-      console.error('❌ Subscription check failed:', error);
+      if (hasAccess) this.showMainApp();
+      else this.showPricingPage();
+    } catch (e) {
+      console.error('❌ Subscription check failed:', e);
       this.showPricingPage();
     } finally {
       this._handlingSignIn = false;
     }
-  }
+  };
 
-  // UI
-  showLoginScreen() {
+  // -------------------------------
+  // UI routing + gating (FIXED order: scrollTo -> lockScroll)
+  // -------------------------------
+  AuthService.prototype.showLoginScreen = function () {
     document.body.classList.add('gated');
-    lockScroll();
     window.scrollTo(0, 0);
+    lockScroll();
 
     this._mainShown = false;
 
-    const { loginScreen, pricingPage, mainApp } = this._refs();
-    if (loginScreen) loginScreen.style.display = 'flex';
-    if (pricingPage) pricingPage.style.display = 'none';
-    if (mainApp) mainApp.style.display = 'none';
-  }
+    var r = this._refs();
+    if (r.loginScreen) r.loginScreen.style.display = 'flex';
+    if (r.pricingPage) r.pricingPage.style.display = 'none';
+    if (r.mainApp) r.mainApp.style.display = 'none';
+  };
 
-  showPricingPage() {
+  AuthService.prototype.showPricingPage = function () {
     document.body.classList.add('gated');
-    lockScroll();
     window.scrollTo(0, 0);
+    lockScroll();
 
     this._mainShown = false;
 
-    const { loginScreen, pricingPage, mainApp } = this._refs();
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (pricingPage) pricingPage.style.display = 'block';
-    if (mainApp) mainApp.style.display = 'none';
-  }
+    var r = this._refs();
+    if (r.loginScreen) r.loginScreen.style.display = 'none';
+    if (r.pricingPage) r.pricingPage.style.display = 'block';
+    if (r.mainApp) r.mainApp.style.display = 'none';
+  };
 
-showMainApp() {
-  document.body.classList.remove('gated');
-  unlockScroll();
+  AuthService.prototype.showMainApp = function () {
+    document.body.classList.remove('gated');
+    unlockScroll();
 
-  const { loginScreen, pricingPage, mainApp } = this._refs();
+    var r = this._refs();
 
-  // Sørg for riktig UI hver gang, selv om init ikke skal kjøres på nytt
-  if (loginScreen) loginScreen.style.display = 'none';
-  if (pricingPage) pricingPage.style.display = 'none';
-  if (mainApp) {
-    mainApp.style.display = 'block';
-    mainApp.style.opacity = '1';
-    mainApp.style.visibility = 'visible';
-    mainApp.style.pointerEvents = 'auto';
-  }
-
-  // Hindre at initApp kjøres flere ganger
-  if (this._mainShown) {
-    console.log('ℹ️ showMainApp: allerede vist - hopper over init');
-    return;
-  }
-  this._mainShown = true;
-
-  try {
-    if (typeof window.initApp === 'function') {
-      console.log('🚀 Initialiserer app');
-      window.initApp();
-    } else {
-      console.warn('⚠️ initApp finnes ikke på window');
+    if (r.loginScreen) r.loginScreen.style.display = 'none';
+    if (r.pricingPage) r.pricingPage.style.display = 'none';
+    if (r.mainApp) {
+      r.mainApp.style.display = 'block';
+      r.mainApp.style.opacity = '1';
+      r.mainApp.style.visibility = 'visible';
+      r.mainApp.style.pointerEvents = 'auto';
     }
-  } catch (e) {
-    console.error('❌ initApp feilet:', e);
-  }
-}
 
-
-// -------------------------------
-// Global instance
-// -------------------------------
-window.authService = window.authService || new AuthService();
-const authService = window.authService;
-
-// -------------------------------
-// Bind UI handlers (én gang)
-// -------------------------------
-function bindGoogleButton() {
-  const btn = document.getElementById('googleSignInBtn');
-  if (!btn) return;
-  if (btn.__bf_bound_google) return;
-  btn.__bf_bound_google = true;
-
-  btn.style.pointerEvents = 'auto';
-  btn.style.cursor = 'pointer';
-
-  btn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-
-    console.log('🟦 Google-knapp klikket, starter OAuth...');
-    const res = await authService.signInWithGoogle();
-    if (res && res.success === false) {
-      console.error('❌ Google-login feilet:', res.error);
-      window.showNotification?.('Innlogging feilet. Prøv igjen.', 'error');
-    }
-  }, { passive: false });
-
-  console.log('✅ Google-knapp bundet');
-}
-
-function bindMagicLink() {
-  const emailInput = document.getElementById('magicLinkEmail');
-  const btn = document.getElementById('magicLinkBtn');
-  const hint = document.getElementById('magicLinkHint');
-
-  if (!emailInput || !btn) return;
-  if (btn.__bf_bound_magic) return;
-  btn.__bf_bound_magic = true;
-
-  btn.style.pointerEvents = 'auto';
-  btn.style.cursor = 'pointer';
-
-  const COOLDOWN_MS = 10_000;
-  const cooldownKey = (email) => `bf_magic_cooldown_${String(email || '').trim().toLowerCase()}`;
-
-  function getCooldownUntil(email) {
-    const raw = safeStorageGet(cooldownKey(email));
-    return raw ? Number(raw) : 0;
-  }
-  function setCooldown(email) {
-    safeStorageSet(cooldownKey(email), String(Date.now() + COOLDOWN_MS));
-  }
-
-  async function sendLink() {
-    const email = String(emailInput.value || '').trim();
-
-    if (!email || !email.includes('@')) {
-      window.showNotification?.('Skriv inn en gyldig e-postadresse.', 'error');
-      emailInput.focus();
+    if (this._mainShown) {
+      console.log('ℹ️ showMainApp: allerede vist - hopper over init');
       return;
     }
-
-    const until = getCooldownUntil(email);
-    const now = Date.now();
-    if (until && now < until) {
-      const remaining = Math.max(1, Math.ceil((until - now) / 1000));
-      window.showNotification?.(`Vent ${remaining}s før du sender ny lenke.`, 'info');
-      return;
-    }
-
-    setCooldown(email);
-
-    btn.disabled = true;
-    const oldText = btn.textContent;
-    btn.textContent = 'Sender...';
+    this._mainShown = true;
 
     try {
-      const res = await authService.signInWithMagicLink(email);
-      if (res?.success) {
-        if (hint) hint.textContent = 'Sjekk e-posten din og klikk på lenka for å logge inn ✅';
-        window.showNotification?.('Innloggingslenke sendt. Sjekk e-posten.', 'success');
+      if (typeof window.initApp === 'function') {
+        console.log('🚀 Initialiserer app');
+        window.initApp();
       } else {
-        window.showNotification?.(res?.error || 'Kunne ikke sende lenke. Prøv igjen.', 'error');
+        console.warn('⚠️ initApp finnes ikke på window');
       }
-    } catch (err) {
-      console.error('❌ Magic link exception:', err);
-      window.showNotification?.('Kunne ikke sende lenke. Prøv igjen.', 'error');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = oldText;
+    } catch (e) {
+      console.error('❌ initApp feilet:', e);
     }
+  };
+
+  // -------------------------------
+  // Create/replace global instance
+  // -------------------------------
+  window.authService = new AuthService();
+  var authService = window.authService;
+
+  // -------------------------------
+  // Bind UI handlers (ONE TIME)
+  // -------------------------------
+  function bindGoogleButton() {
+    var btn = document.getElementById('googleSignInBtn');
+    if (!btn) return;
+    if (btn.__bf_bound_google) return;
+    btn.__bf_bound_google = true;
+
+    btn.style.pointerEvents = 'auto';
+    btn.style.cursor = 'pointer';
+
+    btn.addEventListener('click', async function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
+      try { await authService.init(); } catch (err) {}
+
+      console.log('🟦 Google-knapp klikket, starter OAuth...');
+      var res = await authService.signInWithGoogle();
+      if (res && res.success === false) {
+        console.error('❌ Google-login feilet:', res.error);
+        notify('Innlogging feilet. Prøv igjen.', 'error');
+      }
+    }, { passive: false });
+
+    console.log('✅ Google-knapp bundet');
   }
 
-  btn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-    await sendLink();
-  }, { passive: false });
+  function bindMagicLink() {
+    var emailInput = document.getElementById('magicLinkEmail');
+    var btn = document.getElementById('magicLinkBtn');
+    var hint = document.getElementById('magicLinkHint');
 
-  emailInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      btn.click();
+    if (!emailInput || !btn) return;
+    if (btn.__bf_bound_magic) return;
+    btn.__bf_bound_magic = true;
+
+    btn.style.pointerEvents = 'auto';
+    btn.style.cursor = 'pointer';
+
+    var COOLDOWN_MS = 10000;
+    var GLOBAL_MIN_MS = 1500;
+    var lastGlobal = 0;
+
+    function cooldownKey(email) {
+      return 'bf_magic_cooldown_' + String(email || '').trim().toLowerCase();
     }
-  });
+    function getCooldownUntil(email) {
+      var raw = safeGetStorage(cooldownKey(email));
+      return raw ? Number(raw) : 0;
+    }
+    function setCooldown(email, untilTs) {
+      safeSetStorage(cooldownKey(email), String(untilTs));
+    }
 
-  console.log('✅ Magic link bundet (#magicLinkBtn)');
-}
+    function setButtonState(disabled, text) {
+      btn.disabled = !!disabled;
+      if (text) btn.textContent = text;
+    }
 
-// -------------------------------
-// Boot (idempotent)
-// -------------------------------
-async function bootAuth() {
-  if (window.__bf_auth_booted) return;
-  window.__bf_auth_booted = true;
+    async function sendLink() {
+      try { await authService.init(); } catch (err) {}
 
-  console.log('🟦 DOM ready - initialiserer auth');
-  bindGoogleButton();
-  bindMagicLink();
-  await authService.init();
-}
+      var email = String(emailInput.value || '').trim();
+      if (!email || email.indexOf('@') === -1) {
+        notify('Skriv inn en gyldig e-postadresse.', 'error');
+        try { emailInput.focus(); } catch (e) {}
+        return;
+      }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', bootAuth);
-} else {
-  bootAuth();
-}
+      var now = Date.now();
+      if (now - lastGlobal < GLOBAL_MIN_MS) {
+        notify('Vent litt før du prøver igjen.', 'info');
+        return;
+      }
+      lastGlobal = now;
+
+      var until = getCooldownUntil(email);
+      if (until && now < until) {
+        var remaining = Math.max(1, Math.ceil((until - now) / 1000));
+        notify('Vent ' + remaining + 's før du sender ny lenke.', 'info');
+        return;
+      }
+
+      var nextUntil = now + COOLDOWN_MS;
+      setCooldown(email, nextUntil);
+
+      var oldText = btn.textContent;
+      setButtonState(true, 'Sender...');
+
+      try {
+        var res = await authService.signInWithMagicLink(email);
+        if (res && res.success) {
+          if (hint) hint.textContent = 'Sjekk e-posten din og klikk på lenka for å logge inn ✅';
+          notify('Innloggingslenke sendt. Sjekk e-posten.', 'success');
+        } else {
+          notify((res && res.error) || 'Kunne ikke sende lenke. Prøv igjen.', 'error');
+        }
+      } catch (err) {
+        console.error('❌ Magic link exception:', err);
+        notify('Kunne ikke sende lenke. Prøv igjen.', 'error');
+      } finally {
+        setButtonState(false, oldText);
+      }
+    }
+
+    btn.addEventListener('click', async function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+      await sendLink();
+    }, { passive: false });
+
+    emailInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        btn.click();
+      }
+    });
+
+    console.log('✅ Magic link bundet (#magicLinkBtn)');
+  }
+
+  // -------------------------------
+  // Boot
+  // -------------------------------
+  async function bootAuth() {
+    if (window.__bf_auth_booted) return;
+    window.__bf_auth_booted = true;
+
+    bindGoogleButton();
+    bindMagicLink();
+    await authService.init();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootAuth);
+  } else {
+    bootAuth();
+  }
+})();
