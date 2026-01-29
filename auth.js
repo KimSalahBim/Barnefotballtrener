@@ -223,15 +223,24 @@
           return;
         }
 
-        self.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true
-          }
-        });
+        // Behold referanse til supabase-biblioteket før vi legger klient på window.supabase
+const supabaseLib = window.supabase;
 
-        console.log('✅ Supabase client opprettet');
+self.supabase = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
+
+// Compat: andre filer forventer "window.supabase" = klient (med .auth.getSession())
+window.supabaseLib = supabaseLib;
+window.supabase = self.supabase;
+window.supabaseClient = self.supabase;
+
+console.log('✅ Supabase client opprettet (window.supabase = client)');
+
 
         var session = null;
         try { session = await self._getSessionWithRetry(); } catch (e) {}
