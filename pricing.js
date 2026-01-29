@@ -404,12 +404,13 @@ function bindMagicLink() {
   // -------------------------------
   // Boot
   // -------------------------------
-  function boot() {
-    log('💳 Pricing.js loaded');
-    bindPlanButtons();
-    bindMagicLink();
-    handleStripeReturnParams();
-  }
+function boot() {
+  log('💳 Pricing.js loaded');
+  bindPlanButtons();
+  // bindMagicLink(); // Magic link håndteres av auth.js
+  handleStripeReturnParams();
+}
+
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
