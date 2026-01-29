@@ -41,6 +41,47 @@
   function safeRemoveStorage(key) {
     try { localStorage.removeItem(key); return true; } catch (e) { return false; }
   }
+      
+  function withTimeout(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise(function (_, rej) {
+        setTimeout(function () {
+          rej(new Error((label || "TIMEOUT") + " (" + ms + "ms)"));
+        }, ms);
+      }),
+    ]);
+  }
+
+  function readSessionFromLocalStorage() {
+    try {
+      var keys = Object.keys(localStorage || {}).filter(function (k) {
+        return k.indexOf("sb-") !== -1 && k.indexOf("-auth-token") !== -1;
+      });
+      if (!keys.length) return null;
+
+      keys.sort(function (a, b) {
+        return String(safeGetStorage(b) || "").length - String(safeGetStorage(a) || "").length;
+      });
+
+      var raw = safeGetStorage(keys[0]);
+      if (!raw) return null;
+
+      var obj = JSON.parse(raw);
+
+      // Supabase v2 UMD kan variere litt i shape
+      var sess =
+        (obj && obj.currentSession) ||
+        (obj && obj.session) ||
+        (obj && obj.data && obj.data.session) ||
+        null;
+
+      if (sess && sess.access_token && sess.user) return sess;
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 
   function readEnv(key) {
     try {
@@ -185,21 +226,37 @@
 
     await self._acquireLock();
     try {
+      // 1) Prøv supabase.getSession, men aldri la UI henge
       try {
-        var r1 = await self.supabase.auth.getSession();
+        var r1 = await withTimeout(self.supabase.auth.getSession(), 2500, "supabase.getSession");
         if (r1 && r1.error) throw r1.error;
-        return (r1 && r1.data && r1.data.session) ? r1.data.session : null;
+
+        var s1 = (r1 && r1.data && r1.data.session) ? r1.data.session : null;
+        if (s1 && s1.user) return s1;
       } catch (e1) {
-        console.warn('⚠️ getSession feilet, retry:', e1);
-        await new Promise(function (r) { setTimeout(r, 350); });
-        var r2 = await self.supabase.auth.getSession();
-        if (r2 && r2.error) throw r2.error;
-        return (r2 && r2.data && r2.data.session) ? r2.data.session : null;
+        console.warn("⚠️ getSession timeout/feil, prøver localStorage fallback:", e1);
       }
+
+      // 2) Fallback: localStorage (ofte stabil selv når getSession henger)
+      var ls = readSessionFromLocalStorage();
+      if (ls) return ls;
+
+      // 3) Én kort retry (best effort)
+      try {
+        await new Promise(function (r) { setTimeout(r, 300); });
+        var r2 = await withTimeout(self.supabase.auth.getSession(), 1800, "supabase.getSession.retry");
+        if (r2 && r2.error) throw r2.error;
+
+        var s2 = (r2 && r2.data && r2.data.session) ? r2.data.session : null;
+        if (s2 && s2.user) return s2;
+      } catch (e2) {}
+
+      return null;
     } finally {
       self._releaseLock();
     }
   };
+
 
   AuthService.prototype.init = async function () {
     var self = this;
