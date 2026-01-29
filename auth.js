@@ -344,7 +344,8 @@ class AuthService {
 
 
   showLoginScreen() {
-this._mainShown = false;
+    document.body.classList.add('lock-scroll');
+    this._mainShown = false;
     
     if (loginScreen) loginScreen.style.display = 'flex';
     if (pricingPage) pricingPage.style.display = 'none';
@@ -352,14 +353,16 @@ this._mainShown = false;
   }
 
   showPricingPage() {
-this._mainShown = false;  
-    
+    this._mainShown = false;  
+    document.body.classList.add('lock-scroll');
+
     if (loginScreen) loginScreen.style.display = 'none';
     if (pricingPage) pricingPage.style.display = 'block';
     if (mainApp) mainApp.style.display = 'none';
   }
 
 showMainApp() {
+  document.body.classList.remove('lock-scroll');
   // Hindrer at appen initieres flere ganger (f.eks. pga flere SIGNED_IN-events)
   if (this._mainShown) {
     console.log('ℹ️ showMainApp: allerede vist - hopper over init');
