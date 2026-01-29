@@ -320,18 +320,15 @@ if (false && typeof isDevBypassActive === 'function' && isDevBypassActive(user))
   console.log('🔍 Sjekker subscription for bruker:', user?.id);
 
 try {
-  // Hent tjenesten fra window for å unngå scope/overskriving
   const svc = window.subscriptionService;
 
-  // ROBUST GUARD: hvis svc mangler -> vis pricing (ikke crash)
   if (!svc || typeof svc.checkSubscription !== 'function') {
     console.warn('⚠️ subscriptionService.checkSubscription mangler - viser prisside');
     this.showPricingPage();
     return;
   }
 
-  // Viktig: Bruk checkSubscription() uten userId, fordi backend krever Bearer token (session),
-  // og checkSubscription bør hente token internt.
+  // Bruk token-basert check (backend identifiserer bruker via Bearer token)
   const status = await svc.checkSubscription();
   console.log('📊 Subscription status:', status);
 
@@ -339,22 +336,6 @@ try {
 
   if (hasAccess) {
     this.showMainApp();
-
-    // Auto-lås når trial utløper (så folk ikke blir stående inne etter 7 dager)
-    if (status?.trial && status?.trial_ends_at) {
-      const msLeft = new Date(status.trial_ends_at).getTime() - Date.now();
-      if (msLeft > 0) {
-        setTimeout(async () => {
-          const refreshed = await svc.checkSubscription();
-          const stillHasAccess = !!(refreshed?.active || refreshed?.trial || refreshed?.lifetime);
-          if (!stillHasAccess) {
-            this.showPricingPage();
-            alert('Prøveperioden er utløpt. Velg en plan for å fortsette.');
-          }
-        }, Math.min(msLeft + 1000, 2147483000)); // clamp for setTimeout
-      }
-    }
-
   } else {
     this.showPricingPage();
   }
@@ -363,7 +344,6 @@ try {
   console.error('❌ Subscription check failed:', error);
   this.showPricingPage();
 }
-
 
 
   showLoginScreen() {
