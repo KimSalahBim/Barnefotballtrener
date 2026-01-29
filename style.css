@@ -1628,3 +1628,16 @@ body.lock-scroll {
   position: fixed;
   width: 100%;
 }
+/* Hard gate: ingen scroll når ikke innlogget */
+html.lock-scroll,
+body.lock-scroll {
+  height: 100%;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* Ekstra sikkerhet: skjul app uansett dersom gated */
+body.gated #mainApp {
+  display: none !important;
+}
