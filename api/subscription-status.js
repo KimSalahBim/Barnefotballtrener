@@ -162,29 +162,33 @@ export default async function handler(req, res) {
       });
     }
 
-    if (trialActive) {
-      var trialIso = null;
-      try {
-        trialIso = trialEndsAt ? trialEndsAt.toISOString() : null;
-      } catch (e) {
-        trialIso = null;
-      }
+if (trialActive) {
+  var trialIso = null;
+  try {
+    trialIso = trialEndsAt ? trialEndsAt.toISOString() : null;
+  } catch (e) {
+    trialIso = null;
+  }
 
-      return res.status(200).json({
-        active: false,
-        trial: true,
-        lifetime: false,
-        plan: accessRow?.trial_plan || null,
+  return res.status(200).json({
+    active: false,
+    trial: true,
+    lifetime: false,
 
-        // ✅ Frontend forventer dette feltet (modal/pricing)
-        current_period_end: trialIso,
+    // trial_plan hvis den finnes, ellers null
+    plan: (accessRow && accessRow.trial_plan) ? accessRow.trial_plan : null,
 
-        // (valgfritt, men fint å beholde)
-        trial_ends_at: trialIso,
+    // ✅ Dette er feltet frontend forventer
+    current_period_end: trialIso,
 
-        canStartTrial: false,
-      });
-    }
+    // (fint å beholde for debug/kompat)
+    trial_ends_at: trialIso,
+
+    canStartTrial: false,
+  });
+}
+
+
 
 
     return res.status(200).json({
