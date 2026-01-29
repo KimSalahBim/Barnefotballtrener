@@ -1610,3 +1610,11 @@ body {
   align-items: center;
   padding: 6px 0;
 }
+
+/* Lås scrolling når bruker ikke har tilgang (login/pricing) */
+body.lock-scroll {
+  overflow: hidden;
+  height: 100vh;
+  overscroll-behavior: none;
+  touch-action: none;
+}
