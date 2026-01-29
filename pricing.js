@@ -293,10 +293,16 @@
     return null;
   }
 
-  function bindMagicLink() {
-    const emailInput = document.getElementById('magicLinkEmail');
-    const btn = document.getElementById('magicLinkBtn');
-    const hint = document.getElementById('magicLinkHint');
+function bindMagicLink() {
+  // Magic link håndteres kun av auth.js (unngå dobbel binding)
+  return;
+
+  const emailInput = document.getElementById('magicLinkEmail');
+  const btn = document.getElementById('magicLinkBtn');
+  const hint = document.getElementById('magicLinkHint');
+  ...
+}
+
 
     if (!emailInput || !btn) {
       log('ℹ️ Magic link elementer finnes ikke på denne siden (#magicLinkEmail / #magicLinkBtn).');
