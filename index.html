@@ -230,6 +230,58 @@
         </button>
       </div>
 
+  <!-- Abonnement / innstillinger (modal) -->
+<div id="subscriptionModal" class="bf-modal hidden" role="dialog" aria-modal="true" aria-labelledby="subscriptionModalTitle">
+  <div class="bf-modal__backdrop" data-close="subscriptionModal"></div>
+
+  <div class="bf-modal__panel">
+    <div class="bf-modal__header">
+      <h3 id="subscriptionModalTitle">Abonnement</h3>
+      <button class="icon-btn" type="button" data-close="subscriptionModal" aria-label="Lukk">✕</button>
+    </div>
+
+    <div class="bf-modal__body">
+      <div id="subscriptionUserLine" class="small-text" style="opacity:.8;"></div>
+
+      <div class="bf-subcard">
+        <div class="bf-subrow">
+          <span>Status</span>
+          <strong id="subscriptionStatus">—</strong>
+        </div>
+        <div class="bf-subrow">
+          <span>Plan</span>
+          <strong id="subscriptionPlan">—</strong>
+        </div>
+      </div>
+
+      <div class="small-text" style="margin-top:10px; opacity:.8;">
+        Abonnementshåndtering i appen (uten Stripe-portal).  
+        Du kan fortsatt kontakte support ved behov.
+      </div>
+    </div>
+
+    <div class="bf-modal__footer">
+      <button id="openPricingFromModal" class="btn-secondary" type="button">
+        <i class="fas fa-tags"></i> Se planer
+      </button>
+
+      <button id="copySupportEmailBtn" class="btn-secondary" type="button">
+        <i class="fas fa-copy"></i> Kopiér support-epost
+      </button>
+
+      <!-- NY: Stripe Customer Portal -->
+      <button id="managePortalBtn" class="btn-primary" type="button">
+        <i class="fas fa-gear"></i> Administrer abonnement
+      </button>
+
+      <button class="btn-primary" type="button" data-close="subscriptionModal">
+        OK
+      </button>
+    </div>
+  </div>
+</div> <!-- /#subscriptionModal -->
+
+  
     <!-- Team Contact Modal -->
     <div id="teamContactModal" class="modal" style="display: none;">
       <div class="modal-content">
@@ -727,56 +779,6 @@
 <!-- Notification -->
 <div id="notification" class="notification" style="display:none;"></div>
 
-<!-- Abonnement / innstillinger (modal) -->
-<div id="subscriptionModal" class="bf-modal hidden" role="dialog" aria-modal="true" aria-labelledby="subscriptionModalTitle">
-  <div class="bf-modal__backdrop" data-close="subscriptionModal"></div>
-
-  <div class="bf-modal__panel">
-    <div class="bf-modal__header">
-      <h3 id="subscriptionModalTitle">Abonnement</h3>
-      <button class="icon-btn" type="button" data-close="subscriptionModal" aria-label="Lukk">✕</button>
-    </div>
-
-    <div class="bf-modal__body">
-      <div id="subscriptionUserLine" class="small-text" style="opacity:.8;"></div>
-
-      <div class="bf-subcard">
-        <div class="bf-subrow">
-          <span>Status</span>
-          <strong id="subscriptionStatus">—</strong>
-        </div>
-        <div class="bf-subrow">
-          <span>Plan</span>
-          <strong id="subscriptionPlan">—</strong>
-        </div>
-      </div>
-
-      <div class="small-text" style="margin-top:10px; opacity:.8;">
-        Abonnementshåndtering i appen (uten Stripe-portal).  
-        Du kan fortsatt kontakte support ved behov.
-      </div>
-    </div>
-
-    <div class="bf-modal__footer">
-      <button id="openPricingFromModal" class="btn-secondary" type="button">
-        <i class="fas fa-tags"></i> Se planer
-      </button>
-
-      <button id="copySupportEmailBtn" class="btn-secondary" type="button">
-        <i class="fas fa-copy"></i> Kopiér support-epost
-      </button>
-
-      <!-- NY: Stripe Customer Portal -->
-      <button id="managePortalBtn" class="btn-primary" type="button">
-        <i class="fas fa-gear"></i> Administrer abonnement
-      </button>
-
-      <button class="btn-primary" type="button" data-close="subscriptionModal">
-        OK
-      </button>
-    </div>
-  </div>
-</div> <!-- /#pricingPage -->
 
 
 <!-- Scripts - VIKTIG REKKEFØLGE! -->
