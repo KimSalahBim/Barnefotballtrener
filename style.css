@@ -1618,3 +1618,13 @@ body.lock-scroll {
   overscroll-behavior: none;
   touch-action: none;
 }
+html.lock-scroll,
+body.lock-scroll {
+  overflow: hidden;
+  height: 100%;
+}
+
+body.lock-scroll {
+  position: fixed;
+  width: 100%;
+}
