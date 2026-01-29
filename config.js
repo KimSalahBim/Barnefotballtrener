@@ -74,6 +74,9 @@ const CONFIG = {
   }
 };
 
+// Expose CONFIG globally (Stripe/subscription.js expects this)
+window.CONFIG = CONFIG;
+
 // Eksporter config
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = CONFIG;
