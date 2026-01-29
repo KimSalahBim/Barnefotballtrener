@@ -306,40 +306,40 @@ class AuthService {
     }
   }
 
-async handleSignIn(user) {
-  this.currentUser = user;
+  async handleSignIn(user) {
+    this.currentUser = user;
 
-  // DEV BYPASS (DISABLED)
-  if (false && typeof isDevBypassActive === 'function' && isDevBypassActive(user)) {
-    console.log('🔥 DEV BYPASS aktiv - hopper over plan/pricing:', user.email);
-    this.showMainApp();
-    return;
-  }
-
-  console.log('🔎 Sjekker subscription for bruker:', user?.id);
-
-  try {
-    const svc = window.subscriptionService;
-
-    if (!svc || typeof svc.checkSubscription !== 'function') {
-      console.warn('⚠️ subscriptionService.checkSubscription mangler - viser prisside');
-      this.showPricingPage();
+    // DEV BYPASS (DISABLED)
+    if (false && typeof isDevBypassActive === 'function' && isDevBypassActive(user)) {
+      console.log('🔥 DEV BYPASS aktiv - hopper over plan/pricing:', user.email);
+      this.showMainApp();
       return;
     }
 
-    const status = await svc.checkSubscription();
-    console.log('📊 Subscription status:', status);
+    console.log('🔎 Sjekker subscription for bruker:', user?.id);
 
-    const hasAccess = !!(status?.active || status?.trial || status?.lifetime);
+    try {
+      const svc = window.subscriptionService;
 
-    if (hasAccess) this.showMainApp();
-    else this.showPricingPage();
+      if (!svc || typeof svc.checkSubscription !== 'function') {
+        console.warn('⚠️ subscriptionService.checkSubscription mangler - viser prisside');
+        this.showPricingPage();
+        return;
+      }
 
-  } catch (error) {
-    console.error('❌ Subscription check failed:', error);
-    this.showPricingPage();
+      const status = await svc.checkSubscription();
+      console.log('📊 Subscription status:', status);
+
+      const hasAccess = !!(status?.active || status?.trial || status?.lifetime);
+
+      if (hasAccess) this.showMainApp();
+      else this.showPricingPage();
+
+    } catch (error) {
+      console.error('❌ Subscription check failed:', error);
+      this.showPricingPage();
+    }
   }
-}
 
 
 
