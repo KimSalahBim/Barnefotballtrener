@@ -24,6 +24,15 @@
   margin-bottom: 20px;
 }
 
+.pricing-logo-img {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 10px 20px rgba(2, 6, 23, 0.12));
+}
+
 .pricing-header h1 {
   font-size: 36px;
   font-weight: 800;
@@ -504,6 +513,11 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .pricing-logo-img {
+    width: 120px;
+    height: 120px;
+  }
+
   .pricing-header h1 {
     font-size: 28px;
   }
