@@ -6,7 +6,10 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-06-20',
+});
+
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -24,7 +27,6 @@ async function findOrCreateCustomer(email, userId) {
 }
 
 async function pickSubscriptionId(customerId) {
-  // Ta med flere statuser for å være robust
   const subs = await stripe.subscriptions.list({
     customer: customerId,
     status: 'all',
@@ -34,7 +36,6 @@ async function pickSubscriptionId(customerId) {
   if (!subs.data?.length) return null;
 
   const rank = (s) => {
-    // lavere er bedre
     const st = s.status;
     if (st === 'trialing') return 0;
     if (st === 'active') return 1;
@@ -47,14 +48,22 @@ async function pickSubscriptionId(customerId) {
   };
 
   subs.data.sort((a, b) => rank(a) - rank(b));
-  const best = subs.data[0];
-  return best?.id || null;
+  return subs.data[0]?.id || null;
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   try {
+    // Parse body (Vercel kan gi string)
+    let body = {};
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    } catch (_) {}
+
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!token) return res.status(401).json({ error: 'Missing token' });
@@ -65,8 +74,8 @@ export default async function handler(req, res) {
     const email = user.email;
     if (!email) return res.status(400).json({ error: 'User has no email' });
 
-    const flow = (req.body?.flow || 'manage').toLowerCase();
-    const returnUrl = req.body?.returnUrl || `${req.headers.origin || ''}/#`;
+    const flow = String(body?.flow || 'manage').toLowerCase();
+    const returnUrl = body?.returnUrl || `${req.headers.origin || ''}/#`;
 
     const customer = await findOrCreateCustomer(email, user.id);
 
@@ -75,27 +84,16 @@ export default async function handler(req, res) {
       return_url: returnUrl,
     };
 
-    // Flow: direkte inn i kanselleringsskjermen i portalen
     if (flow === 'cancel') {
       const subId = await pickSubscriptionId(customer.id);
-      if (!subId) {
-        // Hvis kunden ikke har abonnement, send de til vanlig portal
-        const portal = await stripe.billingPortal.sessions.create(sessionParams);
-        return res.status(200).json({ url: portal.url });
+      if (subId) {
+        sessionParams.flow_data = {
+          type: 'subscription_cancel',
+          subscription_cancel: { subscription: subId },
+        };
       }
-
-      // Stripe Billing Portal: flow_data
-      // Docs: https://docs.stripe.com/api/customer_portal/sessions/create
-      sessionParams.flow_data = {
-        type: 'subscription_cancel',
-        subscription_cancel: {
-          subscription: subId,
-        },
-      };
+      // Hvis ingen sub: fall back til vanlig portal
     }
-
-    // (valgfritt) Hvis du ønsker at "manage" også hopper inn i abonnement-visning:
-    // else if (flow === 'manage') { ... subscription_update ... }
 
     const portalSession = await stripe.billingPortal.sessions.create(sessionParams);
     return res.status(200).json({ url: portalSession.url });
