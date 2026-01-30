@@ -238,12 +238,30 @@
 
   function bind() {
     // Knappen i toppmenyen (tannhjul / settings)
-    const btn = document.getElementById("manageSubscriptionBtn");
-    if (btn && !btn.__bound) {
-      btn.__bound = true;
-      btn.addEventListener("click", openSubscriptionModal);
-      console.log(`${LOG_PREFIX} ✅ manageSubscriptionBtn bound`);
+// Robust binding: fanger klikk selv om DOM byttes ut, og selv om bubbling stoppes
+if (!document.__subscription_ui_bound) {
+  document.__subscription_ui_bound = true;
+
+  document.addEventListener("click", (e) => {
+    const gear = e.target.closest("#manageSubscriptionBtn");
+    if (gear) {
+      e.preventDefault();
+      e.stopPropagation();
+      openSubscriptionModal();
+      return;
     }
+
+    const close = e.target.closest("#closeSubscriptionModal");
+    if (close) {
+      e.preventDefault();
+      closeSubscriptionModal();
+      return;
+    }
+  }, true); // <-- capture = viktig
+
+  console.log(`${LOG_PREFIX} ✅ delegated click handlers bound`);
+}
+
 
     const closeBtn = document.getElementById("closeSubscriptionModal");
     if (closeBtn && !closeBtn.__bound) {
