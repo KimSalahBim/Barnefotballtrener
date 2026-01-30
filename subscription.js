@@ -7,6 +7,17 @@
   const PORTAL_ENDPOINT = "/api/create-portal-session";
   const STATUS_ENDPOINT = "/api/subscription-status";
 
+  // --- BFCACHE FIX: Clear state ved browser back/forward restore ---
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) {
+      // Siden ble restored fra bfcache - clear state og rebind
+      delete window.__bf_subscription_click_handler;
+      console.log(`${LOG_PREFIX} 🔄 State cleared after bfcache restore, rebinding...`);
+      // Trigger rebind
+      bind();
+    }
+  });
+
   // --- Utils ---
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -237,43 +248,58 @@
   }
 
   function bind() {
-    // Knappen i toppmenyen (tannhjul / settings)
-// Robust binding: fanger klikk selv om DOM byttes ut, og selv om bubbling stoppes
-if (!document.__subscription_ui_bound) {
-  document.__subscription_ui_bound = true;
+    console.log(`${LOG_PREFIX} 🔧 bind() called, readyState=${document.readyState}`);
 
-  document.addEventListener("click", (e) => {
-    const gear = e.target.closest("#manageSubscriptionBtn");
-    if (gear) {
-      e.preventDefault();
-      e.stopPropagation();
-      openSubscriptionModal();
-      return;
+    // IDEMPOTENT binding: Fjern gammel handler først, registrer ny
+    const oldHandler = window.__bf_subscription_click_handler;
+    if (oldHandler) {
+      document.removeEventListener("click", oldHandler, true);
+      console.log(`${LOG_PREFIX} 🗑️ Removed old click handler`);
     }
 
-    const close = e.target.closest("#closeSubscriptionModal");
-    if (close) {
-      e.preventDefault();
-      closeSubscriptionModal();
-      return;
-    }
-  }, true); // <-- capture = viktig
+    // Lag ny handler
+    const clickHandler = (e) => {
+      // Tannhjul-knapp
+      const gear = e.target.closest("#manageSubscriptionBtn");
+      if (gear) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log(`${LOG_PREFIX} ⚙️ Gear clicked, opening modal...`);
+        openSubscriptionModal();
+        return;
+      }
 
-  console.log(`${LOG_PREFIX} ✅ delegated click handlers bound`);
-}
+      // Lukkeknapper (støtter både ID og data-attribute)
+      const close = e.target.closest("#closeSubscriptionModal, [data-close='subscriptionModal']");
+      if (close) {
+        e.preventDefault();
+        console.log(`${LOG_PREFIX} ❌ Close clicked`);
+        closeSubscriptionModal();
+        return;
+      }
+    };
 
+    // Registrer ny handler i capture-fase
+    document.addEventListener("click", clickHandler, true);
+    window.__bf_subscription_click_handler = clickHandler;
 
+    console.log(`${LOG_PREFIX} ✅ Delegated click handlers bound (idempotent)`);
+
+    // Fallback: direkte binding på lukkeknapp hvis den har ID
     const closeBtn = document.getElementById("closeSubscriptionModal");
     if (closeBtn && !closeBtn.__bound) {
       closeBtn.__bound = true;
       closeBtn.addEventListener("click", closeSubscriptionModal);
     }
 
-    // Lukk ved klikk utenfor
-    window.addEventListener("click", (event) => {
-      const modal = document.getElementById("subscriptionModal");
-      if (event.target === modal) closeSubscriptionModal();
-    });
+    // Lukk ved klikk utenfor (kun registrer én gang)
+    if (!window.__bf_outside_click_bound) {
+      window.__bf_outside_click_bound = true;
+      window.addEventListener("click", (event) => {
+        const modal = document.getElementById("subscriptionModal");
+        if (event.target === modal) closeSubscriptionModal();
+      });
+    }
   }
 
   if (document.readyState === "loading") {
@@ -282,5 +308,5 @@ if (!document.__subscription_ui_bound) {
     bind();
   }
 
-  console.log(`${LOG_PREFIX} ✅ subscription.js loaded (browser-safe)`);
+  console.log(`${LOG_PREFIX} ✅ subscription.js loaded (browser-safe + bfcache-aware)`);
 })();
