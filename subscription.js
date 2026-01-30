@@ -208,6 +208,8 @@
     const modal = document.getElementById("subscriptionModal");
     if (!modal) return;
 
+    // Fjern hidden-klasse og sett display
+    modal.classList.remove("hidden");
     modal.style.display = "block";
 
     const status = await subscriptionService.checkSubscription();
@@ -245,6 +247,7 @@
     const modal = document.getElementById("subscriptionModal");
     if (!modal) return;
     modal.style.display = "none";
+    modal.classList.add("hidden");
   }
 
   function bind() {
