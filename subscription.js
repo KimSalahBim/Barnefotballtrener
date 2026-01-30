@@ -1,274 +1,254 @@
-/* subscription.js (frontend – browser) */
-(function () {
-  "use strict";
+// subscription.js
+// Håndterer abonnement-modal + åpner Stripe Customer Portal (manage / cancel)
+// Krever at window.supabase (Supabase client) er initialisert (fra auth.js)
 
-  function log() { try { console.log("🧾", ...arguments); } catch (_) {} }
-  function warn() { try { console.warn("⚠️", ...arguments); } catch (_) {} }
-  function err() { try { console.error("❌", ...arguments); } catch (_) {} }
+(() => {
+  const LOG_PREFIX = "🧾";
+  const PORTAL_ENDPOINT = "/api/create-portal-session";
+  const STATUS_ENDPOINT = "/api/subscription-status";
 
-  function $(id) { return document.getElementById(id); }
+  // --- Utils ---
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  function show(el, display) {
-    if (!el) return;
-    el.style.display = display || "block";
-    el.classList.remove("hidden");
-  }
+  async function getAccessToken({ retries = 3 } = {}) {
+    // Ikke bruk for aggressive timeouts her – det skaper "Invalid session" / flakiness.
+    // Prøv flere ganger i tilfelle Supabase fortsatt "recoverAndRefresh"-er.
+    for (let i = 0; i < retries; i++) {
+      try {
+        const s = await window.supabase?.auth?.getSession?.();
+        const token = s?.data?.session?.access_token;
+        if (token) return token;
 
-  function hide(el) {
-    if (!el) return;
-    el.style.display = "none";
-    el.classList.add("hidden");
-  }
-
-  function fmtDate(iso) {
-    if (!iso) return null;
-    try {
-      const d = new Date(iso);
-      if (isNaN(d.getTime())) return null;
-      return d.toLocaleDateString("no-NO", { year: "numeric", month: "2-digit", day: "2-digit" });
-    } catch (_) {
-      return null;
+        // fallback: getUser kan av og til fungere når session ikke er tilgjengelig ennå
+        const u = await window.supabase?.auth?.getUser?.();
+        // getUser returnerer ikke token, men hvis den feiler pga manglende session,
+        // gir vi Supabase litt tid og prøver igjen.
+        if (u?.data?.user) {
+          // user finnes, men token mangler -> prøv en runde til
+        }
+      } catch (_) {
+        // ignore
+      }
+      await sleep(250 + i * 250);
     }
+    throw new Error("Ingen gyldig sesjon (token mangler).");
   }
 
-  function planLabel(plan) {
-    if (plan === "month") return "Månedlig";
-    if (plan === "year") return "Årlig";
-    if (plan === "lifetime") return "Livstid";
-    return plan || "—";
-  }
+  async function callApiJson(url, { method = "GET", token, body } = {}) {
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
 
-  async function withTimeout(promise, ms, label) {
-    let t;
-    const timeout = new Promise((_, reject) => {
-      t = setTimeout(() => reject(new Error(label || "timeout")), ms);
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
     });
+
+    let data = null;
     try {
-      return await Promise.race([promise, timeout]);
-    } finally {
-      clearTimeout(t);
+      data = await res.json();
+    } catch (_) {
+      // ignore
     }
+    if (!res.ok) {
+      const msg = data?.error || `${res.status} ${res.statusText}`;
+      throw new Error(msg);
+    }
+    return data;
   }
 
-  async function getAccessToken() {
-    // Prefer AuthService if you have one
-    try {
-      const svc = window.AuthService || window.authService;
-      if (svc && typeof svc.getAccessToken === "function") {
-        const tok = await svc.getAccessToken();
-        if (tok) return tok;
-      }
-    } catch (_) {}
-
-    // Fallback: window.supabase session
-    try {
-      if (!window.supabase || !window.supabase.auth) return null;
-
-      const { data, error } = await withTimeout(
-        window.supabase.auth.getSession(),
-        3500,
-        "supabase.getSession timeout"
-      );
-
-      if (error) {
-        warn("getSession error:", error);
-        return null;
-      }
-      return data && data.session ? data.session.access_token : null;
-    } catch (e) {
-      warn("getAccessToken failed:", e);
-      return null;
-    }
-  }
-
-  async function checkSubscription() {
-    const token = await getAccessToken();
-    if (!token) {
-      return { active: false, trial: false, lifetime: false, plan: null, current_period_end: null, canStartTrial: true, reason: "not_logged_in" };
-    }
-
-    try {
-      const resp = await fetch("/api/subscription-status", {
-        method: "GET",
-        headers: { Authorization: "Bearer " + token },
-      });
-
-      const data = await resp.json().catch(() => ({}));
-
-      if (!resp.ok) {
-        warn("subscription-status not ok:", resp.status, data);
-        return { active: false, trial: false, lifetime: false, plan: null, current_period_end: null, canStartTrial: true, reason: "api_error" };
+  // --- SubscriptionService (window.subscriptionService) ---
+  const subscriptionService = {
+    async checkSubscription() {
+      let token;
+      try {
+        token = await getAccessToken();
+      } catch (e) {
+        console.warn(`${LOG_PREFIX} ⚠️ getAccessToken failed:`, e);
+        return {
+          active: false,
+          trial: false,
+          lifetime: false,
+          plan: null,
+          current_period_end: null,
+          cancel_at_period_end: false,
+          cancel_at: null,
+          subscription_id: null,
+          reason: "no_session",
+        };
       }
 
-      // Normalize for frontend
-      return {
-        active: !!data.active,
-        trial: !!data.trial,
-        lifetime: !!data.lifetime,
-        plan: data.plan || null,
-        current_period_end: data.current_period_end || null,
-        trial_ends_at: data.trial_ends_at || null,
-        canStartTrial: (typeof data.canStartTrial === "boolean") ? data.canStartTrial : true,
-        reason: data.reason || null,
-      };
-    } catch (e) {
-      err("checkSubscription network error:", e);
-      return { active: false, trial: false, lifetime: false, plan: null, current_period_end: null, canStartTrial: true, reason: "network_error" };
-    }
-  }
+      try {
+        const status = await callApiJson(STATUS_ENDPOINT, {
+          method: "GET",
+          token,
+        });
+        return status;
+      } catch (e) {
+        console.warn(`${LOG_PREFIX} ⚠️ subscription-status failed:`, e);
+        return {
+          active: false,
+          trial: false,
+          lifetime: false,
+          plan: null,
+          current_period_end: null,
+          cancel_at_period_end: false,
+          cancel_at: null,
+          subscription_id: null,
+          reason: "status_error",
+        };
+      }
+    },
 
-  async function startTrial(planType) {
-    const token = await getAccessToken();
-    if (!token) return { ok: false, error: "NOT_LOGGED_IN" };
+    async openPortal(flow = "manage") {
+      const token = await getAccessToken();
+      const returnUrl = `${window.location.origin}/#`;
 
-    try {
-      const resp = await fetch("/api/start-trial", {
+      const data = await callApiJson(PORTAL_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token,
-        },
-        body: JSON.stringify({ planType: planType || "year" }),
+        token,
+        body: { returnUrl, flow },
       });
 
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) return { ok: false, error: data.error || ("HTTP_" + resp.status) };
-      return { ok: true, data };
-    } catch (e) {
-      return { ok: false, error: "NETWORK_ERROR" };
-    }
-  }
-
-  async function openCustomerPortal() {
-    const token = await getAccessToken();
-    if (!token) {
-      alert("Du må være logget inn for å åpne abonnement-innstillinger.");
-      return;
-    }
-
-    try {
-      const resp = await fetch("/api/create-portal-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ returnUrl: window.location.href }),
-      });
-
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok || !data.url) {
-        warn("create-portal-session failed:", resp.status, data);
-        alert("Kunne ikke åpne abonnement-innstillinger akkurat nå.");
-        return;
-      }
+      if (!data?.url) throw new Error("Mangler portal-URL fra server.");
       window.location.href = data.url;
-    } catch (e) {
-      err("openCustomerPortal failed:", e);
-      alert("Kunne ikke åpne abonnement-innstillinger akkurat nå.");
-    }
+    },
+  };
+
+  window.subscriptionService = subscriptionService;
+
+  // --- Modal wiring (eksisterende index + "trygg" dynamisk knapp for kansellering) ---
+  function ensureCancelButton() {
+    const modal = document.getElementById("subscriptionModal");
+    if (!modal) return null;
+
+    // Finn eksisterende knapper (samme som før)
+    const manageBtn = modal.querySelector("#managePortalBtn");
+    if (!manageBtn) return null;
+
+    // Hvis cancel-knapp finnes, bruk den
+    let cancelBtn = modal.querySelector("#cancelPortalBtn");
+    if (cancelBtn) return cancelBtn;
+
+    // Lag ny knapp ved siden av "Administrer abonnement"
+    cancelBtn = document.createElement("button");
+    cancelBtn.id = "cancelPortalBtn";
+    cancelBtn.type = "button";
+    cancelBtn.className = manageBtn.className; // samme stil
+    cancelBtn.style.marginLeft = "8px";
+    cancelBtn.innerHTML = `🛑 Kanseller abonnement`;
+    manageBtn.insertAdjacentElement("afterend", cancelBtn);
+
+    return cancelBtn;
   }
 
-  async function fillSubscriptionModal() {
-    const statusEl = $("subscriptionStatus");
-    const planEl = $("subscriptionPlan");
-    const untilEl = $("subscriptionUntil"); // optional
+  function setModalTexts(status) {
+    const statusEl = document.getElementById("subscriptionStatusText");
+    const planEl = document.getElementById("subscriptionPlanText");
 
-    if (statusEl) statusEl.textContent = "Laster…";
-    if (planEl) planEl.textContent = "Laster…";
-    if (untilEl) untilEl.textContent = "";
-
-    const s = await checkSubscription();
-    log("Subscription status:", s);
-
-    if (s.lifetime) {
-      if (statusEl) statusEl.textContent = "Aktiv";
-      if (planEl) planEl.textContent = "Livstid";
-      if (untilEl) untilEl.textContent = "";
-      return;
+    if (statusEl) statusEl.textContent = status?.active ? "Aktiv" : "Ikke aktiv";
+    if (planEl) {
+      const planMap = { month: "Månedlig", year: "Årlig", lifetime: "Livstid" };
+      planEl.textContent = planMap[status?.plan] || "—";
     }
 
-    if (s.trial && !s.active) {
-      if (statusEl) statusEl.textContent = "Prøveperiode";
-      if (planEl) planEl.textContent = planLabel(s.plan);
-      const until = fmtDate(s.current_period_end);
-      if (untilEl) untilEl.textContent = until ? ("Til " + until) : "";
-      return;
-    }
-
-    if (s.active) {
-      if (statusEl) statusEl.textContent = "Aktiv";
-      if (planEl) planEl.textContent = planLabel(s.plan);
-      const until = fmtDate(s.current_period_end);
-      if (untilEl) untilEl.textContent = until ? ("Til " + until) : "";
-      return;
-    }
-
-    if (statusEl) statusEl.textContent = "Ikke aktiv";
-    if (planEl) planEl.textContent = "—";
-    const until = fmtDate(s.current_period_end);
-    if (untilEl) untilEl.textContent = until ? ("Sist kjent slutt: " + until) : "";
-  }
-
-  async function openModal() {
-    const modal = $("subscriptionModal");
-    if (!modal) return false;
-    show(modal, "flex");
-    await fillSubscriptionModal();
-    return true;
-  }
-
-  function closeModal() {
-    const modal = $("subscriptionModal");
+    // Optional: liten info-linje hvis kansellert ved periodens slutt
+    const infoId = "subscriptionCancelInfo";
+    let info = document.getElementById(infoId);
+    const modal = document.getElementById("subscriptionModal");
     if (!modal) return;
-    hide(modal);
+
+    if (!info) {
+      info = document.createElement("div");
+      info.id = infoId;
+      info.style.marginTop = "8px";
+      info.style.fontSize = "13px";
+      info.style.opacity = "0.85";
+      // prøv å plassere under plan-linjene (antatt at disse finnes)
+      const body = modal.querySelector(".modal-body") || modal;
+      body.appendChild(info);
+    }
+
+    if (status?.cancel_at_period_end) {
+      const date = status?.cancel_at ? new Date(status.cancel_at).toLocaleDateString("no-NO") : "";
+      info.textContent = date
+        ? `Abonnementet er satt til å avsluttes ved periodens slutt (${date}).`
+        : `Abonnementet er satt til å avsluttes ved periodens slutt.`;
+    } else {
+      info.textContent = "";
+    }
+  }
+
+  async function openSubscriptionModal() {
+    const modal = document.getElementById("subscriptionModal");
+    if (!modal) return;
+
+    modal.style.display = "block";
+
+    const status = await subscriptionService.checkSubscription();
+    setModalTexts(status);
+
+    // Sørg for at vi har cancel-knapp
+    const cancelBtn = ensureCancelButton();
+
+    // Bind knapper
+    const manageBtn = document.getElementById("managePortalBtn");
+    if (manageBtn && !manageBtn.__bound) {
+      manageBtn.__bound = true;
+      manageBtn.addEventListener("click", async () => {
+        try {
+          await subscriptionService.openPortal("manage");
+        } catch (e) {
+          alert(`Kunne ikke åpne abonnement-portalen: ${e.message}`);
+        }
+      });
+    }
+
+    if (cancelBtn && !cancelBtn.__bound) {
+      cancelBtn.__bound = true;
+      cancelBtn.addEventListener("click", async () => {
+        try {
+          await subscriptionService.openPortal("cancel");
+        } catch (e) {
+          alert(`Kunne ikke åpne kanselleringsflyt: ${e.message}`);
+        }
+      });
+    }
+  }
+
+  function closeSubscriptionModal() {
+    const modal = document.getElementById("subscriptionModal");
+    if (!modal) return;
+    modal.style.display = "none";
   }
 
   function bind() {
-    const manageBtn = $("manageSubscriptionBtn");
-    if (manageBtn) {
-      manageBtn.addEventListener("click", async function () {
-        const ok = await openModal();
-        if (!ok) {
-          // fallback: pricing
-          window.location.href = "/pricing.html";
-        }
-      });
-      log("✅ manageSubscriptionBtn bound");
-    } else {
-      warn("manageSubscriptionBtn not found");
+    // Knappen i toppmenyen (tannhjul / settings)
+    const btn = document.getElementById("manageSubscriptionBtn");
+    if (btn && !btn.__bound) {
+      btn.__bound = true;
+      btn.addEventListener("click", openSubscriptionModal);
+      console.log(`${LOG_PREFIX} ✅ manageSubscriptionBtn bound`);
     }
 
-    const closeBtn = $("closeSubscriptionModal");
-    if (closeBtn) closeBtn.addEventListener("click", closeModal);
-
-    const modal = $("subscriptionModal");
-    if (modal) {
-      modal.addEventListener("click", function (e) {
-        if (e.target === modal) closeModal();
-      });
+    const closeBtn = document.getElementById("closeSubscriptionModal");
+    if (closeBtn && !closeBtn.__bound) {
+      closeBtn.__bound = true;
+      closeBtn.addEventListener("click", closeSubscriptionModal);
     }
 
-    const portalBtn = $("managePortalBtn");
-    if (portalBtn) portalBtn.addEventListener("click", openCustomerPortal);
-
-    // optional trial start buttons (if you have them)
-    const startTrialYearBtn = $("startTrialYearBtn");
-    if (startTrialYearBtn) {
-      startTrialYearBtn.addEventListener("click", async function () {
-        const r = await startTrial("year");
-        if (!r.ok) alert("Kunne ikke starte prøveperiode: " + r.error);
-        else alert("Prøveperiode startet!");
-        await fillSubscriptionModal();
-      });
-    }
+    // Lukk ved klikk utenfor
+    window.addEventListener("click", (event) => {
+      const modal = document.getElementById("subscriptionModal");
+      if (event.target === modal) closeSubscriptionModal();
+    });
   }
 
-  // Expose
-  window.subscriptionService = {
-    checkSubscription: checkSubscription,
-    startTrial: startTrial,
-    openCustomerPortal: openCustomerPortal,
-  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bind);
+  } else {
+    bind();
+  }
 
-  // Boot
-  try { bind(); } catch (e) { err("subscription.js bind failed:", e); }
-  log("✅ subscription.js loaded (browser-safe)");
+  console.log(`${LOG_PREFIX} ✅ subscription.js loaded (browser-safe)`);
 })();
