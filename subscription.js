@@ -242,21 +242,31 @@
     if (!info) {
       info = document.createElement("div");
       info.id = infoId;
-      info.style.marginTop = "8px";
-      info.style.fontSize = "13px";
-      info.style.opacity = "0.85";
-      // prøv å plassere under plan-linjene (antatt at disse finnes)
-      const body = modal.querySelector(".modal-body") || modal;
-      body.appendChild(info);
+      info.style.marginTop = "12px";
+      info.style.padding = "10px 12px";
+      info.style.backgroundColor = "#fff3cd";
+      info.style.border = "1px solid #ffc107";
+      info.style.borderRadius = "6px";
+      info.style.fontSize = "14px";
+      info.style.color = "#856404";
+      info.style.fontWeight = "500";
+      // Plasser rett etter plan-info (i modal-body)
+      const body = modal.querySelector(".bf-modal__body");
+      if (body) {
+        body.appendChild(info);
+      } else {
+        modal.appendChild(info);
+      }
     }
 
     if (status?.cancel_at_period_end) {
       const date = status?.cancel_at ? new Date(status.cancel_at).toLocaleDateString("no-NO") : "";
       info.textContent = date
-        ? `Abonnementet er satt til å avsluttes ved periodens slutt (${date}).`
-        : `Abonnementet er satt til å avsluttes ved periodens slutt.`;
+        ? `⚠️ Abonnementet avsluttes ${date}`
+        : `⚠️ Abonnementet er satt til å avsluttes ved periodens slutt.`;
+      info.style.display = "block";
     } else {
-      info.textContent = "";
+      info.style.display = "none";
     }
   }
 
