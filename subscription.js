@@ -21,33 +21,64 @@
   // --- Utils ---
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  // Timeout wrapper for promises som kan henge
+  function withTimeout(promise, ms, errorMsg = "Timeout") {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(errorMsg)), ms))
+    ]);
+  }
+
   async function getAccessToken({ retries = 3 } = {}) {
     // Ikke bruk for aggressive timeouts her – det skaper "Invalid session" / flakiness.
     // Prøv flere ganger i tilfelle Supabase fortsatt "recoverAndRefresh"-er.
     for (let i = 0; i < retries; i++) {
       try {
-        // 1) Normal vei
-        const s = await window.supabase?.auth?.getSession?.();
+        // 1) Normal vei med timeout
+        const s = await withTimeout(
+          window.supabase?.auth?.getSession?.(),
+          3000,
+          "getSession timeout"
+        );
         const token = s?.data?.session?.access_token;
-        if (token) return token;
+        if (token) {
+          console.log(`${LOG_PREFIX} ✅ Got token from getSession`);
+          return token;
+        }
 
         // 2) Noen nettlesere (enterprise policies / tracking prevention) kan gi
         // en kort periode der session er null selv om bruker er innlogget.
         // Da prøver vi en forsiktig refresh.
-        await window.supabase?.auth?.refreshSession?.();
-        const s2 = await window.supabase?.auth?.getSession?.();
+        await withTimeout(
+          window.supabase?.auth?.refreshSession?.(),
+          3000,
+          "refreshSession timeout"
+        );
+        const s2 = await withTimeout(
+          window.supabase?.auth?.getSession?.(),
+          3000,
+          "getSession timeout (retry)"
+        );
         const token2 = s2?.data?.session?.access_token;
-        if (token2) return token2;
+        if (token2) {
+          console.log(`${LOG_PREFIX} ✅ Got token after refresh`);
+          return token2;
+        }
 
         // fallback: getUser kan av og til fungere når session ikke er tilgjengelig ennå
-        const u = await window.supabase?.auth?.getUser?.();
+        const u = await withTimeout(
+          window.supabase?.auth?.getUser?.(),
+          3000,
+          "getUser timeout"
+        );
         // getUser returnerer ikke token, men hvis den feiler pga manglende session,
         // gir vi Supabase litt tid og prøver igjen.
         if (u?.data?.user) {
+          console.log(`${LOG_PREFIX} ⚠️ User exists but no token, retrying...`);
           // user finnes, men token mangler -> prøv en runde til
         }
-      } catch (_) {
-        // ignore
+      } catch (err) {
+        console.warn(`${LOG_PREFIX} ⚠️ getAccessToken attempt ${i+1} failed:`, err.message);
       }
       await sleep(250 + i * 250);
     }
