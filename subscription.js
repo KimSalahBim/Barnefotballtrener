@@ -1,16 +1,7 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20",
-});
-
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
-async function getUserFromBearer(req) {
+async function getUserFromBearer(req, supabaseAdmin) {
   const authHeader = (req && req.headers && req.headers.authorization) ? req.headers.authorization : "";
   const match = authHeader.match(/^Bearer (.+)$/);
   const accessToken = match && match[1] ? match[1] : null;
@@ -23,11 +14,10 @@ async function getUserFromBearer(req) {
   return { user: data.user, error: null };
 }
 
-async function findStripeCustomer(opts) {
+async function findStripeCustomer(stripe, opts) {
   const userId = opts && opts.userId ? opts.userId : null;
   const email = opts && opts.email ? opts.email : null;
 
-  // Prefer metadata match
   try {
     if (userId) {
       const found = await stripe.customers.search({
@@ -38,7 +28,6 @@ async function findStripeCustomer(opts) {
     }
   } catch (_) {}
 
-  // Fallback: email
   try {
     if (email) {
       const foundByEmail = await stripe.customers.search({
@@ -52,7 +41,7 @@ async function findStripeCustomer(opts) {
   return null;
 }
 
-async function hasActiveSubscription(customerId, priceIds) {
+async function hasActiveSubscription(stripe, customerId, priceIds) {
   if (!customerId) return { active: false, plan: null, current_period_end: null };
 
   const subs = await stripe.subscriptions.list({
@@ -89,7 +78,7 @@ async function hasActiveSubscription(customerId, priceIds) {
   return { active: true, plan: plan, current_period_end: iso };
 }
 
-async function hasLifetimePurchase(customerId, lifetimePriceId) {
+async function hasLifetimePurchase(stripe, customerId, lifetimePriceId) {
   if (!customerId || !lifetimePriceId) return false;
 
   const sessions = await stripe.checkout.sessions.list({
@@ -123,7 +112,7 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    // Hard guard: envs må finnes
+    // Env guards
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return res.status(500).json({ error: "Missing Supabase server env" });
     }
@@ -131,7 +120,11 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing Stripe server env" });
     }
 
-    const auth = await getUserFromBearer(req);
+    // Lazy init (avoids import-time crash)
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
+    const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+    const auth = await getUserFromBearer(req, supabaseAdmin);
     if (auth.error) return res.status(401).json({ error: auth.error });
 
     const user = auth.user;
@@ -159,15 +152,15 @@ export default async function handler(req, res) {
     const trialUsed = !!(accessRow && accessRow.trial_started_at);
 
     // Stripe status
-    const customer = await findStripeCustomer({ userId: userId, email: email });
+    const customer = await findStripeCustomer(stripe, { userId: userId, email: email });
     const customerId = customer && customer.id ? customer.id : null;
 
     const monthPrice = process.env.STRIPE_PRICE_MONTH;
     const yearPrice = process.env.STRIPE_PRICE_YEAR;
     const lifetimePrice = process.env.STRIPE_PRICE_LIFETIME;
 
-    const sub = await hasActiveSubscription(customerId, [monthPrice, yearPrice].filter(Boolean));
-    const lifetime = await hasLifetimePurchase(customerId, lifetimePrice);
+    const sub = await hasActiveSubscription(stripe, customerId, [monthPrice, yearPrice].filter(Boolean));
+    const lifetime = await hasLifetimePurchase(stripe, customerId, lifetimePrice);
 
     // 1) Lifetime
     if (lifetime) {
@@ -211,8 +204,8 @@ export default async function handler(req, res) {
         trial: true,
         lifetime: false,
         plan: (accessRow && accessRow.trial_plan) ? accessRow.trial_plan : null,
-        current_period_end: trialIso, // frontend bruker denne
-        trial_ends_at: trialIso,      // behold for debug/kompat
+        current_period_end: trialIso,
+        trial_ends_at: trialIso,
         reason: "trial_active",
         canStartTrial: false,
       });
@@ -231,7 +224,7 @@ export default async function handler(req, res) {
       trial: false,
       lifetime: false,
       plan: null,
-      current_period_end: trialIso2, // konsistent for frontend
+      current_period_end: trialIso2,
       trial_ends_at: trialIso2,
       reason: trialUsed ? "trial_expired" : "no_access",
       canStartTrial: !trialUsed,
