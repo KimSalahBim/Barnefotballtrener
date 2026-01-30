@@ -1363,13 +1363,13 @@ body {
 .app-title{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:12px;
 }
 
 .app-logo{
-  width:28px;
-  height:28px;
-  border-radius:8px;
+  width:48px;
+  height:48px;
+  border-radius:10px;
   object-fit:cover;
   box-shadow:0 6px 18px rgba(7,41,42,0.18);
 }
@@ -1377,6 +1377,7 @@ body {
 .app-name{
   font-weight:800;
   letter-spacing:0.2px;
+  font-size:18px;
 }
 /* =========================================================
    Mobile: kompakt toppmeny uten scroll (grid 2 rader)
@@ -1388,6 +1389,16 @@ body {
     --bft-orange-2: #FFB000;
     --bft-green: #2E7D32;
     --bft-text: #0f172a;
+  }
+
+  /* Logo: Litt mindre på mobil */
+  .app-logo {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .app-name {
+    font-size: 16px;
   }
 
   /* Menycontainer: grid som viser alt */
