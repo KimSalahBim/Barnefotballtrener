@@ -147,9 +147,11 @@ export default async function handler(req, res) {
         trial: false,
         lifetime: true,
         plan: "lifetime",
-        canStartTrial: false,
-      });
-    }
+        current_period_end: null,
+        reason: "lifetime",
+        canStartTrial: false
+});
+
 
     if (sub.active) {
       return res.status(200).json({
@@ -158,9 +160,10 @@ export default async function handler(req, res) {
         lifetime: false,
         plan: sub.plan,
         current_period_end: sub.current_period_end,
-        canStartTrial: false,
-      });
-    }
+        reason: "active_subscription",
+        canStartTrial: false
+});
+
 
 if (trialActive) {
   var trialIso = null;
@@ -170,23 +173,18 @@ if (trialActive) {
     trialIso = null;
   }
 
-  return res.status(200).json({
-    active: false,
-    trial: true,
-    lifetime: false,
+return res.status(200).json({
+  active: false,
+  trial: true,
+  lifetime: false,
 
-    // trial_plan hvis den finnes, ellers null
-    plan: (accessRow && accessRow.trial_plan) ? accessRow.trial_plan : null,
+  plan: (accessRow && accessRow.trial_plan) ? accessRow.trial_plan : null,
+  current_period_end: trialIso,
+  trial_ends_at: trialIso,
 
-    // ✅ Dette er feltet frontend forventer
-    current_period_end: trialIso,
-
-    // (fint å beholde for debug/kompat)
-    trial_ends_at: trialIso,
-
-    canStartTrial: false,
-  });
-}
+  reason: "trial_active",
+  canStartTrial: false
+});
 
 
     var trialIso2 = null;
@@ -197,20 +195,22 @@ if (trialActive) {
     }
 
     return res.status(200).json({
-      active: false,
-      trial: false,
-      lifetime: false,
-      plan: null,
+  active: false,
+  trial: false,
+  lifetime: false,
+  plan: null,
 
-      // ✅ konsistent for frontend (modal/pricing)
-      current_period_end: trialIso2,
+  // ✅ konsistent for frontend (modal/pricing)
+  current_period_end: trialIso2,
 
-      // behold for debug/kompat
-      trial_ends_at: trialIso2,
+  // behold for debug/kompat
+  trial_ends_at: trialIso2,
 
-      canStartTrial: !trialUsed,
-      reason: trialUsed ? "trial_expired" : "no_access",
-    });
+  // ✅ alltid med
+  reason: trialUsed ? "trial_expired" : "no_access",
+  canStartTrial: !trialUsed
+});
+
 
   } catch (e) {
     console.error("subscription-status error:", e);
