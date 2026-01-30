@@ -21,6 +21,23 @@
   // --- Utils ---
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  // Token cache (5 min TTL)
+  let tokenCache = { token: null, expires: 0 };
+
+  function getCachedToken() {
+    if (tokenCache.token && Date.now() < tokenCache.expires) {
+      console.log(`${LOG_PREFIX} 💾 Using cached token (${Math.floor((tokenCache.expires - Date.now())/1000)}s left)`);
+      return tokenCache.token;
+    }
+    return null;
+  }
+
+  function setCachedToken(token) {
+    tokenCache.token = token;
+    tokenCache.expires = Date.now() + (5 * 60 * 1000); // 5 min
+    console.log(`${LOG_PREFIX} 💾 Cached token for 5 minutes`);
+  }
+
   // Timeout wrapper for promises som kan henge
   function withTimeout(promise, ms, errorMsg = "Timeout") {
     return Promise.race([
@@ -29,12 +46,18 @@
     ]);
   }
 
-  async function getAccessToken({ retries = 3 } = {}) {
-    // Ikke bruk for aggressive timeouts her – det skaper "Invalid session" / flakiness.
+  async function getAccessToken({ retries = 3, skipCache = false } = {}) {
+    // 1) Prøv cached token først (hvis ikke skipCache)
+    if (!skipCache) {
+      const cached = getCachedToken();
+      if (cached) return cached;
+    }
+
+    // 2) Ikke bruk for aggressive timeouts her – det skaper "Invalid session" / flakiness.
     // Prøv flere ganger i tilfelle Supabase fortsatt "recoverAndRefresh"-er.
     for (let i = 0; i < retries; i++) {
       try {
-        // 1) Normal vei med timeout
+        // Normal vei med timeout
         const s = await withTimeout(
           window.supabase?.auth?.getSession?.(),
           3000,
@@ -43,10 +66,11 @@
         const token = s?.data?.session?.access_token;
         if (token) {
           console.log(`${LOG_PREFIX} ✅ Got token from getSession`);
+          setCachedToken(token);
           return token;
         }
 
-        // 2) Noen nettlesere (enterprise policies / tracking prevention) kan gi
+        // Noen nettlesere (enterprise policies / tracking prevention) kan gi
         // en kort periode der session er null selv om bruker er innlogget.
         // Da prøver vi en forsiktig refresh.
         await withTimeout(
@@ -62,6 +86,7 @@
         const token2 = s2?.data?.session?.access_token;
         if (token2) {
           console.log(`${LOG_PREFIX} ✅ Got token after refresh`);
+          setCachedToken(token2);
           return token2;
         }
 
@@ -82,7 +107,7 @@
       }
       await sleep(250 + i * 250);
     }
-    throw new Error("Ingen gyldig sesjon (token mangler).");
+    throw new Error("Ingen gyldig sesjon (token mangler). Prøv å refresh siden (F5).");
   }
 
   async function callApiJson(url, { method = "GET", token, body } = {}) {
