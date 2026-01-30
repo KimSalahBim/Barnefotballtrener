@@ -314,8 +314,8 @@
   .password-box{ padding: 30px 18px; }
   .password-header h1{ font-size: 26px; }
   .btn-google{ font-size: 15px; padding: 13px 16px; }
-  .password-icon{ width: 120px; height: 120px; border-radius: 24px; }
-  .login-logo{ width: 100px; height: 100px; }
+  .password-icon{ width: 156px; height: 156px; border-radius: 30px; }
+  .login-logo{ width: 130px; height: 130px; }
 }
 
 /* ---- FINAL OVERRIDE: Google-knapp (tving designet) ---- */
