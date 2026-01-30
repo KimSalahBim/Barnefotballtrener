@@ -179,47 +179,19 @@
 
   async function startCheckout(planType, priceId, user) {
     try {
-      log('💳 Starting checkout for:', planType, priceId);
+      log('💳 Starting checkout for:', planType);
       showNotification('Videresender til betaling...', 'info');
 
       const svc = getSubscriptionService();
       if (!svc) throw new Error('subscriptionService mangler');
 
-      if (typeof svc.init === 'function') await svc.init();
-
-      if (!svc.stripe || typeof svc.stripe.redirectToCheckout !== 'function') {
-        throw new Error('Stripe er ikke initialisert');
+      // Bruk serverless checkout-session (robust): /api/create-checkout-session
+      // og redirect med sessionId.
+      if (typeof svc.startCheckout !== 'function') {
+        throw new Error('subscriptionService.startCheckout mangler (subscription.js må oppdateres)');
       }
 
-      // Hent riktig priceId fra CONFIG hvis den finnes
-      const cfgPriceId = window.CONFIG?.prices?.[planType]?.id;
-      const actualPriceId = cfgPriceId || priceId;
-
-      log('Using price ID:', actualPriceId);
-
-      if (!actualPriceId) {
-        throw new Error('Ugyldig price ID');
-      }
-
-      // Hold oss på samme path (typisk "/") og la hash være ok
-      const basePath = window.location.origin + window.location.pathname;
-
-      const { error } = await svc.stripe.redirectToCheckout({
-        lineItems: [{ price: actualPriceId, quantity: 1 }],
-        mode: planType === 'lifetime' ? 'payment' : 'subscription',
-        successUrl: `${basePath}?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${basePath}?canceled=true`,
-        customerEmail: user.email,
-        clientReferenceId: user.id,
-        // metadata i Checkout krever normalt at dette settes server-side ved session creation,
-        // men vi lar det stå her (skader ikke om Stripe ignorerer det på client redirect).
-        metadata: {
-          user_id: user.id,
-          plan_type: planType,
-        },
-      });
-
-      if (error) throw error;
+      await svc.startCheckout(planType);
     } catch (error) {
       console.error('❌ Checkout error:', error);
       showNotification(`Kunne ikke starte betalingsprosessen: ${error.message}`, 'error');
@@ -297,124 +269,21 @@
     // Magic link håndteres kun av auth.js (unngå dobbel binding)
     return;
 
-    const emailInput = document.getElementById('magicLinkEmail');
-    const btn = document.getElementById('magicLinkBtn');
-    const hint = document.getElementById('magicLinkHint');
-
-
-
-    if (!emailInput || !btn) {
-      log('ℹ️ Magic link elementer finnes ikke på denne siden (#magicLinkEmail / #magicLinkBtn).');
-      return;
-    }
-
-    if (btn.__bf_bound_magic_pricing) return;
-    btn.__bf_bound_magic_pricing = true;
-
-    btn.style.pointerEvents = 'auto';
-    btn.style.cursor = 'pointer';
-
-    function setHint(text) {
-      if (hint) hint.textContent = text;
-    }
-
-    function setButtonState(disabled, text) {
-      btn.disabled = !!disabled;
-      if (text) btn.textContent = text;
-    }
-
-    async function sendMagicLink() {
-      const email = safeTrim(emailInput.value);
-
-      if (!email || !email.includes('@')) {
-        showNotification('Skriv inn en gyldig e-postadresse.', 'error');
-        emailInput.focus();
-        return;
-      }
-
-      const until = getCooldownUntil(email);
-      const now = Date.now();
-      if (until && now < until) {
-        const remaining = Math.ceil((until - now) / 1000);
-        showNotification(`Vent ${remaining}s før du sender en ny lenke.`, 'info');
-        setButtonState(true, `Vent ${remaining}s...`);
-        setTimeout(() => {
-          // Ikke spam UI – bare “slipp” knappen etter litt
-          setButtonState(false, 'Send innloggingslenke');
-        }, Math.min(remaining, 10) * 1000);
-        return;
-      }
-
-      // Guard: lås alltid i minst 60s for å unngå 429 pga dobbelklikk / dobbel-binding
-      setCooldown(email, COOLDOWN_SECONDS_DEFAULT);
-
-      setButtonState(true, 'Sender...');
-      try {
-        if (!window.authService || typeof window.authService.signInWithMagicLink !== 'function') {
-          throw new Error('authService.signInWithMagicLink finnes ikke');
-        }
-
-        const res = await window.authService.signInWithMagicLink(email);
-
-        if (res && res.success) {
-          setHint('Sjekk e-posten din og klikk på lenka for å logge inn ✅');
-          showNotification('Innloggingslenke sendt. Sjekk e-posten.', 'success');
-        } else {
-          // Hvis Supabase svarer med "after XX seconds", juster cooldown riktig
-          const errMsg = res?.error || 'Kunne ikke sende lenke.';
-          const wait = parseWaitSecondsFromErrorMessage(errMsg);
-          if (wait) setCooldown(email, Math.max(wait, COOLDOWN_SECONDS_DEFAULT));
-          showNotification(errMsg, 'error');
-        }
-      } catch (err) {
-        const msg = err?.message || String(err);
-        const wait = parseWaitSecondsFromErrorMessage(msg);
-        if (wait) setCooldown(email, Math.max(wait, COOLDOWN_SECONDS_DEFAULT));
-        console.error('❌ Magic link exception:', err);
-        showNotification(msg.includes('after')
-          ? msg
-          : 'Kunne ikke sende lenke. Prøv igjen om litt.', 'error');
-      } finally {
-        setButtonState(false, 'Send innloggingslenke');
-      }
-    }
-
-    // CAPTURE + stopImmediatePropagation => hindrer at auth.js sin click-handler også sender
-    btn.addEventListener(
-      'click',
-      async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-        await sendMagicLink();
-      },
-      { capture: true, passive: false }
-    );
-
-    emailInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        btn.click();
-      }
-    });
-
-    log('✅ Magic link bundet (pricing.js) (#magicLinkBtn)');
+    // (resten er bevisst deaktivert)
   }
 
   // -------------------------------
-  // Boot
+  // Init
   // -------------------------------
-function boot() {
-  log('💳 Pricing.js loaded');
-  bindPlanButtons();
-  // bindMagicLink(); // Magic link håndteres av auth.js
-  handleStripeReturnParams();
-}
-
+  function init() {
+    handleStripeReturnParams();
+    bindPlanButtons();
+    bindMagicLink();
+  }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    boot();
+    init();
   }
 })();
