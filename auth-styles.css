@@ -41,10 +41,10 @@
 }
 
 .password-icon{
-  width: 140px;
-  height: 140px;
-  margin: 0 auto 24px;
-  border-radius: 28px;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 28px;
+  border-radius: 36px;
 
   /* “kortet” bak logoen – lett logo-inspirert */
   background: linear-gradient(135deg,
@@ -61,8 +61,8 @@
 }
 
 .login-logo{
-  width: 120px;
-  height: 120px;
+  width: 200px;
+  height: 200px;
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 10px 18px rgba(2, 6, 23, 0.10));
@@ -314,8 +314,8 @@
   .password-box{ padding: 30px 18px; }
   .password-header h1{ font-size: 26px; }
   .btn-google{ font-size: 15px; padding: 13px 16px; }
-  .password-icon{ width: 156px; height: 156px; border-radius: 30px; }
-  .login-logo{ width: 130px; height: 130px; }
+  .password-icon{ width: 215px; height: 215px; border-radius: 34px; }
+  .login-logo{ width: 195px; height: 195px; }
 }
 
 /* ---- FINAL OVERRIDE: Google-knapp (tving designet) ---- */
