@@ -1,92 +1,107 @@
-import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+// api/create-portal-session.js
+// Lager Stripe Customer Portal-session.
+// Støtter to flows: "manage" (standard) og "cancel" (starter kanselleringsflyt)
+// Krever: STRIPE_SECRET_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20",
-});
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
 
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Finn/lag Stripe customer for e-post
+async function findOrCreateCustomer(email, userId) {
+  const list = await stripe.customers.list({ email, limit: 1 });
+  if (list.data?.length) return list.data[0];
+
+  return await stripe.customers.create({
+    email,
+    metadata: { supabase_user_id: userId || '' },
+  });
+}
+
+async function pickSubscriptionId(customerId) {
+  // Ta med flere statuser for å være robust
+  const subs = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 10,
+  });
+
+  if (!subs.data?.length) return null;
+
+  const rank = (s) => {
+    // lavere er bedre
+    const st = s.status;
+    if (st === 'trialing') return 0;
+    if (st === 'active') return 1;
+    if (st === 'past_due') return 2;
+    if (st === 'unpaid') return 3;
+    if (st === 'incomplete') return 4;
+    if (st === 'incomplete_expired') return 5;
+    if (st === 'canceled') return 9;
+    return 8;
+  };
+
+  subs.data.sort((a, b) => rank(a) - rank(b));
+  const best = subs.data[0];
+  return best?.id || null;
+}
+
 export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
   try {
-    if (req.method !== "POST") {
-      res.setHeader("Allow", "POST");
-      return res.status(405).json({ error: "Method not allowed" });
-    }
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ error: 'Missing token' });
 
-    // 1) Hent Supabase access token fra Authorization header
-    const authHeader = req.headers.authorization || "";
-    const match = authHeader.match(/^Bearer (.+)$/);
-    const accessToken = match?.[1];
+    const { data: { user }, error: userErr } = await supabaseAdmin.auth.getUser(token);
+    if (userErr || !user) return res.status(401).json({ error: 'Invalid session' });
 
-    if (!accessToken) {
-      return res.status(401).json({ error: "Missing Bearer token" });
-    }
-
-    // 2) Verifiser token -> få user
-    const { data: userData, error: userErr } =
-      await supabaseAdmin.auth.getUser(accessToken);
-
-    if (userErr || !userData?.user) {
-      return res.status(401).json({ error: "Invalid session" });
-    }
-
-    const user = userData.user;
-    const userId = user.id;
     const email = user.email;
+    if (!email) return res.status(400).json({ error: 'User has no email' });
 
-    if (!email) {
-      return res.status(400).json({ error: "User has no email" });
-    }
+    const flow = (req.body?.flow || 'manage').toLowerCase();
+    const returnUrl = req.body?.returnUrl || `${req.headers.origin || ''}/#`;
 
-    // 3) Finn Stripe customer (først via metadata, så via e-post)
-    let customerId = null;
+    const customer = await findOrCreateCustomer(email, user.id);
 
-    // 3a) Søk via metadata supabase_user_id
-    try {
-      const found = await stripe.customers.search({
-        query: `metadata['supabase_user_id']:'${userId}'`,
-        limit: 1,
-      });
-      customerId = found.data?.[0]?.id || null;
-    } catch (e) {
-      // Ignorer og fall tilbake til e-post
-    }
-
-    // 3b) Fall tilbake: søk via e-post
-    if (!customerId) {
-      const foundByEmail = await stripe.customers.search({
-        query: `email:'${email}'`,
-        limit: 1,
-      });
-      customerId = foundByEmail.data?.[0]?.id || null;
-    }
-
-    // VIKTIG: Vi oppretter IKKE ny customer her.
-    // Hvis vi gjør det, får brukeren en "tom portal" uten abonnement.
-    if (!customerId) {
-      return res.status(404).json({
-        error:
-          "Fant ingen Stripe-kunde/abonnement på denne e-posten ennå. Har du kjøpt abonnement med samme e-post?",
-      });
-    }
-
-    // 4) Opprett Customer Portal session
-    const returnUrl =
-      process.env.APP_URL ||
-      `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}/`;
-
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
+    const sessionParams = {
+      customer: customer.id,
       return_url: returnUrl,
-    });
+    };
 
-    return res.status(200).json({ url: session.url });
-  } catch (e) {
-    console.error("create-portal-session error:", e);
-    return res.status(500).json({ error: "Server error" });
+    // Flow: direkte inn i kanselleringsskjermen i portalen
+    if (flow === 'cancel') {
+      const subId = await pickSubscriptionId(customer.id);
+      if (!subId) {
+        // Hvis kunden ikke har abonnement, send de til vanlig portal
+        const portal = await stripe.billingPortal.sessions.create(sessionParams);
+        return res.status(200).json({ url: portal.url });
+      }
+
+      // Stripe Billing Portal: flow_data
+      // Docs: https://docs.stripe.com/api/customer_portal/sessions/create
+      sessionParams.flow_data = {
+        type: 'subscription_cancel',
+        subscription_cancel: {
+          subscription: subId,
+        },
+      };
+    }
+
+    // (valgfritt) Hvis du ønsker at "manage" også hopper inn i abonnement-visning:
+    // else if (flow === 'manage') { ... subscription_update ... }
+
+    const portalSession = await stripe.billingPortal.sessions.create(sessionParams);
+    return res.status(200).json({ url: portalSession.url });
+
+  } catch (err) {
+    console.error('create-portal-session error:', err);
+    return res.status(500).json({ error: err.message || 'Server error' });
   }
 }
