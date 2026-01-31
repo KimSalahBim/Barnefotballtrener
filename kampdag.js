@@ -437,6 +437,8 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     ids.forEach(id => minutes[id] = 0);
 
     const keeperMinutes = buildKeeperMinutes(keeperTimeline, ids);
+    const keeperSet = new Set(Object.keys(keeperMinutes).filter(id => keeperMinutes[id] > 0));
+    const keeperExtraBias = 0.35; // 0.2–0.6: høyere = sterkere preferanse
     const T = times[times.length - 1];
     const baseTarget = (P * T) / Math.max(1, ids.length);
 
