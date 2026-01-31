@@ -165,7 +165,7 @@ body {
     margin: 0 auto;
     animation: fadeIn 0.5s ease;
     width: 100%;
-    min-height: 100vh;
+    /* min-height: 100vh; FJERNET - Dette forårsaket at container tok for mye plass */
     opacity: 1;
 }
 
