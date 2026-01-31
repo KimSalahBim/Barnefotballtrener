@@ -909,7 +909,8 @@
     const btn = e.target.closest('.nav-btn[data-tab="competitions"]');
     if (btn) {
       if (ui.view === 'detail') ui.view = 'history';
-      render();
+      // Force render with slight delay to ensure window.players is set
+      setTimeout(() => render(), 50);
     }
   });
 
@@ -918,7 +919,8 @@
   });
 
   document.addEventListener('DOMContentLoaded', () => {
-    render();
+    // Initial render with delay to allow players to load
+    setTimeout(() => render(), 100);
   });
 
   window.competitions = {
