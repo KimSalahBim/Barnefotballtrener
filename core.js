@@ -425,28 +425,32 @@
   // Krever ferdighetsnivå aktivert for å gi mening.
   function makeDifferentiatedGroups(players, groupCount) {
     const n = Math.max(2, Math.min(6, Number(groupCount) || 2));
+    
+    const groups = Array.from({ length: n }, (_, i) => []);
+    const pool = [...players];
+
+    // Nivå AV => random fordeling
     if (!state.settings.useSkill) {
-      return null; // håndteres i UI
+      const shuffled = shuffle(pool);
+      shuffled.forEach((p, idx) => {
+        groups[idx % n].push(p);
+      });
+      return groups;
     }
 
-    const list = sortBySkillWithRandomTies(players);
-    const total = list.length;
+    // Nivå PÅ => DIFFERENSIERING (Gruppe 1 = høyest nivå, Gruppe 2 = neste, osv.)
+    const sorted = sortBySkillWithRandomTies(players);
+    
+    // Chunking: fordel spillere i "båser" basert på nivå
+    sorted.forEach((p, idx) => {
+      const groupIndex = Math.floor(idx * n / sorted.length);
+      groups[groupIndex].push(p);
+    });
 
-    const base = Math.floor(total / n);
-    const extra = total % n; // de første "extra" gruppene får +1
-    const sizes = Array.from({ length: n }, (_, i) => base + (i < extra ? 1 : 0));
-
-    const groups = [];
-    let cursor = 0;
-    for (let i = 0; i < n; i++) {
-      const size = sizes[i];
-      groups.push(list.slice(cursor, cursor + size));
-      cursor += size;
-    }
     return groups;
   }
 
-  // Generisk "jevne lag" for 2..6 lag. Bruker "snake draft" for nivå-balanse.
+  // Generisk "jevne lag" for 2..6 lag. Bruker greedy algorithm for perfekt balanse.
   function makeEvenTeams(players, teamCount) {
     const n = Math.max(2, Math.min(6, Number(teamCount) || 2));
 
@@ -457,29 +461,25 @@
       list = shuffle(players);
     }
 
-    const goalies = list.filter(p => p.goalie);
-    const field = list.filter(p => !p.goalie);
-
     const teams = Array.from({ length: n }, () => ({ players: [], sum: 0 }));
 
-    // fordel keepere først (så jevnt som mulig)
-    for (let i = 0; i < goalies.length; i++) {
-      const t = teams[i % n];
-      t.players.push(goalies[i]);
-      t.sum += (goalies[i].skill || 0);
-    }
-
-    // snake draft for resten
-    let dir = 1;
-    let idx2 = 0;
-    for (const p of field) {
-      const t = teams[idx2];
-      t.players.push(p);
-      t.sum += (p.skill || 0);
-
-      idx2 += dir;
-      if (idx2 === n) { dir = -1; idx2 = n - 1; }
-      if (idx2 === -1) { dir = 1; idx2 = 0; }
+    // Nivå AV => random round-robin fordeling
+    if (!state.settings.useSkill) {
+      list.forEach((p, idx) => {
+        const t = teams[idx % n];
+        t.players.push(p);
+        t.sum += (p.skill || 0);
+      });
+    } else {
+      // Nivå PÅ => greedy algorithm (legg til på laget med lavest sum)
+      list.forEach(p => {
+        let minSum = Math.min(...teams.map(t => t.sum));
+        let candidates = teams.filter(t => t.sum === minSum);
+        // Tilfeldig valg blant lag med samme sum
+        const pick = candidates[Math.floor(Math.random() * candidates.length)];
+        pick.players.push(p);
+        pick.sum += (p.skill || 0);
+      });
     }
 
     for (const t of teams) {
@@ -777,19 +777,18 @@
 
       const groupCount = Number($('trainingGroups')?.value ?? 2);
 
-      if (!state.settings.useSkill) {
-        showNotification('Slå på "Bruk ferdighetsnivå" for å lage differensierte grupper', 'error');
-        return;
-      }
-
       const groups = makeDifferentiatedGroups(players, groupCount);
       if (!groups) {
         showNotification('Kunne ikke lage grupper', 'error');
         return;
       }
 
+      const meta = state.settings.useSkill 
+        ? 'Nivå PÅ: Differensierte grupper (Gruppe 1 = høyest nivå)'
+        : 'Nivå AV: Random grupper';
+
       renderTrainingResults(groups);
-      showNotification('Differensierte grupper laget', 'success');
+      showNotification(state.settings.useSkill ? 'Differensierte grupper laget' : 'Random grupper laget', 'success');
     });
   }
 
