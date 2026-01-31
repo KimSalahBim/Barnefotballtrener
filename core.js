@@ -618,9 +618,10 @@
 
   // Mobilfix: sørg for at vi havner øverst i fanen (slipper "langt ned for å finne innhold")
   requestAnimationFrame(() => {
-    const top = content.querySelector('.tab-header') || content;
-    top.scrollIntoView({ block: 'start', behavior: 'auto' });
-  });
+    requestAnimationFrame(() => {
+  const top = content.querySelector('.tab-header') || content;
+  top.scrollIntoView({ block: 'start', behavior: 'auto' });
+});
 }
 
         // keep selections fresh
