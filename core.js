@@ -769,12 +769,6 @@
                     });
                   }
                 });
-                      display: tStyle.display,
-                      hasActiveClass: tabEl.classList.contains('active'),
-                      top: tRect.top
-                    });
-                  }
-                });
               } else {
                 console.log('[LIGA DEBUG] FEIL: Liga element ikke funnet!');
               }
