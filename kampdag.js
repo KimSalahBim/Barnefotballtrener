@@ -50,6 +50,21 @@
   // ------------------------------
   // Init
   // ------------------------------
+  
+  // Register event listener IMMEDIATELY (not waiting for DOMContentLoaded)
+  console.log('[Kampdag] Script loaded - registering event listener');
+  window.addEventListener('players:updated', (e) => {
+    console.log('[Kampdag] players:updated event mottatt:', e.detail);
+    try {
+      kdSelected = new Set(getPlayersArray().map(p => p.id));
+      renderKampdagPlayers();
+      updateKampdagCounts();
+      console.log('[Kampdag] Players re-rendered, count:', getPlayersArray().length);
+    } catch (err) {
+      console.error('[Kampdag] Error in players:updated handler:', err);
+    }
+  });
+  
   document.addEventListener('DOMContentLoaded', () => {
     console.log('[Kampdag] DOMContentLoaded');
     const root = $('kampdag');
@@ -63,19 +78,10 @@
     // Sjekk om spillere allerede er tilgjengelig
     const players = getPlayersArray();
     console.log('[Kampdag] Initial players:', players.length);
+    if (players.length > 0) {
+      kdSelected = new Set(players.map(p => p.id));
+    }
     renderKampdagPlayers();
-
-    // Re-render når spillerlisten oppdateres (fra core.js)
-    window.addEventListener('players:updated', (e) => {
-      console.log('[Kampdag] players:updated event mottatt:', e.detail);
-      try {
-        kdSelected = new Set(getPlayersArray().map(p => p.id));
-        renderKampdagPlayers();
-        console.log('[Kampdag] Players re-rendered');
-      } catch (e) {
-        console.error('Kampdag: kunne ikke oppdatere spillere', e);
-      }
-    });
     refreshKeeperUI();
     updateKampdagCounts();
   });
