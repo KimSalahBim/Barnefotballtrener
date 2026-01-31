@@ -602,9 +602,25 @@
   // UI wiring
   // ------------------------------
   function setupTabs() {
-    // Guard + timer for robust iOS/Safari scrolling when switching tabs
-    let scrollTimer = null;
-    let tabSwitchToken = 0;
+    // Robust mobil-håndtering for iOS/Safari: tab-bytte kan "beholde" scroll-posisjon.
+    // Vi tvinger derfor alltid til toppen ved fanebytte. I tillegg kan Liga få ekstra top-padding/margin
+    // i enkelte mobil-layouts, så vi injiserer en liten, scoped CSS-fix kun for Liga.
+    let ligaCssInjected = false;
+
+    function ensureLigaMobileCss() {
+      if (ligaCssInjected) return;
+      ligaCssInjected = true;
+      const style = document.createElement('style');
+      style.id = 'bft-liga-mobile-fix';
+      style.textContent = `
+        @media (max-width: 820px) {
+          /* Forsøk å fjerne uønsket "luft" over Liga-innhold på mobil */
+          #liga.tab-content { padding-top: 0 !important; margin-top: 0 !important; }
+          #liga .settings-card:first-child { margin-top: 0 !important; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -620,41 +636,21 @@
         if (content) {
           content.classList.add('active');
 
-          // Mobilfix (iOS/Safari): robust scroll til fanens header.
-          // iOS kan "misse" scrollIntoView pga toolbar reflow, så vi gjør multi-pass og bruker absolutt posisjon.
-          if (document.activeElement && typeof document.activeElement.blur === 'function') {
-            document.activeElement.blur();
+          // Kun Liga: injiser en liten CSS-fix (valgfritt, men kan eliminere stort "felt" øverst)
+          if (tab === 'liga') {
+            ensureLigaMobileCss();
           }
 
-          const topEl = content.querySelector('.tab-header') || content;
+          // Mobilfix (iOS/Safari): blur fokus (tastatur) + tving til topp
+          try {
+            if (document.activeElement && typeof document.activeElement.blur === 'function') {
+              document.activeElement.blur();
+            }
+          } catch (_) {}
+
           const scroller = document.scrollingElement || document.documentElement;
-
-          tabSwitchToken += 1;
-          const myToken = tabSwitchToken;
-
-          if (scrollTimer) {
-            clearTimeout(scrollTimer);
-            scrollTimer = null;
-          }
-
-          const scrollToTopEl = () => {
-            if (myToken !== tabSwitchToken) return;
-            const yRaw = topEl.getBoundingClientRect().top + (window.pageYOffset || scroller.scrollTop);
-            const y = Math.max(0, yRaw);
-
-            try { scroller.scrollTop = y; } catch (e) {}
-            try { window.scrollTo(0, y); } catch (e) {}
-          };
-
-          requestAnimationFrame(() => {
-            scrollToTopEl();
-            requestAnimationFrame(scrollToTopEl);
-          });
-
-          scrollTimer = setTimeout(() => {
-            scrollToTopEl();
-            setTimeout(scrollToTopEl, 180);
-          }, 60);
+          try { scroller.scrollTop = 0; } catch (_) {}
+          try { window.scrollTo(0, 0); } catch (_) {}
         }
 
         // keep selections fresh
