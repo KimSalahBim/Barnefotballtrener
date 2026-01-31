@@ -1794,3 +1794,24 @@ body.gated {
   overscroll-behavior: none;
   touch-action: none;
 }
+
+/* ========================================
+   LIGA MOBILE FIX - Fjern tomt felt øverst
+   ======================================== */
+@media (max-width: 640px) {
+  /* Fjern all top-luft fra Liga på mobil */
+  #liga.tab-content {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  /* Første element i Liga skal starte helt øverst */
+  #liga > .tab-header {
+    margin-top: 0 !important;
+  }
+
+  /* Hvis det er noe annet enn tab-header først */
+  #liga > .settings-card:first-child {
+    margin-top: 0 !important;
+  }
+}
