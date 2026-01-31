@@ -602,10 +602,21 @@
   // UI wiring
   // ------------------------------
   function setupTabs() {
+    let tabSwitchToken = 0;
+    let scrollTimer = null;
+
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab');
         if (!tab) return;
+
+        const token = ++tabSwitchToken;
+
+        // Avbryt evt. pending scroll fra forrige fanebytte
+        if (scrollTimer) {
+          clearTimeout(scrollTimer);
+          scrollTimer = null;
+        }
 
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -614,14 +625,35 @@
         const content = document.getElementById(tab);
 
         if (content) {
-        content.classList.add('active');
+          content.classList.add('active');
 
-  // Mobilfix: sørg for at vi havner øverst i fanen (slipper "langt ned for å finne innhold")
-  requestAnimationFrame(() => {
-  const top = content.querySelector('.tab-header') || content;
-  top.scrollIntoView({ block: 'start', behavior: 'auto' });
-});
-}
+          // Mobilfix (iOS/Safari): tving til topp, og scroll så til fanens header etter reflow.
+          // iOS kan "huske" scrollposisjon på tvers av faner, spesielt med adressefelt/toolbar som endrer høyde.
+          try {
+            if (document.activeElement && typeof document.activeElement.blur === 'function') {
+              document.activeElement.blur();
+            }
+          } catch {}
+
+          const scroller = document.scrollingElement || document.documentElement;
+
+          // Hopp til toppen umiddelbart (Safari kan beholde scrollposisjon ved fanebytte)
+          try { window.scrollTo(0, 0); } catch {}
+          try { scroller.scrollTop = 0; } catch {}
+
+          // Etter reflow: scroll til fanens header (eller fanen selv)
+          scrollTimer = setTimeout(() => {
+            // Guard: hvis brukeren bytter fane igjen før timeouten går, ikke scroll tilbake
+            if (token !== tabSwitchToken) return;
+            if (!content.classList.contains('active')) return;
+
+            try { window.scrollTo(0, 0); } catch {}
+            try { scroller.scrollTop = 0; } catch {}
+
+            const top = content.querySelector('.tab-header') || content;
+            top.scrollIntoView({ block: 'start', behavior: 'auto' });
+          }, 60);
+        }
 
         // keep selections fresh
         renderSelections();
