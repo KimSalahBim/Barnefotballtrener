@@ -170,13 +170,37 @@ export default async function handler(req, res) {
   try {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    if (!token) return res.status(401).json({ error: 'Missing token' });
+    
+    console.log('[subscription-status] Request received');
+    console.log('[subscription-status] Token present:', !!token);
+    console.log('[subscription-status] Token length:', token?.length);
+    console.log('[subscription-status] Token prefix:', token?.substring(0, 20) + '...');
+    
+    if (!token) {
+      console.error('[subscription-status] ❌ No token provided');
+      return res.status(401).json({ error: 'Missing token' });
+    }
 
+    console.log('[subscription-status] Validating token with Supabase Admin...');
     const { data: { user }, error: userErr } = await supabaseAdmin.auth.getUser(token);
-    if (userErr || !user) return res.status(401).json({ error: 'Invalid session' });
+    
+    if (userErr) {
+      console.error('[subscription-status] ❌ Supabase getUser error:', userErr.message);
+      return res.status(401).json({ error: 'Invalid session', details: userErr.message });
+    }
+    
+    if (!user) {
+      console.error('[subscription-status] ❌ No user returned from Supabase');
+      return res.status(401).json({ error: 'Invalid session' });
+    }
+    
+    console.log('[subscription-status] ✅ User validated:', user.id);
 
     const email = user.email;
-    if (!email) return res.status(400).json({ error: 'User has no email' });
+    if (!email) {
+      console.error('[subscription-status] ❌ User has no email');
+      return res.status(400).json({ error: 'User has no email' });
+    }
 
     const customer = await findOrCreateCustomer(email, user.id);
 
