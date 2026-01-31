@@ -41,9 +41,9 @@
   // ------------------------------
   function getUserKeyPrefix() {
     try {
-      const uid = (window.authService && typeof authService.getUserId === 'function')
-        ? (authService.getUserId() || 'anon')
-        : 'anon';
+      const uid = (window.authService && typeof window.authService.getUserId === 'function')
+  ? (window.authService.getUserId() || 'anon')
+  : 'anon';
       return `bft:${uid}`;
     } catch (e) {
       return 'bft:anon';
