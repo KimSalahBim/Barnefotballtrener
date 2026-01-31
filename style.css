@@ -84,6 +84,12 @@ height: 120px;
 ```
 .login-container, .password-box {
     padding: 30px 20px;
+    max-width: 90vw;
+    box-sizing: border-box;
+}
+
+.login-input, .login-btn, .btn-google {
+    box-sizing: border-box;
 }
 ```
 
@@ -1556,6 +1562,28 @@ opacity: .9;
 }
 
 /* Aktiv fane: logofarger - VIKTIG at disse beholdes */
+@media (max-width: 640px) {
+.app-nav .nav-btn.active,
+.app-nav .nav-btn[aria-current=“page”],
+.app-nav button.nav-btn.active {
+background: linear-gradient(90deg, var(–bft-orange) 0%, var(–bft-orange-2) 35%, var(–bft-green) 100%) !important;
+color: #fff !important;
+border-color: rgba(0,0,0,0.06) !important;
+box-shadow: 0 10px 22px rgba(0,0,0,0.14) !important;
+}
+
+```
+/* Sikre at ikoner også er hvite på aktiv knapp */
+.app-nav .nav-btn.active i,
+.app-nav .nav-btn.active .fa,
+.app-nav .nav-btn.active .fas {
+  color: #fff !important;
+  opacity: 1 !important;
+}
+```
+
+}
+
 .app-nav .nav-btn.active,
 .app-nav .nav-btn[aria-current=“page”]{
 background: linear-gradient(90deg, var(–bft-orange) 0%, var(–bft-orange-2) 35%, var(–bft-green) 100%) !important;
