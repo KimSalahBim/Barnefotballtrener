@@ -461,7 +461,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
           const need = baseTarget - minutes[p.id];
           const keepBonus = prev.has(p.id) ? 0.9 : 0;
           const jitter = (rng() - 0.5) * 0.35;
-          return { id: p.id, score: need + keepBonus + jitter };
+          return { id: p.id, score: need + keepBonus + jitter + (keeperSet.has(p.id) ? keeperExtraBias : 0) };
         })
         .sort((a, b) => b.score - a.score);
 
