@@ -602,25 +602,8 @@
   // UI wiring
   // ------------------------------
   function setupTabs() {
-    // Robust mobil-håndtering for iOS/Safari: tab-bytte kan "beholde" scroll-posisjon.
-    // Vi tvinger derfor alltid til toppen ved fanebytte. I tillegg kan Liga få ekstra top-padding/margin
-    // i enkelte mobil-layouts, så vi injiserer en liten, scoped CSS-fix kun for Liga.
-    let ligaCssInjected = false;
-
-    function ensureLigaMobileCss() {
-      if (ligaCssInjected) return;
-      ligaCssInjected = true;
-      const style = document.createElement('style');
-      style.id = 'bft-liga-mobile-fix';
-      style.textContent = `
-        @media (max-width: 820px) {
-          /* Forsøk å fjerne uønsket "luft" over Liga-innhold på mobil */
-          #liga.tab-content { padding-top: 0 !important; margin-top: 0 !important; }
-          #liga .settings-card:first-child { margin-top: 0 !important; }
-        }
-      `;
-      document.head.appendChild(style);
-    }
+    // Robust mobil-håndtering for iOS/Safari
+    // Mål: ingen "tomt felt" øverst i Liga eller andre faner
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -636,21 +619,47 @@
         if (content) {
           content.classList.add('active');
 
-          // Kun Liga: injiser en liten CSS-fix (valgfritt, men kan eliminere stort "felt" øverst)
-          if (tab === 'liga') {
-            ensureLigaMobileCss();
-          }
-
-          // Mobilfix (iOS/Safari): blur fokus (tastatur) + tving til topp
+          // Mobilfix (iOS/Safari): blur fokus + tving til topp
+          // Gjør dette SYNC (ikke async) for å unngå race conditions
           try {
             if (document.activeElement && typeof document.activeElement.blur === 'function') {
               document.activeElement.blur();
             }
           } catch (_) {}
 
+          // Scroll til toppen UMIDDELBART - viktig for iOS
           const scroller = document.scrollingElement || document.documentElement;
-          try { scroller.scrollTop = 0; } catch (_) {}
-          try { window.scrollTo(0, 0); } catch (_) {}
+          try { 
+            scroller.scrollTop = 0; 
+            scroller.scrollLeft = 0;
+          } catch (_) {}
+          
+          try { 
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); 
+          } catch (_) {
+            // Fallback for eldre Safari
+            try { window.scrollTo(0, 0); } catch (_) {}
+          }
+
+          // Debug logging (kan fjernes senere)
+          if (tab === 'liga') {
+            console.log('[LIGA DEBUG] Bytte til Liga-fanen');
+            console.log('[LIGA DEBUG] window.scrollY:', window.scrollY);
+            console.log('[LIGA DEBUG] document.scrollingElement.scrollTop:', scroller.scrollTop);
+            
+            // Sjekk om Liga-innholdet faktisk er synlig
+            setTimeout(() => {
+              const ligaEl = document.getElementById('liga');
+              if (ligaEl) {
+                const rect = ligaEl.getBoundingClientRect();
+                console.log('[LIGA DEBUG] Liga bounding rect:', {
+                  top: rect.top,
+                  height: rect.height,
+                  y: rect.y
+                });
+              }
+            }, 100);
+          }
         }
 
         // keep selections fresh
