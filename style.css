@@ -1407,6 +1407,18 @@ body {
     --bft-text: #0f172a;
   }
 
+  /* Fjern body padding for full bredde */
+  body {
+    padding: 0;
+  }
+
+  /* Header: full bredde, ingen border-radius */
+  .app-header {
+    border-radius: 0;
+    margin-bottom: 0;
+    padding: 12px 10px;
+  }
+
   /* Logo: Stor også på mobil */
   .app-logo {
     width: 64px;
@@ -1418,38 +1430,48 @@ body {
     font-size: 20px;
   }
 
-  /* Menycontainer: grid som viser alt */
+  /* Main content: ingen padding fra container */
+  .app-container {
+    padding: 0;
+  }
+
+  /* Tab content: legg til litt padding inne i innholdet */
+  .tab-content {
+    padding: 12px 10px;
+  }
+
+  /* Menycontainer: grid som viser alt - full bredde */
   .app-nav{
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr)); /* 3 per rad = 2 rader for 6 faner */
-    gap: 10px;
+    gap: 8px;
 
-    padding: 10px 12px;
-    margin: 10px 12px 14px;
+    padding: 8px;
+    margin: 0 0 12px 0;
 
     background: rgba(255,255,255,0.92);
     border: 1px solid rgba(0,0,0,0.06);
-    border-radius: 18px;
+    border-radius: 0;
   }
 
-  /* Knappene: mindre høyde, ryddig */
+  /* Knappene: mindre høyde, ryddig, mindre font */
   .app-nav .nav-btn{
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
 
-    padding: 10px 10px;
+    padding: 8px 6px;
     min-height: 42px;
 
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid rgba(0,0,0,0.08);
     background: rgba(255,255,255,0.96);
 
     font-weight: 700;
-    font-size: 14px;
-    line-height: 1;
+    font-size: 12px;
+    line-height: 1.1;
     color: var(--bft-text);
 
     box-shadow: 0 6px 16px rgba(0,0,0,0.06);
@@ -1462,7 +1484,7 @@ body {
   .app-nav .nav-btn .fas,
   .app-nav .nav-btn .far,
   .app-nav .nav-btn .fab{
-    font-size: 15px;
+    font-size: 13px;
     opacity: .95;
   }
 
