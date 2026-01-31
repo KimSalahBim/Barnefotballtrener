@@ -68,6 +68,24 @@ body {
 
 .login-logo {
     margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+}
+
+.login-logo img {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    filter: drop-shadow(0 10px 20px rgba(2, 6, 23, 0.15));
+}
+
+@media (max-width: 640px) {
+    .login-logo img {
+        width: 140px;
+        height: 140px;
+    }
 }
 
 .login-logo .club-badge {
