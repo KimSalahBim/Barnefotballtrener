@@ -77,9 +77,16 @@ filter: drop-shadow(0 10px 20px rgba(2, 6, 23, 0.15));
 
 @media (max-width: 640px) {
 .login-logo {
-width: 140px;
-height: 140px;
+width: 120px;
+height: 120px;
 }
+
+```
+.login-container, .password-box {
+    padding: 30px 20px;
+}
+```
+
 }
 
 .login-logo .club-badge {
@@ -1419,22 +1426,29 @@ body {
 padding: 0;
 }
 
-/* Header: full bredde, ingen border-radius */
+/* Header: full bredde, kompakt for å unngå overflow */
 .app-header {
 border-radius: 0;
 margin-bottom: 0;
-padding: 12px 10px;
+padding: 10px 8px;
+overflow: hidden;
 }
 
-/* Logo: Stor også på mobil */
+/* Logo: mindre på mobil */
 .app-logo {
-width: 64px;
-height: 64px;
-border-radius: 14px;
+width: 50px;
+height: 50px;
+border-radius: 12px;
 }
 
+/* Tittel: mye mindre for å få plass til knapper */
 .app-name {
-font-size: 20px;
+font-size: 16px !important;
+}
+
+/* Header knapper: må få plass */
+.header-right {
+flex-shrink: 0;
 }
 
 /* Main content: ingen padding fra container */
@@ -1541,13 +1555,13 @@ font-size: 11px;
 opacity: .9;
 }
 
-/* Aktiv fane: logofarger */
+/* Aktiv fane: logofarger - VIKTIG at disse beholdes */
 .app-nav .nav-btn.active,
 .app-nav .nav-btn[aria-current=“page”]{
-background: linear-gradient(90deg, var(–bft-orange) 0%, var(–bft-orange-2) 35%, var(–bft-green) 100%);
-color: #fff;
-border-color: rgba(0,0,0,0.06);
-box-shadow: 0 10px 22px rgba(0,0,0,0.14);
+background: linear-gradient(90deg, var(–bft-orange) 0%, var(–bft-orange-2) 35%, var(–bft-green) 100%) !important;
+color: #fff !important;
+border-color: rgba(0,0,0,0.06) !important;
+box-shadow: 0 10px 22px rgba(0,0,0,0.14) !important;
 }
 
 .app-nav .nav-btn:active{
