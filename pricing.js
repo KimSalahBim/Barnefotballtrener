@@ -185,7 +185,12 @@
       // ✅ Foretrukket: server-side Checkout Session (sikrer riktig kunde/metadata, og unngår
       // klient-cache/Stripe.js edge-cases).
       const token = await getAccessTokenWithRetry();
-      if (!token) throw new Error('Invalid session');
+      if (!token) {
+        console.error('❌ Failed to get access token after retries');
+        throw new Error('Invalid session - kunne ikke hente tilgangstoken');
+      }
+
+      log('✅ Got access token, calling API...');
 
       const r = await fetch('/api/create-checkout-session', {
         method: 'POST',
@@ -196,15 +201,36 @@
         body: JSON.stringify({ plan: planType }),
       });
 
+      log(`📡 API response status: ${r.status}`);
+
       const data = await safeJson(r);
+      
       if (!r.ok) {
+        console.error('❌ API returned error:', {
+          status: r.status,
+          statusText: r.statusText,
+          error: data?.error,
+          data: data
+        });
         throw new Error(data?.error || `Checkout-feil (${r.status})`);
       }
 
-      if (!data?.url) throw new Error('Mangler checkout-url');
+      log('✅ API response OK:', data);
+
+      if (!data?.url) {
+        console.error('❌ API response missing url:', data);
+        throw new Error('Mangler checkout-url fra server');
+      }
+
+      log('✅ Redirecting to:', data.url);
       window.location.assign(data.url);
     } catch (error) {
-      console.error('❌ Checkout error:', error);
+      console.error('❌ Checkout error:', {
+        message: error.message,
+        stack: error.stack,
+        planType: planType,
+        user: user?.email
+      });
       showNotification(`Kunne ikke starte betalingsprosessen: ${error.message}`, 'error');
     }
   }
@@ -441,11 +467,81 @@
   }
 
   // -------------------------------
+  // Back button
+  // -------------------------------
+  function bindBackButton() {
+    const btn = document.getElementById('closePricingBtn');
+    if (!btn) {
+      log('ℹ️ closePricingBtn ikke funnet på denne siden');
+      return;
+    }
+
+    if (btn.__bf_bound_back) {
+      log('ℹ️ closePricingBtn allerede bundet');
+      return;
+    }
+    btn.__bf_bound_back = true;
+
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      log('🔙 Back button klikket');
+
+      try {
+        const user = await getCurrentUser();
+        
+        if (!user) {
+          // Ikke innlogget: gå til login
+          log('ℹ️ Ingen bruker - går til login');
+          if (window.authService && typeof window.authService.showLoginScreen === 'function') {
+            window.authService.showLoginScreen();
+          }
+          return;
+        }
+
+        // Innlogget: sjekk subscription
+        const svc = getSubscriptionService();
+        if (!svc || typeof svc.checkSubscription !== 'function') {
+          log('⚠️ Subscription service mangler - går til login');
+          if (window.authService && typeof window.authService.showLoginScreen === 'function') {
+            window.authService.showLoginScreen();
+          }
+          return;
+        }
+
+        const status = await svc.checkSubscription();
+        const hasAccess = !!(status && (status.active || status.trial || status.lifetime));
+
+        if (hasAccess) {
+          log('✅ Bruker har tilgang - går til hovedapp');
+          if (window.authService && typeof window.authService.showMainApp === 'function') {
+            window.authService.showMainApp();
+          }
+        } else {
+          log('ℹ️ Bruker mangler tilgang - forblir på pricing');
+          // Bruker er på riktig side allerede (pricing)
+          showNotification('Velg en plan for å fortsette', 'info');
+        }
+      } catch (err) {
+        console.error('❌ Back button error:', err);
+        // Fallback: gå til login
+        if (window.authService && typeof window.authService.showLoginScreen === 'function') {
+          window.authService.showLoginScreen();
+        }
+      }
+    });
+
+    log('✅ Back button bundet (#closePricingBtn)');
+  }
+
+  // -------------------------------
   // Boot
   // -------------------------------
 function boot() {
   log('💳 Pricing.js loaded');
   bindPlanButtons();
+  bindBackButton();
   // bindMagicLink(); // Magic link håndteres av auth.js
   handleStripeReturnParams();
 }
