@@ -496,13 +496,13 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
 
     let improved = true;
     let loops = 0;
-
+    
+    const keeperRebalanceAllowance = 2; // "et par" minutter
+    const adj = (id) => minutes[id] - (keeperMinutes[id] > 0 ? keeperRebalanceAllowance : 0);
+      
     while (improved && loops < 250) {
       loops++;
       improved = false;
-
-      const keeperRebalanceAllowance = 2; // "et par" minutter
-      const adj = (id) => minutes[id] - (keeperMinutes[id] > 0 ? keeperRebalanceAllowance : 0);
 
       let highId = ids[0], lowId = ids[0];
       ids.forEach(id => {
