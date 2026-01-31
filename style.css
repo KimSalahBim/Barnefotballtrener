@@ -1478,14 +1478,29 @@ max-width: 100%;
 box-sizing: border-box;
 }
 
+/* Form-group: fjern min-width på mobil */
+.form-group {
+min-width: 0 !important;
+flex: 1 1 100%;
+}
+
+/* Form-row: strekk hele bredden */
+.form-row {
+width: 100%;
+gap: 12px;
+}
+
 /* Input-felt skal ikke gå utenfor */
 input[type=“text”],
 input[type=“number”],
 input[type=“email”],
 select,
-textarea {
-max-width: 100%;
-box-sizing: border-box;
+textarea,
+.form-group input,
+.form-group select {
+max-width: 100% !important;
+width: 100% !important;
+box-sizing: border-box !important;
 }
 
 /* Tab-header: mindre padding og margin */
