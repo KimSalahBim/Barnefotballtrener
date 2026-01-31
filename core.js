@@ -647,6 +647,15 @@
             console.log('[LIGA DEBUG] window.scrollY:', window.scrollY);
             console.log('[LIGA DEBUG] document.scrollingElement.scrollTop:', scroller.scrollTop);
             
+            // Sjekk hvilke tabs som er active
+            const allTabs = document.querySelectorAll('.tab-content');
+            const activeTabs = document.querySelectorAll('.tab-content.active');
+            console.log('[LIGA DEBUG] Totalt tabs:', allTabs.length);
+            console.log('[LIGA DEBUG] Active tabs:', activeTabs.length);
+            activeTabs.forEach((t, i) => {
+              console.log(`[LIGA DEBUG] Active tab ${i}:`, t.id, t.className);
+            });
+            
             // Sjekk om Liga-innholdet faktisk er synlig
             setTimeout(() => {
               const ligaEl = document.getElementById('liga');
@@ -691,6 +700,20 @@
                 
                 // Tell antall children
                 console.log('[LIGA DEBUG] Antall children:', ligaEl.children.length);
+                
+                // VIKTIG: Sjekk om det er andre tab-content over Liga
+                const allTabsNow = document.querySelectorAll('.tab-content');
+                allTabsNow.forEach((tabEl, idx) => {
+                  const tRect = tabEl.getBoundingClientRect();
+                  const tStyle = window.getComputedStyle(tabEl);
+                  if (tabEl.id !== 'liga' && tRect.height > 0) {
+                    console.log(`[LIGA DEBUG] ⚠️ TAB "${tabEl.id}" tar plass (${tRect.height}px) og er over Liga!`, {
+                      display: tStyle.display,
+                      hasActiveClass: tabEl.classList.contains('active'),
+                      top: tRect.top
+                    });
+                  }
+                });
               } else {
                 console.log('[LIGA DEBUG] FEIL: Liga element ikke funnet!');
               }
