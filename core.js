@@ -610,14 +610,32 @@
         const tab = btn.getAttribute('data-tab');
         if (!tab) return;
 
+        // STEG 1: Fjern active fra ALLE nav-knapper
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // STEG 2: Fjern active fra ALLE tabs OG eksplisitt skjul dem
+        document.querySelectorAll('.tab-content').forEach(c => {
+          c.classList.remove('active');
+          // Eksplisitt skjul (backup til CSS)
+          c.style.display = 'none';
+          c.style.visibility = 'hidden';
+          c.style.position = 'absolute';
+          c.style.left = '-99999px';
+        });
 
+        // STEG 3: Aktiver kun den valgte tab-knappen
         btn.classList.add('active');
+        
+        // STEG 4: Aktiver og vis kun den valgte tab
         const content = document.getElementById(tab);
 
         if (content) {
           content.classList.add('active');
+          // Eksplisitt vis (backup til CSS)
+          content.style.display = 'block';
+          content.style.visibility = 'visible';
+          content.style.position = 'relative';
+          content.style.left = 'auto';
 
           // Mobilfix (iOS/Safari): blur fokus + tving til topp
           // Gjør dette SYNC (ikke async) for å unngå race conditions
@@ -703,11 +721,54 @@
                 
                 // VIKTIG: Sjekk om det er andre tab-content over Liga
                 const allTabsNow = document.querySelectorAll('.tab-content');
+                console.log('[LIGA DEBUG] Sjekker alle tabs...');
                 allTabsNow.forEach((tabEl, idx) => {
                   const tRect = tabEl.getBoundingClientRect();
                   const tStyle = window.getComputedStyle(tabEl);
+                  console.log(`[LIGA DEBUG] Tab ${idx} "${tabEl.id}":`, {
+                    height: tRect.height,
+                    top: tRect.top,
+                    display: tStyle.display,
+                    position: tStyle.position,
+                    hasActive: tabEl.classList.contains('active')
+                  });
                   if (tabEl.id !== 'liga' && tRect.height > 0) {
-                    console.log(`[LIGA DEBUG] ⚠️ TAB "${tabEl.id}" tar plass (${tRect.height}px) og er over Liga!`, {
+                    console.log(`[LIGA DEBUG] ⚠️ TAB "${tabEl.id}" tar plass (${tRect.height}px) og er over Liga!`);
+                  }
+                });
+                
+                // Sjekk også parent-containeren til Liga
+                const main = ligaEl.parentElement;
+                if (main) {
+                  const mainRect = main.getBoundingClientRect();
+                  const mainStyle = window.getComputedStyle(main);
+                  console.log('[LIGA DEBUG] Parent container (<main>):', {
+                    tagName: main.tagName,
+                    top: mainRect.top,
+                    paddingTop: mainStyle.paddingTop,
+                    marginTop: mainStyle.marginTop
+                  });
+                }
+                
+                // Sjekk siblings (andre elementer på samme nivå som Liga)
+                const siblings = Array.from(main?.children || []);
+                console.log('[LIGA DEBUG] Søsken til Liga (elementer før Liga):', siblings.length);
+                siblings.forEach((sib, idx) => {
+                  if (sib === ligaEl) {
+                    console.log(`[LIGA DEBUG] → Liga er child #${idx}`);
+                    return;
+                  }
+                  const sibRect = sib.getBoundingClientRect();
+                  if (sibRect.height > 0) {
+                    console.log(`[LIGA DEBUG] → Søsken #${idx}:`, {
+                      tagName: sib.tagName,
+                      id: sib.id,
+                      className: sib.className,
+                      height: sibRect.height,
+                      top: sibRect.top
+                    });
+                  }
+                });
                       display: tStyle.display,
                       hasActiveClass: tabEl.classList.contains('active'),
                       top: tRect.top
