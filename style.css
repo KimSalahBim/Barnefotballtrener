@@ -67,22 +67,16 @@ body {
 }
 
 .login-logo {
-    margin-bottom: 30px;
-    display: flex;
-    justify-content: center;
-}
-
-.login-logo img {
     width: 180px;
     height: 180px;
     object-fit: contain;
     display: block;
-    margin: 0 auto;
+    margin: 0 auto 30px auto;
     filter: drop-shadow(0 10px 20px rgba(2, 6, 23, 0.15));
 }
 
 @media (max-width: 640px) {
-    .login-logo img {
+    .login-logo {
         width: 140px;
         height: 140px;
     }
@@ -1107,6 +1101,10 @@ body {
 
 .password-header {
     margin-bottom: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .password-icon {
