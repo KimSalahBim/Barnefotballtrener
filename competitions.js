@@ -932,7 +932,25 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     // Initial render with delay to allow players to load
-    setTimeout(() => render(), 100);
+    // Retry every 200ms if no players found, up to 5 times
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    function tryRender() {
+      attempts++;
+      console.log('[Competitions] Forsøk', attempts, 'å rendre...');
+      
+      const players = getPlayersSnapshot();
+      if (players.length > 0 || attempts >= maxAttempts) {
+        console.log('[Competitions] Rendrer med', players.length, 'spillere');
+        render();
+      } else {
+        console.log('[Competitions] Ingen spillere funnet, prøver igjen...');
+        setTimeout(tryRender, 200);
+      }
+    }
+    
+    setTimeout(tryRender, 300);
   });
 
   window.competitions = {
