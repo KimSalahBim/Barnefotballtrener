@@ -652,11 +652,47 @@
               const ligaEl = document.getElementById('liga');
               if (ligaEl) {
                 const rect = ligaEl.getBoundingClientRect();
+                const computedStyle = window.getComputedStyle(ligaEl);
+                
+                console.log('[LIGA DEBUG] Liga element:', {
+                  exists: true,
+                  hasActiveClass: ligaEl.classList.contains('active'),
+                  display: computedStyle.display,
+                  visibility: computedStyle.visibility,
+                  opacity: computedStyle.opacity,
+                  height: computedStyle.height,
+                  paddingTop: computedStyle.paddingTop,
+                  marginTop: computedStyle.marginTop
+                });
+                
                 console.log('[LIGA DEBUG] Liga bounding rect:', {
                   top: rect.top,
+                  left: rect.left,
+                  width: rect.width,
                   height: rect.height,
-                  y: rect.y
+                  bottom: rect.bottom,
+                  right: rect.right
                 });
+                
+                // Sjekk første child
+                const firstChild = ligaEl.firstElementChild;
+                if (firstChild) {
+                  const childRect = firstChild.getBoundingClientRect();
+                  const childStyle = window.getComputedStyle(firstChild);
+                  console.log('[LIGA DEBUG] Første child:', {
+                    tagName: firstChild.tagName,
+                    className: firstChild.className,
+                    display: childStyle.display,
+                    visibility: childStyle.visibility,
+                    height: childStyle.height,
+                    top: childRect.top
+                  });
+                }
+                
+                // Tell antall children
+                console.log('[LIGA DEBUG] Antall children:', ligaEl.children.length);
+              } else {
+                console.log('[LIGA DEBUG] FEIL: Liga element ikke funnet!');
               }
             }, 100);
           }
