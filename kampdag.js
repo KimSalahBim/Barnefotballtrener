@@ -51,17 +51,27 @@
   // Init
   // ------------------------------
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('[Kampdag] DOMContentLoaded');
     const root = $('kampdag');
-    if (!root) return;
+    if (!root) {
+      console.log('[Kampdag] Root element ikke funnet');
+      return;
+    }
 
     bindKampdagUI();
+    
+    // Sjekk om spillere allerede er tilgjengelig
+    const players = getPlayersArray();
+    console.log('[Kampdag] Initial players:', players.length);
     renderKampdagPlayers();
 
     // Re-render når spillerlisten oppdateres (fra core.js)
-    window.addEventListener('players:updated', () => {
+    window.addEventListener('players:updated', (e) => {
+      console.log('[Kampdag] players:updated event mottatt:', e.detail);
       try {
         kdSelected = new Set(getPlayersArray().map(p => p.id));
         renderKampdagPlayers();
+        console.log('[Kampdag] Players re-rendered');
       } catch (e) {
         console.error('Kampdag: kunne ikke oppdatere spillere', e);
       }
