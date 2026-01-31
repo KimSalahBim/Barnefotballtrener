@@ -119,13 +119,13 @@
   // Spillerdata (hentes fra eksisterende app)
   // -------------------------
   function getPlayersSnapshot() {
-    console.log('[Competitions] Henter spillere...');
+    console.log('[Competitions] getPlayersSnapshot kalles');
     console.log('[Competitions] window.players:', window.players);
     
     const list = Array.isArray(window.players) ? window.players : null;
 
     if (list && list.length) {
-      console.log('[Competitions] Fant', list.length, 'spillere i window.players');
+      console.log('[Competitions] ✅ Fant', list.length, 'spillere i window.players');
       // Viktig: ikke bruk/vis ferdighetsnivå i UI
       return list.map((p) => ({
         id: p.id,
@@ -135,21 +135,29 @@
     }
 
     // Fallback: les direkte fra storage (samme key som core.js bruker)
-    console.log('[Competitions] window.players tom, prøver localStorage...');
+    console.log('[Competitions] ⚠️ window.players tom, prøver localStorage...');
     try {
       const raw = safeGet(k('players'));
-      console.log('[Competitions] localStorage raw:', raw ? 'fant data' : 'tom');
+      console.log('[Competitions] localStorage:', raw ? 'fant data' : 'tom');
       if (!raw) return [];
       const parsed = JSON.parse(raw);
-      const arr = Array.isArray(parsed?.players) ? parsed.players : [];
-      console.log('[Competitions] Fant', arr.length, 'spillere i localStorage');
+      
+      // Støtt både gammelt format {players: [...]} og nytt format [...]
+      let arr = [];
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.players)) {
+        arr = parsed.players;
+      } else if (Array.isArray(parsed)) {
+        arr = parsed;
+      }
+      
+      console.log('[Competitions] ✅ Fant', arr.length, 'spillere i localStorage');
       return arr.map((p) => ({
         id: p.id,
         name: p.name,
         active: p.active !== false
       }));
     } catch (e) {
-      console.error('[Competitions] Feil ved lesing fra storage:', e);
+      console.error('[Competitions] ❌ Feil ved lesing fra storage:', e);
       return [];
     }
   }
@@ -920,37 +928,24 @@
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.nav-btn[data-tab="competitions"]');
     if (btn) {
+      console.log('[Competitions] Tab klikket - renderer nå');
       if (ui.view === 'detail') ui.view = 'history';
-      // Force render with slight delay to ensure window.players is set
-      setTimeout(() => render(), 50);
+      render();
     }
   });
 
-  window.addEventListener('players:updated', () => {
+  window.addEventListener('players:updated', (e) => {
+    console.log('[Competitions] players:updated event mottatt:', e.detail);
     render();
   });
 
   document.addEventListener('DOMContentLoaded', () => {
-    // Initial render with delay to allow players to load
-    // Retry every 200ms if no players found, up to 5 times
-    let attempts = 0;
-    const maxAttempts = 5;
-    
-    function tryRender() {
-      attempts++;
-      console.log('[Competitions] Forsøk', attempts, 'å rendre...');
-      
-      const players = getPlayersSnapshot();
-      if (players.length > 0 || attempts >= maxAttempts) {
-        console.log('[Competitions] Rendrer med', players.length, 'spillere');
-        render();
-      } else {
-        console.log('[Competitions] Ingen spillere funnet, prøver igjen...');
-        setTimeout(tryRender, 200);
-      }
+    console.log('[Competitions] DOMContentLoaded - venter på players...');
+    // Render umiddelbart hvis spillere finnes, ellers vent på event
+    if (window.players && window.players.length > 0) {
+      console.log('[Competitions] Spillere allerede tilgjengelig!');
+      render();
     }
-    
-    setTimeout(tryRender, 300);
   });
 
   window.competitions = {
