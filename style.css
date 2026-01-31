@@ -1566,7 +1566,7 @@ opacity: .9;
 .app-nav .nav-btn.active,
 .app-nav .nav-btn[aria-current=“page”],
 .app-nav button.nav-btn.active {
-background: linear-gradient(90deg, var(–bft-orange) 0%, var(–bft-orange-2) 35%, var(–bft-green) 100%) !important;
+background: linear-gradient(90deg, #F28C1B 0%, #FFB000 35%, #2E7D32 100%) !important;
 color: #fff !important;
 border-color: rgba(0,0,0,0.06) !important;
 box-shadow: 0 10px 22px rgba(0,0,0,0.14) !important;
@@ -1586,7 +1586,7 @@ box-shadow: 0 10px 22px rgba(0,0,0,0.14) !important;
 
 .app-nav .nav-btn.active,
 .app-nav .nav-btn[aria-current=“page”]{
-background: linear-gradient(90deg, var(–bft-orange) 0%, var(–bft-orange-2) 35%, var(–bft-green) 100%) !important;
+background: linear-gradient(90deg, #F28C1B 0%, #FFB000 35%, #2E7D32 100%) !important;
 color: #fff !important;
 border-color: rgba(0,0,0,0.06) !important;
 box-shadow: 0 10px 22px rgba(0,0,0,0.14) !important;
