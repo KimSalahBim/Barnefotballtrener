@@ -1497,7 +1497,18 @@ input[type=“email”],
 select,
 textarea,
 .form-group input,
-.form-group select {
+.form-group select,
+.input,
+.team-name-input {
+max-width: 100% !important;
+width: 100% !important;
+box-sizing: border-box !important;
+}
+
+/* Team name rows i Liga-fanen */
+.team-name-row,
+#ligaTeamNames,
+#ligaTeamNames > div {
 max-width: 100% !important;
 width: 100% !important;
 box-sizing: border-box !important;
