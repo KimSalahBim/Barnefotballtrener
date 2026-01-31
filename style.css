@@ -307,24 +307,32 @@ body {
     box-shadow: 0 8px 20px rgba(13,71,161,0.3);
 }
 
-/* Tab Content */
+/* Tab Content - EKSPLISITT TILNÆRMING */
 .tab-content {
-    display: none;
-    animation: fadeInContent 0.4s ease;
+    /* Default: ALLE tabs er fullstendig skjult og tar INGEN plass */
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    left: -99999px !important;
+    top: -99999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
 }
 
 .tab-content.active {
-    display: block;
-}
-
-/* Sikre at inactive tabs aldri vises */
-.tab-content:not(.active) {
-    display: none !important;
-    visibility: hidden !important;
-    height: 0 !important;
-    overflow: hidden !important;
-    position: absolute !important;
-    left: -9999px !important;
+    /* Kun active tab vises og tar plass */
+    display: block !important;
+    visibility: visible !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    pointer-events: auto !important;
+    animation: fadeInContent 0.4s ease;
 }
 
 @keyframes fadeInContent {
