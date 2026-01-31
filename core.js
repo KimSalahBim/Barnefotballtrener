@@ -639,7 +639,8 @@
 
           const scrollToTopEl = () => {
             if (myToken !== tabSwitchToken) return;
-            const y = topEl.getBoundingClientRect().top + (window.pageYOffset || scroller.scrollTop) - 8;
+            const yRaw = topEl.getBoundingClientRect().top + (window.pageYOffset || scroller.scrollTop);
+            const y = Math.max(0, yRaw);
 
             try { scroller.scrollTop = y; } catch (e) {}
             try { window.scrollTo(0, y); } catch (e) {}
