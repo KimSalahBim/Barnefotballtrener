@@ -119,9 +119,13 @@
   // Spillerdata (hentes fra eksisterende app)
   // -------------------------
   function getPlayersSnapshot() {
+    console.log('[Competitions] Henter spillere...');
+    console.log('[Competitions] window.players:', window.players);
+    
     const list = Array.isArray(window.players) ? window.players : null;
 
     if (list && list.length) {
+      console.log('[Competitions] Fant', list.length, 'spillere i window.players');
       // Viktig: ikke bruk/vis ferdighetsnivå i UI
       return list.map((p) => ({
         id: p.id,
@@ -131,17 +135,21 @@
     }
 
     // Fallback: les direkte fra storage (samme key som core.js bruker)
+    console.log('[Competitions] window.players tom, prøver localStorage...');
     try {
       const raw = safeGet(k('players'));
+      console.log('[Competitions] localStorage raw:', raw ? 'fant data' : 'tom');
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       const arr = Array.isArray(parsed?.players) ? parsed.players : [];
+      console.log('[Competitions] Fant', arr.length, 'spillere i localStorage');
       return arr.map((p) => ({
         id: p.id,
         name: p.name,
         active: p.active !== false
       }));
     } catch (e) {
+      console.error('[Competitions] Feil ved lesing fra storage:', e);
       return [];
     }
   }
@@ -206,13 +214,16 @@
   }
 
   function render() {
+    console.log('[Competitions] render() kalles');
     const root = getRoot();
+    console.log('[Competitions] root element:', root ? 'funnet' : 'IKKE FUNNET');
     if (!root) return;
 
     const storeRes = loadStore();
     const store = storeRes.data;
 
     const players = getPlayersSnapshot().filter((p) => p.active);
+    console.log('[Competitions] Aktive spillere:', players.length);
     const playerNameMap = Object.fromEntries(players.map((p) => [p.id, p.name]));
 
     const active = ui.activeCompetitionId
@@ -233,6 +244,7 @@
       : '';
 
     const noPlayers = players.length === 0;
+    console.log('[Competitions] noPlayers:', noPlayers);
 
     root.innerHTML = `
       <div class="comp-root">
