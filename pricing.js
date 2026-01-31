@@ -217,26 +217,51 @@
     }
   }
 
-  async function getAccessTokenWithRetry(retries = 3) {
+  async function getAccessTokenWithRetry(retries = 5) {
+    console.log('💳 Getting access token for checkout...');
+    
     for (let i = 0; i < retries; i++) {
       try {
+        // Først: prøv getSession
         const s = await window.supabase?.auth?.getSession?.();
         let token = s?.data?.session?.access_token;
 
-        if (!token && typeof window.supabase?.auth?.refreshSession === 'function') {
-          try {
-            await window.supabase.auth.refreshSession();
-          } catch (_) {}
-          const s2 = await window.supabase?.auth?.getSession?.();
-          token = s2?.data?.session?.access_token;
+        if (token) {
+          console.log(`✅ Got token from getSession (attempt ${i+1}/${retries}):`, token.substring(0, 20) + '...');
+          return token;
         }
 
-        if (token) return token;
-      } catch (_) {}
+        console.log(`⚠️ No token from getSession (attempt ${i+1}/${retries}), trying refresh...`);
 
-      // liten backoff
-      await new Promise((r) => setTimeout(r, 250));
+        // Hvis ingen token: prøv refresh først
+        if (typeof window.supabase?.auth?.refreshSession === 'function') {
+          try {
+            await window.supabase.auth.refreshSession();
+            console.log('🔄 Refreshed session');
+          } catch (refreshErr) {
+            console.warn('⚠️ Refresh failed:', refreshErr);
+          }
+          
+          // Prøv getSession igjen etter refresh
+          const s2 = await window.supabase?.auth?.getSession?.();
+          token = s2?.data?.session?.access_token;
+          
+          if (token) {
+            console.log(`✅ Got token after refresh (attempt ${i+1}/${retries}):`, token.substring(0, 20) + '...');
+            return token;
+          }
+        }
+      } catch (e) {
+        console.warn(`❌ Token attempt ${i+1}/${retries} failed:`, e);
+      }
+
+      // Økende backoff: 500ms, 1000ms, 1500ms, 2000ms, 2500ms
+      const delay = 500 + (i * 500);
+      console.log(`⏳ Waiting ${delay}ms before retry...`);
+      await new Promise((r) => setTimeout(r, delay));
     }
+    
+    console.error(`❌ Failed to get token after ${retries} attempts`);
     return null;
   }
 
