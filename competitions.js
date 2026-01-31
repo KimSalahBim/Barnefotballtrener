@@ -925,6 +925,14 @@
   }
 
   // Hooks: render når tab åpnes, og når spillere endres
+  
+  // Register event listener IMMEDIATELY
+  console.log('[Competitions] Script loaded - registering event listener');
+  window.addEventListener('players:updated', (e) => {
+    console.log('[Competitions] players:updated event mottatt:', e.detail);
+    render();
+  });
+  
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.nav-btn[data-tab="competitions"]');
     if (btn) {
@@ -934,16 +942,13 @@
     }
   });
 
-  window.addEventListener('players:updated', (e) => {
-    console.log('[Competitions] players:updated event mottatt:', e.detail);
-    render();
-  });
-
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('[Competitions] DOMContentLoaded - venter på players...');
-    // Render umiddelbart hvis spillere finnes, ellers vent på event
-    if (window.players && window.players.length > 0) {
-      console.log('[Competitions] Spillere allerede tilgjengelig!');
+    console.log('[Competitions] DOMContentLoaded - sjekker players...');
+    // Render umiddelbart hvis spillere finnes
+    const players = getPlayersSnapshot();
+    console.log('[Competitions] Initial players:', players.length);
+    if (players.length > 0) {
+      console.log('[Competitions] Spillere allerede tilgjengelig - renderer');
       render();
     }
   });
