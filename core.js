@@ -72,7 +72,9 @@
   // Expose for other modules (kampdag.js)
   function publishPlayers() {
     window.players = state.players; // MUST be an Array
+    console.log('[core.js] publishPlayers: Setting window.players to', state.players.length, 'spillere');
     window.dispatchEvent(new CustomEvent('players:updated', { detail: { count: state.players.length } }));
+    console.log('[core.js] publishPlayers: Event sendt');
   }
 
   // ------------------------------
@@ -151,20 +153,28 @@
 
     // players
     const p = safeGet(k('players'));
+    console.log('[core.js] loadState: localStorage players:', p ? 'FUNNET' : 'TOM');
     if (p) {
       try {
         const parsed = JSON.parse(p);
+        console.log('[core.js] loadState: parsed type:', Array.isArray(parsed) ? 'array' : 'object', 'has .players?', parsed?.players ? 'ja' : 'nei');
         if (parsed && typeof parsed === "object" && Array.isArray(parsed.players)) {
+          console.log('[core.js] loadState: Gammelt format - henter', parsed.players.length, 'spillere');
           state.players = normalizePlayers(parsed.players);
         } else if (Array.isArray(parsed)) {
+          console.log('[core.js] loadState: Nytt format - henter', parsed.length, 'spillere');
           state.players = normalizePlayers(parsed);
         } else {
+          console.log('[core.js] loadState: Ukjent format!');
           state.players = [];
         }
-      } catch {
+        console.log('[core.js] loadState: state.players har nå', state.players.length, 'spillere');
+      } catch (e) {
+        console.error('[core.js] loadState: FEIL ved parsing:', e);
         state.players = [];
       }
     } else {
+      console.log('[core.js] loadState: Ingen players i localStorage - setter tom array');
       state.players = [];
     }
 
@@ -1154,10 +1164,15 @@
   // initApp (called by auth.js / auth-ui.js)
   // ------------------------------
   window.initApp = function initApp() {
-    if (window.appInitialized) return;
+    console.log('[core.js] 🚀 initApp STARTER');
+    if (window.appInitialized) {
+      console.log('[core.js] ⚠️ App allerede initialisert');
+      return;
+    }
     window.appInitialized = true;
 
     loadState();
+    console.log('[core.js] ✅ State lastet, spillere:', state.players.length);
 
     // default select all active players
     state.selection.training = new Set(state.players.filter(p => p.active).map(p => p.id));
@@ -1174,7 +1189,7 @@
     renderAll();
     publishPlayers();
 
-    console.log('✅ core.js initApp ferdig');
+    console.log('[core.js] ✅ initApp FERDIG');
   };
 
 })();
