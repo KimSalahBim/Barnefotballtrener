@@ -3,8 +3,11 @@
    - No regressions: isolert logikk + namespacede klasser (.comp-*)
    - Lagring per bruker: samme prefix-logikk som core.js
 */
+console.log('🔥🔥🔥 COMPETITIONS.JS LOADING - BEFORE IIFE');
+
 (function () {
   'use strict';
+  console.log('🔥 COMPETITIONS.JS - INSIDE IIFE');
 
   // -------------------------
   // Små helpers
