@@ -1467,6 +1467,27 @@ padding: 0;
 padding: 12px 10px;
 }
 
+/* Alle kort og input-felt: max bredde */
+.settings-card,
+.tab-header,
+.player-form,
+.results-container,
+.stats-container,
+.actions-container {
+max-width: 100%;
+box-sizing: border-box;
+}
+
+/* Input-felt skal ikke gå utenfor */
+input[type=“text”],
+input[type=“number”],
+input[type=“email”],
+select,
+textarea {
+max-width: 100%;
+box-sizing: border-box;
+}
+
 /* Tab-header: mindre padding og margin */
 .tab-header {
 padding: 14px 12px !important;
