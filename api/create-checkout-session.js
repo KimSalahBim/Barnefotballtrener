@@ -53,7 +53,8 @@ export default async function handler(req, res) {
       body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     } catch (_) {}
 
-    const planType = body.planType; // "month" | "year" | "lifetime"
+    // Aksepter både 'planType' og 'plan' for bakoverkompatibilitet
+    const planType = body.planType || body.plan;
     if (!planType || !["month", "year", "lifetime"].includes(planType)) {
       return res.status(400).json({ error: "Invalid planType" });
     }
@@ -128,7 +129,11 @@ export default async function handler(req, res) {
           : undefined,
     });
 
-    return res.status(200).json({ sessionId: session.id });
+    // Returner både sessionId og url (url er det klienten trenger)
+    return res.status(200).json({ 
+      sessionId: session.id,
+      url: session.url
+    });
   } catch (e) {
     console.error("create-checkout-session error:", e);
     return res.status(500).json({ error: "Server error" });
