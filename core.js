@@ -146,34 +146,49 @@ return out;
 }
 
 function loadState() {
-// settings
-const s = safeGet(k(‘settings’));
-if (s) {
-try {
-const parsed = JSON.parse(s);
-if (typeof parsed?.useSkill === ‘boolean’) state.settings.useSkill = parsed.useSkill;
-} catch {}
-}
+console.log(’[core.js] loadState starter…’);
 
 ```
+// settings
+const s = safeGet(k('settings'));
+if (s) {
+  try {
+    const parsed = JSON.parse(s);
+    if (typeof parsed?.useSkill === 'boolean') state.settings.useSkill = parsed.useSkill;
+  } catch (e) {
+    console.error('[core.js] Feil ved lasting av settings:', e);
+  }
+}
+
 // players - støtter både gammelt format {players: [...]} og nytt format [...]
 const p = safeGet(k('players'));
+console.log('[core.js] Raw players data:', p ? 'funnet' : 'ikke funnet');
+
 if (p) {
   try {
     const parsed = JSON.parse(p);
+    console.log('[core.js] Parsed players:', typeof parsed, Array.isArray(parsed) ? 'array' : 'object');
+    
     // Sjekk om det er gammelt format (objekt med .players property)
     if (parsed && typeof parsed === 'object' && Array.isArray(parsed.players)) {
+      console.log('[core.js] Gammelt format detektert, henter', parsed.players.length, 'spillere');
       state.players = normalizePlayers(parsed.players);
     } else if (Array.isArray(parsed)) {
       // Nytt format (direkte array)
+      console.log('[core.js] Nytt format detektert, henter', parsed.length, 'spillere');
       state.players = normalizePlayers(parsed);
     } else {
+      console.log('[core.js] Ukjent format, setter tom array');
       state.players = [];
     }
-  } catch {
+    
+    console.log('[core.js] state.players satt til', state.players.length, 'spillere');
+  } catch (e) {
+    console.error('[core.js] Feil ved parsing av players:', e);
     state.players = [];
   }
 } else {
+  console.log('[core.js] Ingen players i storage');
   state.players = [];
 }
 
@@ -188,6 +203,8 @@ if (l) {
 // selections (optional)
 state.selection.training = new Set();
 state.selection.match = new Set();
+
+console.log('[core.js] loadState ferdig');
 ```
 
 }
@@ -1217,28 +1234,39 @@ el.value = String(next);
 // initApp (called by auth.js / auth-ui.js)
 // ——————————
 window.initApp = function initApp() {
-if (window.appInitialized) return;
-window.appInitialized = true;
+console.log(’[core.js] initApp starter…’);
 
 ```
-loadState();
+if (window.appInitialized) {
+  console.log('[core.js] App allerede initialisert');
+  return;
+}
+window.appInitialized = true;
 
-// default select all active players
-state.selection.training = new Set(state.players.filter(p => p.active).map(p => p.id));
-state.selection.match = new Set(state.players.filter(p => p.active).map(p => p.id));
+try {
+  loadState();
+  console.log('[core.js] State lastet, spillere:', state.players.length);
 
-renderLogo();
-setupTabs();
-setupSkillToggle();
-setupPlayersUI();
-setupTrainingUI();
-setupMatchUI();
-setupLigaUI();
+  // default select all active players
+  state.selection.training = new Set(state.players.filter(p => p.active).map(p => p.id));
+  state.selection.match = new Set(state.players.filter(p => p.active).map(p => p.id));
 
-renderAll();
-publishPlayers();
+  renderLogo();
+  setupTabs();
+  setupSkillToggle();
+  setupPlayersUI();
+  setupTrainingUI();
+  setupMatchUI();
+  setupLigaUI();
 
-console.log('✅ core.js initApp ferdig');
+  renderAll();
+  publishPlayers();
+
+  console.log('✅ core.js initApp ferdig');
+} catch (e) {
+  console.error('❌ KRITISK FEIL i initApp:', e);
+  alert('Feil ved lasting av app. Sjekk console for detaljer.');
+}
 ```
 
 };
