@@ -602,21 +602,14 @@
   // UI wiring
   // ------------------------------
   function setupTabs() {
-    let tabSwitchToken = 0;
+    // Guard + timer for robust iOS/Safari scrolling when switching tabs
     let scrollTimer = null;
+    let tabSwitchToken = 0;
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab');
         if (!tab) return;
-
-        const token = ++tabSwitchToken;
-
-        // Avbryt evt. pending scroll fra forrige fanebytte
-        if (scrollTimer) {
-          clearTimeout(scrollTimer);
-          scrollTimer = null;
-        }
 
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -627,31 +620,39 @@
         if (content) {
           content.classList.add('active');
 
-          // Mobilfix (iOS/Safari): tving til topp, og scroll så til fanens header etter reflow.
-          // iOS kan "huske" scrollposisjon på tvers av faner, spesielt med adressefelt/toolbar som endrer høyde.
-          try {
-            if (document.activeElement && typeof document.activeElement.blur === 'function') {
-              document.activeElement.blur();
-            }
-          } catch {}
+          // Mobilfix (iOS/Safari): robust scroll til fanens header.
+          // iOS kan "misse" scrollIntoView pga toolbar reflow, så vi gjør multi-pass og bruker absolutt posisjon.
+          if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
+          }
 
+          const topEl = content.querySelector('.tab-header') || content;
           const scroller = document.scrollingElement || document.documentElement;
 
-          // Hopp til toppen umiddelbart (Safari kan beholde scrollposisjon ved fanebytte)
-          try { window.scrollTo(0, 0); } catch {}
-          try { scroller.scrollTop = 0; } catch {}
+          tabSwitchToken += 1;
+          const myToken = tabSwitchToken;
 
-          // Etter reflow: scroll til fanens header (eller fanen selv)
+          if (scrollTimer) {
+            clearTimeout(scrollTimer);
+            scrollTimer = null;
+          }
+
+          const scrollToTopEl = () => {
+            if (myToken !== tabSwitchToken) return;
+            const y = topEl.getBoundingClientRect().top + (window.pageYOffset || scroller.scrollTop) - 8;
+
+            try { scroller.scrollTop = y; } catch (e) {}
+            try { window.scrollTo(0, y); } catch (e) {}
+          };
+
+          requestAnimationFrame(() => {
+            scrollToTopEl();
+            requestAnimationFrame(scrollToTopEl);
+          });
+
           scrollTimer = setTimeout(() => {
-            // Guard: hvis brukeren bytter fane igjen før timeouten går, ikke scroll tilbake
-            if (token !== tabSwitchToken) return;
-            if (!content.classList.contains('active')) return;
-
-            try { window.scrollTo(0, 0); } catch {}
-            try { scroller.scrollTop = 0; } catch {}
-
-            const top = content.querySelector('.tab-header') || content;
-            top.scrollIntoView({ block: 'start', behavior: 'auto' });
+            scrollToTopEl();
+            setTimeout(scrollToTopEl, 180);
           }, 60);
         }
 
