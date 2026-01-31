@@ -504,11 +504,11 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       const keeperRebalanceAllowance = 2; // "et par" minutter
       const adj = (id) => minutes[id] - (keeperMinutes[id] > 0 ? keeperRebalanceAllowance : 0);
 
-let highId = ids[0], lowId = ids[0];
-ids.forEach(id => {
-  if (adj(id) > adj(highId)) highId = id;
-  if (adj(id) < adj(lowId)) lowId = id;
-});
+      let highId = ids[0], lowId = ids[0];
+      ids.forEach(id => {
+      if (adj(id) > adj(highId)) highId = id;
+      if (adj(id) < adj(lowId)) lowId = id;
+      });
 
       const before = currentDiff();
       if (before <= 4) return;
