@@ -52,20 +52,37 @@
   }
 
   // SECURITY: Clear token cache on auth state changes (prevents cross-user token reuse)
-  if (window.supabase && typeof window.supabase.auth?.onAuthStateChange === 'function') {
-    window.supabase.auth.onAuthStateChange((event, session) => {
-      const newUserId = session?.user?.id || null;
-      const cachedUserId = tokenCache.userId;
-      
-      console.log(`${LOG_PREFIX} 🔐 Auth state change: ${event}, user: ${newUserId?.substring(0, 8) || 'none'}`);
-      
-      // Clear cache if user changed or signed out
-      if (newUserId !== cachedUserId) {
-        console.log(`${LOG_PREFIX} ⚠️ User changed (${cachedUserId?.substring(0, 8) || 'none'} → ${newUserId?.substring(0, 8) || 'none'}), clearing token cache`);
-        clearTokenCache();
-      }
-    });
+  // NOTE: auth.js laster Supabase async, så vi venter kort til window.supabase finnes.
+  function bindAuthStateCleanup(retries = 40) {
+    if (window.__bf_subscription_auth_cleanup_bound) return;
+
+    const sb = window.supabase;
+    const canBind = sb && sb.auth && (typeof sb.auth.onAuthStateChange === 'function');
+
+    if (canBind) {
+      window.__bf_subscription_auth_cleanup_bound = true;
+
+      sb.auth.onAuthStateChange((event, session) => {
+        const newUserId = session?.user?.id || null;
+        const cachedUserId = tokenCache.userId;
+
+        console.log(`${LOG_PREFIX} 🔐 Auth state change: ${event}, user: ${newUserId?.substring(0, 8) || 'none'}`);
+
+        // Clear cache if user changed or signed out
+        if (newUserId !== cachedUserId) {
+          console.log(`${LOG_PREFIX} ⚠️ User changed (${cachedUserId?.substring(0, 8) || 'none'} → ${newUserId?.substring(0, 8) || 'none'}), clearing token cache`);
+          clearTokenCache();
+        }
+      });
+
+      return;
+    }
+
+    if (retries <= 0) return;
+    setTimeout(() => bindAuthStateCleanup(retries - 1), 250);
   }
+
+  bindAuthStateCleanup();
 
   // Timeout wrapper for promises som kan henge
   function withTimeout(promise, ms, errorMsg = "Timeout") {
@@ -397,6 +414,52 @@
         }
       });
     }
+
+    // Ekstra: Vis hvilken bruker som er innlogget (for "shared device" trygghet)
+    const userLine = document.getElementById("subscriptionUserLine");
+    try {
+      const u = window.authService?.getUser?.();
+      if (userLine) userLine.textContent = u?.email ? `Innlogget: ${u.email}` : "";
+    } catch (_) {
+      if (userLine) userLine.textContent = "";
+    }
+
+    // Ekstra: "Se planer"-knapp i modal (åpner prissiden)
+    const openPricingBtn = document.getElementById("openPricingFromModal");
+    if (openPricingBtn && !openPricingBtn.__bound) {
+      openPricingBtn.__bound = true;
+      openPricingBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+        closeSubscriptionModal();
+        window.authService?.showPricingPage?.();
+      }, { capture: true });
+    }
+
+    // Ekstra: Kopiér support-epost
+    const copyBtn = document.getElementById("copySupportEmailBtn");
+    if (copyBtn && !copyBtn.__bound) {
+      copyBtn.__bound = true;
+      copyBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+
+        const email = window.CONFIG?.app?.supportEmail || "support@barnefotballtrener.no";
+        try {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            await navigator.clipboard.writeText(email);
+            alert("Support-epost kopiert ✅");
+          } else {
+            prompt("Kopiér e-post:", email);
+          }
+        } catch (_) {
+          prompt("Kopiér e-post:", email);
+        }
+      }, { capture: true });
+    }
+
   }
 
   function closeSubscriptionModal() {
@@ -423,8 +486,10 @@
       if (gear) {
         e.preventDefault();
         e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+
         console.log(`${LOG_PREFIX} ⚙️ Gear clicked, opening modal...`);
-        openSubscriptionModal();
+        openSubscriptionModal().catch((err) => console.error(`${LOG_PREFIX} ❌ openSubscriptionModal failed:`, err));
         return;
       }
 
