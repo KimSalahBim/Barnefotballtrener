@@ -12,6 +12,16 @@
   'use strict';
 
   // -------------------------------
+  // Timeout wrapper (kritisk for å unngå infinite hangs)
+  // -------------------------------
+  function withTimeout(promise, ms, errorMsg = "Timeout") {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(errorMsg)), ms))
+    ]);
+  }
+
+  // -------------------------------
   // Utils
   // -------------------------------
   function log(...args) {
@@ -192,44 +202,60 @@
 
       log('✅ Got access token, calling API...');
 
-      const r = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ plan: planType }),
-      });
+      // AbortController for fetch timeout (10s)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      log(`📡 API response status: ${r.status}`);
-
-      const data = await safeJson(r);
-      
-      if (!r.ok) {
-        console.error('❌ API returned error:', {
-          status: r.status,
-          statusText: r.statusText,
-          error: data?.error,
-          data: data
+      try {
+        const r = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ plan: planType }),
+          signal: controller.signal
         });
-        throw new Error(data?.error || `Checkout-feil (${r.status})`);
+
+        clearTimeout(timeoutId);
+
+        log(`📡 API response status: ${r.status}`);
+
+        const data = await safeJson(r);
+        
+        if (!r.ok) {
+          console.error('❌ API returned error:', {
+            status: r.status,
+            statusText: r.statusText,
+            error: data?.error,
+            data: data
+          });
+          throw new Error(data?.error || `Checkout-feil (${r.status})`);
+        }
+
+        log('✅ API response OK:', data);
+
+        if (!data?.url) {
+          console.error('❌ API response missing url:', data);
+          throw new Error('Mangler checkout-url fra server');
+        }
+
+        log('✅ Redirecting to:', data.url);
+        window.location.assign(data.url);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Forespørselen tok for lang tid (timeout)');
+        }
+        throw fetchError;
       }
-
-      log('✅ API response OK:', data);
-
-      if (!data?.url) {
-        console.error('❌ API response missing url:', data);
-        throw new Error('Mangler checkout-url fra server');
-      }
-
-      log('✅ Redirecting to:', data.url);
-      window.location.assign(data.url);
     } catch (error) {
       console.error('❌ Checkout error:', {
         message: error.message,
         stack: error.stack,
         planType: planType,
-        user: user?.email
+        userPresent: !!user
       });
       showNotification(`Kunne ikke starte betalingsprosessen: ${error.message}`, 'error');
     }
@@ -248,41 +274,53 @@
     
     for (let i = 0; i < retries; i++) {
       try {
-        // Først: prøv getSession
-        const s = await window.supabase?.auth?.getSession?.();
+        // Først: prøv getSession med 3s timeout
+        const s = await withTimeout(
+          window.supabase?.auth?.getSession?.(),
+          3000,
+          'getSession timeout'
+        );
         let token = s?.data?.session?.access_token;
 
         if (token) {
-          console.log(`✅ Got token from getSession (attempt ${i+1}/${retries}):`, token.substring(0, 20) + '...');
+          console.log(`✅ Got token from getSession (attempt ${i+1}/${retries})`);
           return token;
         }
 
         console.log(`⚠️ No token from getSession (attempt ${i+1}/${retries}), trying refresh...`);
 
-        // Hvis ingen token: prøv refresh først
+        // Hvis ingen token: prøv refresh med 3s timeout
         if (typeof window.supabase?.auth?.refreshSession === 'function') {
           try {
-            await window.supabase.auth.refreshSession();
+            await withTimeout(
+              window.supabase.auth.refreshSession(),
+              3000,
+              'refreshSession timeout'
+            );
             console.log('🔄 Refreshed session');
           } catch (refreshErr) {
-            console.warn('⚠️ Refresh failed:', refreshErr);
+            console.warn('⚠️ Refresh failed:', refreshErr.message);
           }
           
-          // Prøv getSession igjen etter refresh
-          const s2 = await window.supabase?.auth?.getSession?.();
+          // Prøv getSession igjen etter refresh (med timeout)
+          const s2 = await withTimeout(
+            window.supabase?.auth?.getSession?.(),
+            3000,
+            'getSession timeout (retry)'
+          );
           token = s2?.data?.session?.access_token;
           
           if (token) {
-            console.log(`✅ Got token after refresh (attempt ${i+1}/${retries}):`, token.substring(0, 20) + '...');
+            console.log(`✅ Got token after refresh (attempt ${i+1}/${retries})`);
             return token;
           }
         }
       } catch (e) {
-        console.warn(`❌ Token attempt ${i+1}/${retries} failed:`, e);
+        console.warn(`❌ Token attempt ${i+1}/${retries} failed:`, e.message);
       }
 
-      // Økende backoff: 500ms, 1000ms, 1500ms, 2000ms, 2500ms
-      const delay = 500 + (i * 500);
+      // Økende backoff: 250ms, 500ms, 750ms, 1000ms, 1250ms
+      const delay = 250 + (i * 250);
       console.log(`⏳ Waiting ${delay}ms before retry...`);
       await new Promise((r) => setTimeout(r, delay));
     }
@@ -295,9 +333,15 @@
     const selectButtons = document.querySelectorAll('.btn-select');
     log(`Found ${selectButtons.length} select buttons`);
 
+    // Global in-flight guard for checkout process
+    let checkoutInProgress = false;
+
     selectButtons.forEach((btn) => {
       if (btn.__bf_bound_plan) return;
       btn.__bf_bound_plan = true;
+
+      // Store original text for restoration
+      const originalText = btn.textContent;
 
       btn.addEventListener(
         'click',
@@ -305,11 +349,37 @@
           e.preventDefault();
           e.stopPropagation();
 
+          // Guard against double-clicks
+          if (checkoutInProgress) {
+            log('⚠️ Checkout already in progress, ignoring click');
+            return;
+          }
+
+          checkoutInProgress = true;
+
+          // Disable all plan buttons
+          selectButtons.forEach(b => {
+            b.disabled = true;
+            b.style.opacity = '0.6';
+            b.style.cursor = 'not-allowed';
+          });
+
           const planType = btn.getAttribute('data-plan');
           const priceId = btn.getAttribute('data-price-id');
 
           log(`Button clicked: ${planType}, priceId: ${priceId}`);
-          await handlePlanSelection(planType, priceId);
+
+          try {
+            await handlePlanSelection(planType, priceId);
+          } finally {
+            // Re-enable all buttons (in case of error or if user navigates back)
+            checkoutInProgress = false;
+            selectButtons.forEach(b => {
+              b.disabled = false;
+              b.style.opacity = '1';
+              b.style.cursor = 'pointer';
+            });
+          }
         },
         { passive: false }
       );
@@ -503,7 +573,15 @@
         // Innlogget: sjekk subscription
         const svc = getSubscriptionService();
         if (!svc || typeof svc.checkSubscription !== 'function') {
-          log('⚠️ Subscription service mangler - går til login');
+          log('⚠️ Subscription service mangler - logger ut og går til login');
+          // Sign out så bruker kan prøve med annen konto
+          try {
+            if (window.authService?.supabase?.auth?.signOut) {
+              await window.authService.supabase.auth.signOut();
+            }
+          } catch (signOutErr) {
+            console.warn('⚠️ Sign out failed:', signOutErr);
+          }
           if (window.authService && typeof window.authService.showLoginScreen === 'function') {
             window.authService.showLoginScreen();
           }
@@ -519,9 +597,20 @@
             window.authService.showMainApp();
           }
         } else {
-          log('ℹ️ Bruker mangler tilgang - forblir på pricing');
-          // Bruker er på riktig side allerede (pricing)
-          showNotification('Velg en plan for å fortsette', 'info');
+          // VIKTIG: "Tilbake" betyr bruker vil escape - ikke holde dem fanget
+          // Sign out slik at de kan logge inn med en annen konto
+          log('ℹ️ Bruker mangler tilgang - logger ut for å tillate kontobytte');
+          try {
+            if (window.authService?.supabase?.auth?.signOut) {
+              await window.authService.supabase.auth.signOut();
+              log('✅ Signed out successfully');
+            }
+          } catch (signOutErr) {
+            console.warn('⚠️ Sign out failed:', signOutErr);
+          }
+          if (window.authService && typeof window.authService.showLoginScreen === 'function') {
+            window.authService.showLoginScreen();
+          }
         }
       } catch (err) {
         console.error('❌ Back button error:', err);
