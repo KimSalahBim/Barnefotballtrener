@@ -76,9 +76,9 @@ export default async function handler(req, res) {
     // 4) Finn eller opprett Stripe customer på e-post
     let customerId = null;
 
-    // 4a) Finn på e-post først
-    const found = await stripe.customers.search({
-      query: `email:'${email}'`,
+    // 4a) Finn på e-post først (bruk list for sikkerhet, ikke search)
+    const found = await stripe.customers.list({
+      email: email,
       limit: 1,
     });
     customerId = found.data?.[0]?.id || null;
@@ -128,6 +128,12 @@ export default async function handler(req, res) {
             }
           : undefined,
     });
+
+    // Validering: Stripe skal alltid returnere url for hosted checkout
+    if (!session.url) {
+      console.error('create-checkout-session: Stripe session missing url:', session);
+      return res.status(500).json({ error: 'Stripe session missing checkout URL' });
+    }
 
     // Returner både sessionId og url (url er det klienten trenger)
     return res.status(200).json({ 
