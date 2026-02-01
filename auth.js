@@ -335,11 +335,23 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
     return self._initPromise;
   };
 
+  // -------------------------------
+  // Helper: Get canonical redirect URL (prevents /pricing.html trap)
+  // -------------------------------
+  function getCanonicalRedirectUrl() {
+    // Strip filename, keep directory (prevents /pricing.html redirect, preserves subpath deployments)
+    var p = window.location.pathname || '/';
+    if (!p.endsWith('/')) {
+      p = p.replace(/\/[^\/]*$/, '/');
+    }
+    return window.location.origin + p;
+  }
+
   AuthService.prototype.signInWithGoogle = async function () {
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
 
-      var redirectTo = window.location.origin + window.location.pathname;
+      var redirectTo = getCanonicalRedirectUrl();
 
       var res = await this.supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -363,7 +375,7 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
         return { success: false, error: 'Ugyldig e-postadresse' };
       }
 
-      var emailRedirectTo = window.location.origin + window.location.pathname;
+      var emailRedirectTo = getCanonicalRedirectUrl();
 
       var res = await this.supabase.auth.signInWithOtp({
         email: cleanEmail,
@@ -653,6 +665,13 @@ if (typeof authService.getSessionWithRetry !== 'function') {
   }
 
   // -------------------------------
+  // Pricing back button
+  // -------------------------------
+  // NOTE: Removed bindPricingBackButton() - pricing.js owns this button
+  // to prevent duplicate event handlers that can cause race conditions
+  // and iOS scroll-lock issues. See Round 3 Bug #3.
+
+  // -------------------------------
   // Boot
   // -------------------------------
   async function bootAuth() {
@@ -661,6 +680,7 @@ if (typeof authService.getSessionWithRetry !== 'function') {
 
     bindGoogleButton();
     bindMagicLink();
+    // bindPricingBackButton(); // REMOVED: pricing.js handles this
     await authService.init();
   }
 
