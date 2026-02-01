@@ -13,8 +13,11 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
+// RELIABILITY: Configure Stripe client with timeout and retries to prevent hangs
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20',
+  timeout: 10000,           // 10 second timeout (prevents invoice fetch hangs)
+  maxNetworkRetries: 2,     // Retry failed requests twice
 });
 
 const supabaseAdmin = createClient(
@@ -81,7 +84,39 @@ async function checkStripeSubscription(customerId) {
   const priceId = sub.items?.data?.[0]?.price?.id;
   const plan = mapPlanFromPriceId(priceId);
 
-  const active = sub.status === 'active' || sub.status === 'trialing' || sub.status === 'past_due';
+  // REVENUE PROTECTION: Do NOT treat past_due as active indefinitely
+  // Allow 72-hour grace period for payment retry, then revoke access
+  let active = sub.status === 'active' || sub.status === 'trialing';
+  
+  if (!active && sub.status === 'past_due') {
+    console.log('[subscription-status] ⚠️ Subscription is past_due, checking grace period...');
+    
+    // Check if within grace period (72 hours from latest invoice creation)
+    if (sub.latest_invoice) {
+      try {
+        const invoice = await stripe.invoices.retrieve(sub.latest_invoice);
+        const invoiceCreatedMs = (invoice?.created || 0) * 1000;
+        const GRACE_PERIOD_MS = 72 * 60 * 60 * 1000; // 72 hours
+        const timeElapsedMs = Date.now() - invoiceCreatedMs;
+        
+        if (timeElapsedMs <= GRACE_PERIOD_MS) {
+          console.log(`[subscription-status] ✅ Within grace period (${Math.floor(timeElapsedMs / 1000 / 60 / 60)}h elapsed)`);
+          active = true;
+        } else {
+          console.log(`[subscription-status] ❌ Grace period expired (${Math.floor(timeElapsedMs / 1000 / 60 / 60)}h elapsed), access revoked`);
+          active = false;
+        }
+      } catch (err) {
+        console.error('[subscription-status] ⚠️ Failed to retrieve invoice for grace check:', err.message);
+        // Safe fallback: revoke access if we can't verify grace period
+        active = false;
+      }
+    } else {
+      console.log('[subscription-status] ⚠️ past_due but no latest_invoice, revoking access');
+      active = false;
+    }
+  }
+
   const isoEnd = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null;
   const cancelAt = sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null;
 
@@ -162,6 +197,11 @@ async function checkTrialStatus(userId) {
 }
 
 export default async function handler(req, res) {
+  // SECURITY: Set no-cache headers for personalized data (prevents caching of auth-dependent responses)
+  res.setHeader('Cache-Control', 'no-store, private, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Vary', 'Authorization');
+
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -171,10 +211,7 @@ export default async function handler(req, res) {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     
-    console.log('[subscription-status] Request received');
-    console.log('[subscription-status] Token present:', !!token);
-    console.log('[subscription-status] Token length:', token?.length);
-    console.log('[subscription-status] Token prefix:', token?.substring(0, 20) + '...');
+    console.log('[subscription-status] Request received (auth header present: %s)', !!authHeader);
     
     if (!token) {
       console.error('[subscription-status] ❌ No token provided');
@@ -186,7 +223,8 @@ export default async function handler(req, res) {
     
     if (userErr) {
       console.error('[subscription-status] ❌ Supabase getUser error:', userErr.message);
-      return res.status(401).json({ error: 'Invalid session', details: userErr.message });
+      // SECURITY: Don't leak internal error details to client
+      return res.status(401).json({ error: 'Invalid session' });
     }
     
     if (!user) {
@@ -194,7 +232,8 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid session' });
     }
     
-    console.log('[subscription-status] ✅ User validated:', user.id);
+    // PRIVACY: Log validation without full user ID
+    console.log('[subscription-status] ✅ User validated');
 
     const email = user.email;
     if (!email) {
