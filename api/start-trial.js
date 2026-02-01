@@ -3,8 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20',
+  timeout: 10000,           // 10 second timeout
+  maxNetworkRetries: 2,     // Retry failed requests twice
 });
-
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
