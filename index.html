@@ -2,7 +2,26 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <script>
+(function () {
+  try {
+    var h = String(window.location.hostname || '').toLowerCase();
+    var isDebugHost = (h === 'localhost') || h.endsWith('.vercel.app');
+    if (isDebugHost) {
+      var s = document.createElement('script');
+      s.src = 'debug.js';
+      s.defer = true;
+      document.head.appendChild(s);
+    } else {
+      window.__BF_DEBUG_ENABLED = false;
+    }
+  } catch (e) {
+    window.__BF_DEBUG_ENABLED = false;
+  }
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Barnefotballtrener</title>
 
   <!-- PWA -->
