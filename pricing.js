@@ -90,34 +90,49 @@
   // -------------------------------
   function handleStripeReturnParams() {
     const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success') === 'true';
+    const canceled = urlParams.get('canceled') === 'true';
 
-    if (urlParams.get('success') === 'true') {
-      showNotification('Betaling fullført! Velkommen! 🎉', 'success');
+    if (!success && !canceled) return;
 
-      setTimeout(() => {
-        // Fjern query params fra URL (behold hash)
-        const cleanUrl =
-          window.location.origin +
-          window.location.pathname +
-          (window.location.hash || '');
-        window.history.replaceState({}, document.title, cleanUrl);
+    // Fjern query params fra URL (behold hash) - gjør dette tidlig for å unngå "back/refresh loops"
+    const cleanUrl =
+      window.location.origin +
+      window.location.pathname +
+      (window.location.hash || '');
+    window.history.replaceState({}, document.title, cleanUrl);
 
-        // Til hovedapp
+    if (success) {
+      // SECURITY: Ikke åpne app direkte. Verifiser tilgang via auth + subscription-status.
+      showNotification('Betaling fullført! Verifiserer tilgang…', 'success');
+
+      // Gi auth/subscription en liten "breathing room" (Stripe return + ITP + auth refresh)
+      setTimeout(async () => {
         try {
-          window.authService?.showMainApp?.();
-        } catch (_) {}
-      }, 1500);
-    } else if (urlParams.get('canceled') === 'true') {
-      showNotification('Betaling avbrutt. Du kan prøve igjen når som helst.', 'info');
+          // Sørg for at AuthService er initialisert (init er idempotent)
+          if (window.authService && typeof window.authService.init === 'function') {
+            await window.authService.init();
+          }
 
-      setTimeout(() => {
-        const cleanUrl =
-          window.location.origin +
-          window.location.pathname +
-          (window.location.hash || '');
-        window.history.replaceState({}, document.title, cleanUrl);
-      }, 800);
+          const user = window.authService?.getUser?.();
+          if (user && typeof window.authService?.handleSignIn === 'function') {
+            await window.authService.handleSignIn(user);
+            return;
+          }
+
+          // Hvis vi mangler bruker, gå til login (ikke åpne app)
+          window.authService?.showLoginScreen?.();
+        } catch (err) {
+          console.error('❌ Post-checkout verify failed:', err);
+          try { window.authService?.showPricingPage?.(); } catch (_) {}
+        }
+      }, 250);
+
+      return;
     }
+
+    // canceled
+    showNotification('Betaling avbrutt. Du kan prøve igjen når som helst.', 'info');
   }
 
   // -------------------------------
@@ -169,8 +184,16 @@
         if (result && result.success) {
           const days = window.CONFIG?.trial?.days || 7;
           showNotification(`Gratulerer! Din ${days}-dagers prøveperiode har startet! 🎉`, 'success');
-          setTimeout(() => {
-            window.authService?.showMainApp?.();
+          setTimeout(async () => {
+            try {
+              if (window.authService && typeof window.authService.handleSignIn === 'function') {
+                await window.authService.handleSignIn(user);
+              } else {
+                window.location.reload();
+              }
+            } catch (_) {
+              window.location.reload();
+            }
           }, 1200);
           return;
         }
