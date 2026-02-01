@@ -6,6 +6,7 @@
   const LOG_PREFIX = "🧾";
   const PORTAL_ENDPOINT = "/api/create-portal-session";
   const STATUS_ENDPOINT = "/api/subscription-status";
+  const TRIAL_ENDPOINT = "/api/start-trial";
 
   // --- BFCACHE FIX: Clear state ved browser back/forward restore ---
   window.addEventListener('pageshow', (e) => {
@@ -21,21 +22,49 @@
   // --- Utils ---
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  // Token cache (5 min TTL)
-  let tokenCache = { token: null, expires: 0 };
+  // Token cache (5 min TTL) - SECURITY: Now keyed by userId to prevent cross-user leakage
+  let tokenCache = { token: null, expires: 0, userId: null };
 
-  function getCachedToken() {
-    if (tokenCache.token && Date.now() < tokenCache.expires) {
-      console.log(`${LOG_PREFIX} 💾 Using cached token (${Math.floor((tokenCache.expires - Date.now())/1000)}s left)`);
+  function getCachedToken(currentUserId) {
+    // SECURITY: Only return cached token if it belongs to current user
+    if (tokenCache.token && 
+        Date.now() < tokenCache.expires && 
+        tokenCache.userId === currentUserId) {
+      console.log(`${LOG_PREFIX} 💾 Using cached token for user ${currentUserId?.substring(0, 8)}... (${Math.floor((tokenCache.expires - Date.now())/1000)}s left)`);
       return tokenCache.token;
     }
     return null;
   }
 
-  function setCachedToken(token) {
+  function setCachedToken(token, userId) {
     tokenCache.token = token;
+    tokenCache.userId = userId;
     tokenCache.expires = Date.now() + (5 * 60 * 1000); // 5 min
-    console.log(`${LOG_PREFIX} 💾 Cached token for 5 minutes`);
+    console.log(`${LOG_PREFIX} 💾 Cached token for user ${userId?.substring(0, 8)}... (5 min)`);
+  }
+
+  function clearTokenCache() {
+    const hadToken = !!tokenCache.token;
+    tokenCache = { token: null, expires: 0, userId: null };
+    if (hadToken) {
+      console.log(`${LOG_PREFIX} 🗑️ Token cache cleared`);
+    }
+  }
+
+  // SECURITY: Clear token cache on auth state changes (prevents cross-user token reuse)
+  if (window.supabase && typeof window.supabase.auth?.onAuthStateChange === 'function') {
+    window.supabase.auth.onAuthStateChange((event, session) => {
+      const newUserId = session?.user?.id || null;
+      const cachedUserId = tokenCache.userId;
+      
+      console.log(`${LOG_PREFIX} 🔐 Auth state change: ${event}, user: ${newUserId?.substring(0, 8) || 'none'}`);
+      
+      // Clear cache if user changed or signed out
+      if (newUserId !== cachedUserId) {
+        console.log(`${LOG_PREFIX} ⚠️ User changed (${cachedUserId?.substring(0, 8) || 'none'} → ${newUserId?.substring(0, 8) || 'none'}), clearing token cache`);
+        clearTokenCache();
+      }
+    });
   }
 
   // Timeout wrapper for promises som kan henge
@@ -46,10 +75,48 @@
     ]);
   }
 
+  // Timeout wrapper for fetch API calls
+  async function fetchWithTimeout(url, options, timeoutMs) {
+    timeoutMs = timeoutMs || 10000;
+    
+    // Check if AbortController is available
+    if (typeof AbortController === "undefined") {
+      // Fallback: no abort, but avoid blocking UX forever
+      return Promise.race([
+        fetch(url, options),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("Request timeout")), timeoutMs))
+      ]);
+    }
+
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    
+    try {
+      return await fetch(url, { ...(options || {}), signal: controller.signal });
+    } catch (error) {
+      // Re-throw with clearer message if aborted
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      throw error;
+    } finally {
+      clearTimeout(id);
+    }
+  }
+
   async function getAccessToken({ retries = 3, skipCache = false } = {}) {
+    // Get current user ID for cache keying
+    let currentUserId = null;
+    try {
+      const { data: { session } } = await window.supabase?.auth?.getSession?.() || { data: {} };
+      currentUserId = session?.user?.id || null;
+    } catch (err) {
+      console.warn(`${LOG_PREFIX} ⚠️ Could not get current user ID for cache:`, err.message);
+    }
+
     // 1) Prøv cached token først (hvis ikke skipCache)
-    if (!skipCache) {
-      const cached = getCachedToken();
+    if (!skipCache && currentUserId) {
+      const cached = getCachedToken(currentUserId);
       if (cached) return cached;
     }
 
@@ -64,9 +131,10 @@
           "getSession timeout"
         );
         const token = s?.data?.session?.access_token;
-        if (token) {
+        const userId = s?.data?.session?.user?.id;
+        if (token && userId) {
           console.log(`${LOG_PREFIX} ✅ Got token from getSession`);
-          setCachedToken(token);
+          setCachedToken(token, userId);
           return token;
         }
 
@@ -84,9 +152,10 @@
           "getSession timeout (retry)"
         );
         const token2 = s2?.data?.session?.access_token;
-        if (token2) {
+        const userId2 = s2?.data?.session?.user?.id;
+        if (token2 && userId2) {
           console.log(`${LOG_PREFIX} ✅ Got token after refresh`);
-          setCachedToken(token2);
+          setCachedToken(token2, userId2);
           return token2;
         }
 
@@ -114,11 +183,11 @@
     const headers = { "Content-Type": "application/json" };
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
-    });
+    }, 10000); // 10 second timeout
 
     let data = null;
     try {
@@ -174,6 +243,27 @@
           reason: "status_error",
         };
       }
+    },
+
+    async startTrial(userId, planType) {
+      // Only month/year supported by /api/start-trial
+      if (!planType || (planType !== "month" && planType !== "year")) {
+        throw new Error("Trial only supported for month/year plans");
+      }
+
+      console.log(`${LOG_PREFIX} 🎁 Starting trial for user ${userId}, plan: ${planType}`);
+
+      const token = await getAccessToken();
+      const data = await callApiJson(TRIAL_ENDPOINT, {
+        method: "POST",
+        token,
+        body: { planType },
+      });
+
+      console.log(`${LOG_PREFIX} ✅ Trial started:`, data);
+
+      // Expected response: { success:true, trial_started_at, trial_ends_at, trial_days }
+      return data;
     },
 
     async openPortal(flow = "manage") {
