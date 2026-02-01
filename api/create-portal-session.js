@@ -22,25 +22,31 @@ const supabaseAdmin = createClient(
 function getBaseUrl(req) {
   // SECURITY: Always use APP_URL if set (prevents host header injection)
   if (process.env.APP_URL) {
-    return process.env.APP_URL;
+    return String(process.env.APP_URL).replace(/\/+$/, '');
   }
-  
+
+  // Vercel: NODE_ENV kan være "production" også i Preview.
+  // Vi bruker VERCEL_ENV når den finnes for å skille preview vs production.
+  const isProd = process.env.VERCEL_ENV
+    ? process.env.VERCEL_ENV === 'production'
+    : process.env.NODE_ENV === 'production';
+
   // PRODUCTION: Fail hard if APP_URL not set in production
-  if (process.env.NODE_ENV === 'production') {
+  if (isProd) {
     console.error('[create-portal-session] ❌ APP_URL not configured in production!');
     throw new Error('APP_URL must be configured in production environment');
   }
-  
+
   // DEV/LOCAL ONLY: Fallback with strict validation
   const rawHost = String(req.headers.host || '');
-  
-  // NORMALIZE: lowercase, trim whitespace, remove trailing dot, remove :443 port
+
+  // NORMALIZE: lowercase, trim whitespace, remove :443 port, remove trailing dot
   const normalizedHost = rawHost
     .trim()
     .toLowerCase()
-    .replace(/\.$/, '')           // trailing dot
-    .replace(/:443$/, '');        // explicit https port
-  
+    .replace(/:443$/, '')          // explicit https port
+    .replace(/\.$/, '');          // trailing dot
+
   const allowedHosts = new Set([
     'localhost:3000',
     'localhost:5173',
@@ -48,18 +54,18 @@ function getBaseUrl(req) {
     'barnefotballtrener.no',
     'www.barnefotballtrener.no'
   ]);
-  
+
   if (!allowedHosts.has(normalizedHost)) {
     console.error('[create-portal-session] ⚠️ Invalid host header:', rawHost, '(normalized:', normalizedHost + ')');
     throw new Error('Invalid host header');
   }
-  
+
   // NORMALIZE PROTOCOL: handle "https, http" comma-separated variants from proxies
   const protoRaw = String(req.headers["x-forwarded-proto"] || "https");
   const proto = protoRaw.split(',')[0].trim();
-  // Force HTTPS in production even if proxy says HTTP
-  const safeProto = (proto === 'http' && process.env.NODE_ENV === 'production') ? 'https' : proto;
-  
+  // Force HTTPS in production even if proxy sier HTTP
+  const safeProto = (proto === 'http' && isProd) ? 'https' : proto;
+
   return `${safeProto}://${normalizedHost}`;
 }
 
