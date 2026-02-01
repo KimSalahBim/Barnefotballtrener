@@ -18,6 +18,25 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+
+function makeErrorId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeHost(rawHost) {
+  return String(rawHost || '')
+    .trim()
+    .toLowerCase()
+    .replace(/:443$/, '')
+    .replace(/\.$/, '');
+}
+
+function isDebugHost(host) {
+  // Debug ONLY on localhost / 127.0.0.1 / *.vercel.app (strip port)
+  const h = String(host || '').toLowerCase().split(':')[0];
+  return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app');
+}
+
 // Helper: Get base URL for this deployment
 function getBaseUrl(req) {
   // SECURITY: Always use APP_URL if set (prevents host header injection)
@@ -179,7 +198,11 @@ export default async function handler(req, res) {
     return res.status(200).json({ url: portalSession.url });
 
   } catch (err) {
-    console.error('create-portal-session error:', err);
-    return res.status(500).json({ error: err.message || 'Server error' });
+    const errorId = makeErrorId();
+    const host = normalizeHost(req.headers.host);
+    const debug = isDebugHost(host);
+    console.error(`create-portal-session error (${errorId}) [host=${host}]`, err);
+    // Avoid leaking internal errors on production domain
+    return res.status(500).json({ error: (debug ? (err.message || "Server error") : "Server error"), ...(debug ? { error_id: errorId } : {}) });
   }
 }

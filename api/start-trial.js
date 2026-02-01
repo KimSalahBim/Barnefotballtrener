@@ -11,6 +11,25 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+
+function makeErrorId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeHost(rawHost) {
+  return String(rawHost || '')
+    .trim()
+    .toLowerCase()
+    .replace(/:443$/, '')
+    .replace(/\.$/, '');
+}
+
+function isDebugHost(host) {
+  // Debug ONLY on localhost / 127.0.0.1 / *.vercel.app (strip port)
+  const h = String(host || '').toLowerCase().split(':')[0];
+  return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app');
+}
+
 function addDays(date, days) {
   const d = new Date(date);
   d.setUTCDate(d.getUTCDate() + days);
@@ -153,7 +172,10 @@ export default async function handler(req, res) {
       trial_days: TRIAL_DAYS,
     });
   } catch (e) {
-    console.error('start-trial error:', e);
-    return res.status(500).json({ error: 'Server error' });
+    const errorId = makeErrorId();
+    const host = normalizeHost(req.headers.host);
+    const debug = isDebugHost(host);
+    console.error(`start-trial error (${errorId}) [host=${host}]`, e);
+    return res.status(500).json({ error: "Server error", ...(debug ? { error_id: errorId } : {}) });
   }
 }
