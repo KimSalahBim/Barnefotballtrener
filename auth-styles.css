@@ -227,26 +227,24 @@
 /* ------------------------------
    Small text / links
 --------------------------------- */
-.small-text{
+#passwordProtection .small-text{
   font-size: 13px;
   color: rgba(100,116,139,1);
   line-height: 1.55;
 }
-
-.small-text a{
+#passwordProtection .small-text a{
   color: var(--bf-green);
   text-decoration: none;
   font-weight: 700;
 }
-
-.small-text a:hover{
+#passwordProtection .small-text a:hover{
   text-decoration: underline;
 }
 
 /* ------------------------------
    Secondary button (hvis i bruk)
 --------------------------------- */
-.btn-secondary{
+#passwordProtection .btn-secondary{
   width: 100%;
   padding: 12px 18px;
   background: transparent;
@@ -263,15 +261,13 @@
   justify-content: center;
   gap: 10px;
 }
-
-.btn-secondary:hover{
+#passwordProtection .btn-secondary:hover{
   background: rgba(2, 6, 23, 0.03);
   border-color: rgba(15, 23, 42, 0.26);
   transform: translateY(-1px);
   box-shadow: 0 14px 30px rgba(2, 6, 23, 0.12);
 }
-
-.btn-secondary:active{
+#passwordProtection .btn-secondary:active{
   transform: translateY(0);
   box-shadow: none;
 }
@@ -279,7 +275,7 @@
 /* ------------------------------
    Error message
 --------------------------------- */
-.error-message{
+#passwordProtection .error-message{
   background: #FEE2E2;
   border: 1px solid #FCA5A5;
   color: #991B1B;
@@ -290,8 +286,7 @@
   margin-top: 14px;
   display: none;
 }
-
-.error-message.show{
+#passwordProtection .error-message.show{
   display: block;
   animation: shake 0.35s ease;
 }
