@@ -651,13 +651,168 @@
     log('✅ Back button bundet (#closePricingBtn)');
   }
 
-  // -------------------------------
+  
+
+// -------------------------------
+// Contact modals (Team/Club license)
+// - Referenced via inline onclick="" in index.html / pricing.html
+// - Visibility via .modal-visible (pricing.css) so inline style display:none is OK
+// - No PII logging (privacy-safe)
+// -------------------------------
+let __bf_contactModalsBound = false;
+
+function getSupportEmail() {
+  try {
+    const e = window.CONFIG?.app?.supportEmail;
+    return (typeof e === 'string' && e.includes('@')) ? e : 'support@barnefotballtrener.no';
+  } catch (_) {
+    return 'support@barnefotballtrener.no';
+  }
+}
+
+function isElVisible(el) {
+  return !!el && el.classList && el.classList.contains('modal-visible');
+}
+
+function openModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.add('modal-visible');
+  document.body.classList.add('modal-open');
+  // focus first input for accessibility/usability
+  const first = modalEl.querySelector('input, textarea, button');
+  if (first) {
+    setTimeout(() => { try { first.focus(); } catch (_) {} }, 0);
+  }
+}
+
+function closeModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.remove('modal-visible');
+  // If no other visible modals, unlock body scroll
+  const anyOpen = document.querySelector('.modal.modal-visible');
+  if (!anyOpen) document.body.classList.remove('modal-open');
+}
+
+function buildMailto(formEl, kind) {
+  const supportEmail = getSupportEmail();
+  const fd = new FormData(formEl);
+  const name = (fd.get('name') || '').toString().trim();
+  const email = (fd.get('email') || '').toString().trim();
+  const phone = (fd.get('phone') || '').toString().trim();
+  const qty = (fd.get('quantity') || '').toString().trim();
+  const message = (fd.get('message') || '').toString().trim();
+
+  const subject = kind === 'club'
+    ? '[Barnefotballtrener] Klubb-lisens forespørsel'
+    : '[Barnefotballtrener] Team-lisens forespørsel';
+
+  const bodyLines = [
+    subject,
+    '',
+    `Navn: ${name}`,
+    `E-post: ${email}`,
+    phone ? `Telefon: ${phone}` : null,
+    qty ? `Antall trenere: ${qty}` : null,
+    '',
+    message ? `Melding:\n${message}` : 'Melding: (ingen)',
+    '',
+    '---',
+    'Sendt fra Barnefotballtrener (kontaktmodal)'
+  ].filter(Boolean);
+
+  const body = bodyLines.join('\n');
+  const mailto = `mailto:${encodeURIComponent(supportEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  return { supportEmail, subject, body, mailto };
+}
+
+function bindContactModal(modalId, formId, kind) {
+  const modalEl = document.getElementById(modalId);
+  const formEl = document.getElementById(formId);
+  if (!modalEl || !formEl) return;
+
+  // Click outside modal-content closes
+  modalEl.addEventListener('mousedown', (e) => {
+    if (e.target === modalEl) closeModal(modalEl);
+  });
+
+  // Prevent accidental form reload + provide a real action (email draft)
+  formEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const { supportEmail, subject, body, mailto } = buildMailto(formEl, kind);
+
+    // Best effort: copy to clipboard (helps on locked-down devices)
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(`${subject}\n\n${body}`);
+        copied = true;
+      }
+    } catch (_) {}
+
+    // Best effort: open mail client
+    try { window.location.href = mailto; } catch (_) {}
+
+    alert(
+      `Takk! Vi åpner et e-postutkast til ${supportEmail}.\n` +
+      (copied ? 'Innholdet er også kopiert til utklippstavlen.' : 'Hvis e-post ikke åpner, kopier innholdet manuelt og send til support.')
+    );
+
+    // Optional: close after submit
+    closeModal(modalEl);
+    try { formEl.reset(); } catch (_) {}
+  });
+}
+
+function setupContactModals() {
+  if (__bf_contactModalsBound) return;
+  __bf_contactModalsBound = true;
+
+  const teamModalId = 'teamContactModal';
+  const clubModalId = 'clubContactModal';
+
+  // Expose globals for inline onclick handlers
+  window.showTeamContactForm = () => openModal(document.getElementById(teamModalId));
+  window.closeTeamContactForm = () => closeModal(document.getElementById(teamModalId));
+
+  window.showClubContactForm = () => openModal(document.getElementById(clubModalId));
+  window.closeClubContactForm = () => closeModal(document.getElementById(clubModalId));
+
+  bindContactModal(teamModalId, 'teamContactForm', 'team');
+  bindContactModal(clubModalId, 'clubContactForm', 'club');
+
+  // ESC handler (capture) – only acts if a contact modal is visible
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+
+    const teamEl = document.getElementById(teamModalId);
+    const clubEl = document.getElementById(clubModalId);
+
+    if (isElVisible(teamEl)) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      closeModal(teamEl);
+      return;
+    }
+    if (isElVisible(clubEl)) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      closeModal(clubEl);
+    }
+  }, true);
+}
+
+
+// -------------------------------
   // Boot
   // -------------------------------
 function boot() {
   log('💳 Pricing.js loaded');
   bindPlanButtons();
   bindBackButton();
+  setupContactModals();
   // bindMagicLink(); // Magic link håndteres av auth.js
   handleStripeReturnParams();
 }
