@@ -805,6 +805,128 @@ function setupContactModals() {
 }
 
 
+
+
+// -------------------------------
+// Pricing support/FAQ + Kontakt oss (low risk UI-only)
+// - Injects a small info box on the pricing page to reduce support
+// - Does NOT touch auth/stripe logic
+// -------------------------------
+function ensurePricingSupportAndContact() {
+  const page = document.getElementById('pricingPage');
+  if (!page) return;
+
+  const container = page.querySelector('.pricing-container') || page;
+  if (!container) return;
+
+  function insertAfterPricingCards(el) {
+    const cards = container.querySelector('.pricing-cards');
+    if (cards && cards.parentNode) {
+      cards.insertAdjacentElement('afterend', el);
+    } else {
+      container.appendChild(el);
+    }
+  }
+
+  // FAQ / Support
+  if (!container.querySelector('#pricingSupportBox')) {
+    const box = document.createElement('div');
+    box.id = 'pricingSupportBox';
+    box.style.marginTop = '14px';
+    box.style.padding = '12px';
+    box.style.borderRadius = '12px';
+    box.style.border = '1px solid rgba(255,255,255,0.12)';
+    box.style.background = 'rgba(0,0,0,0.25)';
+
+    box.innerHTML = `
+      <div style="font-weight:700; margin-bottom:8px;">Info</div>
+      <ul style="margin:0; padding-left:18px; line-height:1.35;">
+        <li><strong>Gratis prøveperiode:</strong> 7 dager – du kan velge abonnement etterpå.</li>
+        <li><strong>Kansellering:</strong> Du kan kansellere når som helst i <em>Innstillinger</em> (tannhjul). Du har fortsatt tilgang ut perioden du allerede har betalt for.</li>
+        <li><strong>Innlogging:</strong> Bruk samme Google-konto på alle enheter.</li>
+        <li><strong>Bytter du konto på samme mobil/PC?</strong> Logg ut først.</li>
+        <li><strong>Hvis noe “henger”:</strong> Oppdater siden, eller prøv privat fane.</li>
+        <li><strong>Spørsmål:</strong> Bruk kontaktinformasjonen under.</li>
+      </ul>
+    `;
+    insertAfterPricingCards(box);
+  }
+
+  // Kontakt oss
+  if (!container.querySelector('#pricingContactBox')) {
+    const supportEmail = getSupportEmail();
+
+    const box = document.createElement('div');
+    box.id = 'pricingContactBox';
+    box.style.marginTop = '12px';
+    box.style.padding = '12px';
+    box.style.borderRadius = '12px';
+    box.style.border = '1px solid rgba(255,255,255,0.12)';
+    box.style.background = 'rgba(0,0,0,0.18)';
+
+    const subject = encodeURIComponent('Hjelp – Barnefotballtrener');
+    const body = encodeURIComponent(
+      'Hei!\n\nJeg trenger hjelp med Barnefotballtrener.\n\n' +
+      'E-post (Google): \n' +
+      'Hva jeg prøvde å gjøre: \n' +
+      'Enhet/nettleser: \n' +
+      'Skjermbilde (hvis mulig): \n\n' +
+      'Takk!'
+    );
+
+    box.innerHTML = `
+      <div style="font-weight:700; margin-bottom:8px;">Kontakt oss</div>
+      <div style="opacity:.92; line-height:1.35;">
+        Får du ikke brukt appen som forventet? Send oss en melding, så hjelper vi deg raskt.
+      </div>
+      <div style="margin-top:10px;">
+        <div style="font-weight:700; margin-bottom:6px;">Husk å ta med:</div>
+        <ul style="margin:0; padding-left:18px; line-height:1.35;">
+          <li>E-posten du logger inn med (Google)</li>
+          <li>Hva du prøvde å gjøre (f.eks. «kom ikke inn», «betaling», «kansellering»)</li>
+          <li>Hvilken enhet/nettleser du bruker (iPhone/Android/PC + Chrome/Edge/Safari)</li>
+          <li>Gjerne et skjermbilde av feilen / det du ser</li>
+        </ul>
+      </div>
+      <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button id="pricingCopySupportEmailBtn" type="button" class="btn-secondary" style="flex:1; min-width:160px;">
+          Kopiér support-epost
+        </button>
+        <a class="btn-primary" style="flex:1; min-width:160px; text-align:center; text-decoration:none;"
+           href="mailto:${supportEmail}?subject=${subject}&body=${body}">
+          Send e-post
+        </a>
+      </div>
+      <div style="margin-top:8px; opacity:.85;">${supportEmail}</div>
+    `;
+
+    insertAfterPricingCards(box);
+
+    const copyBtn = box.querySelector('#pricingCopySupportEmailBtn');
+    if (copyBtn && !copyBtn.__bf_bound_copy_email) {
+      copyBtn.__bf_bound_copy_email = true;
+
+      copyBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
+        try {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            await navigator.clipboard.writeText(supportEmail);
+            showNotification('Support-epost kopiert ✅', 'success');
+            return;
+          }
+        } catch (_) {}
+
+        try {
+          prompt('Kopiér support-epost:', supportEmail);
+        } catch (_) {}
+      }, { capture: true });
+    }
+  }
+}
+
 // -------------------------------
   // Boot
   // -------------------------------
@@ -813,6 +935,7 @@ function boot() {
   bindPlanButtons();
   bindBackButton();
   setupContactModals();
+  ensurePricingSupportAndContact();
   // bindMagicLink(); // Magic link håndteres av auth.js
   handleStripeReturnParams();
 }
