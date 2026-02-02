@@ -32,6 +32,18 @@
     } catch (e) {}
   }
 
+
+  function isStagingHost() {
+    try {
+      var h = String(window.location.hostname || '').toLowerCase();
+      return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app');
+    } catch (e) {
+      return false;
+    }
+  }
+
+
+
   function safeGetStorage(key) {
     try { return localStorage.getItem(key); } catch (e) { return null; }
   }
@@ -690,7 +702,20 @@ if (typeof authService.getSessionWithRetry !== 'function') {
     window.__bf_auth_booted = true;
 
     bindGoogleButton();
-    bindMagicLink();
+    if (isStagingHost()) {
+      bindMagicLink();
+    } else {
+      // Prod: Google-only (skjul magic link for å unngå rate-limit og support)
+      var emailInput = document.getElementById('magicLinkEmail');
+      var btn = document.getElementById('magicLinkBtn');
+      var hint = document.getElementById('magicLinkHint');
+      var divider = document.getElementById('magicLinkDivider'); // optional (hvis du har gitt den id i HTML)
+    
+      if (divider) divider.style.display = 'none';
+      if (emailInput) emailInput.style.display = 'none';
+      if (btn) btn.style.display = 'none';
+      if (hint) hint.style.display = 'none';
+    }
     // bindPricingBackButton(); // REMOVED: pricing.js handles this
     await authService.init();
   }
