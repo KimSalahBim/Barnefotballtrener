@@ -365,60 +365,67 @@
 
     return cancelBtn;
   }
+function setModalTexts(status) {
+  const modal = document.getElementById("subscriptionModal");
+  if (!modal) return;
 
-  function setModalTexts(status) {
-    // Støtt både gamle og nye id-er (noe kan være ulikt mellom bygg/versjoner)
-    const statusEl =
-      document.getElementById("subscriptionStatusText") ||
-      document.getElementById("subscriptionStatus");
-    const planEl =
-      document.getElementById("subscriptionPlanText") ||
-      document.getElementById("subscriptionPlan");
+  // Finn elementer inne i modalen (robust hvis samme id finnes andre steder)
+  const statusEl =
+    modal.querySelector("#subscriptionStatusText") ||
+    modal.querySelector("#subscriptionStatus");
+  const planEl =
+    modal.querySelector("#subscriptionPlanText") ||
+    modal.querySelector("#subscriptionPlan");
 
-    if (statusEl) statusEl.textContent = status?.active ? "Aktiv" : "Ikke aktiv";
-    if (planEl) {
-      const planMap = { month: "Månedlig", year: "Årlig", lifetime: "Livstid" };
-      planEl.textContent = planMap[status?.plan] || "—";
-    }
-
-    // Optional: liten info-linje hvis kansellert ved periodens slutt
-    const infoId = "subscriptionCancelInfo";
-    let info = document.getElementById(infoId);
-    const modal = document.getElementById("subscriptionModal");
-    if (!modal) return;
-
-    if (!info) {
-      info = document.createElement("div");
-      info.id = infoId;
-      info.style.marginTop = "12px";
-      info.style.padding = "10px 12px";
-      info.style.backgroundColor = "#fff3cd";
-      info.style.border = "1px solid #ffc107";
-      info.style.borderRadius = "6px";
-      info.style.fontSize = "14px";
-      info.style.color = "#856404";
-      info.style.fontWeight = "500";
-      // Plasser rett etter plan-info (i modal-body)
-      const body = modal.querySelector(".bf-modal__body");
-      if (body) {
-        body.appendChild(info);
-      } else {
-        modal.appendChild(info);
-      }
-    }
-
-    const cancelIso = status?.cancel_at || status?.current_period_end;
-    const shouldShowCancelInfo =
-      !!cancelIso && !!status?.active && (status?.cancel_at_period_end || status?.cancel_at);
-
-    if (shouldShowCancelInfo) {
-      const date = new Date(cancelIso).toLocaleDateString("no-NO");
-      info.textContent = `✅ Du har tilgang til ${date} (ut perioden du allerede har betalt for).`;
-      info.style.display = "block";
-    } else {
-      info.style.display = "none";
-    }
+  // Status: regn trial/lifetime som aktivt for UI
+  if (statusEl) {
+    const isActive = !!(status && (status.active || status.trial || status.lifetime));
+    statusEl.textContent = isActive ? "Aktiv" : "Ikke aktiv";
   }
+
+  // Plan: støtt både `plan` og `planType`
+  if (planEl) {
+    const planKey = (status && (status.plan || status.planType)) || null;
+    const planMap = { month: "Månedlig", year: "Årlig", lifetime: "Livstid" };
+    planEl.textContent = (planKey && planMap[planKey]) ? planMap[planKey] : "—";
+  }
+
+  // Info-linje ved kansellering / utløp av periode
+  const infoId = "subscriptionCancelInfo";
+  let info = document.getElementById(infoId);
+
+  if (!info) {
+    info = document.createElement("div");
+    info.id = infoId;
+    info.style.marginTop = "12px";
+    info.style.padding = "10px 12px";
+    info.style.backgroundColor = "#fff3cd";
+    info.style.border = "1px solid #ffc107";
+    info.style.borderRadius = "6px";
+    info.style.fontSize = "14px";
+    info.style.color = "#856404";
+    info.style.fontWeight = "500";
+
+    const body = modal.querySelector(".bf-modal__body");
+    if (body) body.appendChild(info);
+    else modal.appendChild(info);
+  }
+
+  const cancelIso = status?.cancel_at || status?.current_period_end;
+  const shouldShowCancelInfo =
+    !!cancelIso &&
+    !!(status?.active || status?.trial || status?.lifetime) &&
+    (status?.cancel_at_period_end || status?.cancel_at);
+
+  if (shouldShowCancelInfo) {
+    const date = new Date(cancelIso).toLocaleDateString("no-NO");
+    info.textContent = `✅ Du har tilgang til ${date} (ut perioden du allerede har betalt for).`;
+    info.style.display = "block";
+  } else {
+    info.style.display = "none";
+  }
+}
+
 
   async function openSubscriptionModal() {
     const modal = document.getElementById("subscriptionModal");
