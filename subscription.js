@@ -316,6 +316,7 @@
     // Lag ny knapp ved siden av "Administrer abonnement"
     cancelBtn = document.createElement("button");
     cancelBtn.id = "cancelPortalBtn";
+    cancelBtn.dataset.createdBy = "subscriptionjs";
     cancelBtn.type = "button";
     cancelBtn.className = manageBtn.className; // samme stil
     cancelBtn.style.marginLeft = "8px";
@@ -406,10 +407,46 @@
       });
     }
 
-    if (cancelBtn && !cancelBtn.__bound) {
+    // Oppdater cancel-knappens state hver gang modalen åpnes (unngå "stale" status)
+    if (cancelBtn) {
+      const hasStripeSub = !!status?.subscription_id;
+      const isLifetime = !!status?.lifetime || status?.plan === "lifetime";
+      const isTrial = !!status?.trial && !hasStripeSub && !isLifetime;
+      const alreadyCancellingNow = !!status?.cancel_at || !!status?.cancel_at_period_end;
+
+      // Kun ekte Stripe-subscriptions kan kanselleres (ikke trial / lifetime)
+      const canCancelNow = !!status?.active && hasStripeSub && !isLifetime && !alreadyCancellingNow;
+
+      cancelBtn.disabled = !canCancelNow;
+      cancelBtn.style.opacity = cancelBtn.disabled ? "0.6" : "1";
+      cancelBtn.style.cursor = cancelBtn.disabled ? "not-allowed" : "pointer";
+
+      // Unngå å ødelegge evt. eksisterende ikon/markup i HTML:
+      // Vi endrer kun knappetekst hvis knappen er opprettet av subscription.js.
+      const createdByScript = cancelBtn.dataset?.createdBy === "subscriptionjs";
+
+      if (isLifetime) {
+        if (createdByScript) cancelBtn.innerHTML = "🏆 Livstid (ingen kansellering)";
+        cancelBtn.title = "Livstidskjøp kan ikke kanselleres.";
+      } else if (isTrial) {
+        if (createdByScript) cancelBtn.innerHTML = "🧪 Prøveperiode (ingen kansellering)";
+        cancelBtn.title = "Prøveperioden avsluttes automatisk – ingen kansellering nødvendig.";
+      } else if (!hasStripeSub) {
+        if (createdByScript) cancelBtn.innerHTML = "— Ingen abonnement å kansellere";
+        cancelBtn.title = "Ingen Stripe-abonnement er knyttet til denne brukeren.";
+      } else if (alreadyCancellingNow) {
+        if (createdByScript) cancelBtn.innerHTML = "✅ Allerede kansellert";
+        cancelBtn.title = "Abonnementet er allerede satt til å avsluttes ved periodens slutt.";
+      } else {
+        if (createdByScript) cancelBtn.innerHTML = "🛑 Kanseller abonnement";
+        cancelBtn.title = "";
+      }
+    }
+if (cancelBtn && !cancelBtn.__bound) {
       cancelBtn.__bound = true;
       cancelBtn.addEventListener("click", async () => {
         try {
+          if (cancelBtn.disabled) return; // ekstra sikkerhet
           await subscriptionService.openPortal("cancel");
         } catch (e) {
           alert(`Kunne ikke åpne kanselleringsflyt: ${e.message}`);
