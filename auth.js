@@ -351,12 +351,23 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
     try {
       if (!this.supabase) throw new Error('Supabase ikke initialisert');
 
-      var redirectTo = getCanonicalRedirectUrl();
+  var redirectTo = getCanonicalRedirectUrl();
 
-      var res = await this.supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: redirectTo }
-      });
+  const hostname = window.location.hostname;
+  const isStagingHost =
+    hostname === "localhost" ||
+    hostname.endsWith(".vercel.app");
+
+  const options = {
+    redirectTo,
+    ...(isStagingHost ? { queryParams: { prompt: "select_account" } } : {})
+  };
+
+  var res = await this.supabase.auth.signInWithOAuth({
+    provider: "google",
+    options
+  });
+
 
       if (res && res.error) throw res.error;
       return { success: true };
