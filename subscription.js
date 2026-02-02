@@ -366,11 +366,13 @@
       }
     }
 
-    if (status?.cancel_at_period_end) {
-      const date = status?.cancel_at ? new Date(status.cancel_at).toLocaleDateString("no-NO") : "";
-      info.textContent = date
-        ? `⚠️ Abonnementet avsluttes ${date}`
-        : `⚠️ Abonnementet er satt til å avsluttes ved periodens slutt.`;
+    const cancelIso = status?.cancel_at || status?.current_period_end;
+    const shouldShowCancelInfo =
+      !!cancelIso && !!status?.active && (status?.cancel_at_period_end || status?.cancel_at);
+
+    if (shouldShowCancelInfo) {
+      const date = new Date(cancelIso).toLocaleDateString("no-NO");
+      info.textContent = `⚠️ Abonnementet avsluttes ${date}`;
       info.style.display = "block";
     } else {
       info.style.display = "none";
