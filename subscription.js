@@ -25,6 +25,31 @@
   // Token cache (5 min TTL) - SECURITY: Now keyed by userId to prevent cross-user leakage
   let tokenCache = { token: null, expires: 0, userId: null };
 
+  // Subscription-status cache (60s TTL) keyed by userId (reduces duplicate /api/subscription-status calls)
+  let statusCache = { status: null, expires: 0, userId: null };
+
+  function getCachedStatus(currentUserId) {
+    if (
+      statusCache.status &&
+      Date.now() < statusCache.expires &&
+      statusCache.userId === currentUserId
+    ) {
+      console.log(`${LOG_PREFIX} 💾 Using cached subscription status for user ${currentUserId?.substring(0, 8)}... (${Math.floor((statusCache.expires - Date.now())/1000)}s left)`);
+      return statusCache.status;
+    }
+    return null;
+  }
+
+  function setCachedStatus(status, userId, ttlMs = 60 * 1000) {
+    statusCache.status = status;
+    statusCache.userId = userId;
+    statusCache.expires = Date.now() + ttlMs;
+  }
+
+  function clearStatusCache() {
+    statusCache = { status: null, expires: 0, userId: null };
+  }
+
   function getCachedToken(currentUserId) {
     // SECURITY: Only return cached token if it belongs to current user
     if (tokenCache.token && 
@@ -46,6 +71,7 @@
   function clearTokenCache() {
     const hadToken = !!tokenCache.token;
     tokenCache = { token: null, expires: 0, userId: null };
+    clearStatusCache();
     if (hadToken) {
       console.log(`${LOG_PREFIX} 🗑️ Token cache cleared`);
     }
@@ -221,7 +247,8 @@
 
   // --- SubscriptionService (window.subscriptionService) ---
   const subscriptionService = {
-    async checkSubscription() {
+    async checkSubscription(options) {
+      const forceFresh = !!(options && options.forceFresh);
       let token;
       try {
         token = await getAccessToken();
@@ -241,10 +268,20 @@
       }
 
       try {
+        // Use last known userId from token cache (set by getAccessToken) to key status cache safely.
+        const currentUserId = tokenCache.userId || null;
+
+        if (!forceFresh && currentUserId) {
+          const cachedStatus = getCachedStatus(currentUserId);
+          if (cachedStatus) return cachedStatus;
+        }
+
         const status = await callApiJson(STATUS_ENDPOINT, {
           method: "GET",
           token,
         });
+
+        if (currentUserId) setCachedStatus(status, currentUserId, 60 * 1000);
         return status;
       } catch (e) {
         console.warn(`${LOG_PREFIX} ⚠️ subscription-status failed:`, e);
@@ -278,6 +315,7 @@
       });
 
       console.log(`${LOG_PREFIX} ✅ Trial started:`, data);
+      clearStatusCache();
 
       // Expected response: { success:true, trial_started_at, trial_ends_at, trial_days }
       return data;
@@ -285,6 +323,8 @@
 
     async openPortal(flow = "manage") {
       const token = await getAccessToken();
+      // Portal actions may change subscription state; clear cache so next check is fresh
+      clearStatusCache();
       const returnUrl = `${window.location.origin}/#`;
 
       const data = await callApiJson(PORTAL_ENDPOINT, {
@@ -373,7 +413,7 @@
 
     if (shouldShowCancelInfo) {
       const date = new Date(cancelIso).toLocaleDateString("no-NO");
-      info.textContent = `⚠️ Abonnementet avsluttes ${date}`;
+      info.textContent = `✅ Du har tilgang til ${date} (ut perioden du allerede har betalt for).`;
       info.style.display = "block";
     } else {
       info.style.display = "none";
