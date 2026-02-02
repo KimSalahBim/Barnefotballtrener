@@ -392,7 +392,14 @@ function setModalTexts(status) {
 
   // Info-linje ved kansellering / utløp av periode
   const infoId = "subscriptionCancelInfo";
-  let info = modal.querySelector("#" + infoId);
+  let info = modal.querySelector("#" + infoId) || document.getElementById(infoId);
+
+  // Hvis info finnes globalt men ikke i modalen, flytt den inn (unngår duplicate id)
+  if (info && !modal.contains(info)) {
+    const body = modal.querySelector(".bf-modal__body");
+    if (body) body.appendChild(info);
+    else modal.appendChild(info);
+  }
 
   if (!info) {
     info = document.createElement("div");
