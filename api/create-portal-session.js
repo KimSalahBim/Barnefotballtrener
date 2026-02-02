@@ -114,15 +114,104 @@ function safeReturnUrl(req, candidate) {
   }
 }
 
-// Finn/lag Stripe customer for e-post
-async function findOrCreateCustomer(email, userId) {
-  const list = await stripe.customers.list({ email, limit: 1 });
-  if (list.data?.length) return list.data[0];
+// Finn/velg Stripe customer for e-post (robust mot duplikater)
+// Regler:
+// 1) Foretrekk customer med metadata.supabase_user_id === userId
+// 2) Ellers: se på opptil 3 nyeste "ubundne" customers og velg en som har en subscription (active/trialing/past_due)
+// 3) Ellers: velg nyeste ubundne customer
+// 4) Hvis ingen ubundne: opprett ny customer (idempotent)
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
 
-  return await stripe.customers.create({
-    email,
-    metadata: { supabase_user_id: userId || '' },
+function makeIdempotencyKey(prefix, parts) {
+  const raw = [prefix, ...parts].join('_');
+  // Stripe idempotency key max length is 255; keep some margin
+  return raw.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 240);
+}
+
+function rankSubscriptionStatus(status) {
+  if (status === 'trialing') return 0;
+  if (status === 'active') return 1;
+  if (status === 'past_due') return 2;
+  if (status === 'unpaid') return 3;
+  if (status === 'incomplete') return 4;
+  if (status === 'incomplete_expired') return 5;
+  if (status === 'canceled') return 9;
+  return 8;
+}
+
+async function customerHasRelevantSubscription(customerId) {
+  const subs = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 10,
   });
+  const best = (subs.data || []).slice().sort((a, b) => rankSubscriptionStatus(a.status) - rankSubscriptionStatus(b.status))[0];
+  if (!best) return false;
+  return best.status === 'active' || best.status === 'trialing' || best.status === 'past_due';
+}
+
+async function bindCustomerToUserIfNeeded(customer, userId) {
+  const current = String(customer?.metadata?.supabase_user_id || '');
+  if (current === userId) return customer;
+  if (current && current !== userId) {
+    // Never re-bind a customer that is explicitly bound to another Supabase user
+    return null;
+  }
+
+  const key = makeIdempotencyKey('bftr_cust_bind', [userId, customer.id]);
+  const updated = await stripe.customers.update(
+    customer.id,
+    { metadata: { ...(customer.metadata || {}), supabase_user_id: userId } },
+    { idempotencyKey: key }
+  );
+  return updated;
+}
+
+async function findOrCreateCustomer(email, userId) {
+  const normalizedEmail = normalizeEmail(email);
+
+  // List more than 1 to handle duplicates deterministically
+  const list = await stripe.customers.list({ email: normalizedEmail, limit: 10 });
+  const customers = list.data || [];
+
+  // 1) Exact metadata match
+  const exact = customers.find((c) => String(c?.metadata?.supabase_user_id || '') === userId);
+  if (exact) return exact;
+
+  // Partition: exclude customers bound to another userId
+  const candidates = customers.filter((c) => {
+    const bound = String(c?.metadata?.supabase_user_id || '');
+    return !bound || bound === userId;
+  });
+
+  // 2) Look at up to 3 newest candidates and pick one with relevant subscription
+  const newestFew = candidates.slice(0, 3);
+  for (const c of newestFew) {
+    try {
+      const hasSub = await customerHasRelevantSubscription(c.id);
+      if (hasSub) {
+        const bound = await bindCustomerToUserIfNeeded(c, userId);
+        if (bound) return bound;
+      }
+    } catch (_) {
+      // ignore and continue
+    }
+  }
+
+  // 3) Fallback: bind newest candidate if possible
+  if (newestFew.length) {
+    const bound = await bindCustomerToUserIfNeeded(newestFew[0], userId);
+    if (bound) return bound;
+  }
+
+  // 4) Create new (idempotent)
+  const createKey = makeIdempotencyKey('bftr_cust_create', [userId, normalizedEmail]);
+  return await stripe.customers.create(
+    { email: normalizedEmail, metadata: { supabase_user_id: userId } },
+    { idempotencyKey: createKey }
+  );
 }
 
 async function pickSubscriptionId(customerId) {
