@@ -25,6 +25,23 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function idKey(prefix, parts) {
+  const safe = (parts || [])
+    .filter(Boolean)
+    .map((p) => String(p).replace(/[^a-zA-Z0-9_-]/g, '_'))
+    .join('_');
+  return `${prefix}_${safe}`.slice(0, 200);
+}
+
+function isDebugHost(hostHeader) {
+  const h = String(hostHeader || '').toLowerCase().split(':')[0];
+  return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app');
+}
+
 function mapPlanFromPriceId(priceId) {
   if (!priceId) return null;
   if (process.env.STRIPE_PRICE_MONTH && priceId === process.env.STRIPE_PRICE_MONTH) return 'month';
@@ -34,13 +51,42 @@ function mapPlanFromPriceId(priceId) {
 }
 
 async function findOrCreateCustomer(email, userId) {
-  const list = await stripe.customers.list({ email, limit: 1 });
-  if (list.data?.length) return list.data[0];
+  const normalizedEmail = normalizeEmail(email);
+  // Stripe returns most recent first.
+  const list = await stripe.customers.list({ email: normalizedEmail, limit: 10 });
+  const all = list.data || [];
 
-  return await stripe.customers.create({
-    email,
-    metadata: { supabase_user_id: userId || '' },
+  // Safety: never reuse a Stripe customer that is explicitly bound to another Supabase user.
+  const candidates = all.filter((c) => {
+    const bound = c?.metadata?.supabase_user_id;
+    return !bound || bound === userId;
   });
+
+  // 1) Strong match: metadata binding
+  const metaMatch = candidates.find((c) => c?.metadata?.supabase_user_id === userId);
+  if (metaMatch) return metaMatch;
+
+  // 2) Prefer a customer that already has a subscription (avoid picking a “random” duplicate)
+  for (const c of candidates.slice(0, 3)) {
+    try {
+      const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 1 });
+      if ((subs.data || []).length > 0) return c;
+    } catch (_) {
+      // ignore and continue
+    }
+  }
+
+  // 3) Fallback: most recent candidate
+  if (candidates.length > 0) return candidates[0];
+
+  // 4) Create new (idempotent)
+  return await stripe.customers.create(
+    {
+      email: normalizedEmail,
+      metadata: { supabase_user_id: userId || '' },
+    },
+    { idempotencyKey: idKey('bf_cus_create', [userId, normalizedEmail]) }
+  );
 }
 
 function pickBestSubscription(subs) {
@@ -243,6 +289,21 @@ export default async function handler(req, res) {
 
     const customer = await findOrCreateCustomer(email, user.id);
 
+    // Ensure deterministic binding for future lookups.
+    const meta = customer?.metadata || {};
+    if (!meta.supabase_user_id) {
+      try {
+        await stripe.customers.update(
+          customer.id,
+          { metadata: { ...meta, supabase_user_id: user.id } },
+          { idempotencyKey: idKey('bf_cus_update', [customer.id, user.id]) }
+        );
+      } catch (e) {
+        // Non-fatal: access checks below still use the customer.id we selected.
+        console.error('[subscription-status] ⚠️ Failed to update customer metadata:', e?.message || e);
+      }
+    }
+
     // 1) Stripe subscription
     const sub = await checkStripeSubscription(customer.id);
     if (sub.active) {
@@ -317,7 +378,14 @@ export default async function handler(req, res) {
       reason: tr.canStartTrial ? 'trial_available' : 'no_access',
     });
   } catch (err) {
-    console.error('subscription-status error:', err);
-    return res.status(500).json({ error: err.message || 'Server error' });
+    const errorId = `ss_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    console.error('[subscription-status] error_id=%s', errorId, err);
+
+    const debug = isDebugHost(req.headers.host);
+    return res.status(500).json(
+      debug
+        ? { error: 'Server error', error_id: errorId }
+        : { error: 'Server error' }
+    );
   }
 }

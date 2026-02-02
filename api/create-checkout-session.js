@@ -13,23 +13,55 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-
-function makeErrorId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
 }
 
-function normalizeHost(rawHost) {
-  return String(rawHost || '')
-    .trim()
-    .toLowerCase()
-    .replace(/:443$/, '')
-    .replace(/\.$/, '');
+function idKey(prefix, parts) {
+  const safe = (parts || [])
+    .filter(Boolean)
+    .map((p) => String(p).replace(/[^a-zA-Z0-9_-]/g, '_'))
+    .join('_');
+  // Stripe idempotency keys must be <= 255 chars; keep it short and deterministic.
+  return `${prefix}_${safe}`.slice(0, 200);
 }
 
-function isDebugHost(host) {
-  // Debug ONLY on localhost / 127.0.0.1 / *.vercel.app (strip port)
-  const h = String(host || '').toLowerCase().split(':')[0];
-  return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app');
+async function selectOrCreateCustomer({ email, userId }) {
+  const normalizedEmail = normalizeEmail(email);
+  // Stripe lists most recent customers first.
+  const list = await stripe.customers.list({ email: normalizedEmail, limit: 10 });
+  const candidates = (list.data || []).filter((c) => {
+    const metaId = c?.metadata?.supabase_user_id;
+    // If another supabase_user_id is already bound, never reuse that customer for safety.
+    return !metaId || metaId === userId;
+  });
+
+  // 1) Strong match: metadata.supabase_user_id
+  const metaMatch = candidates.find((c) => c?.metadata?.supabase_user_id === userId);
+  if (metaMatch) return metaMatch;
+
+  // 2) If duplicates exist without metadata, prefer a customer that already has a subscription.
+  // Limit network calls: check only the 3 most recent candidates.
+  for (const c of candidates.slice(0, 3)) {
+    try {
+      const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 1 });
+      if ((subs.data || []).length > 0) return c;
+    } catch (_) {
+      // ignore and continue
+    }
+  }
+
+  // 3) Fallback: most recent candidate
+  if (candidates.length > 0) return candidates[0];
+
+  // 4) Create new customer (idempotent)
+  return await stripe.customers.create(
+    {
+      email: normalizedEmail,
+      metadata: { supabase_user_id: userId },
+    },
+    { idempotencyKey: idKey('bf_cus_create', [userId, normalizedEmail]) }
+  );
 }
 
 function getBaseUrl(req) {
@@ -138,34 +170,18 @@ export default async function handler(req, res) {
 
     const mode = planType === "lifetime" ? "payment" : "subscription";
 
-    // 4) Finn eller opprett Stripe customer på e-post
-    let customerId = null;
+    // 4) Finn eller opprett Stripe customer på en deterministisk og idempotent måte
+    const customer = await selectOrCreateCustomer({ email, userId });
+    let customerId = customer.id;
 
-    // 4a) Finn på e-post først (bruk list for sikkerhet, ikke search)
-    const found = await stripe.customers.list({
-      email: email,
-      limit: 1,
-    });
-    customerId = found.data?.[0]?.id || null;
-
-    if (!customerId) {
-      // Opprett kunde med metadata
-      const created = await stripe.customers.create({
-        email,
-        metadata: {
-          supabase_user_id: userId,
-        },
-      });
-      customerId = created.id;
-    } else {
-      // Sørg for at metadata finnes (nyttig for senere feilsøking)
-      const existing = found.data?.[0];
-      const meta = existing?.metadata || {};
-      if (!meta.supabase_user_id) {
-        await stripe.customers.update(customerId, {
-          metadata: { ...meta, supabase_user_id: userId },
-        });
-      }
+    // Ensure metadata is present for later deterministic selection.
+    const meta = customer?.metadata || {};
+    if (!meta.supabase_user_id) {
+      await stripe.customers.update(
+        customerId,
+        { metadata: { ...meta, supabase_user_id: userId } },
+        { idempotencyKey: idKey('bf_cus_update', [customerId, userId]) }
+      );
     }
 
     // 5) Opprett Checkout Session
@@ -206,10 +222,7 @@ export default async function handler(req, res) {
       url: session.url
     });
   } catch (e) {
-    const errorId = makeErrorId();
-    const host = normalizeHost(req.headers.host);
-    const debug = isDebugHost(host);
-    console.error(`create-checkout-session error (${errorId}) [host=${host}]`, e);
-    return res.status(500).json({ error: "Server error", ...(debug ? { error_id: errorId } : {}) });
+    console.error("create-checkout-session error:", e);
+    return res.status(500).json({ error: "Server error" });
   }
 }
