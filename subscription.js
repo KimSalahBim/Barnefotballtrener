@@ -392,7 +392,7 @@ function setModalTexts(status) {
 
   // Info-linje ved kansellering / utløp av periode
   const infoId = "subscriptionCancelInfo";
-  let info = document.getElementById(infoId);
+  let info = modal.querySelector("#" + infoId);
 
   if (!info) {
     info = document.createElement("div");
