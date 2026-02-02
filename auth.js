@@ -5,6 +5,7 @@
   // AbortError guard (støy fra intern auth / fetch aborts)
   if (!window.__bf_aborterror_guard) {
     window.__bf_aborterror_guard = true;
+    // Use capture=true to intercept early (Edge kan logge/stoppe på "Uncaught (in promise) AbortError")
     window.addEventListener('unhandledrejection', function (event) {
       try {
         var reason = event && event.reason;
@@ -14,7 +15,7 @@
           if (event && typeof event.preventDefault === 'function') event.preventDefault();
         }
       } catch (e) {}
-    });
+    }, true);
   }
 
   // Prevent multiple boots/files
@@ -55,14 +56,16 @@
   }
       
   function withTimeout(promise, ms, label) {
-    return Promise.race([
-      promise,
-      new Promise(function (_, rej) {
-        setTimeout(function () {
-          rej(new Error((label || "TIMEOUT") + " (" + ms + "ms)"));
-        }, ms);
-      }),
-    ]);
+    var t;
+    var timeoutPromise = new Promise(function (_, rej) {
+      t = setTimeout(function () {
+        rej(new Error((label || "TIMEOUT") + " (" + ms + "ms)"));
+      }, ms);
+    });
+    return Promise.race([promise, timeoutPromise]).then(
+      function (val) { try { clearTimeout(t); } catch (e) {} return val; },
+      function (err) { try { clearTimeout(t); } catch (e) {} throw err; }
+    );
   }
 
   function readSessionFromLocalStorage() {
@@ -162,6 +165,10 @@
     this._handlingSignIn = false;
 
     this._lockKey = 'bf_auth_lock_v1';
+
+    // Single-flight for getSession to avoid Supabase auth lock/AbortError when multiple calls overlap
+    this._sessionPromise = null;
+    this._sessionPromiseAt = 0;
   }
 
   AuthService.prototype._refs = function () {
@@ -238,30 +245,71 @@
 
     await self._acquireLock();
     try {
-      // 1) Prøv supabase.getSession, men aldri la UI henge
-      try {
-        var r1 = await withTimeout(self.supabase.auth.getSession(), 2500, "supabase.getSession");
-        if (r1 && r1.error) throw r1.error;
+      // 0) Fast path: localStorage (unngår Supabase internal lock på Edge hvis storage er ok)
+      var ls0 = readSessionFromLocalStorage();
+      if (ls0) return ls0;
 
-        var s1 = (r1 && r1.data && r1.data.session) ? r1.data.session : null;
-        if (s1 && s1.user) return s1;
-      } catch (e1) {
-        console.warn("⚠️ getSession timeout/feil, prøver localStorage fallback:", e1);
+      // 1) Single-flight getSession: aldri start flere overlappende getSession-kall
+      var now = Date.now();
+
+      if (!self._sessionPromise || (now - (self._sessionPromiseAt || 0) > 15000)) {
+        self._sessionPromiseAt = now;
+
+        // Catch -> strukturert retur for å unngå "Uncaught (in promise) AbortError" ved interne locks
+        self._sessionPromise = self.supabase.auth.getSession().catch(function (err) {
+          return { data: { session: null }, error: err };
+        });
+
+        // Clear when completed (only if still the same promise)
+        try {
+          (function (createdAt, p) {
+            p.finally(function () {
+              if (self._sessionPromise === p && self._sessionPromiseAt === createdAt) {
+                self._sessionPromise = null;
+                self._sessionPromiseAt = 0;
+              }
+            });
+          })(self._sessionPromiseAt, self._sessionPromise);
+        } catch (e0) {}
       }
 
-      // 2) Fallback: localStorage (ofte stabil selv når getSession henger)
+      // 2) Vent litt lengre (Edge kan henge litt) – men uten å trigge nye getSession-kall
+      var r1 = null;
+      try {
+        r1 = await withTimeout(self._sessionPromise, 8000, "supabase.getSession");
+      } catch (e1) {
+        console.warn("⚠️ getSession timeout/feil:", e1);
+      }
+
+      if (r1 && r1.error) {
+        var msg = String((r1.error && r1.error.message) || r1.error || '');
+        if (msg.indexOf('AbortError') !== -1 || msg.indexOf('signal is aborted') !== -1 || msg.toLowerCase().indexOf('lock') !== -1) {
+          console.warn('⚠️ Supabase auth lock/AbortError – bruker localStorage fallback. (Tips: lukk andre faner)');
+        } else {
+          console.warn('⚠️ Supabase getSession error:', r1.error);
+        }
+      }
+
+      var s1 = (r1 && r1.data && r1.data.session) ? r1.data.session : null;
+      if (s1 && s1.user) return s1;
+
+      // 3) Fallback: localStorage (ofte stabil selv når getSession henger)
       var ls = readSessionFromLocalStorage();
       if (ls) return ls;
 
-      // 3) Én kort retry (best effort)
+      // 4) Best-effort "late" wait (samme promise, ingen nye kall)
       try {
-        await new Promise(function (r) { setTimeout(r, 300); });
-        var r2 = await withTimeout(self.supabase.auth.getSession(), 1800, "supabase.getSession.retry");
-        if (r2 && r2.error) throw r2.error;
+        await new Promise(function (r) { setTimeout(r, 400); });
+        if (self._sessionPromise) {
+          var r2 = null;
+          try {
+            r2 = await withTimeout(self._sessionPromise, 2000, "supabase.getSession.late");
+          } catch (e2) {}
 
-        var s2 = (r2 && r2.data && r2.data.session) ? r2.data.session : null;
-        if (s2 && s2.user) return s2;
-      } catch (e2) {}
+          var s2 = (r2 && r2.data && r2.data.session) ? r2.data.session : null;
+          if (s2 && s2.user) return s2;
+        }
+      } catch (e3) {}
 
       return null;
     } finally {
@@ -370,10 +418,8 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
     hostname === "localhost" ||
     hostname.endsWith(".vercel.app");
 
-  const options = {
-    redirectTo,
-    ...(isStagingHost ? { queryParams: { prompt: "select_account" } } : {})
-  };
+  var options = { redirectTo: redirectTo };
+  if (isStagingHost) options.queryParams = { prompt: "select_account" };
 
   var res = await this.supabase.auth.signInWithOAuth({
     provider: "google",
