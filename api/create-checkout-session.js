@@ -40,12 +40,15 @@ async function selectOrCreateCustomer({ email, userId }) {
   const metaMatch = candidates.find((c) => c?.metadata?.supabase_user_id === userId);
   if (metaMatch) return metaMatch;
 
-  // 2) If duplicates exist without metadata, prefer a customer that already has a subscription.
+  // 2) If duplicates exist without metadata, prefer a customer that already has a relevant subscription.
   // Limit network calls: check only the 3 most recent candidates.
   for (const c of candidates.slice(0, 3)) {
     try {
-      const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 1 });
-      if ((subs.data || []).length > 0) return c;
+      const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 10 });
+      const hasRelevant = (subs.data || []).some((s) =>
+        s && (s.status === 'active' || s.status === 'trialing' || s.status === 'past_due')
+      );
+      if (hasRelevant) return c;
     } catch (_) {
       // ignore and continue
     }

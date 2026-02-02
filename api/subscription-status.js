@@ -66,11 +66,15 @@ async function findOrCreateCustomer(email, userId) {
   const metaMatch = candidates.find((c) => c?.metadata?.supabase_user_id === userId);
   if (metaMatch) return metaMatch;
 
-  // 2) Prefer a customer that already has a subscription (avoid picking a “random” duplicate)
+  // 2) Prefer a customer that already has a relevant subscription (active/trialing/past_due)
+  // (avoid picking a “random” duplicate that only has canceled/incomplete history)
   for (const c of candidates.slice(0, 3)) {
     try {
-      const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 1 });
-      if ((subs.data || []).length > 0) return c;
+      const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 10 });
+      const hasRelevant = (subs.data || []).some((s) =>
+        s && (s.status === 'active' || s.status === 'trialing' || s.status === 'past_due')
+      );
+      if (hasRelevant) return c;
     } catch (_) {
       // ignore and continue
     }
@@ -221,7 +225,7 @@ async function checkTrialStatus(userId) {
       .maybeSingle();
 
     if (error) {
-      return { trial: false, trial_ends_at: null, trial_plan: null, canStartTrial: false };
+      return { trial: false, trial_ends_at: null, trial_plan: null, canStartTrial: false, trial_used: false, trial_expired: false };
     }
 
     const now = new Date();
@@ -229,16 +233,20 @@ async function checkTrialStatus(userId) {
     const ends = data?.trial_ends_at ? new Date(data.trial_ends_at) : null;
 
     const trialActive = !!(ends && !Number.isNaN(ends.getTime()) && ends > now);
-    const trialUsed = !!(started && !Number.isNaN(started.getTime()));
+    const trialUsed = !!((started && !Number.isNaN(started.getTime())) || (ends && !Number.isNaN(ends.getTime())));
+    const trialExpired = !!(trialUsed && ends && !Number.isNaN(ends.getTime()) && ends <= now);
 
     return {
       trial: trialActive,
+      // Include ends_at even if expired (useful for UX/support messaging)
       trial_ends_at: data?.trial_ends_at || null,
       trial_plan: data?.trial_plan || null,
       canStartTrial: !trialUsed,
+      trial_used: trialUsed,
+      trial_expired: trialExpired,
     };
   } catch (_) {
-    return { trial: false, trial_ends_at: null, trial_plan: null, canStartTrial: false };
+    return { trial: false, trial_ends_at: null, trial_plan: null, canStartTrial: false, trial_used: false, trial_expired: false };
   }
 }
 
@@ -363,6 +371,10 @@ export default async function handler(req, res) {
     }
 
     // 4) Ingen tilgang
+    const noAccessReason = tr.trial_expired
+      ? 'trial_expired'
+      : (tr.canStartTrial ? 'trial_available' : 'no_access');
+
     return res.status(200).json({
       active: false,
       trial: false,
@@ -373,9 +385,10 @@ export default async function handler(req, res) {
       current_period_end: sub.current_period_end || null,
       cancel_at_period_end: sub.cancel_at_period_end || false,
       cancel_at: sub.cancel_at || null,
-      trial_ends_at: null,
+      // If trial has been used (and may be expired), return trial_ends_at for clearer UX
+      trial_ends_at: (tr.trial_used && tr.trial_ends_at) ? tr.trial_ends_at : null,
       canStartTrial: !!tr.canStartTrial,
-      reason: tr.canStartTrial ? 'trial_available' : 'no_access',
+      reason: noAccessReason,
     });
   } catch (err) {
     const errorId = `ss_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
