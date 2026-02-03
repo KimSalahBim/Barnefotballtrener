@@ -553,6 +553,142 @@ if (cancelBtn && !cancelBtn.__bound) {
       }, { capture: true });
     }
 
+    // GDPR Art. 20: Export Data button
+    const exportDataBtn = document.getElementById("exportDataBtn");
+    if (exportDataBtn && !exportDataBtn.__bound) {
+      exportDataBtn.__bound = true;
+      exportDataBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+
+        console.log(`${LOG_PREFIX} 📥 Eksporterer data...`);
+        
+        try {
+          const token = await getAccessToken();
+          if (!token) {
+            alert("Kunne ikke hente tilgangsnøkkel. Logg inn på nytt.");
+            return;
+          }
+
+          const response = await fetchWithTimeout("/api/export-data", {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }, 15000);
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: "Unknown error" }));
+            throw new Error(error.error || "Eksport feilet");
+          }
+
+          // Download the JSON file
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `barnefotballtrener-data-${Date.now()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+
+          alert("✅ Dine data er lastet ned!\n\nFilen inneholder:\n- Kontoinformasjon\n- Abonnementshistorikk\n- Betalingshistorikk\n\nSpillerlister må eksporteres separat via \"Eksporter\"-knappen i Spillere-seksjonen.");
+
+        } catch (err) {
+          console.error(`${LOG_PREFIX} ❌ Export failed:`, err);
+          alert(`Kunne ikke eksportere data: ${err.message}\n\nKontakt support@barnefotballtrener.no hvis problemet vedvarer.`);
+        }
+      }, { capture: true });
+    }
+
+    // GDPR Art. 17: Delete Account button
+    const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+    if (deleteAccountBtn && !deleteAccountBtn.__bound) {
+      deleteAccountBtn.__bound = true;
+      deleteAccountBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+
+        // Step 1: First warning
+        const confirm1 = window.confirm(
+          "⚠️ ADVARSEL: Slette konto permanent?\n\n" +
+          "Dette vil:\n" +
+          "• Slette din bruker og alle data\n" +
+          "• Kansellere alle aktive abonnementer\n" +
+          "• Ikke kunne angres\n\n" +
+          "Betalingshistorikk beholdes i 7 år (lovkrav)\n\n" +
+          "Er du sikker?"
+        );
+
+        if (!confirm1) return;
+
+        // Step 2: Type confirmation
+        const confirm2 = window.prompt(
+          "For å bekrefte sletting, skriv:\n\nDELETE_MY_ACCOUNT\n\n" +
+          "(dette kan ikke angres)"
+        );
+
+        if (confirm2 !== "DELETE_MY_ACCOUNT") {
+          alert("Kontosletting avbrutt.");
+          return;
+        }
+
+        console.log(`${LOG_PREFIX} 🗑️ Sletter konto...`);
+        
+        try {
+          const token = await getAccessToken();
+          if (!token) {
+            alert("Kunne ikke hente tilgangsnøkkel. Logg inn på nytt.");
+            return;
+          }
+
+          const response = await fetchWithTimeout("/api/delete-account", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ confirmation: "DELETE_MY_ACCOUNT" }),
+          }, 20000);
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: "Unknown error" }));
+            throw new Error(error.error || "Sletting feilet");
+          }
+
+          const result = await response.json();
+          
+          alert(
+            "✅ Din konto er nå permanent slettet.\n\n" +
+            "Hva som ble slettet:\n" +
+            "• Bruker og påloggingsinformasjon\n" +
+            "• Abonnementer kansellert\n" +
+            "• App-data fjernet\n\n" +
+            "Betalingshistorikk beholdes i 7 år per norsk lov (bokføringsloven).\n\n" +
+            "Du vil nå bli logget ut."
+          );
+
+          // Clear localStorage and redirect to login
+          try {
+            localStorage.clear();
+          } catch (_) {}
+          
+          window.location.href = "/";
+
+        } catch (err) {
+          console.error(`${LOG_PREFIX} ❌ Delete failed:`, err);
+          alert(
+            `Kunne ikke slette konto: ${err.message}\n\n` +
+            "Kontakt support@barnefotballtrener.no for manuell sletting."
+          );
+        }
+      }, { capture: true });
+    }
+
   }
 
   function closeSubscriptionModal() {

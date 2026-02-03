@@ -262,7 +262,26 @@
           const newName = window.prompt('Nytt navn:', p.name);
           if (newName === null) return;
           const name = String(newName).trim();
+          
+          // PRIVACY COMPLIANCE: Validate player name length (max 50 chars)
           if (!name) return showNotification('Navn kan ikke være tomt', 'error');
+          if (name.length > 50) {
+            return showNotification('Spillernavn må være maks 50 tegn (kun fornavn anbefales)', 'error');
+          }
+          
+          // PRIVACY WARNING: Alert if name contains space (might be full name)
+          if (name.includes(' ') && !p.name.includes(' ')) {
+            // Only warn if adding space (not if already had space)
+            const confirmed = window.confirm(
+              '⚠️ PERSONVERN-ADVARSEL:\n\n' +
+              'Navnet inneholder mellomrom og kan være et fullt navn.\n\n' +
+              'For å beskytte barns personvern bør du KUN bruke fornavn.\n\n' +
+              'Vil du fortsette likevel?'
+            );
+            if (!confirmed) {
+              return;
+            }
+          }
 
           let skill = p.skill;
           if (state.settings.useSkill) {
@@ -817,7 +836,26 @@
         const goalieEl = $('playerGoalie');
 
         const name = String(nameEl?.value || '').trim();
+        
+        // PRIVACY COMPLIANCE: Validate player name length (max 50 chars)
+        // Prevents excessive personal data storage about children (GDPR Art. 5(1)(c) - data minimization)
         if (!name) return showNotification('Skriv inn et navn først', 'error');
+        if (name.length > 50) {
+          return showNotification('Spillernavn må være maks 50 tegn (kun fornavn anbefales)', 'error');
+        }
+        
+        // PRIVACY WARNING: Alert if name contains space (might be full name)
+        if (name.includes(' ')) {
+          const confirmed = window.confirm(
+            '⚠️ PERSONVERN-ADVARSEL:\n\n' +
+            'Navnet inneholder mellomrom og kan være et fullt navn.\n\n' +
+            'For å beskytte barns personvern bør du KUN bruke fornavn.\n\n' +
+            'Vil du fortsette likevel?'
+          );
+          if (!confirmed) {
+            return;
+          }
+        }
 
         const skill = Number(skillEl?.value ?? 3);
         const goalie = !!goalieEl?.checked;

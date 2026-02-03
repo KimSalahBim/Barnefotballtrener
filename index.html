@@ -93,6 +93,12 @@
         Vi sender en lenke på e-post. Klikk på den for å logge inn.
       </p>
 
+      <!-- Legal text -->
+      <p class="small-text" style="margin-top: 20px; font-size: 0.8em; opacity: 0.7; text-align: center; line-height: 1.4;">
+        Ved å logge inn godtar du våre 
+        <a href="/terms.html" style="color: #0b5bd3; text-decoration: underline;">vilkår</a> og 
+        <a href="/privacy.html" style="color: #0b5bd3; text-decoration: underline;">personvernerklæring</a>
+      </p>
 
     </div>
   </div>
@@ -292,12 +298,22 @@
         <i class="fas fa-copy"></i> Kopiér support-epost
       </button>
 
+      <!-- GDPR Art. 20: Right to Data Portability -->
+      <button id="exportDataBtn" class="btn-secondary" type="button" title="Last ned alle dine data (GDPR Art. 20)">
+        <i class="fas fa-download"></i> Eksporter mine data
+      </button>
+
       <!-- NY: Stripe Customer Portal -->
       <button id="managePortalBtn" class="btn-primary" type="button">
         <i class="fas fa-gear"></i> Administrer abonnement
       </button>
 
-      <button class="btn-primary" type="button" data-close="subscriptionModal">
+      <!-- GDPR Art. 17: Right to Erasure -->
+      <button id="deleteAccountBtn" class="btn-danger" type="button" title="Slett konto permanent (GDPR Art. 17)" style="margin-top: 20px; width: 100%;">
+        <i class="fas fa-trash"></i> Slett konto permanent
+      </button>
+
+      <button class="btn-primary" type="button" data-close="subscriptionModal" style="margin-top: 10px;">
         OK
       </button>
     </div>
@@ -460,8 +476,14 @@
         <div class="player-form">
           <div class="form-row">
             <div class="form-group">
-              <label for="playerName">Navn</label>
-              <input type="text" id="playerName" placeholder="F.eks. Marie" autocomplete="off">
+              <label for="playerName">Navn <small style="color: #666;">(kun fornavn anbefales)</small></label>
+              <input 
+                type="text" 
+                id="playerName" 
+                placeholder="F.eks. Marie" 
+                autocomplete="off"
+                maxlength="50"
+                title="Maks 50 tegn. Kun fornavn anbefales for barns personvern.">
             </div>
 
             <div class="form-group">
@@ -802,7 +824,17 @@
 <!-- Notification -->
 <div id="notification" class="notification" style="display:none;"></div>
 
-
+<!-- Footer (legal links) -->
+<footer style="text-align: center; padding: 20px; color: #666; font-size: 0.9em; border-top: 1px solid #eee; margin-top: 40px;">
+  <p>
+    <a href="/privacy.html" style="color: #0b5bd3; text-decoration: none; margin: 0 10px;">Personvernerklæring</a> |
+    <a href="/terms.html" style="color: #0b5bd3; text-decoration: none; margin: 0 10px;">Vilkår for bruk</a> |
+    <a href="mailto:support@barnefotballtrener.no" style="color: #0b5bd3; text-decoration: none; margin: 0 10px;">Kontakt</a>
+  </p>
+  <p style="margin-top: 10px; font-size: 0.85em; color: #999;">
+    © 2025 Barnefotballtrener | Laget med ❤️ for norske fotballtrenere
+  </p>
+</footer>
 
 <!-- Scripts - VIKTIG REKKEFØLGE! -->
 <script src="env.js"></script>
