@@ -200,6 +200,7 @@ export default async function handler(req, res) {
       metadata: {
         supabase_user_id: userId,
         plan_type: planType,
+        price_id: priceId,
       },
       // Dette er nyttig på subscriptions:
       subscription_data:
@@ -208,6 +209,7 @@ export default async function handler(req, res) {
               metadata: {
                 supabase_user_id: userId,
                 plan_type: planType,
+                price_id: priceId,
               },
             }
           : undefined,
