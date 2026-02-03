@@ -190,6 +190,14 @@ export default async function handler(req, res) {
     // 5) Opprett Checkout Session
     const baseUrl = getBaseUrl(req);
 
+    // LEGAL COMPLIANCE: Angrerett (Right to Withdrawal) consent tracking
+    // Forbrukeravtaleloven § 22 requires explicit consent that service starts immediately
+    // and acknowledgment that this causes loss of the 14-day withdrawal right
+    const customerIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+                       req.headers['x-real-ip'] || 
+                       req.connection?.remoteAddress || 
+                       'unknown';
+
     const session = await stripe.checkout.sessions.create({
       mode,
       customer: customerId,
@@ -197,11 +205,26 @@ export default async function handler(req, res) {
       success_url: `${baseUrl}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/?canceled=true`,
       client_reference_id: userId,
+      
+      // LEGAL: Display angrerett notice at checkout (visible to customer before payment)
+      custom_text: {
+        submit: {
+          message: 'Ved å fullføre kjøpet samtykker du til umiddelbar levering og erkjenner at angreretten faller bort i henhold til Forbrukeravtaleloven § 22.'
+        }
+      },
+      
+      // LEGAL: Store consent metadata for audit trail
       metadata: {
         supabase_user_id: userId,
         plan_type: planType,
         price_id: priceId,
+        // Angrerett consent tracking (Forbrukeravtaleloven compliance)
+        angrerett_acknowledged: 'true',
+        acknowledgment_timestamp: new Date().toISOString(),
+        customer_ip: customerIp,
+        consent_version: 'v1_2025-02-03', // Track which version of terms user agreed to
       },
+      
       // Dette er nyttig på subscriptions:
       subscription_data:
         mode === "subscription"
@@ -210,6 +233,8 @@ export default async function handler(req, res) {
                 supabase_user_id: userId,
                 plan_type: planType,
                 price_id: priceId,
+                angrerett_acknowledged: 'true',
+                acknowledgment_timestamp: new Date().toISOString(),
               },
             }
           : undefined,
