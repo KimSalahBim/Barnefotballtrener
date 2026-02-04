@@ -434,32 +434,57 @@ button#googleSignInBtn.btn-google:active{
 }
 
 #passwordProtection .public-landing .landing-muted {
-  margin: 10px 0 0;
-  font-size: 0.9rem;
-  opacity: 0.85;
+  margin: 6px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #22324a;
+  opacity: 0.95;
 }
 
 #passwordProtection .public-landing .landing-faq {
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(11, 91, 211, 0.14);
   border-radius: 12px;
   padding: 10px 12px;
   margin-top: 10px;
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(11, 91, 211, 0.035);
+}
+
+#passwordProtection .public-landing .landing-faq[open] {
+  background: rgba(11, 91, 211, 0.055);
 }
 
 #passwordProtection .public-landing .landing-faq summary {
   cursor: pointer;
   font-weight: 700;
   list-style: none;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #0b1220;
 }
 
-#passwordProtection .public-landing .landing-faq summary::-webkit-details-marker {
-  display: none;
+#passwordProtection .public-landing .landing-faq summary::-webkit-details-marker { display: none; }
+
+#passwordProtection .public-landing .landing-faq summary::after {
+  content: "▾";
+  flex: 0 0 auto;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(11, 91, 211, 0.9);
+  transform: rotate(0deg) translateY(-1px);
+  transition: transform 160ms ease;
+}
+
+#passwordProtection .public-landing .landing-faq[open] summary::after {
+  transform: rotate(180deg) translateY(-1px);
 }
 
 #passwordProtection .public-landing .landing-faq p {
   margin: 10px 0 0;
   line-height: 1.6;
+  color: #22324a;
 }
 
 #passwordProtection .public-landing .landing-faq a {
@@ -478,13 +503,18 @@ button#googleSignInBtn.btn-google:active{
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 8px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  gap: 10px;
+  padding: 10px 10px;
+  border: 1px solid rgba(11, 91, 211, 0.14);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.02);
-  font-size: 0.9rem;
-  opacity: 0.95;
+  background: rgba(11, 91, 211, 0.035);
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: #0b1220;
+}
+
+#passwordProtection .landing-trust .trust-item i {
+  color: rgba(11, 91, 211, 0.95);
 }
 
 #passwordProtection .landing-footer-links {
@@ -498,7 +528,12 @@ button#googleSignInBtn.btn-google:active{
 
 #passwordProtection .landing-footer-links a {
   color: #0b5bd3;
-  text-decoration: underline;
+  text-decoration: none;
+  font-weight: 650;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 91, 211, 0.18);
+  background: rgba(11, 91, 211, 0.035);
 }
 
 #passwordProtection .landing-footer-links .dot {
