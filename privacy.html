@@ -1,384 +1,101 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Personvernerklæring - Barnefotballtrener</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    .legal-container {
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .legal-container h1 {
-      color: #0b5bd3;
-      margin-bottom: 10px;
-    }
-    .legal-container h2 {
-      color: #333;
-      margin-top: 30px;
-      margin-bottom: 15px;
-      font-size: 1.3em;
-    }
-    .legal-container p, .legal-container ul {
-      line-height: 1.6;
-      color: #444;
-      margin-bottom: 15px;
-    }
-    .legal-container ul {
-      margin-left: 20px;
-    }
-    .legal-container a {
-      color: #0b5bd3;
-      text-decoration: none;
-    }
-    .legal-container a:hover {
-      text-decoration: underline;
-    }
-    .back-link {
-      display: inline-block;
-      margin-bottom: 20px;
-      color: #0b5bd3;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .back-link:hover {
-      text-decoration: underline;
-    }
-    .last-updated {
-      color: #666;
-      font-size: 0.9em;
-      margin-top: 10px;
-    }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Personvernerklæring – Barnefotballtrener</title>
+  <meta name="description" content="Personvernerklæring for Barnefotballtrener." />
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <div class="legal-container">
-    <a href="/" class="back-link">← Tilbake til appen</a>
-    
+  <main class="legal">
     <h1>Personvernerklæring</h1>
-    <p class="last-updated">Sist oppdatert: 3. februar 2025</p>
 
+    <p><strong>Sist oppdatert:</strong> 4. februar 2026</p>
+
+    <h2>1. Hvem vi er</h2>
     <p>
-      Denne personvernerklæringen forklarer hvordan Barnefotballtrener ("vi", "oss", "appen") 
-      samler inn, bruker og beskytter dine personopplysninger når du bruker vår tjeneste.
+      Barnefotballtrener er en norsk webapp/PWA for trenere i barnefotball.
+      Har du spørsmål om personvern, kontakt oss på
+      <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.
     </p>
 
-    <h2>1. Behandlingsansvarlig</h2>
-    <p>
-      <strong>Kim Rune Holmvik</strong><br>
-      Steinkjer, Trøndelag, Norge<br>
-      E-post: <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>
-    </p>
-    <p>
-      <strong>Personvernombud:</strong> Vi er ikke pålagt å utnevne personvernombud i henhold til 
-      GDPR Art. 37 (gjelder kun offentlige myndigheter, storskala overvåking eller storskala 
-      behandling av sensitive personopplysninger). For alle henvendelser om personvern, 
-      kontakt behandlingsansvarlig direkte via e-post over.
-    </p>
+    <h2>2. Hvilke data vi behandler</h2>
 
-    <h2>2. Hvilke opplysninger samler vi inn?</h2>
-    <p>Vi samler inn følgende typer informasjon:</p>
-    
-    <h3>2.1 Informasjon du gir oss</h3>
+    <h3>2.1 Konto og innlogging</h3>
     <ul>
-      <li><strong>Kontoopplysninger:</strong> E-postadresse, navn (via Google-innlogging eller magic link)</li>
-      <li><strong>Brukerdata:</strong> Spillerlister, lagoppsett, treningsdata og annen informasjon du legger inn i appen</li>
-      <li><strong>Betalingsinformasjon:</strong> Håndteres av Stripe (vi lagrer ikke kortinformasjon direkte)</li>
+      <li><strong>E-postadresse</strong> (fra Google-login) for å identifisere kontoen din.</li>
+      <li><strong>Supabase bruker-ID</strong> (teknisk identifikator) for kontoen.</li>
     </ul>
 
-    <h3>2.2 Informasjon vi samler automatisk</h3>
-    <ul>
-      <li><strong>Teknisk informasjon:</strong> IP-adresse, nettlesertype, enhet, tidsstempler for innlogging</li>
-      <li><strong>Bruksdata:</strong> Hvilke funksjoner du bruker, feilmeldinger</li>
-    </ul>
-
-    <h2>3. Hvorfor samler vi inn opplysningene?</h2>
-    <p>Vi bruker dine personopplysninger til:</p>
-    <ul>
-      <li><strong>Levere tjenesten:</strong> Gi deg tilgang til appen og lagre dine data</li>
-      <li><strong>Autentisering:</strong> Verifisere din identitet ved innlogging</li>
-      <li><strong>Abonnementshåndtering:</strong> Administrere betalinger, prøveperioder og abonnementer</li>
-      <li><strong>Kundesupport:</strong> Svare på henvendelser og løse problemer</li>
-      <li><strong>Forbedring av tjenesten:</strong> Forstå hvordan appen brukes og forbedre funksjoner</li>
-      <li><strong>Juridiske forpliktelser:</strong> Oppfylle lovkrav (f.eks. regnskapslovgivning)</li>
-    </ul>
-
-    <h2>4. Rettslig grunnlag (GDPR)</h2>
-    <p>Vi behandler dine personopplysninger basert på:</p>
-    <ul>
-      <li><strong>Samtykke (GDPR Art. 6(1)(a)):</strong> Ved registrering og innlogging</li>
-      <li><strong>Kontraktsoppfyllelse (GDPR Art. 6(1)(b)):</strong> For å levere tjenesten du har kjøpt/registrert deg for</li>
-      <li><strong>Legitimate interesser (GDPR Art. 6(1)(f)):</strong> Forbedring av tjenesten og sikkerhet</li>
-    </ul>
-
-    <h2>5. Hvem deler vi opplysningene med?</h2>
-    <p>Vi deler dine opplysninger med følgende tredjeparts-tjenester:</p>
-    
-    <h3>5.1 Supabase (database og autentisering)</h3>
-    <ul>
-      <li><strong>Hva:</strong> Lagring av brukerdata, e-post, spillerlister</li>
-      <li><strong>Hvor:</strong> EU (London, UK - AWS eu-west-2)</li>
-      <li><strong>Hvorfor:</strong> Database og autentisering</li>
-      <li><strong>Personvern:</strong> <a href="https://supabase.com/privacy" target="_blank">supabase.com/privacy</a></li>
-    </ul>
-
-    <h3>5.2 Stripe (betalinger)</h3>
-    <ul>
-      <li><strong>Hva:</strong> E-post, betalingsinformasjon, abonnementsdata</li>
-      <li><strong>Hvor:</strong> USA (GDPR-compliant via EU-US Data Privacy Framework)</li>
-      <li><strong>Hvorfor:</strong> Håndtering av betalinger og abonnementer</li>
-      <li><strong>Personvern:</strong> <a href="https://stripe.com/privacy" target="_blank">stripe.com/privacy</a></li>
-    </ul>
-
-    <h3>5.3 Google (OAuth-innlogging)</h3>
-    <ul>
-      <li><strong>Hva:</strong> E-post, navn, profilbilde (hvis du velger Google-innlogging)</li>
-      <li><strong>Hvor:</strong> USA</li>
-      <li><strong>Hvorfor:</strong> Sikker innlogging uten passord</li>
-      <li><strong>Personvern:</strong> <a href="https://policies.google.com/privacy" target="_blank">policies.google.com/privacy</a></li>
-    </ul>
-
-    <h3>5.4 Vercel (hosting)</h3>
-    <ul>
-      <li><strong>Hva:</strong> IP-adresse, bruksdata</li>
-      <li><strong>Hvor:</strong> Varierer (primært USA/EU)</li>
-      <li><strong>Hvorfor:</strong> Hosting av appen</li>
-      <li><strong>Personvern:</strong> <a href="https://vercel.com/legal/privacy-policy" target="_blank">vercel.com/legal/privacy-policy</a></li>
-    </ul>
-
-    <p><strong>Vi selger ALDRI dine personopplysninger til tredjeparter.</strong></p>
-
-    <h3>5.5 Databehandling og juridiske garantier</h3>
+    <h3>2.2 Prøveperiode (hvis aktivert)</h3>
     <p>
-      Alle våre tredjeparts-leverandører er <strong>GDPR-compliant</strong> og opererer under 
-      juridiske rammeverk som sikrer dine rettigheter:
-    </p>
-    <ul>
-      <li><strong>Supabase:</strong> Tilbyr standard databehandleravtale (DPA) i henhold til GDPR Art. 28. 
-      <a href="https://supabase.com/privacy" target="_blank">Supabase DPA</a></li>
-      <li><strong>Stripe:</strong> DPA inkludert i deres Terms of Service. 
-      <a href="https://stripe.com/en-no/legal/dpa" target="_blank">Stripe DPA</a></li>
-      <li><strong>Google (OAuth):</strong> Google opptrer som selvstendig behandlingsansvarlig for 
-      autentiseringsdata. <a href="https://policies.google.com/privacy" target="_blank">Google Privacy</a></li>
-      <li><strong>Vercel (Hosting):</strong> GDPR-compliant hosting. 
-      <a href="https://vercel.com/legal/dpa" target="_blank">Vercel DPA</a></li>
-    </ul>
-    <p>
-      <strong>Dine rettigheter:</strong> Du kan når som helst be om innsyn i hvordan disse 
-      leverandørene behandler dine data, enten via oss eller direkte til leverandøren.
-    </p>
-    <p>
-      <strong>Sub-prosessorer:</strong> En oppdatert liste over alle sub-prosessorer er tilgjengelig 
-      ved henvendelse til <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>
+      Hvis appen tilbyr prøveperiode, lagres tekniske felter knyttet til prøveperioden (start/slutt og evt. plan)
+      i vår database (Supabase) for å kunne gi/stenge tilgang riktig.
     </p>
 
-    <h2>6. Cookies og sporing</h2>
+    <h3>2.3 Betaling og abonnement</h3>
     <p>
-      Vi bruker <strong>ikke</strong> Google Analytics eller andre sporingsverktøy som krever samtykke.
-      Appen bruker kun nødvendige cookies for:
-    </p>
-    <ul>
-      <li>Påloggingssesjon (Supabase auth-token)</li>
-      <li>Teknisk drift (LocalStorage for app-data)</li>
-    </ul>
-    <p>Disse er <strong>strengt nødvendige</strong> for at appen skal fungere og krever ikke samtykke.</p>
-
-    <h2>7. Dine rettigheter (GDPR)</h2>
-    <p>Du har følgende rettigheter:</p>
-    <ul>
-      <li><strong>Rett til innsyn (Art. 15):</strong> Se hvilke opplysninger vi har om deg</li>
-      <li><strong>Rett til retting (Art. 16):</strong> Korrigere feil i dine opplysninger</li>
-      <li><strong>Rett til sletting (Art. 17):</strong> Be om at vi sletter dine opplysninger</li>
-      <li><strong>Rett til dataportabilitet (Art. 20):</strong> Få dine data i et maskinlesbart format</li>
-      <li><strong>Rett til å trekke samtykke (Art. 7(3)):</strong> Trekke tilbake samtykke når som helst</li>
-      <li><strong>Rett til å protestere (Art. 21):</strong> Protestere mot behandling basert på legitime interesser</li>
-    </ul>
-    <p>
-      For å utøve dine rettigheter, kontakt oss på 
-      <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>
+      Betaling håndteres av Stripe. Vi mottar og bruker tekniske opplysninger som er nødvendig for å gi tilgang,
+      typisk <em>Stripe customer-id</em>, <em>subscription-id</em>, status og periodedatoer. Vi lagrer ikke kortnummer
+      eller fullstendige betalingsopplysninger.
     </p>
 
-    <h2>8. Hvor lenge lagrer vi opplysningene?</h2>
-    <ul>
-      <li><strong>Aktive brukere:</strong> Data lagres så lenge du har en aktiv konto</li>
-      <li><strong>Etter kontosletting:</strong> Data slettes innen 30 dager (med unntak av data vi er pålagt å beholde av lovgivning)</li>
-      <li><strong>Betalingsdata:</strong> Stripe beholder transaksjonshistorikk i 7 år (bokføringsloven)</li>
-    </ul>
-
-    <h2>9. Sikkerhet</h2>
-    <p>Vi tar sikkerhet på alvor og implementerer tekniske og organisatoriske tiltak:</p>
-    <ul>
-      <li><strong>Transportkryptering:</strong> All kommunikasjon mellom deg og appen er kryptert med TLS/HTTPS</li>
-      <li><strong>Lagringssikkerhet:</strong> Data lagres hos Supabase (AWS EU-region) med kryptering både i transitt og i hvile</li>
-      <li><strong>Autentisering:</strong> Sikker pålogging via Google OAuth eller Magic Link (Supabase Auth)</li>
-      <li><strong>Tilgangskontroll:</strong> Row Level Security (RLS) sikrer at kun du har tilgang til dine egne data</li>
-      <li><strong>Passord:</strong> Vi lagrer aldri passord i klartekst (håndteres av Supabase med bcrypt-hashing)</li>
-      <li><strong>Oppdateringer:</strong> Regelmessige sikkerhetsoppdateringer av avhengigheter</li>
-    </ul>
-    
-    <h3>9.1 Varsel ved databrudd</h3>
+    <h3>2.4 Innhold du lager i appen</h3>
     <p>
-      I henhold til GDPR Art. 33-34 har vi rutiner for å håndtere personvernbrudd:
-    </p>
-    <ul>
-      <li><strong>Oppdagelse:</strong> Kontinuerlig overvåking av systemer og logger</li>
-      <li><strong>Vurdering:</strong> Rask vurdering av omfang og risiko innen 24 timer</li>
-      <li><strong>Varsling av Datatilsynet:</strong> Melding sendes innen 72 timer hvis bruddet medfører risiko</li>
-      <li><strong>Varsling av deg:</strong> Du vil bli informert direkte hvis bruddet medfører høy risiko for dine rettigheter</li>
-    </ul>
-    <p>
-      <strong>Kontakt ved mistanke om brudd:</strong> Hvis du mistenker uautorisert tilgang til din 
-      konto, kontakt oss umiddelbart på 
-      <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>
+      Spillerlister, lagoppsett og treningsdata lagres som hovedregel <strong>lokalt i nettleseren på enheten din</strong>
+      (for eksempel localStorage). Disse dataene sendes ikke til oss som en del av normal bruk. Sletter du nettleserdata
+      eller bytter enhet, kan lokale data forsvinne.
     </p>
 
-    <h2>10. Barn og barns personopplysninger</h2>
-    
-    <h3>10.1 Alderskrav for bruk av tjenesten</h3>
+    <h3>2.5 Tekniske logger</h3>
     <p>
-      Appen er rettet mot voksne trenere. Du må være <strong>minst 18 år gammel</strong> for å 
-      opprette en konto og bruke tjenesten.
-    </p>
-    
-    <h3>10.2 Vår rolle som behandlingsansvarlig for barns data</h3>
-    <p>
-      Som leverandør av appen er vi <strong>behandlingsansvarlig</strong> for alle personopplysninger 
-      som lagres i systemet, inkludert informasjon om barn som trenere legger inn.
-    </p>
-    <p>
-      <strong>Vårt ansvar:</strong>
-    </p>
-    <ul>
-      <li>Sikre at systemet er designet for å minimere innsamling av personopplysninger om barn</li>
-      <li>Gi trenere tydelige retningslinjer for hva som er akseptabel databehandling</li>
-      <li>Implementere tekniske begrensninger der det er mulig</li>
-      <li>Respondere raskt på henvendelser om sletting av ulovlig lagret data</li>
-    </ul>
-    
-    <h3>10.3 Retningslinjer for trenere (databehandlere)</h3>
-    <p>
-      Som trener opptrer du som <strong>databehandler</strong> på vegne av din klubb/organisasjon når 
-      du bruker appen. Du <strong>MÅ</strong> følge disse reglene:
-    </p>
-    <ul>
-      <li><strong>Kun fornavn:</strong> Bruk aldri fullt navn (fornavn + etternavn)</li>
-      <li><strong>Ingen fødselsdato:</strong> Aldri legg inn fødselsdato, personnummer eller nøyaktig alder</li>
-      <li><strong>Ingen kontaktinformasjon:</strong> Ingen adresser, telefonnummer, e-post til barn</li>
-      <li><strong>Ingen helseopplysninger:</strong> Informasjon om helse, diagnoser, skader eller spesielle behov skal <strong>ikke</strong> lagres i appen</li>
-      <li><strong>Ingen bilder:</strong> Ikke last opp bilder av barn</li>
-    </ul>
-    
-    <h3>10.4 Tekniske begrensninger</h3>
-    <p>
-      For å beskytte barn har vi implementert følgende tekniske tiltak:
-    </p>
-    <ul>
-      <li>Maks 50 tegn per spillernavn (forhindrer lagring av utvidet informasjon)</li>
-      <li>Ingen mulighet for filvedlegg på spillerdata</li>
-      <li>Ingen fritekstfelt for sensitiv informasjon på spillernivå</li>
-    </ul>
-    
-    <h3>10.5 Foreldrenes rettigheter</h3>
-    <p>
-      Foreldre til barn som er registrert i appen har følgende rettigheter:
-    </p>
-    <ul>
-      <li><strong>Rett til innsyn:</strong> Be treneren vise hvilken informasjon som er lagret</li>
-      <li><strong>Rett til sletting:</strong> Kreve at barnets informasjon slettes umiddelbart</li>
-      <li><strong>Rett til klage:</strong> Kontakte oss eller Datatilsynet hvis informasjonen er ulovlig</li>
-    </ul>
-    
-    <h3>10.6 Klubbens ansvar</h3>
-    <p>
-      Fotballklubben/organisasjonen er den primære <strong>behandlingsansvarlige</strong> for barns data. 
-      Trenere må:
-    </p>
-    <ul>
-      <li>Ha samtykke fra klubben til å bruke digitale verktøy</li>
-      <li>Informere foreldre om at et organisasjonsverktøy brukes</li>
-      <li>Følge klubbens personvernpolicy (hvis den finnes)</li>
-    </ul>
-    
-    <h3>10.7 Rapportering av brudd</h3>
-    <p>
-      <strong>Hvis du oppdager brudd:</strong> Hvis du oppdager at noen har lagret fullt navn, 
-      fødselsdato, bilder eller annen sensitiv informasjon om barn i appen, vennligst kontakt oss 
-      umiddelbart på <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>
-    </p>
-    <p>
-      Vi vil:
-    </p>
-    <ul>
-      <li>Undersøke saken innen 24 timer</li>
-      <li>Slette ulovlig data umiddelbart</li>
-      <li>Kontakte Datatilsynet hvis det er et alvorlig brudd (GDPR Art. 33)</li>
-      <li>Varsle berørte foreldre hvis nødvendig (GDPR Art. 34)</li>
-    </ul>
-
-    <h2>11. Dataoverføring til land utenfor EU/EØS</h2>
-    <p>
-      Noen av våre tjenester (Stripe, Google) er basert i USA. Disse selskapene er:
-    </p>
-    <ul>
-      <li>Sertifisert under <strong>EU-US Data Privacy Framework</strong>, eller</li>
-      <li>Har signert <strong>Standard Contractual Clauses (SCC)</strong> godkjent av EU-kommisjonen</li>
-    </ul>
-    <p>Dette sikrer at dine data er beskyttet i tråd med GDPR, selv når de behandles utenfor EU/EØS.</p>
-
-    <h2>12. Automatisert beslutningstaking og profilering</h2>
-    <p>
-      Vi bruker <strong>ikke</strong> automatisert beslutningstaking, profilering eller algoritmer som 
-      har rettslige eller betydelige konsekvenser for deg (GDPR Art. 22).
-    </p>
-    <p>
-      Konkret betyr dette:
-    </p>
-    <ul>
-      <li>Vi analyserer ikke din atferd for å lage profiler</li>
-      <li>Vi bruker ikke algoritmer til å ta beslutninger om deg automatisk</li>
-      <li>Vi selger ikke dine data til annonsører eller andre</li>
-      <li>Vi sporer ikke din aktivitet på tvers av nettsider</li>
-    </ul>
-
-    <h2>13. Endringer i personvernerklæringen</h2>
-    <p>
-      Vi kan oppdatere denne personvernerklæringen fra tid til annen. Ved vesentlige endringer 
-      vil vi varsle deg via e-post eller melding i appen.
+      Som de fleste nettjenester kan vi motta tekniske logger fra drift/hosting (for eksempel tidspunkt, feilkoder, IP-adresse,
+      nettlesertype og URL-er) for sikkerhet og feilsøking.
     </p>
 
-    <h2>14. Klage til Datatilsynet</h2>
+    <h2>3. Hvorfor vi behandler data</h2>
+    <ul>
+      <li>Levere tjenesten: innlogging, tilgangskontroll og grunnleggende funksjoner.</li>
+      <li>Betaling/abonnement: verifisere status og gi riktig tilgang.</li>
+      <li>Sikkerhet og drift: forebygge misbruk og feilsøke problemer.</li>
+      <li>Kundeservice: svare på henvendelser.</li>
+    </ul>
+
+    <h2>4. Hvem vi deler data med</h2>
+    <ul>
+      <li><strong>Stripe</strong>: betalingsbehandling og kundportal for administrasjon/kansellering.</li>
+      <li><strong>Supabase</strong>: autentisering og lagring av prøvetilgang (og tekniske kontofelter).</li>
+      <li><strong>Vercel</strong>: hosting av nettsted og serverless API.</li>
+      <li><strong>Google</strong>: innlogging via Google OAuth.</li>
+    </ul>
+
+    <h2>5. Lagringstid</h2>
+    <ul>
+      <li>Kontoopplysninger lagres så lenge kontoen eksisterer.</li>
+      <li>Betalingshistorikk i Stripe lagres i tråd med Stripes og gjeldende regnskaps-/lovkrav.</li>
+      <li>Lokale data på enheten din styrer du selv (sletting skjer ved å slette nettleserdata).</li>
+    </ul>
+
+    <h2>6. Dine valg og rettigheter</h2>
     <p>
-      Hvis du mener vi ikke behandler dine personopplysninger i tråd med GDPR, har du rett til å klage til:
-    </p>
-    <p>
-      <strong>Datatilsynet</strong><br>
-      Postboks 458 Sentrum<br>
-      0105 Oslo<br>
-      Telefon: 22 39 69 00<br>
-      E-post: <a href="mailto:postkasse@datatilsynet.no">postkasse@datatilsynet.no</a><br>
-      Nettside: <a href="https://www.datatilsynet.no" target="_blank">www.datatilsynet.no</a>
+      Du kan be om innsyn, retting eller sletting av kontodata vi kontrollerer, ved å kontakte oss.
+      Merk at data som kun ligger lokalt på enheten din må du håndtere selv.
     </p>
 
-    <h2>15. Kontakt oss</h2>
+    <h2>7. Informasjon om barn</h2>
     <p>
-      Hvis du har spørsmål om denne personvernerklæringen eller hvordan vi behandler dine personopplysninger, 
-      kontakt oss på:
-    </p>
-    <p>
-      <strong>E-post:</strong> <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>
+      Appen er ment brukt av voksne trenere. Dersom du legger inn opplysninger om barn (for eksempel navn i en spillerliste),
+      anbefaler vi at du kun bruker det som er nødvendig og følger klubbens rutiner for personvern. Når slike opplysninger
+      lagres lokalt på enheten din, har vi normalt ikke tilgang til dem.
     </p>
 
-    <hr style="margin: 40px 0; border: none; border-top: 1px solid #ddd;">
-    
-    <p style="text-align: center; color: #666; font-size: 0.9em;">
-      <a href="/">Tilbake til appen</a> | 
-      <a href="/terms.html">Vilkår for bruk</a>
+    <h2>8. Endringer</h2>
+    <p>
+      Vi kan oppdatere denne erklæringen ved behov. Datoen øverst viser når den sist ble oppdatert.
     </p>
-  </div>
+
+    <p><a href="/">Tilbake</a></p>
+  </main>
 </body>
 </html>

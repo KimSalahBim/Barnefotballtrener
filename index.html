@@ -7,7 +7,9 @@
 (function () {
   try {
     var h = String(window.location.hostname || '').toLowerCase();
-    var isDebugHost = (h === 'localhost') || h.endsWith('.vercel.app');
+    var isDebugHost = (h === 'localhost') || (h.length >= 10 && h.slice(-10) === '.vercel.app');
+    window.__BF_IS_DEBUG_HOST = !!isDebugHost;
+    if (isDebugHost) { try { document.documentElement.classList.add('bf-debug-host'); } catch (e) {} }
     if (isDebugHost) {
       var s = document.createElement('script');
       s.src = 'debug.js';
@@ -15,14 +17,50 @@
       document.head.appendChild(s);
     } else {
       window.__BF_DEBUG_ENABLED = false;
+      window.__BF_IS_DEBUG_HOST = false;
     }
   } catch (e) {
     window.__BF_DEBUG_ENABLED = false;
+      window.__BF_IS_DEBUG_HOST = false;
   }
 })();
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Barnefotballtrener</title>
+  <title>Barnefotballtrener – kampdag, bytter og plan på mobilen</title>
+
+  <meta name="description" content="Barnefotballtrener gjør kampdag og trening enklere: planlegg, bytt og hold oversikt på mobilen. Betal med kort via Stripe. Avslutt når som helst." />
+  <link rel="canonical" href="https://barnefotballtrener.no/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Barnefotballtrener" />
+  <meta property="og:title" content="Barnefotballtrener – kampdag, bytter og plan på mobilen" />
+  <meta property="og:description" content="Planlegg kampdag og trening på mobilen. Få kontroll på bytter og spilletid – uten Excel." />
+  <meta property="og:url" content="https://barnefotballtrener.no/" />
+  <meta property="og:image" content="https://barnefotballtrener.no/icon-512.png" />
+
+  <!-- Structured data (minimal) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Barnefotballtrener",
+    "applicationCategory": "SportsApplication",
+    "operatingSystem": "Web",
+    "url": "https://barnefotballtrener.no/",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Barnefotballtrener",
+      "url": "https://barnefotballtrener.no/",
+      "contactPoint": [{
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "email": "support@barnefotballtrener.no",
+        "availableLanguage": ["Norwegian"]
+      }]
+    }
+  }
+  </script>
 
   <!-- PWA -->
   <meta name="theme-color" content="#0b5bd3" />
@@ -54,9 +92,17 @@
       <div class="password-header">
   <img class="login-logo" src="apple-touch-icon.png" alt="Barnefotballtrener logo">
   <h1>Barnefotballtrener</h1>
-  <p>En hjelpende hånd til deg som barnefotballtrener</p>
+  <p class="landing-tagline">Kampdag, bytter og plan – enkelt på mobilen.</p>
 </div>
 
+      <!-- Mini-landing (pre-login / SEO) -->
+      <div class="landing-hero" aria-label="Kort om Barnefotballtrener">
+        <ul class="landing-bullets">
+          <li><strong>Rask oversikt</strong> over spillere, roller og notater</li>
+          <li><strong>Bytter &amp; spilletid</strong> uten Excel – laget for kampdag</li>
+          <li><strong>Mobilvennlig</strong> – fungerer i nettleser og som PWA</li>
+        </ul>
+      </div>
 
       <!-- Google Sign In Button -->
       <button id="googleSignInBtn" class="btn-google" type="button">
@@ -70,7 +116,20 @@
         <span>Fortsett med Google</span>
       </button>
 
-      <!-- Divider -->
+      <!-- Secondary CTA (stays on login page, no new logic) -->
+      <button type="button" class="btn-secondary btn-secondary-link" id="publicSeePricingBtn" aria-label="Se priser" onclick="try{if(window.authService&&typeof window.authService.showPricingPage==='function'){window.authService.showPricingPage();}else{location.hash='landingPricing';}}catch(e){location.hash='landingPricing';}">
+        <i class="fas fa-tags" aria-hidden="true"></i>
+        Se priser
+      </button>
+      <noscript>
+        <a href="#landingPricing" class="btn-secondary btn-secondary-link" role="button" aria-label="Se priser" onclick="try{ if(window.authService&&typeof window.authService.showPricingPage==='function'){ window.authService.showPricingPage(); return false; } }catch(e){}">
+          <i class="fas fa-tags" aria-hidden="true"></i>
+          Se priser
+        </a>
+      </noscript>
+
+            <div id="magicLinkSection" class="magic-link-section" aria-label="Testinnlogging">
+<!-- Divider -->
       <div class="divider" style="margin: 14px 0; text-align:center; opacity:.75;">
         <span style="background: #fff; padding: 0 10px;">eller</span>
       </div>
@@ -90,8 +149,90 @@
       </button>
 
       <p id="magicLinkHint" class="small-text" style="margin-top:10px; opacity:.8; text-align:center;">
-        Vi sender en lenke på e-post. Klikk på den for å logge inn.
+        Magic link er kun tilgjengelig i testmiljø (staging/localhost). I produksjon brukes Google-innlogging.
       </p>
+      </div>
+
+      <!-- Public landing content (static HTML for SEO; hidden after login) -->
+      <div id="publicLanding" class="public-landing">
+        <section class="landing-section" aria-label="Dette får du">
+          <h2>Dette får du</h2>
+          <ul class="landing-list">
+            <li><strong>Kampdag</strong> – planlegg lag, roller og bytter</li>
+            <li><strong>Spilleroversikt</strong> – liste og notater tilgjengelig når du trenger det</li>
+            <li><strong>Enkelt</strong> – laget for travle trenere (barnefotball)</li>
+          </ul>
+        </section>
+
+        <section class="landing-section" aria-label="Slik fungerer det">
+          <h2>Slik fungerer det</h2>
+          <ol class="landing-steps">
+            <li>Logg inn med Google.</li>
+            <li>Velg plan og betal med kort via Stripe.</li>
+            <li>Bruk appen – og avslutt når som helst.</li>
+          </ol>
+        </section>
+
+        <section id="landingPricing" class="landing-section" aria-label="Priser">
+          <h2>Priser</h2>
+          <div class="landing-prices" role="list">
+            <div class="landing-price" role="listitem">
+              <div class="price-title">Måned</div>
+              <div class="price-amount">25 kr</div>
+            </div>
+            <div class="landing-price" role="listitem">
+              <div class="price-title">År</div>
+              <div class="price-amount">199 kr</div>
+            </div>
+            <div class="landing-price" role="listitem">
+              <div class="price-title">Livstid</div>
+              <div class="price-amount">599 kr</div>
+            </div>
+          </div>
+          <p class="landing-muted">Betaling håndteres av Stripe. Du kan administrere og avslutte abonnement i appen.</p>
+        </section>
+
+        <section class="landing-section" aria-label="Spørsmål og svar">
+          <h2>Spørsmål og svar</h2>
+
+          <details class="landing-faq">
+            <summary>Kan jeg avslutte når som helst?</summary>
+            <p>Ja. Du kan avslutte selv i appen. Du beholder tilgang ut perioden du har betalt for.</p>
+          </details>
+
+          <details class="landing-faq">
+            <summary>Fungerer dette på iPhone og Android?</summary>
+            <p>Ja. Appen er laget for mobil nettleser og kan brukes som PWA.</p>
+          </details>
+
+          <details class="landing-faq">
+            <summary>Hvordan får jeg hjelp?</summary>
+            <p>Send e-post til <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.</p>
+          </details>
+
+          <details class="landing-faq">
+            <summary>Hva med personvern og data om barn?</summary>
+            <p>Barnefotballtrener er laget for trenere. Spillere har ingen konto, og du bestemmer selv hvilke opplysninger du legger inn (for eksempel fornavn/initialer). Spillerlisten lagres lokalt i nettleseren din.</p>
+            <p>Les mer i <a href="/privacy.html">personvernerklæringen</a>.</p>
+          </details>
+        </section>
+
+        <section class="landing-trust" aria-label="Trygghet">
+        <p class="landing-trust-note">Trygt for klubber: betaling via Stripe, og abonnent kan avslutte selv. Ingen annonser eller sporingspiksler.</p>
+
+          <div class="trust-item"><i class="fas fa-credit-card" aria-hidden="true"></i><span>Betaling via Stripe</span></div>
+          <div class="trust-item"><i class="fas fa-sliders" aria-hidden="true"></i><span>Administrer i appen</span></div>
+          <div class="trust-item"><i class="fas fa-flag" aria-hidden="true"></i><span>Norsk</span></div>
+        </section>
+
+        <nav class="landing-footer-links" aria-label="Lenker">
+          <a href="/privacy.html">Personvern</a>
+          <span class="dot" aria-hidden="true">•</span>
+          <a href="/terms.html">Vilkår</a>
+          <span class="dot" aria-hidden="true">•</span>
+          <a href="mailto:support@barnefotballtrener.no">Kontakt</a>
+        </nav>
+      </div>
 
       <!-- Legal text -->
       <p class="small-text" style="margin-top: 20px; font-size: 0.8em; opacity: 0.7; text-align: center; line-height: 1.4;">

@@ -345,3 +345,176 @@ button#googleSignInBtn.btn-google:active{
   transform: translateY(0);
   box-shadow: 0 10px 26px rgba(2, 6, 23, 0.10);
 }
+
+/* ===========================
+   Public mini-landing (pre-login)
+   Scoped to #passwordProtection to prevent CSS bleed
+   =========================== */
+
+#passwordProtection .landing-tagline {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+#passwordProtection .landing-hero {
+  margin: 14px 0 6px;
+}
+
+#passwordProtection .landing-bullets {
+  margin: 0;
+  padding-left: 18px;
+  text-align: left;
+  line-height: 1.5;
+}
+
+#passwordProtection .landing-bullets li {
+  margin: 6px 0;
+}
+
+#passwordProtection .btn-secondary-link {
+  display: block;
+  margin: 10px auto 0;
+  text-decoration: none;
+  text-align: center;
+}
+
+#passwordProtection .public-landing {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+#passwordProtection .public-landing .landing-section + .landing-section {
+  margin-top: 16px;
+}
+
+#passwordProtection .public-landing h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  letter-spacing: 0.2px;
+}
+
+#passwordProtection .public-landing .landing-list,
+#passwordProtection .public-landing .landing-steps {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+#passwordProtection .public-landing .landing-list li,
+#passwordProtection .public-landing .landing-steps li {
+  margin: 6px 0;
+}
+
+#passwordProtection .public-landing .landing-prices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+#passwordProtection .public-landing .landing-price {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: center;
+  background: rgba(11, 91, 211, 0.03);
+}
+
+#passwordProtection .public-landing .price-title {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+#passwordProtection .public-landing .price-amount {
+  margin-top: 6px;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+#passwordProtection .public-landing .landing-muted {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+#passwordProtection .public-landing .landing-faq {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+#passwordProtection .public-landing .landing-faq summary {
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+
+#passwordProtection .public-landing .landing-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+#passwordProtection .public-landing .landing-faq p {
+  margin: 10px 0 0;
+  line-height: 1.6;
+}
+
+#passwordProtection .public-landing .landing-faq a {
+  color: #0b5bd3;
+  text-decoration: underline;
+}
+
+#passwordProtection .landing-trust {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+#passwordProtection .landing-trust .trust-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.02);
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
+#passwordProtection .landing-footer-links {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+#passwordProtection .landing-footer-links a {
+  color: #0b5bd3;
+  text-decoration: underline;
+}
+
+#passwordProtection .landing-footer-links .dot {
+  opacity: 0.6;
+}
+
+@media (max-width: 420px) {
+  #passwordProtection .public-landing .landing-prices {
+    grid-template-columns: 1fr;
+  }
+  #passwordProtection .landing-trust {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Hide magic link in production to avoid confusion. Enable only on debug hosts (staging/localhost). */
+#passwordProtection .magic-link-section { display: none; }
+html.bf-debug-host #passwordProtection .magic-link-section { display: block; }
