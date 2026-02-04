@@ -29,27 +29,45 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     min-height: 100vh;
+  min-height: 100dvh; /* bedre på mobil (adressefelt) */
     padding: 20px;
     color: var(--gray-800);
 }
 
 /* Login Screen */
 #passwordProtection {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    background: linear-gradient(135deg, var(--egge-blue) 0%, var(--egge-light-blue) 100%);
-    padding: 20px;
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
+
+    /* Scroll container (pre-login) */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+
+    background: linear-gradient(to bottom, #1f5da3, #1a4b82);
     z-index: 1000;
+
+    /* Safe-area friendly padding (iOS notch/home indicator) */
+    padding: 20px;
+    padding-top: calc(20px + env(safe-area-inset-top));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+
+    /* Robust viewport sizing */
+    min-height: 100vh;
+    min-height: 100svh;
+    height: 100dvh;
+
+    /* Helps scrolling in Chromium browsers */
+    touch-action: pan-y;
 }
 
+/* Ensure the pre-login card stays centered and readable on all screens */
+#passwordProtection .password-box {
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
 .login-container {
     background: white;
     padding: 40px;
@@ -165,7 +183,8 @@ body {
     margin: 0 auto;
     animation: fadeIn 0.5s ease;
     width: 100%;
-    /* min-height: 100vh; FJERNET - Dette forårsaket at container tok for mye plass */
+    /* min-height: 100vh;
+  min-height: 100dvh; /* bedre på mobil (adressefelt) */ FJERNET - Dette forårsaket at container tok for mye plass */
     opacity: 1;
 }
 
@@ -1765,54 +1784,34 @@ body {
   padding: 6px 0;
 }
 
-/* Lås scrolling når bruker ikke har tilgang (login/pricing) */
-body.lock-scroll {
-  overflow: hidden;
-  height: 100vh;
-  overscroll-behavior: none;
-  touch-action: none;
-}
-html.lock-scroll,
-body.lock-scroll {
-  overflow: hidden;
-  height: 100%;
-}
+/* Lås scrolling når bruker ikke har tilgang (login/pricing)
+   Viktig: vi låser kun bakgrunn (body/html), men lar selve login-/landing-overlayet (#passwordProtection)
+   være scroll-container. Ikke bruk touch-action:none eller body{position:fixed} her – det stopper
+   scrolling inne i overlay på mobil (særlig i iOS Safari). */
 
-body.lock-scroll {
-  position: fixed;
-  width: 100%;
-}
-/* Hard gate: ingen scroll når ikke innlogget */
 html.lock-scroll,
-body.lock-scroll {
-  height: 100%;
+body.lock-scroll,
+html.gated,
+body.gated {
   overflow: hidden !important;
+  height: 100%;
   overscroll-behavior: none;
-  touch-action: none;
 }
 
-/* Ekstra sikkerhet: skjul app uansett dersom gated */
+/* Ikke blokker touch/pan globalt */
+body.lock-scroll,
+body.gated {
+  touch-action: auto;
+  position: static;
+  width: auto;
+  left: auto;
+  top: auto;
+}
+
+/* Skjul appen når gated (hindrer “scroll inn i appen”) */
 body.gated #mainApp {
   display: none !important;
 }
-/* ---------- Gating / scroll lock (iOS-safe) ---------- */
-html.gated,
-body.gated {
-  height: 100%;
-  overflow: hidden !important;
-}
-
-body.gated {
-  position: fixed;
-  width: 100%;
-  left: 0;
-  top: 0;
-
-  /* iOS/Safari: hindrer "bounce"/pull-to-refresh inni body */
-  overscroll-behavior: none;
-  touch-action: none;
-}
-
 /* ========================================
    LIGA MOBILE FIX - Fjern tomt felt øverst
    ======================================== */
