@@ -360,49 +360,6 @@ button#googleSignInBtn.btn-google:active{
 #passwordProtection .landing-hero {
   margin: 14px 0 6px;
 }
-/* A+ landing (no lists / no numbering) */
-#passwordProtection .landing-hero { 
-  text-align: left;
-}
-
-#passwordProtection .landing-summary {
-  margin: 8px 0 0;
-  font-size: 0.98rem;
-  line-height: 1.55;
-  color: #22324a;
-}
-
-#passwordProtection .landing-summary strong {
-  color: #0b1220;
-  font-weight: 800;
-}
-
-#passwordProtection .landing-chips {
-  margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-#passwordProtection .landing-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(11, 91, 211, 0.18);
-  background: rgba(11, 91, 211, 0.06);
-  color: #0b1220;
-  font-size: 0.86rem;
-  font-weight: 720;
-}
-
-#passwordProtection .public-landing .landing-paragraph {
-  margin: 10px 0 0;
-  font-size: 0.98rem;
-  line-height: 1.6;
-  color: #22324a;
-}
-
 
 #passwordProtection .landing-bullets {
   margin: 0;
@@ -413,6 +370,25 @@ button#googleSignInBtn.btn-google:active{
 
 #passwordProtection .landing-bullets li {
   margin: 6px 0;
+}
+
+
+
+/* Login landing — keypoint paragraphs (no bullet list) */
+#passwordProtection .landing-kps {
+  margin: 14px 0 10px;
+  text-align: left;
+  line-height: 1.6;
+  font-size: 0.98rem;
+  color: rgba(15, 23, 42, 0.86);
+}
+#passwordProtection .landing-kps p {
+  margin: 10px 0;
+}
+@media (max-width: 420px) {
+  #passwordProtection .landing-kps {
+    font-size: 0.96rem;
+  }
 }
 
 #passwordProtection .btn-secondary-link {
