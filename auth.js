@@ -500,8 +500,10 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
     hostname === "localhost" ||
     hostname.endsWith(".vercel.app");
 
+  var forcePicker = safeGetStorage('bf_force_google_picker') === '1';
+
   var options = { redirectTo: redirectTo };
-  if (isStagingHost) options.queryParams = { prompt: "select_account" };
+  if (isStagingHost || forcePicker) options.queryParams = { prompt: "select_account" };
 
   var res = await this.supabase.auth.signInWithOAuth({
     provider: "google",
@@ -549,6 +551,8 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
       var res = await this.supabase.auth.signOut();
       if (res && res.error) throw res.error;
 
+      safeSetStorage('bf_force_google_picker', '1');
+
       this.currentUser = null;
       this._mainShown = false;
 
@@ -567,6 +571,7 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
     this._handlingSignIn = true;
 
     try {
+      safeRemoveStorage('bf_force_google_picker');
       this.currentUser = user;
 
       console.log('🔎 Sjekker subscription for bruker:', user && user.id);
