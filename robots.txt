@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://barnefotballtrener.no/sitemap.xml
+# preview test
