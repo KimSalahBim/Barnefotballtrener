@@ -253,7 +253,8 @@
             error: data?.error,
             data: data
           });
-          throw new Error(data?.error || `Checkout-feil (${r.status})`);
+          const msg = data?.error || `Checkout-feil (${r.status})`;
+          throw new Error(data && data.error_id ? `${msg} (Feilkode: ${data.error_id})` : msg);
         }
 
         log('✅ API response OK:', data);

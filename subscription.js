@@ -240,7 +240,8 @@
     }
     if (!res.ok) {
       const msg = data?.error || `${res.status} ${res.statusText}`;
-      throw new Error(msg);
+      const errId = (data && data.error_id) ? data.error_id : null;
+      throw new Error(errId ? `${msg} (Feilkode: ${errId})` : msg);
     }
     return data;
   }
@@ -580,8 +581,9 @@ if (cancelBtn && !cancelBtn.__bound) {
           }, 15000);
 
           if (!response.ok) {
-            const error = await response.json().catch(() => ({ error: "Unknown error" }));
-            throw new Error(error.error || "Eksport feilet");
+            const payload = await response.json().catch(() => ({ error: "Unknown error" }));
+            const msg = payload.error || "Eksport feilet";
+            throw new Error(payload && payload.error_id ? `${msg} (Feilkode: ${payload.error_id})` : msg);
           }
 
           // Download the JSON file
@@ -656,8 +658,9 @@ if (cancelBtn && !cancelBtn.__bound) {
           }, 20000);
 
           if (!response.ok) {
-            const error = await response.json().catch(() => ({ error: "Unknown error" }));
-            throw new Error(error.error || "Sletting feilet");
+            const payload = await response.json().catch(() => ({ error: "Unknown error" }));
+            const msg = payload.error || "Sletting feilet";
+            throw new Error(payload && payload.error_id ? `${msg} (Feilkode: ${payload.error_id})` : msg);
           }
 
           const result = await response.json();
