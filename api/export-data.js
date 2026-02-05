@@ -25,6 +25,12 @@ function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
+
+function isDebugHost(hostHeader) {
+  const h = String(hostHeader || '').toLowerCase().split(':')[0];
+  return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app');
+}
+
 export default async function handler(req, res) {
   // SECURITY: Prevent caching of personalized data
   res.setHeader('Cache-Control', 'no-store, private, must-revalidate');
@@ -186,10 +192,14 @@ export default async function handler(req, res) {
     return res.status(200).json(exportData);
 
   } catch (err) {
-    console.error('[export-data] Error:', err);
-    return res.status(500).json({ 
+    const errorId = `ed_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    console.error('[export-data] error_id=%s', errorId, err);
+
+    const debug = isDebugHost(req.headers.host);
+    return res.status(500).json({
       error: 'Server error',
       message: 'Could not export data. Please try again or contact support.',
+      ...(debug ? { error_id: errorId } : {}),
     });
   }
 }

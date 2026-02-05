@@ -25,6 +25,12 @@ function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
+
+function isDebugHost(hostHeader) {
+  const h = String(hostHeader || '').toLowerCase().split(':')[0];
+  return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app');
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') {
@@ -198,10 +204,14 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error('[delete-account] Unexpected error:', err);
-    return res.status(500).json({ 
+    const errorId = `da_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    console.error('[delete-account] error_id=%s', errorId, err);
+
+    const debug = isDebugHost(req.headers.host);
+    return res.status(500).json({
       error: 'Server error',
       message: 'Account deletion failed. Please contact support at support@barnefotballtrener.no',
+      ...(debug ? { error_id: errorId } : {}),
     });
   }
 }

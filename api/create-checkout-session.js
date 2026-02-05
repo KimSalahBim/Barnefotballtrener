@@ -26,6 +26,12 @@ function idKey(prefix, parts) {
   return `${prefix}_${safe}`.slice(0, 200);
 }
 
+
+function isDebugHost(hostHeader) {
+  const h = String(hostHeader || '').toLowerCase().split(':')[0];
+  return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app');
+}
+
 async function selectOrCreateCustomer({ email, userId }) {
   const normalizedEmail = normalizeEmail(email);
   // Stripe lists most recent customers first.
@@ -252,7 +258,14 @@ export default async function handler(req, res) {
       url: session.url
     });
   } catch (e) {
-    console.error("create-checkout-session error:", e);
-    return res.status(500).json({ error: "Server error" });
+    const errorId = `cc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    console.error('[create-checkout-session] error_id=%s', errorId, e);
+
+    const debug = isDebugHost(req.headers.host);
+    return res.status(500).json(
+      debug
+        ? { error: 'Server error', error_id: errorId }
+        : { error: 'Server error' }
+    );
   }
 }
