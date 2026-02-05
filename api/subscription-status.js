@@ -195,10 +195,32 @@ async function checkLifetimePurchase(customerId) {
   for (const s of sessions.data || []) {
     if (s.mode !== 'payment') continue;
 
-    const paid = s.payment_status === 'paid';
+    // Stripe can mark some sessions as no_payment_required (e.g. fully discounted)
+    const paid =
+      s.payment_status === 'paid' ||
+      s.payment_status === 'no_payment_required';
+
     const complete = s.status === 'complete' || s.status === 'completed';
     if (!paid && !complete) continue;
 
+    // Fast path: prefer Checkout Session metadata when present (new purchases)
+    const meta = s.metadata || {};
+    const planType = meta.plan_type;
+    const metaPriceId = meta.price_id;
+
+    // If metadata explicitly confirms lifetime, accept immediately
+    if (planType === 'lifetime' || metaPriceId === lifetimePriceId) {
+      return {
+        lifetime: true,
+        purchased_at: s.created ? new Date(s.created * 1000).toISOString() : null,
+      };
+    }
+
+    // If metadata explicitly says NOT lifetime, skip expensive lineItems lookup
+    if (planType && planType !== 'lifetime') continue;
+    if (metaPriceId && metaPriceId !== lifetimePriceId) continue;
+
+    // Fallback: old sessions without metadata (or incomplete metadata)
     try {
       const items = await stripe.checkout.sessions.listLineItems(s.id, { limit: 10 });
       const hasLifetime = (items.data || []).some((it) => it?.price?.id === lifetimePriceId);
@@ -215,6 +237,7 @@ async function checkLifetimePurchase(customerId) {
 
   return { lifetime: false };
 }
+
 
 async function checkTrialStatus(userId) {
   try {
