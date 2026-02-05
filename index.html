@@ -96,15 +96,7 @@
 </div>
 
       <!-- Mini-landing (pre-login / SEO) -->
-      <div class="landing-hero" aria-label="Kort om Barnefotballtrener">
-        <ul class="landing-bullets">
-          <li><strong>Rask oversikt</strong> over spillere, roller og notater</li>
-          <li><strong>Bytter &amp; spilletid</strong> uten Excel – laget for kampdag</li>
-          <li><strong>Mobilvennlig</strong> – fungerer i nettleser og som PWA</li>
-        </ul>
-      </div>
-
-      <!-- Google Sign In Button -->
+<!-- Google Sign In Button -->
       <button id="googleSignInBtn" class="btn-google" type="button">
         <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -129,15 +121,6 @@
         <p>Få hjelp til å sette sammen jevne lag i trening og kamp.</p>
         <p>Konkurranse-funksjon som lar deg legge til spillere og antall konkurranser – tabell oppdateres fortløpende.</p>
         <p>Liga-funksjon hvis man spiller «turnering» på trening – legg inn resultater og få tabell oppdatert fortløpende.</p>
-      </div>
-
-      <div class="landing-chips" aria-label="Nøkkelfunksjoner">
-        <span class="landing-chip">Spilletid-generator</span>
-        <span class="landing-chip">Bytteplan</span>
-        <span class="landing-chip">Treningsgrupper</span>
-        <span class="landing-chip">Jevne lag</span>
-        <span class="landing-chip">Konkurranser</span>
-        <span class="landing-chip">Liga</span>
       </div>
 <noscript>
         <a href="#landingPricing" class="btn-secondary btn-secondary-link" role="button" aria-label="Se priser" onclick="try{ if(window.authService&&typeof window.authService.showPricingPage==='function'){ window.authService.showPricingPage(); return false; } }catch(e){}">
@@ -173,28 +156,7 @@
 
       <!-- Public landing content (static HTML for SEO; hidden after login) -->
       <div id="publicLanding" class="public-landing">
-        <section class="landing-section" aria-label="Dette får du">
-          <h2>Dette får du</h2>
-          
-      <p><strong>Spillere</strong> – legg enkelt til spillere, og angi nivå hvis du ønsker.</p>
-      <p><strong>Kampdag</strong> – automatisk lik spilletid og presis bytteplan.</p>
-      <p><strong>Trening</strong> – lag differensierte grupper og sett sammen jevne lag.</p>
-      <p><strong>Konkurranser</strong> – legg inn spillere og antall konkurranser; tabellen oppdateres fortløpende.</p>
-      <p><strong>Liga</strong> – registrer resultater i «turnering» og få tabell oppdatert fortløpende.</p>
-      <p><strong>Notater</strong> – spillerliste og notater når du trenger det.</p>
-
-        </section>
-
-        <section class="landing-section" aria-label="Slik fungerer det">
-          <h2>Slik fungerer det</h2>
-          <ol class="landing-steps">
-            <li>Logg inn med Google.</li>
-            <li>Velg plan og betal med kort via Stripe.</li>
-            <li>Bruk appen – og avslutt når som helst.</li>
-          </ol>
-        </section>
-
-        <section id="landingPricing" class="landing-section" aria-label="Priser">
+<section id="landingPricing" class="landing-section" aria-label="Priser">
           <h2>Priser</h2>
           <div class="landing-prices" role="list">
             <div class="landing-price" role="listitem">
@@ -246,7 +208,18 @@
           <div class="trust-item"><i class="fas fa-flag" aria-hidden="true"></i><span>Norsk</span></div>
         </section>
 
-        <nav class="landing-footer-links" aria-label="Lenker">
+        
+        <!-- Nøkkelfunksjoner (tags) -->
+        <div class="landing-chips" aria-label="Nøkkelfunksjoner">
+          <span class="landing-chip">Spilletid-generator</span>
+          <span class="landing-chip">Bytteplan</span>
+          <span class="landing-chip">Treningsgrupper</span>
+          <span class="landing-chip">Jevne lag</span>
+          <span class="landing-chip">Konkurranser</span>
+          <span class="landing-chip">Liga</span>
+        </div>
+
+<nav class="landing-footer-links" aria-label="Lenker">
           <a href="/privacy.html">Personvern</a>
           <span class="dot" aria-hidden="true">•</span>
           <a href="/terms.html">Vilkår</a>
