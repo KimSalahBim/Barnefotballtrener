@@ -117,7 +117,6 @@
     document.body.classList.add('lock-scroll');
 
     // Inline fallback for iOS
-    document.body.style.position = 'fixed';
     document.body.style.width = '100%';
     document.body.style.top = '-' + y + 'px';
     document.body.style.overflow = 'hidden';
@@ -141,6 +140,75 @@
 
   window.__bf_lockScroll = lockScroll;
   window.__bf_unlockScroll = unlockScroll;
+
+function showSupabaseBlockedMessage(err) {
+  try {
+    // Idempotent: don't add twice
+    if (document.getElementById('supabaseBlockedBanner')) return;
+
+    var root = document.getElementById('passwordProtection') || document.body;
+    var box = null;
+    try {
+      box = root.querySelector && root.querySelector('.password-box');
+    } catch (_) {}
+    var mount = box || root;
+
+    var isDebugHost = false;
+    try {
+      var hn = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';
+      isDebugHost = (hn === 'localhost' || hn === '127.0.0.1' || hn.endsWith('.vercel.app'));
+    } catch (_) {}
+
+    var banner = document.createElement('div');
+    banner.id = 'supabaseBlockedBanner';
+    banner.className = 'supabase-blocked-banner';
+    banner.setAttribute('role', 'alert');
+
+    var title = document.createElement('div');
+    title.className = 'supabase-blocked-title';
+    title.textContent = 'Innlogging kunne ikke lastes';
+
+    var msg = document.createElement('div');
+    msg.className = 'supabase-blocked-text';
+    msg.textContent =
+      'Det ser ut som nettverket eller nettleseren din blokkerer innloggingskomponenten. ' +
+      'Prøv å laste siden på nytt, bytt nettverk, eller bruk mobilnett.';
+
+    var details = null;
+    if (isDebugHost && err && (err.message || String(err))) {
+      details = document.createElement('div');
+      details.className = 'supabase-blocked-details';
+      details.textContent = 'Teknisk: ' + (err.message || String(err));
+    }
+
+    var actions = document.createElement('div');
+    actions.className = 'supabase-blocked-actions';
+
+    var reloadBtn = document.createElement('button');
+    reloadBtn.type = 'button';
+    reloadBtn.className = 'supabase-blocked-retry';
+    reloadBtn.textContent = 'Prøv igjen';
+    reloadBtn.addEventListener('click', function () {
+      try { window.location.reload(); } catch (_) {}
+    });
+
+    actions.appendChild(reloadBtn);
+
+    banner.appendChild(title);
+    banner.appendChild(msg);
+    if (details) banner.appendChild(details);
+    banner.appendChild(actions);
+
+    // Insert banner near top of the login box
+    if (mount && mount.firstChild) {
+      mount.insertBefore(banner, mount.firstChild);
+    } else if (mount) {
+      mount.appendChild(banner);
+    }
+  } catch (_) {
+    // don't throw from UI helper
+  }
+}
 
   // -------------------------------
   // Supabase config (public)
@@ -232,6 +300,20 @@
       };
       script.onerror = function (e) {
         console.error('❌ Kunne ikke laste Supabase script', e);
+        // Ultra-safe: only mutate UI after DOM is ready, and never throw
+        try {
+          var show = function () {
+            try { showSupabaseBlockedMessage(e); } catch (_) {}
+          };
+          if (document && document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function onReady(){
+              try { document.removeEventListener('DOMContentLoaded', onReady); } catch (_) {}
+              show();
+            });
+          } else {
+            show();
+          }
+        } catch (_) {}
         reject(e);
       };
 
@@ -625,7 +707,12 @@ if (typeof authService.getSessionWithRetry !== 'function') {
       e.stopPropagation();
       if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
 
-      try { await authService.init(); } catch (err) {}
+      try { await authService.init(); } catch (err) { showSupabaseBlockedMessage(err); }
+
+      if (!authService.supabase) {
+        showSupabaseBlockedMessage(new Error('Supabase-klienten er ikke lastet.'));
+        return;
+      }
 
       console.log('🟦 Google-knapp klikket, starter OAuth...');
       var res = await authService.signInWithGoogle();
@@ -671,7 +758,12 @@ if (typeof authService.getSessionWithRetry !== 'function') {
     }
 
     async function sendLink() {
-      try { await authService.init(); } catch (err) {}
+      try { await authService.init(); } catch (err) { showSupabaseBlockedMessage(err); }
+
+      if (!authService.supabase) {
+        showSupabaseBlockedMessage(new Error('Supabase-klienten er ikke lastet.'));
+        return;
+      }
 
       var email = String(emailInput.value || '').trim();
       if (!email || email.indexOf('@') === -1) {
