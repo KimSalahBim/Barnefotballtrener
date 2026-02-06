@@ -206,6 +206,15 @@
           if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
 
           console.log(LOG, "Logout clicked");
+
+          // Confirm before logout (U1c fix)
+          try {
+            var ok = window.confirm("Er du sikker på at du vil logge ut?");
+            if (!ok) return;
+          } catch (_) {
+            // If confirm() fails (e.g. some enterprise browsers), proceed with logout
+          }
+
           safeNotify("Logger ut…");
 
           // Prevent unhandled rejections
