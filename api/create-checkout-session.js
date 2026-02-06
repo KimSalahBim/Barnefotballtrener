@@ -27,100 +27,102 @@ function idKey(prefix, parts) {
 }
 
 
-function isDebugHost(hostHeader) {
-  const h = String(hostHeader || '').toLowerCase().split(':')[0];
-  return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app');
+function getForwardedProto(req) {
+  const raw = req.headers['x-forwarded-proto'] || '';
+  const proto = String(raw).split(',')[0].trim().toLowerCase();
+  return proto === 'http' ? 'http' : 'https';
 }
 
-async function selectOrCreateCustomer({ email, userId }) {
-  const normalizedEmail = normalizeEmail(email);
-  // Stripe lists most recent customers first.
-  const list = await stripe.customers.list({ email: normalizedEmail, limit: 10 });
-  const candidates = (list.data || []).filter((c) => {
-    const metaId = c?.metadata?.supabase_user_id;
-    // If another supabase_user_id is already bound, never reuse that customer for safety.
-    return !metaId || metaId === userId;
-  });
+function getForwardedHost(req) {
+  const raw = req.headers['x-forwarded-host'] || req.headers.host || '';
+  return String(raw).split(',')[0].trim();
+}
 
-  // 1) Strong match: metadata.supabase_user_id
-  const metaMatch = candidates.find((c) => c?.metadata?.supabase_user_id === userId);
-  if (metaMatch) return metaMatch;
+function normalizeHost(rawHost) {
+  return String(rawHost || '').trim().toLowerCase().replace(/\.$/, '');
+}
 
-  // 2) If duplicates exist without metadata, prefer a customer that already has a relevant subscription.
-  // Limit network calls: check only the 3 most recent candidates.
-  for (const c of candidates.slice(0, 3)) {
-    try {
-      const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 10 });
-      const hasRelevant = (subs.data || []).some((s) =>
-        s && (s.status === 'active' || s.status === 'trialing' || s.status === 'past_due')
-      );
-      if (hasRelevant) return c;
-    } catch (_) {
-      // ignore and continue
-    }
+function isLocalHost(host) {
+  return host === 'localhost' ||
+    host.startsWith('localhost:') ||
+    host === '127.0.0.1' ||
+    host.startsWith('127.0.0.1:');
+}
+
+function isAllowedHost(normalizedHost) {
+  // Local dev
+  if (normalizedHost === 'localhost:3000' || normalizedHost === 'localhost:5173') return true;
+  if (normalizedHost === '127.0.0.1:3000' || normalizedHost === '127.0.0.1:5173') return true;
+
+  const bare = normalizedHost.split(':')[0];
+
+  // Canonical + www
+  if (bare === 'barnefotballtrener.no' || bare === 'www.barnefotballtrener.no') return true;
+
+  // Vercel stable domain
+  if (bare === 'barnefotballtrener.vercel.app') return true;
+
+  // Vercel preview domains (per branch / per deployment)
+  if (bare.endsWith('.vercel.app') && bare.startsWith('barnefotballtrener-')) return true;
+
+  return false;
+}
+
+function getRequestOrigin(req) {
+  let host = normalizeHost(getForwardedHost(req));
+  let proto = getForwardedProto(req);
+
+  // Force https for non-local
+  if (!isLocalHost(host)) proto = 'https';
+
+  // Strip default ports
+  if (proto === 'https') host = host.replace(/:443$/, '');
+  if (proto === 'http') host = host.replace(/:80$/, '');
+
+  if (!isAllowedHost(host)) {
+    const err = new Error(`Invalid host header: ${host}`);
+    err.statusCode = 400;
+    throw err;
   }
 
-  // 3) Fallback: most recent candidate
-  if (candidates.length > 0) return candidates[0];
-
-  // 4) Create new customer (idempotent)
-  return await stripe.customers.create(
-    {
-      email: normalizedEmail,
-      metadata: { supabase_user_id: userId },
-    },
-    { idempotencyKey: idKey('bf_cus_create', [userId, normalizedEmail]) }
-  );
+  return `${proto}://${host}`;
 }
 
+// Debug should be enabled only on local + vercel (including preview)
+function isDebugHost(req) {
+  try {
+    const host = normalizeHost(getForwardedHost(req));
+    const bare = host.split(':')[0];
+    return bare === 'localhost' || bare === '127.0.0.1' || bare.endsWith('.vercel.app');
+  } catch {
+    return false;
+  }
+}
+
+// Base URL for success/cancel/return URLs.
+// - If request comes via canonical host, use APP_URL (so .no stays "true" production).
+// - If request comes via a vercel domain, keep that origin so you can debug on networks that block .no.
 function getBaseUrl(req) {
-  // SECURITY: Always use APP_URL if set (prevents host header injection)
-  if (process.env.APP_URL) {
-    return String(process.env.APP_URL).replace(/\/+$/, '');
+  const requestOrigin = getRequestOrigin(req);
+
+  const appUrlRaw = process.env.APP_URL
+    ? String(process.env.APP_URL).replace(/\/+$/, '')
+    : '';
+
+  if (!appUrlRaw) return requestOrigin;
+
+  try {
+    const app = new URL(appUrlRaw);
+    const reqUrl = new URL(requestOrigin);
+
+    const appRoot = app.hostname.replace(/^www\./, '').toLowerCase();
+    const reqRoot = reqUrl.hostname.replace(/^www\./, '').toLowerCase();
+
+    return reqRoot === appRoot ? appUrlRaw : requestOrigin;
+  } catch (e) {
+    // If APP_URL is malformed, fail safe to APP_URL rather than trusting host headers.
+    return appUrlRaw;
   }
-
-  // Vercel: NODE_ENV kan være "production" også i Preview.
-  // Vi bruker VERCEL_ENV når den finnes for å skille preview vs production.
-  const isProd = process.env.VERCEL_ENV
-    ? process.env.VERCEL_ENV === 'production'
-    : process.env.NODE_ENV === 'production';
-
-  // PRODUCTION: Fail hard if APP_URL not set in production
-  if (isProd) {
-    console.error('[create-checkout-session] ❌ APP_URL not configured in production!');
-    throw new Error('APP_URL must be configured in production environment');
-  }
-
-  // DEV/LOCAL ONLY: Fallback with strict validation
-  const rawHost = String(req.headers.host || '');
-
-  // NORMALIZE: lowercase, trim whitespace, remove :443 port, remove trailing dot
-  const normalizedHost = rawHost
-    .trim()
-    .toLowerCase()
-    .replace(/:443$/, '')          // explicit https port
-    .replace(/\.$/, '');          // trailing dot
-
-  const allowedHosts = new Set([
-    'localhost:3000',
-    'localhost:5173',
-    'barnefotballtrener.vercel.app',
-    'barnefotballtrener.no',
-    'www.barnefotballtrener.no'
-  ]);
-
-  if (!allowedHosts.has(normalizedHost)) {
-    console.error('[create-checkout-session] ⚠️ Invalid host header:', rawHost, '(normalized:', normalizedHost + ')');
-    throw new Error('Invalid host header');
-  }
-
-  // NORMALIZE PROTOCOL: handle "https, http" comma-separated variants from proxies
-  const protoRaw = String(req.headers["x-forwarded-proto"] || "https");
-  const proto = protoRaw.split(',')[0].trim();
-  // Force HTTPS in production even if proxy says HTTP
-  const safeProto = (proto === 'http' && isProd) ? 'https' : proto;
-
-  return `${safeProto}://${normalizedHost}`;
 }
 
 export default async function handler(req, res) {
