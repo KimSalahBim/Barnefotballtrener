@@ -23,14 +23,10 @@ function makeErrorId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function normalizeHost(rawHost) {
-  return String(rawHost || '')
-    .trim()
-    .toLowerCase()
-    .replace(/:443$/, '')
-    .replace(/\.$/, '');
-}
 
+// ---------------------------------------------------------------
+// Base URL helpers (preview-aware, host-validated)
+// ---------------------------------------------------------------
 function getForwardedProto(req) {
   const raw = req.headers['x-forwarded-proto'] || '';
   const proto = String(raw).split(',')[0].trim().toLowerCase();
@@ -43,7 +39,9 @@ function getForwardedHost(req) {
 }
 
 function normalizeHost(rawHost) {
-  return String(rawHost || '').trim().toLowerCase().replace(/\.$/, '');
+  return String(rawHost || '').trim().toLowerCase()
+    .replace(/:443$/, '')
+    .replace(/\.$/, '');
 }
 
 function isLocalHost(host) {
@@ -92,11 +90,10 @@ function getRequestOrigin(req) {
   return `${proto}://${host}`;
 }
 
-// Debug should be enabled only on local + vercel (including preview)
-function isDebugHost(req) {
+// Debug: enabled on localhost + *.vercel.app (including preview)
+function isDebugHost(hostHeader) {
   try {
-    const host = normalizeHost(getForwardedHost(req));
-    const bare = host.split(':')[0];
+    const bare = String(hostHeader || '').toLowerCase().split(':')[0];
     return bare === 'localhost' || bare === '127.0.0.1' || bare.endsWith('.vercel.app');
   } catch {
     return false;
@@ -104,8 +101,8 @@ function isDebugHost(req) {
 }
 
 // Base URL for success/cancel/return URLs.
-// - If request comes via canonical host, use APP_URL (so .no stays "true" production).
-// - If request comes via a vercel domain, keep that origin so you can debug on networks that block .no.
+// - If request comes via canonical host (.no), use APP_URL.
+// - If request comes via a vercel domain, keep that origin (so preview/staging stays on its own domain).
 function getBaseUrl(req) {
   const requestOrigin = getRequestOrigin(req);
 
@@ -155,7 +152,10 @@ function safeReturnUrl(req, candidate) {
   }
 }
 
-// Finn/velg Stripe customer for e-post (robust mot duplikater)
+
+// ---------------------------------------------------------------
+// Stripe Customer Selection (robust mot duplikater)
+// ---------------------------------------------------------------
 // Regler:
 // 1) Foretrekk customer med metadata.supabase_user_id === userId
 // 2) Ellers: se på opptil 3 nyeste "ubundne" customers og velg en som har en subscription (active/trialing/past_due)
