@@ -148,16 +148,32 @@
   }
 
   async function getAccessToken({ retries = 3, skipCache = false } = {}) {
-    // Get current user ID for cache keying
+    // Get current user ID for cache keying.
+    // Try getSession first, but fall back to existing cache or authService if it hangs.
     let currentUserId = null;
     try {
-      const { data: { session } } = await window.supabase?.auth?.getSession?.() || { data: {} };
+      const sessionResult = await withTimeout(
+        window.supabase?.auth?.getSession?.() || Promise.resolve({ data: {} }),
+        3000,
+        "getSession userId lookup timeout"
+      );
+      const { data: { session } } = sessionResult || { data: {} };
       currentUserId = session?.user?.id || null;
     } catch (err) {
       console.warn(`${LOG_PREFIX} ⚠️ Could not get current user ID for cache:`, err.message);
     }
 
-    // 1) Prøv cached token først (hvis ikke skipCache)
+    // Fallback: use cached userId or authService if getSession timed out
+    if (!currentUserId) {
+      currentUserId = tokenCache.userId || null;
+    }
+    if (!currentUserId) {
+      try {
+        currentUserId = window.authService?.getUserId?.() || null;
+      } catch (_) {}
+    }
+
+    // 1) Try cached token first (unless skipCache)
     if (!skipCache && currentUserId) {
       const cached = getCachedToken(currentUserId);
       if (cached) return cached;

@@ -292,6 +292,7 @@ function showSupabaseBlockedMessage(err) {
       script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
       script.async = true;
       script.defer = true;
+      script.setAttribute('crossorigin', 'anonymous');
       script.setAttribute('data-supabase-script', '1');
 
       script.onload = function () {

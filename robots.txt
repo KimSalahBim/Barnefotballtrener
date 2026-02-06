@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /config.js
+Disallow: /env.js
+Disallow: /app.js
+Disallow: /debug.js
 
 Sitemap: https://barnefotballtrener.no/sitemap.xml

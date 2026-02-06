@@ -108,10 +108,10 @@ export default async function handler(req, res) {
         for (const sub of subscriptions.data || []) {
           try {
             await stripe.subscriptions.cancel(sub.id);
-            deletionResults.steps_completed.push(`Cancelled subscription: ${sub.id}`);
+            deletionResults.steps_completed.push('Cancelled active subscription');
           } catch (cancelErr) {
             console.error('[delete-account] Failed to cancel subscription:', cancelErr);
-            deletionResults.errors.push(`Could not cancel subscription ${sub.id}: ${cancelErr.message}`);
+            deletionResults.errors.push('Could not cancel a subscription');
           }
         }
 
@@ -130,14 +130,14 @@ export default async function handler(req, res) {
           deletionResults.steps_completed.push('Anonymized Stripe customer metadata');
         } catch (updateErr) {
           console.error('[delete-account] Failed to anonymize customer:', updateErr);
-          deletionResults.errors.push(`Could not anonymize Stripe customer: ${updateErr.message}`);
+          deletionResults.errors.push('Could not anonymize Stripe customer');
         }
       } else {
         deletionResults.steps_completed.push('No Stripe customer found (nothing to cancel)');
       }
     } catch (stripeErr) {
       console.error('[delete-account] Stripe error:', stripeErr);
-      deletionResults.errors.push(`Stripe error: ${stripeErr.message}`);
+      deletionResults.errors.push('Stripe processing error');
     }
 
     // 4) Delete trial data from Supabase
@@ -149,13 +149,13 @@ export default async function handler(req, res) {
 
       if (deleteErr) {
         console.error('[delete-account] Failed to delete trial data:', deleteErr);
-        deletionResults.errors.push(`Could not delete trial data: ${deleteErr.message}`);
+        deletionResults.errors.push('Could not delete trial data');
       } else {
         deletionResults.steps_completed.push('Deleted trial data from database');
       }
     } catch (dbErr) {
       console.error('[delete-account] Database error:', dbErr);
-      deletionResults.errors.push(`Database error: ${dbErr.message}`);
+      deletionResults.errors.push('Database error during deletion');
     }
 
     // 5) Delete Supabase Auth user (THIS MUST BE LAST - deletes the session token!)
@@ -164,7 +164,7 @@ export default async function handler(req, res) {
       
       if (authDeleteErr) {
         console.error('[delete-account] Failed to delete auth user:', authDeleteErr);
-        deletionResults.errors.push(`Could not delete auth user: ${authDeleteErr.message}`);
+        deletionResults.errors.push('Could not delete auth user');
         
         // CRITICAL: If we can't delete the auth user, the deletion is incomplete
         return res.status(500).json({
@@ -177,7 +177,7 @@ export default async function handler(req, res) {
       }
     } catch (authErr) {
       console.error('[delete-account] Auth error:', authErr);
-      deletionResults.errors.push(`Auth error: ${authErr.message}`);
+      deletionResults.errors.push('Auth deletion error');
       
       return res.status(500).json({
         error: 'Account deletion incomplete',

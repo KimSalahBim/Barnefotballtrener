@@ -12,10 +12,11 @@
     // Vent litt på at authService blir tilgjengelig
     await waitForAuthService(3000);
 
-    setupGoogleSignIn();
-    setupLegacyLogin();
+    // NOTE: Google Sign In button is bound by auth.js (with stopImmediatePropagation).
+    // We do NOT bind it here to avoid double-firing on mobile (touchend + click).
     setupLogoutDelegation(); // <-- viktig: robust på mobil
     setupSubscriptionBadge();
+    setupRefreshButton();
   }
 
   async function waitForAuthService(timeoutMs) {
@@ -25,82 +26,6 @@
       await new Promise((r) => setTimeout(r, 50));
     }
     return false;
-  }
-
-  // -----------------------------
-  // Google Sign In
-  // -----------------------------
-  function setupGoogleSignIn() {
-    const btn = document.getElementById('googleSignInBtn');
-    if (!btn) return;
-
-    // Unngå dobbel-binding
-    if (btn.dataset.bound === '1') return;
-    btn.dataset.bound = '1';
-
-    const handler = async (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-
-      btn.disabled = true;
-      const original = btn.innerHTML;
-      btn.innerHTML = '<span>Logger inn...</span>';
-
-      try {
-        if (!window.authService) throw new Error('AuthService mangler');
-        const result = await window.authService.signInWithGoogle();
-        if (!result || result.success === false) {
-          throw new Error(result?.error || 'Login failed');
-        }
-      } catch (error) {
-        console.error('Google sign in error:', error);
-        notify('Kunne ikke logge inn med Google. Prøv igjen.', 'error');
-        btn.disabled = false;
-        btn.innerHTML = original;
-      }
-    };
-
-    // click + touchend for mobil
-    btn.addEventListener('click', handler, { passive: false });
-    btn.addEventListener('touchend', handler, { passive: false });
-  }
-
-  // -----------------------------
-  // Legacy Login (gammel passord-metode)
-  // -----------------------------
-  function setupLegacyLogin() {
-    const btn = document.getElementById('legacyLoginBtn');
-    if (!btn) return;
-
-    if (btn.dataset.bound === '1') return;
-    btn.dataset.bound = '1';
-
-    btn.addEventListener('click', () => {
-      const pwd = prompt('Skriv passord:');
-      if (pwd === '1234') {
-        try {
-          localStorage.setItem('fotballLoggedIn', 'true');
-          localStorage.setItem('fotballLoginTime', String(Date.now()));
-        } catch (e) {}
-
-        const err = document.getElementById('passwordError');
-        if (err) err.style.display = 'none';
-
-        if (window.authService && typeof window.authService.showMainApp === 'function') {
-          window.authService.showMainApp();
-        }
-
-        if (typeof window.initApp === 'function' && !window.appInitialized) {
-          window.initApp();
-        }
-      } else {
-        const errorEl = document.getElementById('passwordError');
-        if (errorEl) {
-          errorEl.textContent = 'Feil passord. Prøv igjen.';
-          errorEl.style.display = 'block';
-        }
-      }
-    });
   }
 
   // -----------------------------
@@ -164,7 +89,7 @@
         return;
       }
 
-      const subscription = await window.subscriptionService?.checkSubscription?.(user.id);
+      const subscription = await window.subscriptionService?.checkSubscription?.();
       if (!subscription) {
         badge.style.display = 'none';
         return;
@@ -185,6 +110,20 @@
       console.error('Error loading subscription badge:', e);
       badge.style.display = 'none';
     }
+  }
+
+  // -----------------------------
+  // Refresh Button
+  // -----------------------------
+  function setupRefreshButton() {
+    const btn = document.getElementById('refreshBtn');
+    if (!btn) return;
+    if (btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+
+    btn.addEventListener('click', () => {
+      window.location.reload();
+    });
   }
 
   // -----------------------------

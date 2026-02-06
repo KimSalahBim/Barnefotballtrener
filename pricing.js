@@ -169,7 +169,7 @@
 
       let subscription = null;
       if (checkFn) {
-        subscription = await checkFn.call(svc, user.id);
+        subscription = await checkFn.call(svc);
       }
 
       log('📊 Subscription status:', subscription);
@@ -177,7 +177,8 @@
       const trialEnabled = !!(window.CONFIG && window.CONFIG.trial && window.CONFIG.trial.enabled);
       const canStartTrial = !!(subscription && subscription.canStartTrial);
 
-      if (trialEnabled && canStartTrial && typeof svc.startTrial === 'function') {
+      // Lifetime plans skip trial entirely — go straight to checkout
+      if (trialEnabled && canStartTrial && planType !== 'lifetime' && typeof svc.startTrial === 'function') {
         log('🎁 Starting trial...');
         const result = await svc.startTrial(user.id, planType);
 
