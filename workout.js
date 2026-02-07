@@ -378,7 +378,7 @@
               <select id="${idp}_mode" class="input wo-input">
                 <option value="none" ${mode === 'none' ? 'selected' : ''}>Ingen inndeling</option>
                 <option value="even" ${mode === 'even' ? 'selected' : ''}>Jevne grupper</option>
-                <option value="diff" ${mode === 'diff' ? 'selected' : ''}>Etter nivå (beste sammen)</option>
+                <option value="diff" ${mode === 'diff' ? 'selected' : ''}>Grupper etter nivå</option>
               </select>
             </div>
             <div class="small-text" style="opacity:0.85; margin-top:6px;">
@@ -482,7 +482,7 @@
           <div class="wo-block-actions">
             <button class="btn-small" type="button" id="wo_${b.id}_up" title="Flytt opp">↑</button>
             <button class="btn-small" type="button" id="wo_${b.id}_down" title="Flytt ned">↓</button>
-            ${isParallel ? '' : `<button class="btn-small" type="button" id="wo_${b.id}_addParallel" title="Legg til parallell øvelse">+ Parallel</button>`}
+            ${isParallel ? '' : `<button class="btn-small" type="button" id="wo_${b.id}_addParallel" title="Legg til parallell øvelse">Øvelser parallelt</button>`}
             <button class="btn-small btn-danger" type="button" id="wo_${b.id}_del" title="Slett">Slett</button>
           </div>
         </div>
@@ -498,7 +498,7 @@
       `;
 
       return `
-        <div class="wo-block">
+        <div class="wo-block${isParallel ? ' wo-block-parallel' : ''}">
           ${header}
           ${help}
           <div class="wo-block-body">
@@ -784,13 +784,11 @@
 
     const groups = Array.isArray(cached) ? cached : [];
     groupsOut.innerHTML = `
-      <div class="wo-groups-wrap">
+      <div class="wo-groups-compact">
         ${groups.map((g, idx) => `
-          <div class="results-card">
-            <h3>${groups.length === 1 ? 'Deltakere' : `Gruppe ${idx + 1}`} <span class="small-text" style="opacity:0.8;">(${g.length})</span></h3>
-            <div class="results-list">
-              ${g.map(p => `<div class="result-item">${escapeHtml(p.name)} ${p.goalie ? ' 🧤' : ''}</div>`).join('')}
-            </div>
+          <div class="wo-group-card">
+            <div class="wo-group-title">${groups.length === 1 ? 'Deltakere' : `Gruppe ${idx + 1}`} <span style="opacity:0.7;">(${g.length})</span></div>
+            <div class="wo-group-names">${g.map(p => `<span class="wo-group-name">${escapeHtml(p.name)}${p.goalie ? ' 🧤' : ''}</span>`).join('')}</div>
           </div>
         `).join('')}
       </div>
@@ -1710,6 +1708,7 @@ function serializeWorkoutFromState() {
 
     const usePlayersToggle = $('woUsePlayersToggle');
     const addBtn = $('woAddExerciseBtn');
+    const addBtnBottom = $('woAddExerciseBtnBottom');
     const suggestBtn = $('woSuggestBtn');
     const saveBtn = $('woSaveTemplateBtn');
     const saveWorkoutBtn = $('woSaveWorkoutBtn');
@@ -1747,6 +1746,7 @@ function serializeWorkoutFromState() {
     }
 
     if (addBtn) addBtn.addEventListener('click', () => addBlock('single'));
+    if (addBtnBottom) addBtnBottom.addEventListener('click', () => addBlock('single'));
     if (suggestBtn) suggestBtn.addEventListener('click', () => suggestWorkout());
     if (saveBtn) saveBtn.addEventListener('click', () => saveTemplate());
     if (saveWorkoutBtn) saveWorkoutBtn.addEventListener('click', () => saveWorkout());

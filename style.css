@@ -1635,10 +1635,10 @@ body {
   /* Bygg din treningsøkt: full bredde på mobil */
   .app-nav .nav-btn[data-tab="workout"]{
     grid-column: 1 / -1;
-    min-height: 58px;
+    min-height: 44px;
     font-size: 10px;
     font-weight: 800;
-    gap: 6px;
+    gap: 4px;
   }
 
   /* Ikoner mindre */
@@ -1875,6 +1875,10 @@ body.gated #mainApp {
   background: #fff;
   box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
 }
+.wo-block-parallel {
+  border-left: 4px solid #f59e0b;
+  background: #fffbeb;
+}
 
 .wo-block-header {
   display: flex;
@@ -2010,3 +2014,10 @@ body.gated #mainApp {
 
 /* Workout: hint under share/import buttons */
 .wo-hint{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.35;}
+
+/* Workout: compact group display */
+.wo-groups-compact { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.wo-group-card { background:#f6f8fc; border:1px solid #e6e9ef; border-left:4px solid rgba(11,91,211,0.35); border-radius:10px; padding:8px 10px; }
+.wo-group-title { font-weight:800; font-size:12px; margin-bottom:4px; color:#1a2333; }
+.wo-group-names { display:flex; flex-wrap:wrap; gap:4px; }
+.wo-group-name { background:#fff; border:1px solid #e6e9ef; border-radius:6px; padding:2px 8px; font-size:12px; white-space:nowrap; }
