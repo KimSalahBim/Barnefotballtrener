@@ -1755,35 +1755,30 @@ body {
     padding: 8px !important;
   }
   .player-card {
-    display: grid;
-    grid-template-columns: 18px 1fr auto;
-    grid-template-rows: auto;
-    align-items: center;
-    gap: 4px;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 4px !important;
     background: var(--gray-50);
     border: 1px solid var(--gray-200);
     border-radius: 8px;
-    padding: 5px 6px;
+    padding: 4px 5px !important;
+    overflow: hidden;
   }
-  .player-card .player-active {
-    display: contents;
-  }
-  .player-card .player-active input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    margin: 0;
-  }
-  .player-card .player-active span {
-    display: none;
+  .player-card .player-active-toggle {
+    width: 15px !important;
+    height: 15px !important;
+    margin: 0 !important;
+    flex-shrink: 0;
   }
   .player-card .player-info {
+    flex: 1;
     min-width: 0;
-    grid-column: 2;
   }
   .player-card .player-name {
-    font-size: 12px !important;
+    font-size: 11px !important;
     font-weight: 700;
-    margin-bottom: 0 !important;
+    margin: 0 !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1791,37 +1786,27 @@ body {
   }
   .player-card .player-tags {
     display: flex;
-    gap: 3px;
-    flex-wrap: nowrap;
+    gap: 2px;
   }
   .player-card .player-tags .tag {
-    font-size: 9px;
-    padding: 0px 4px;
-    border-radius: 4px;
+    font-size: 9px !important;
+    padding: 0 3px !important;
+    border-radius: 3px;
     white-space: nowrap;
-  }
-  .player-card .player-actions {
-    display: flex;
-    gap: 2px;
-    grid-column: 3;
-    grid-row: 1 / -1;
-    align-self: center;
+    line-height: 1.4;
   }
   .player-card .icon-btn {
-    width: 22px;
-    height: 22px;
-    font-size: 12px;
-    padding: 0;
-    border: none;
-    background: transparent;
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 11px !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
     cursor: pointer;
-    border-radius: 4px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-  .player-card .icon-btn:active {
-    background: var(--gray-200);
   }
 }
 .selection-header{
