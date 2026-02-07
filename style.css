@@ -2019,6 +2019,19 @@ body.gated #mainApp {
 /* Workout: hint under share/import buttons */
 .wo-hint{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.35;}
 
+/* Workout: meta fields (dato, tittel, total) */
+.wo-meta-card { text-align:left; }
+.wo-meta-fields { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+.wo-meta-field { flex:1; min-width:140px; }
+.wo-meta-field-wide { flex:2; min-width:200px; }
+.wo-meta-field .input { width:100%; }
+.wo-meta-total { min-width:100px; text-align:right; }
+@media (max-width: 600px) {
+  .wo-meta-fields { flex-direction:column; }
+  .wo-meta-field, .wo-meta-field-wide { width:100%; }
+  .wo-meta-total { text-align:center; }
+}
+
 /* Workout: compact group display */
 .wo-groups-compact { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
 .wo-group-card { background:#f6f8fc; border:1px solid #e6e9ef; border-left:4px solid rgba(11,91,211,0.35); border-radius:10px; padding:8px 10px; }
