@@ -1678,14 +1678,14 @@ body {
   .top-bar{ margin-bottom: 10px; }
 }
 /* --------------------------------------------
-   MOBIL: spiller-velger i 2 kolonner (Training/Kamp/Kampdag)
-   Endrer kun layout – ikke funksjon
+   MOBIL: spiller-velger i 3 kolonner (Training/Kamp/Kampdag)
+   Endrer kun layout - ikke funksjon
 -------------------------------------------- */
 @media (max-width: 640px) {
   /* Selve boksen som inneholder spillerlista */
   .player-selection {
-    padding: 14px 14px;
-    max-height: 260px;          /* lavere boks = mer plass til resten av siden */
+    padding: 10px 10px;
+    max-height: 280px;
     overflow-y: auto;
     scrollbar-width: none;      /* Firefox */
   }
@@ -1694,27 +1694,56 @@ body {
     height: 0;
   }
 
-  /* Gjør innholdet til grid med 2 kolonner */
+  /* Gjor innholdet til grid med 3 kolonner */
   .player-selection {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px;
   }
 
-  /* Hvert “spiller-kort” i lista */
-  .player-checkbox-item {
-    margin: 0;                  /* viktig: ellers blir det rare mellomrom */
-    padding: 10px 12px;
-    border-radius: 14px;
+  /* Hvert spiller-kort i lista (label.player-checkbox) */
+  .player-selection .player-checkbox {
+    margin: 0;
+    padding: 6px 6px;
+    border-radius: 10px;
+    gap: 4px;
+    align-items: center;
   }
 
-  /* Litt strammere typografi */
-  .player-checkbox-item .player-name {
-    font-size: 14px;
+  /* Kompakt checkbox */
+  .player-selection .checkmark {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    border-radius: 5px;
+  }
+
+  /* Kompakt typografi */
+  .player-selection .player-name {
+    font-size: 12px;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .player-selection .player-meta {
+    font-size: 10px;
+    opacity: 0.85;
     line-height: 1.1;
   }
-  .player-checkbox-item .player-position {
+
+  /* Legacy-klasse (beholdt for sikkerhet) */
+  .player-checkbox-item {
+    margin: 0;
+    padding: 6px 6px;
+    border-radius: 10px;
+  }
+  .player-checkbox-item .player-name {
     font-size: 12px;
+    line-height: 1.15;
+  }
+  .player-checkbox-item .player-position {
+    font-size: 10px;
     opacity: 0.85;
   }
 }
@@ -2108,22 +2137,22 @@ body.gated #mainApp {
 
   /* --- PLAYER CARDS (spillerliste) --- */
   .player-checkbox-item {
-    padding: 8px 10px !important;
+    padding: 6px 6px !important;
     border-radius: 10px !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 2px !important;
   }
   .player-checkbox-item .player-name,
   .player-name {
-    font-size: 14px !important;
-    margin-bottom: 2px !important;
+    font-size: 12px !important;
+    margin-bottom: 1px !important;
   }
   .player-meta {
-    font-size: 11px !important;
-    gap: 6px !important;
+    font-size: 10px !important;
+    gap: 4px !important;
   }
   .position-indicator {
-    font-size: 12px !important;
-    padding: 2px 8px !important;
+    font-size: 10px !important;
+    padding: 2px 6px !important;
   }
 
   /* --- BUTTONS --- */
@@ -2151,18 +2180,18 @@ body.gated #mainApp {
     margin-bottom: 10px !important;
   }
 
-  /* --- COMPETITIONS: 2-column player list --- */
+  /* --- COMPETITIONS: 3-column player list --- */
   .comp-list--players {
     display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(3, 1fr) !important;
     gap: 4px !important;
     max-height: 240px !important;
   }
   .comp-check {
-    padding: 6px 8px !important;
+    padding: 4px 6px !important;
     border-radius: 10px !important;
-    gap: 6px !important;
-    font-size: 13px !important;
+    gap: 4px !important;
+    font-size: 12px !important;
   }
   .comp-check input {
     width: 16px !important;
