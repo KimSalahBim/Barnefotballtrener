@@ -1209,23 +1209,21 @@
           const row = document.createElement('div');
           row.className = 'liga-match-row';
           row.innerHTML = `
-            <div class="liga-match-card" style="display:flex; align-items:stretch; justify-content:space-between; gap:12px; padding:12px; border:1px solid rgba(0,0,0,0.06); border-radius:14px; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,0.04);">
+            <div class="liga-match-card" style="display:flex; align-items:stretch; justify-content:space-between; gap:8px; padding:8px 10px; border:1px solid rgba(0,0,0,0.06); border-radius:10px; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
               <div class="liga-side home" style="flex:1; min-width:0;">
-                <div style="font-size:12px; font-weight:800; opacity:.6; margin-bottom:4px;">Hjemme</div>
-                <div class="liga-team-name" style="font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:10px;">${escapeHtml(m.home)}</div>
+                <div style="font-size:10px; font-weight:700; opacity:.5; margin-bottom:2px;">Hjemme</div>
+                <div class="liga-team-name" style="font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px;">${escapeHtml(m.home)}</div>
                 <input type="number" min="0" step="1" inputmode="numeric" class="input liga-score" data-mid="${m.id}" data-side="home"
                   placeholder="0" value="${m.homeGoals ?? ''}"
-                  style="width:100%; text-align:center; font-size:18px; font-weight:900; padding:10px 12px; border-radius:12px;">
+                  style="width:100%; text-align:center; font-size:16px; font-weight:900; padding:6px 8px; border-radius:8px;">
               </div>
-
-              <div class="liga-mid" aria-hidden="true" style="display:flex; align-items:center; justify-content:center; width:22px; font-weight:900; opacity:.55;">–</div>
-
+              <div class="liga-mid" aria-hidden="true" style="display:flex; align-items:center; justify-content:center; width:16px; font-weight:900; opacity:.4; font-size:14px;">–</div>
               <div class="liga-side away" style="flex:1; min-width:0;">
-                <div style="font-size:12px; font-weight:800; opacity:.6; margin-bottom:4px; text-align:right;">Borte</div>
-                <div class="liga-team-name" style="font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:10px; text-align:right;">${escapeHtml(m.away)}</div>
+                <div style="font-size:10px; font-weight:700; opacity:.5; margin-bottom:2px; text-align:right;">Borte</div>
+                <div class="liga-team-name" style="font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px; text-align:right;">${escapeHtml(m.away)}</div>
                 <input type="number" min="0" step="1" inputmode="numeric" class="input liga-score" data-mid="${m.id}" data-side="away"
                   placeholder="0" value="${m.awayGoals ?? ''}"
-                  style="width:100%; text-align:center; font-size:18px; font-weight:900; padding:10px 12px; border-radius:12px;">
+                  style="width:100%; text-align:center; font-size:16px; font-weight:900; padding:6px 8px; border-radius:8px;">
               </div>
             </div>
           `;
