@@ -277,8 +277,11 @@
   }
 
   function updateTotalUI() {
+    const t = `${totalMinutes()} min`;
     const el = $('woTotal');
-    if (el) el.textContent = `${totalMinutes()} min`;
+    if (el) el.textContent = t;
+    const elB = $('woTotalBottom');
+    if (elB) elB.textContent = t;
   }
 
   function renderPlayersPanel() {
@@ -301,19 +304,19 @@
     const validIds = new Set(players.map(p => p.id));
     state.selected = new Set(Array.from(state.selected).filter(id => validIds.has(id)));
 
-    container.innerHTML = players.map(p => {
+    container.innerHTML = `<div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:2px;">` + players.map(p => {
       const checked = state.selected.has(p.id) ? 'checked' : '';
       return `
-        <label class="player-checkbox">
+        <label class="player-checkbox" style="padding:4px 6px; gap:6px;">
           <input type="checkbox" data-id="${escapeHtml(p.id)}" ${checked}>
-          <span class="checkmark"></span>
-          <div class="player-details">
-            <div class="player-name">${escapeHtml(p.name)}</div>
-            <div class="player-meta">${p.goalie ? '🧤 Keeper' : '⚽ Utespiller'}</div>
+          <span class="checkmark" style="width:18px; height:18px;"></span>
+          <div class="player-details" style="min-width:0;">
+            <div class="player-name" style="font-size:13px;">${escapeHtml(p.name)}</div>
+            <div class="player-meta" style="font-size:10px;">${p.goalie ? '🧤 Keeper' : '⚽ Utespiller'}</div>
           </div>
         </label>
       `;
-    }).join('');
+    }).join('') + `</div>`;
 
     container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
       cb.addEventListener('change', () => {
@@ -446,16 +449,16 @@
             <button id="wo_${bid}_pickNone" class="btn-small" type="button">Fjern alle</button>
           </div>
 
-          <div class="wo-pick-list">
+          <div class="wo-pick-list" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:2px;">
             ${eligible.map(p => {
               const checked = cleaned.has(p.id) ? 'checked' : '';
               return `
-                <label class="player-checkbox wo-pick-item">
+                <label class="player-checkbox wo-pick-item" style="padding:4px 6px; gap:6px;">
                   <input type="checkbox" data-pickb="${escapeHtml(p.id)}" ${checked}>
-                  <span class="checkmark"></span>
-                  <div class="player-details">
-                    <div class="player-name">${escapeHtml(p.name)}</div>
-                    <div class="player-meta">${p.goalie ? '🧤 Keeper' : '⚽ Utespiller'}</div>
+                  <span class="checkmark" style="width:18px; height:18px;"></span>
+                  <div class="player-details" style="min-width:0;">
+                    <div class="player-name" style="font-size:13px;">${escapeHtml(p.name)}</div>
+                    <div class="player-meta" style="font-size:10px;">${p.goalie ? '🧤 Keeper' : '⚽ Utespiller'}</div>
                   </div>
                 </label>
               `;
@@ -1529,8 +1532,8 @@ function serializeWorkoutFromState() {
       display:flex; gap:14px; align-items:center;
       box-shadow: 0 6px 18px rgba(11,91,211,0.20);
     }
-    .logo{width:44px; height:44px; border-radius:12px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden;}
-    .logo img{width:44px; height:44px; object-fit:cover;}
+    .logo{width:72px; height:72px; border-radius:14px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+    .logo img{width:72px; height:72px; object-fit:cover;}
     .h-title{font-size:18px; font-weight:900; line-height:1.2;}
     .h-sub{opacity:0.9; font-size:13px; margin-top:2px;}
     .meta{margin-left:auto; text-align:right;}
@@ -1607,6 +1610,11 @@ function serializeWorkoutFromState() {
         </tbody>
       </table>
       ${attendanceHtml}
+    </div>
+
+    <div class="card" style="text-align:center; margin-top:16px; padding:12px;">
+      <div style="font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:900;">Oppsummering</div>
+      <div style="font-size:1.5rem; font-weight:900; margin-top:4px;">Total tid: ${totalMinutes()} min</div>
     </div>
 
     <div class="actions">
