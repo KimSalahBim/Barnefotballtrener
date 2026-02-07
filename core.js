@@ -389,7 +389,7 @@
     if (!el) return;
     el.innerHTML = `
   <div class="app-title">
-    <img src="icon-192.png" alt="Barnefotballtrener" class="app-logo" />
+    <img src="apple-touch-icon.png" alt="Barnefotballtrener logo" class="app-logo" />
     <div class="app-name">Barnefotballtrener</div>
   </div>
 `;
@@ -436,6 +436,10 @@
   }
 
   function makeBalancedGroups(players, groupCount) {
+    if (window.Grouping && typeof window.Grouping.makeBalancedGroups === 'function') {
+      return window.Grouping.makeBalancedGroups(players, groupCount, state.settings.useSkill);
+    }
+
     const n = Math.max(2, Math.min(6, Number(groupCount) || 2));
     let list = players;
 
@@ -460,6 +464,10 @@
   // Differensiering: "beste sammen, neste beste sammen ..."
   // Krever ferdighetsnivå aktivert for å gi mening.
   function makeDifferentiatedGroups(players, groupCount) {
+    if (window.Grouping && typeof window.Grouping.makeDifferentiatedGroups === 'function') {
+      return window.Grouping.makeDifferentiatedGroups(players, groupCount, state.settings.useSkill);
+    }
+
     const n = Math.max(2, Math.min(6, Number(groupCount) || 2));
     if (!state.settings.useSkill) {
       return null; // håndteres i UI
@@ -484,6 +492,10 @@
 
   // Generisk "jevne lag" for 2..6 lag. Bruker "snake draft" for nivå-balanse.
   function makeEvenTeams(players, teamCount) {
+    if (window.Grouping && typeof window.Grouping.makeEvenTeams === 'function') {
+      return window.Grouping.makeEvenTeams(players, teamCount, state.settings.useSkill);
+    }
+
     const n = Math.max(2, Math.min(6, Number(teamCount) || 2));
 
     let list = players;
@@ -624,13 +636,13 @@
     // Robust mobil-håndtering for iOS/Safari
     // Mål: ingen "tomt felt" øverst i Liga eller andre faner
 
-    document.querySelectorAll('.nav-btn').forEach(btn => {
+    document.querySelectorAll('.app-nav .nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab');
         if (!tab) return;
 
         // STEG 1: Fjern active fra ALLE nav-knapper
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.app-nav .nav-btn').forEach(b => b.classList.remove('active'));
         
         // STEG 2: Fjern active fra ALLE tabs OG eksplisitt skjul dem
         document.querySelectorAll('.tab-content').forEach(c => {
@@ -999,7 +1011,7 @@
         return;
       }
 
-      const groups = makeDifferentiatedGroups(players, groupCount);
+      const groups = (window.Grouping && window.Grouping.makeDifferentiatedGroups) ? window.Grouping.makeDifferentiatedGroups(players, groupCount, !!state.settings.useSkill) : makeDifferentiatedGroups(players, groupCount);
       if (!groups) {
         showNotification('Kunne ikke lage grupper', 'error');
         return;
@@ -1042,7 +1054,7 @@
       if (players.length < 2) return showNotification('Velg minst 2 spillere', 'error');
 
       const teamCount = Number($('matchTeams')?.value ?? 2);
-      const res = makeEvenTeams(players, teamCount);
+      const res = (window.Grouping && window.Grouping.makeEvenTeams) ? window.Grouping.makeEvenTeams(players, teamCount, !!state.settings.useSkill) : makeEvenTeams(players, teamCount);
       renderMultiTeamResults(res);
       showNotification('Lagdeling klar', 'success');
     });
@@ -1350,6 +1362,9 @@
 
 
   // Exposed global helper used by inline onclick in HTML
+  // Expose grouping algorithms for other modules (e.g. workout.js)
+  // Important: workout.js MUST reuse these to stay in sync with Treningsgrupper/Laginndeling.
+
   window.changeNumber = function (inputId, delta) {
     const el = $(inputId);
     if (!el) return;

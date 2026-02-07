@@ -1632,6 +1632,15 @@ body {
     transition: transform .12s ease, box-shadow .12s ease;
   }
 
+  /* Bygg din treningsøkt: full bredde på mobil */
+  .app-nav .nav-btn[data-tab="workout"]{
+    grid-column: 1 / -1;
+    min-height: 58px;
+    font-size: 10px;
+    font-weight: 800;
+    gap: 6px;
+  }
+
   /* Ikoner mindre */
   .app-nav .nav-btn i,
   .app-nav .nav-btn .fa,
@@ -1845,3 +1854,159 @@ body.gated #mainApp {
     margin-top: 0 !important;
   }
 }
+
+
+/* =========================
+   Bygg din treningsøkt (workout)
+   ========================= */
+.wo-hidden { display: none !important; }
+
+.wo-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.wo-block {
+  border: 1px solid #e6e9ef;
+  border-radius: 16px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+}
+
+.wo-block-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.wo-block-title {
+  font-weight: 900;
+}
+
+.wo-block-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.wo-subcard {
+  border: 1px solid #eef1f6;
+  border-radius: 14px;
+  padding: 10px;
+  background: #fafbfe;
+  margin-top: 10px;
+}
+
+.wo-subtitle {
+  font-weight: 900;
+}
+
+.wo-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.wo-field {
+  flex: 1;
+  min-width: 190px;
+}
+
+.wo-minutes {
+  max-width: 140px;
+  min-width: 140px;
+}
+
+.wo-label {
+  display: block;
+  font-weight: 800;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.wo-input {
+  width: 100%;
+}
+
+.wo-inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wo-groupsout {
+  margin-top: 10px;
+}
+
+.wo-groups-wrap {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .wo-groups-wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wo-parallel-pick {
+  border: 1px dashed #d7dbe4;
+  border-radius: 14px;
+  padding: 10px;
+  margin-top: 10px;
+  background: #fff;
+}
+
+.wo-parallel-pick-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wo-pick-list {
+  max-height: 280px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.wo-pick-item {
+  margin-top: 8px;
+}
+
+.wo-templates {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wo-template-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid #e6e9ef;
+  border-radius: 16px;
+  padding: 12px;
+  background: #fff;
+}
+
+.wo-template-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+
+/* Workout: hint under share/import buttons */
+.wo-hint{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.35;}

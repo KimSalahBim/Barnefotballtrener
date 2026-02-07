@@ -579,6 +579,9 @@
       <button class="nav-btn" data-tab="liga" type="button">
         <i class="fas fa-trophy"></i> Liga
       </button>
+      <button class="nav-btn" data-tab="workout" type="button">
+        <i class="fas fa-dumbbell"></i> Bygg din treningsøkt
+      </button>
     </nav>
 
     <!-- Innhold -->
@@ -954,6 +957,106 @@
           <div id="ligaTable"></div>
         </div>
       </div>
+
+      <!-- BYGG DIN TRENINGSØKT TAB -->
+      <div id="workout" class="tab-content">
+        <div class="tab-header">
+          <h2><i class="fas fa-dumbbell"></i> Bygg din treningsøkt</h2>
+          <p class="tab-description">
+            Bygg økta øvelse for øvelse, del inn i grupper (valgfritt) og eksporter til PDF for deling/utskrift.
+          </p>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-row" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:1; min-width:200px;">
+              <label for="woDate" style="display:block; font-weight:700; margin-bottom:6px;">Dato</label>
+              <input id="woDate" type="date" class="input" style="width:100%;">
+            </div>
+
+            <div style="flex:2; min-width:220px;">
+              <label for="woTitle" style="display:block; font-weight:700; margin-bottom:6px;">Navn på økta (valgfritt)</label>
+              <input id="woTitle" type="text" class="input" placeholder="f.eks. Tirsdag – pasning og spill" style="width:100%;">
+            </div>
+
+            <div style="min-width:160px;">
+              <div class="small-text" style="opacity:0.85; font-weight:800;">Total tid</div>
+              <div id="woTotal" style="font-size:1.4rem; font-weight:900;">0 min</div>
+            </div>
+          </div>
+
+          <div class="settings-row" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;">
+            <div>
+              <div style="font-weight:800;">Velg spillere til økta</div>
+              <div class="small-text" style="opacity:0.85;">Slå av hvis du bare vil lage en mal uten oppmøte.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="woUsePlayersToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div id="woPlayersPanel" style="display:none; margin-top:12px;">
+            <div class="selection-header">
+              <div class="selection-title">Oppmøte på trening (<span id="woPlayerCount">0</span>)</div>
+              <div class="selection-actions">
+                <button id="woSelectAllBtn" class="btn-small" type="button">Velg alle</button>
+                <button id="woClearAllBtn" class="btn-small" type="button">Fjern alle</button>
+              </div>
+            </div>
+            <div id="woPlayerSelection" class="player-selection"></div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div style="font-weight:900;">Øvelser</div>
+            <button id="woAddExerciseBtn" class="btn-primary" type="button">
+              <i class="fas fa-plus"></i> Legg til ny øvelse
+            </button>
+          </div>
+
+          <div id="woBlocks" class="wo-blocks"></div>
+
+          <div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+            <button id="woSuggestBtn" class="btn-secondary" type="button">
+              <i class="fas fa-magic"></i> Lag en treningsøkt for meg
+            </button>
+            <button id="woSaveTemplateBtn" class="btn-secondary" type="button">
+              <i class="fas fa-save"></i> Lagre som mal
+            </button>
+            <button id="woSaveWorkoutBtn" class="btn-secondary" type="button">
+              <i class="fas fa-bookmark"></i> Lagre økt
+            </button>
+            <button id="woExportBtn" class="btn-primary" type="button">
+              <i class="fas fa-file-pdf"></i> Eksporter / PDF
+            </button>
+
+            <button id="woDownloadJsonBtn" class="btn-secondary" type="button">
+              <i class="fas fa-download"></i> Last ned øktfil
+            </button>
+            <button id="woShareJsonBtn" class="btn-secondary" type="button">
+              <i class="fas fa-share-alt"></i> Del øktfil
+            </button>
+            <button id="woImportJsonBtn" class="btn-secondary" type="button">
+              <i class="fas fa-file-import"></i> Importer øktfil
+            </button>
+            <input id="woImportFile" type="file" accept="application/json,.json" style="display:none;" />
+            <div class="wo-hint">Øktfil inneholder ikke spillere. Medtrener velger spillere lokalt etter import.</div>
+          </div>
+        </div>
+
+        <div class="results-container">
+          <h3>Mine økter</h3>
+          <div id="woWorkouts" class="wo-templates"></div>
+        </div>
+
+        <div class="results-container">
+          <h3>Mine maler</h3>
+          <div id="woTemplates" class="wo-templates"></div>
+        </div>
+      </div>
+
     </main>
   </div> <!-- /#mainApp -->
 
@@ -980,9 +1083,11 @@
 <script src="subscription.js"></script>
 <script src="auth-ui.js"></script>
 <script src="pricing.js"></script>
+<script src="grouping.js"></script>
 <script src="core.js"></script>
 <script src="kampdag.js"></script>
 <script src="competitions.js"></script>
+<script src="workout.js"></script>
 <script src="logout-fix.js"></script>
 
 </body>
