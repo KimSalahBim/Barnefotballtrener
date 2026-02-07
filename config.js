@@ -18,28 +18,28 @@ const CONFIG = {
   // Prisplaner (Stripe Price IDs)
   prices: {
     month: {
-      id: 'price_1SssQbD5NzOLeQrihuah3dHE', // Fyll inn etter du har opprettet produktet i Stripe
-      amount: 25,
+      id: 'price_1SylYMD5NzOLeQrictXE2x6X',
+      amount: 49,
       currency: 'NOK',
       interval: 'month',
       name: 'Månedlig',
-      description: '25 kr per måned'
+      description: '49 kr per måned'
     },
     year: {
-      id: 'price_1SsskZD5NzOLeQri0c4i879y',
-      amount: 199,
+      id: 'price_1SylZ1D5NzOLeQriR9j3zVLb',
+      amount: 299,
       currency: 'NOK',
       interval: 'year',
       name: 'Årlig',
-      description: '199 kr per år (spar 33%)'
+      description: '299 kr per år (spar 49%)'
     },
     lifetime: {
-      id: 'price_1SssnID5NzOLeQri9vOKcXmO',
-      amount: 599,
+      id: 'price_1SylZsD5NzOLeQriqp3g2j7t',
+      amount: 799,
       currency: 'NOK',
       interval: 'one_time',
       name: 'Livstid',
-      description: '599 kr - betal én gang'
+      description: '799 kr - betal én gang'
     }
   },
 
