@@ -2024,7 +2024,8 @@ body.gated #mainApp {
 .wo-meta-fields { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
 .wo-meta-field { flex:1; min-width:140px; }
 .wo-meta-field-wide { flex:2; min-width:200px; }
-.wo-meta-field .input { width:100%; padding:7px 10px; font-size:14px; border-radius:10px; }
+.wo-meta-field .input { width:100%; padding:7px 10px; font-size:14px; border-radius:10px; -webkit-appearance:none; appearance:none; }
+.wo-meta-field input[type="date"] { text-align:left; min-height:0; }
 .wo-meta-total { min-width:100px; text-align:right; }
 @media (max-width: 600px) {
   .wo-meta-card { padding:12px 14px; }
