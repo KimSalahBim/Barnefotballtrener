@@ -218,23 +218,13 @@
     container.innerHTML = sorted.map(p => {
       return `
         <div class="player-card" data-id="${p.id}">
-          <label class="player-active">
-            <input type="checkbox" class="player-active-toggle" ${p.active ? 'checked' : ''}>
-            <span>Aktiv</span>
-          </label>
-
+          <input type="checkbox" class="player-active-toggle" ${p.active ? 'checked' : ''}>
           <div class="player-info">
             <div class="player-name">${escapeHtml(p.name)}</div>
-            <div class="player-tags">
-              ${state.settings.useSkill ? `<span class="tag">Nivå ${p.skill}</span>` : ''}
-              ${p.goalie ? `<span class="tag">🧤 Keeper</span>` : `<span class="tag">⚽ Utespiller</span>`}
-            </div>
+            <div class="player-tags">${state.settings.useSkill ? `<span class="tag">Nivå ${p.skill}</span>` : ''}${p.goalie ? `<span class="tag">🧤</span>` : `<span class="tag">⚽</span>`}</div>
           </div>
-
-          <div class="player-actions">
-            <button class="icon-btn edit" type="button" title="Rediger">✏️</button>
-            <button class="icon-btn delete" type="button" title="Slett">🗑️</button>
-          </div>
+          <button class="icon-btn edit" type="button" title="Rediger">✏️</button>
+          <button class="icon-btn delete" type="button" title="Slett">🗑️</button>
         </div>
       `;
     }).join('');
