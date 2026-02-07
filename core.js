@@ -678,8 +678,8 @@
             try { window.scrollTo(0, 0); } catch (_) {}
           }
 
-          // Debug logging (kan fjernes senere)
-          if (tab === 'liga') {
+          // Debug logging (kun på debug-hosts)
+          if (window.__BF_IS_DEBUG_HOST && tab === 'liga') {
             console.log('[LIGA DEBUG] Bytte til Liga-fanen');
             console.log('[LIGA DEBUG] window.scrollY:', window.scrollY);
             console.log('[LIGA DEBUG] document.scrollingElement.scrollTop:', scroller.scrollTop);
@@ -1074,7 +1074,7 @@
         row.className = 'team-name-row';
         row.innerHTML = `
           <label class="team-name-label">Lag ${i + 1}</label>
-          <input class="input team-name-input" data-team-name="1" type="text" value="${escapeHtml(v)}" />
+          <input class="input team-name-input" data-team-name="${i+1}" type="text" value="${escapeHtml(v)}" />
         `;
         namesWrap.appendChild(row);
       }

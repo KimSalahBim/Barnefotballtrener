@@ -14,7 +14,6 @@
 
     // NOTE: Google Sign In button is bound by auth.js (with stopImmediatePropagation).
     // We do NOT bind it here to avoid double-firing on mobile (touchend + click).
-    setupLogoutDelegation(); // <-- viktig: robust på mobil
     setupSubscriptionBadge();
     setupRefreshButton();
   }
@@ -31,48 +30,7 @@
   // -----------------------------
   // Logout (robust på mobil)
   // -----------------------------
-  function setupLogoutDelegation() {
-    // Vi lytter på dokumentet og sjekker om klikk/touch kom fra logout-knappen
-    const matchesLogout = (target) => {
-      if (!target) return null;
-      return target.closest('#logoutBtn, [data-action="logout"], .logout-btn');
-    };
-
-    const doLogout = async (ev) => {
-      const btn = matchesLogout(ev.target);
-      if (!btn) return;
-
-      ev.preventDefault();
-      ev.stopPropagation();
-
-      // Unngå dobbel-trigger (click + touchend)
-      if (btn.dataset.locked === '1') return;
-      btn.dataset.locked = '1';
-      setTimeout(() => (btn.dataset.locked = '0'), 600);
-
-      const ok = window.confirm('Er du sikker på at du vil logge ut?');
-      if (!ok) return;
-
-      try {
-        if (!window.authService || typeof window.authService.signOut !== 'function') {
-          throw new Error('authService.signOut mangler');
-        }
-
-        await window.authService.signOut();
-
-        // Valgfritt, men ofte nødvendig for å få UI “rent” på iOS:
-        // reload sikrer at session + view resettes
-        notify('Logget ut', 'info');
-        setTimeout(() => window.location.reload(), 150);
-      } catch (error) {
-        console.error('Logout error:', error);
-        notify('Kunne ikke logge ut. Prøv igjen.', 'error');
-      }
-    };
-
-    document.addEventListener('click', doLogout, true);
-    document.addEventListener('touchend', doLogout, true);
-  }
+  // Logout delegation removed — handled entirely by logout-fix.js
 
   // -----------------------------
   // Subscription Badge
