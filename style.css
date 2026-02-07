@@ -2020,16 +2020,17 @@ body.gated #mainApp {
 .wo-hint{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.35;}
 
 /* Workout: meta fields (dato, tittel, total) */
-.wo-meta-card { text-align:left; }
-.wo-meta-fields { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+.wo-meta-card { text-align:left; padding:14px 16px; }
+.wo-meta-fields { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
 .wo-meta-field { flex:1; min-width:140px; }
 .wo-meta-field-wide { flex:2; min-width:200px; }
-.wo-meta-field .input { width:100%; }
+.wo-meta-field .input { width:100%; padding:7px 10px; font-size:14px; border-radius:10px; }
 .wo-meta-total { min-width:100px; text-align:right; }
 @media (max-width: 600px) {
-  .wo-meta-fields { flex-direction:column; }
+  .wo-meta-card { padding:12px 14px; }
+  .wo-meta-fields { flex-direction:column; gap:8px; }
   .wo-meta-field, .wo-meta-field-wide { width:100%; }
-  .wo-meta-total { text-align:center; }
+  .wo-meta-total { text-align:center; margin-top:2px; }
 }
 
 /* Workout: compact group display */
