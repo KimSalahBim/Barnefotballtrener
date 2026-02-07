@@ -154,8 +154,8 @@
     try {
       const sessionResult = await withTimeout(
         window.supabase?.auth?.getSession?.() || Promise.resolve({ data: {} }),
-        3000,
-        "getSession userId lookup timeout"
+        5000,
+        "getSession userId lookup (5s)"
       );
       const { data: { session } } = sessionResult || { data: {} };
       currentUserId = session?.user?.id || null;
@@ -186,8 +186,8 @@
         // Normal vei med timeout
         const s = await withTimeout(
           window.supabase?.auth?.getSession?.(),
-          3000,
-          "getSession timeout"
+          5000,
+          "getSession (5s)"
         );
         const token = s?.data?.session?.access_token;
         const userId = s?.data?.session?.user?.id;
@@ -202,12 +202,12 @@
         // Da prøver vi en forsiktig refresh.
         await withTimeout(
           window.supabase?.auth?.refreshSession?.(),
-          3000,
-          "refreshSession timeout"
+          5000,
+          "refreshSession (5s)"
         );
         const s2 = await withTimeout(
           window.supabase?.auth?.getSession?.(),
-          3000,
+          5000,
           "getSession timeout (retry)"
         );
         const token2 = s2?.data?.session?.access_token;
@@ -221,8 +221,8 @@
         // fallback: getUser kan av og til fungere når session ikke er tilgjengelig ennå
         const u = await withTimeout(
           window.supabase?.auth?.getUser?.(),
-          3000,
-          "getUser timeout"
+          5000,
+          "getUser (5s)"
         );
         // getUser returnerer ikke token, men hvis den feiler pga manglende session,
         // gir vi Supabase litt tid og prøver igjen.
@@ -264,6 +264,13 @@
 
   // --- SubscriptionService (window.subscriptionService) ---
   const subscriptionService = {
+    // Returner cachet status uten nettverkskall (for graceful fallback)
+    getLastKnownStatus() {
+      if (statusCache.status && statusCache.userId) {
+        return statusCache.status;
+      }
+      return null;
+    },
     async checkSubscription(options) {
       const forceFresh = !!(options && options.forceFresh);
       let token;
