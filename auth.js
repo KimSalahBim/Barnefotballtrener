@@ -456,8 +456,20 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
         self.supabase.auth.onAuthStateChange(async function (event, sess) {
           console.log('🔄 Auth state changed:', event);
 
-          if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && sess && sess.user) {
+          if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && sess && sess.user) {
+            // Unngå re-trigger hvis appen allerede er vist for samme bruker
+            if (self._mainShown && self.currentUser && self.currentUser.id === sess.user.id) {
+              console.log('ℹ️ Ignorerer duplikat auth event (allerede vist for denne brukeren)');
+              return;
+            }
             await self.handleSignIn(sess.user);
+          }
+
+          if (event === 'INITIAL_SESSION' && sess && sess.user) {
+            // Bare handle hvis vi IKKE allerede har gjort det i init
+            if (!self._mainShown && !self._handlingSignIn) {
+              await self.handleSignIn(sess.user);
+            }
           }
 
           if (event === 'SIGNED_OUT') {
@@ -467,6 +479,31 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
             self.showLoginScreen();
           }
         });
+
+        // FIX 3: Visibilitychange-handler — refresh session når tab aktiveres
+        try {
+          document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' && self.currentUser && self.supabase) {
+              console.log('👁️ Tab ble synlig igjen, refresher session...');
+              // Best-effort refresh med timeout — ikke blokker UI
+              try {
+                withTimeout(self.supabase.auth.getSession(), 5000, 'visibility getSession').then(function (r) {
+                  var s = r && r.data && r.data.session;
+                  if (s && s.user) {
+                    console.log('✅ Session fortsatt gyldig etter tab-switch');
+                  } else {
+                    console.warn('⚠️ Session tapt etter tab-switch, prøver refresh...');
+                    withTimeout(self.supabase.auth.refreshSession(), 5000, 'visibility refresh').catch(function (e) {
+                      console.warn('⚠️ refreshSession feilet:', e && e.message);
+                    });
+                  }
+                }).catch(function (e) {
+                  console.warn('⚠️ getSession feilet etter tab-switch:', e && e.message);
+                });
+              } catch (_) {}
+            }
+          });
+        } catch (_) {}
 
         console.log('✅ AuthService initialisert');
       } catch (err) {
@@ -584,7 +621,57 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
         return;
       }
 
-      var status = await svc.checkSubscription();
+      // Prøv subscription-sjekk med retry ved nettverksfeil
+      var status = null;
+      var lastError = null;
+      var MAX_ATTEMPTS = 2;
+      for (var attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        try {
+          status = await svc.checkSubscription(attempt > 0 ? { forceFresh: true } : undefined);
+          lastError = null;
+          break;
+        } catch (e) {
+          lastError = e;
+          console.warn('⚠️ Subscription check attempt ' + (attempt + 1) + ' failed:', e && e.message);
+          if (attempt < MAX_ATTEMPTS - 1) {
+            await new Promise(function (r) { setTimeout(r, 2000); });
+          }
+        }
+      }
+
+      // Hvis alle forsøk feilet: sjekk cachet status for å avgjøre
+      if (lastError) {
+        console.error('❌ Subscription check failed etter ' + MAX_ATTEMPTS + ' forsøk:', lastError);
+
+        // Allerede i appen? Behold den synlig.
+        if (this._mainShown) {
+          console.log('ℹ️ Beholder appen synlig (allerede vist)');
+          return;
+        }
+
+        // Sjekk om vi har en tidligere kjent status
+        var lastKnown = null;
+        try {
+          lastKnown = svc.getLastKnownStatus ? svc.getLastKnownStatus() : null;
+        } catch (_) {}
+
+        if (lastKnown && (lastKnown.active || lastKnown.trial || lastKnown.lifetime)) {
+          // Hadde tilgang sist — sannsynligvis nettverksfeil, ikke mistet abonnement
+          console.log('ℹ️ Cachet status sier aktiv tilgang — viser appen');
+          this.showMainApp();
+          try {
+            if (typeof window.showNotification === 'function') {
+              window.showNotification('Kunne ikke verifisere abonnement. Prøv å oppdatere siden om problemet vedvarer.', 'warning');
+            }
+          } catch (_) {}
+        } else {
+          // Ingen cachet status eller hadde IKKE tilgang → vis prisside (trygt)
+          console.log('ℹ️ Ingen cachet tilgang — viser prisside');
+          this.showPricingPage();
+        }
+        return;
+      }
+
       console.log('📊 Subscription status:', status);
 
       var hasAccess = !!(status && (status.active || status.trial || status.lifetime));
@@ -592,8 +679,14 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
       if (hasAccess) this.showMainApp();
       else this.showPricingPage();
     } catch (e) {
-      console.error('❌ Subscription check failed:', e);
-      this.showPricingPage();
+      console.error('❌ handleSignIn uventet feil:', e);
+      // Hvis appen allerede vises, behold den
+      if (this._mainShown) {
+        console.log('ℹ️ Beholder appen synlig tross feil');
+      } else {
+        // Uten kjent status, vis prisside (trygt default)
+        this.showPricingPage();
+      }
     } finally {
       this._handlingSignIn = false;
     }
