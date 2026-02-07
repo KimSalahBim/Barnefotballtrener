@@ -91,7 +91,12 @@ export default async function handler(req, res) {
 
       const customers = (customerList.data || []).filter(c => {
         const metaId = c?.metadata?.supabase_user_id;
-        return !metaId || metaId === userId;
+        if (metaId === userId) return true;
+        if (!metaId) {
+          console.warn(`[delete-account] Including legacy Stripe customer ${c.id} (no supabase_user_id metadata) for email ${normalizedEmail}`);
+          return true;
+        }
+        return false;
       });
 
       if (customers.length > 0) {

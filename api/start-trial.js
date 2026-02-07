@@ -201,7 +201,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Database error (user_access)' });
     }
 
-    if (existing?.trial_started_at) {
+    if (existing?.trial_started_at || existing?.trial_ends_at) {
       return res.status(409).json({
         error: 'Trial already used',
         trial_ends_at: existing.trial_ends_at,
