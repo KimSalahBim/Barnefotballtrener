@@ -2315,19 +2315,50 @@ body.gated #mainApp {
 
   /* --- PLAYER FORM (Legg til spiller) --- */
   .player-form {
-    padding: 12px 14px !important;
+    padding: 10px 12px !important;
     margin-bottom: 10px !important;
     border-radius: 12px !important;
   }
   .form-row {
-    gap: 10px !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    align-items: end !important;
   }
   .form-group {
-    min-width: 120px !important;
+    min-width: 0 !important;
   }
   .form-group label {
-    margin-bottom: 4px !important;
+    margin-bottom: 3px !important;
+    font-size: 12px !important;
+  }
+  .form-group label small {
+    display: none !important;
+  }
+  .form-group input,
+  .form-group select {
+    padding: 8px 10px !important;
+    font-size: 14px !important;
+    border-radius: 8px !important;
+    border-width: 1.5px !important;
+  }
+  .form-group.checkbox-group {
+    display: flex;
+    align-items: center;
+  }
+  .form-group .checkbox-label {
+    padding: 6px 0 !important;
+    gap: 6px !important;
     font-size: 13px !important;
+  }
+  .form-group .checkbox-label input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .form-group .btn-primary {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    width: 100%;
   }
 
   /* --- PLAYER LIST CONTAINER --- */
