@@ -967,22 +967,23 @@
           </p>
         </div>
 
-        <div class="settings-card" style="text-align:left;">
-          <div class="settings-row" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
-            <div style="flex:1 1 100%;">
-              <label for="woDate" style="display:block; font-weight:700; margin-bottom:4px; font-size:14px;">Dato</label>
-              <input id="woDate" type="date" class="input" style="width:100%;">
+        <div class="settings-card wo-meta-card">
+          <div class="wo-meta-fields">
+            <div class="wo-meta-field">
+              <label for="woDate" class="wo-label">Dato</label>
+              <input id="woDate" type="date" class="input">
             </div>
 
-            <div style="flex:1 1 100%;">
-              <label for="woTitle" style="display:block; font-weight:700; margin-bottom:4px; font-size:14px;">Navn på økta (valgfritt)</label>
-              <input id="woTitle" type="text" class="input" placeholder="f.eks. Tirsdag – pasning og spill" style="width:100%;">
+            <div class="wo-meta-field wo-meta-field-wide">
+              <label for="woTitle" class="wo-label">Navn på økta (valgfritt)</label>
+              <input id="woTitle" type="text" class="input" placeholder="f.eks. Tirsdag – pasning og spill">
             </div>
 
-            <div style="flex:1 1 100%; text-align:center; margin-top:4px;">
+            <div class="wo-meta-total">
               <div class="small-text" style="opacity:0.85; font-weight:800;">Total tid</div>
               <div id="woTotal" style="font-size:1.4rem; font-weight:900;">0 min</div>
             </div>
+          </div>
           </div>
 
           <div class="settings-row" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;">
