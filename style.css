@@ -1746,6 +1746,77 @@ body {
     font-size: 10px;
     opacity: 0.85;
   }
+
+  /* ── Spillere-fanen: 2-kolonne grid for spillerkort ── */
+  .player-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+    padding: 10px !important;
+  }
+  .player-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 8px 10px;
+    gap: 4px;
+    position: relative;
+  }
+  .player-card .player-active {
+    font-size: 11px;
+    gap: 4px;
+    display: flex;
+    align-items: center;
+  }
+  .player-card .player-active input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+  .player-card .player-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .player-card .player-name {
+    font-size: 13px !important;
+    font-weight: 700;
+    margin-bottom: 2px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .player-card .player-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .player-card .player-tags .tag {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 6px;
+  }
+  .player-card .player-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+  }
+  .player-card .icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .player-card .icon-btn:active {
+    background: var(--gray-200);
+  }
 }
 .selection-header{
   display:flex;
