@@ -2161,16 +2161,16 @@ body.gated #mainApp {
 
   /* --- TAB HEADER (alle tabs) --- */
   .tab-header {
-    padding: 14px 16px !important;
-    margin-bottom: 12px !important;
+    padding: 10px 14px !important;
+    margin-bottom: 8px !important;
   }
   .tab-header h2 {
-    font-size: 18px !important;
-    margin-bottom: 2px !important;
+    font-size: 16px !important;
+    margin-bottom: 1px !important;
   }
   .tab-header p {
-    font-size: 13px !important;
-    line-height: 1.3 !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
   }
 
   /* --- SETTINGS-CARD (alle containere) --- */
@@ -2182,14 +2182,30 @@ body.gated #mainApp {
 
   /* --- STAT-CARDS (Spillere/Målvakter/Aktive) --- */
   .stat-card {
-    padding: 12px 10px !important;
-    border-radius: 12px !important;
+    padding: 8px 6px !important;
+    border-radius: 10px !important;
   }
   .stat-value {
-    font-size: 22px !important;
+    font-size: 20px !important;
+    margin-bottom: 1px !important;
   }
   .stat-label {
+    font-size: 11px !important;
+  }
+  .stats-container {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+  .actions-container {
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+  }
+  .actions-container .btn-secondary,
+  .actions-container .btn-danger {
+    padding: 8px 12px !important;
     font-size: 12px !important;
+    border-radius: 8px !important;
   }
 
   /* --- PLAYER SELECTION CONTAINER --- */
