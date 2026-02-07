@@ -967,19 +967,19 @@
           </p>
         </div>
 
-        <div class="settings-card">
-          <div class="settings-row" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; text-align:left;">
-            <div style="flex:1; min-width:140px;">
-              <label for="woDate" style="display:block; font-weight:700; margin-bottom:6px;">Dato</label>
-              <input id="woDate" type="date" class="input" style="width:100%; max-width:200px;">
+        <div class="settings-card" style="text-align:left;">
+          <div class="settings-row" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:1 1 100%;">
+              <label for="woDate" style="display:block; font-weight:700; margin-bottom:4px; font-size:14px;">Dato</label>
+              <input id="woDate" type="date" class="input" style="width:100%;">
             </div>
 
-            <div style="flex:2; min-width:200px;">
-              <label for="woTitle" style="display:block; font-weight:700; margin-bottom:6px;">Navn på økta (valgfritt)</label>
+            <div style="flex:1 1 100%;">
+              <label for="woTitle" style="display:block; font-weight:700; margin-bottom:4px; font-size:14px;">Navn på økta (valgfritt)</label>
               <input id="woTitle" type="text" class="input" placeholder="f.eks. Tirsdag – pasning og spill" style="width:100%;">
             </div>
 
-            <div style="min-width:160px;">
+            <div style="flex:1 1 100%; text-align:center; margin-top:4px;">
               <div class="small-text" style="opacity:0.85; font-weight:800;">Total tid</div>
               <div id="woTotal" style="font-size:1.4rem; font-weight:900;">0 min</div>
             </div>
@@ -1050,6 +1050,11 @@
           </div>
         </div>
 
+        <div class="settings-card" style="text-align:center; padding:12px; margin-top:10px;">
+          <div class="small-text" style="opacity:0.85; font-weight:800;">Total tid</div>
+          <div id="woTotalBottom" style="font-size:1.4rem; font-weight:900;">0 min</div>
+        </div>
+
         <div class="results-container">
           <h3>Mine økter</h3>
           <div id="woWorkouts" class="wo-templates"></div>
@@ -1096,4 +1101,3 @@
 
 </body>
 </html>
-
