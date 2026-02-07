@@ -2431,21 +2431,49 @@ body.gated #mainApp {
 
   /* ── KAMPDAG: compact layout ── */
   #kampdag .settings-card label,
-  #kampdag .settings-card div[style*="font-weight:700"] {
+  #kampdag .settings-card div[style*="font-weight:700"],
+  #kampdag .settings-card div[style*="font-weight:800"] {
     font-size: 13px !important;
-    margin-bottom: 3px !important;
+    margin-bottom: 2px !important;
   }
-  #kampdag .settings-card div[style*="min-width:220px"] {
+  #kampdag .settings-card div[style*="min-width:220px"],
+  #kampdag .settings-card div[style*="min-width:240px"] {
     min-width: 0 !important;
     flex: 1 1 45% !important;
   }
+  #kampdag .settings-card {
+    margin-top: 8px !important;
+  }
+  #kampdag .settings-row {
+    gap: 6px !important;
+    margin-top: 4px !important;
+    margin-bottom: 6px !important;
+  }
+  #kampdag .btn-secondary {
+    flex: 1 1 auto !important;
+    text-align: center;
+  }
   #kampdag .kd-card {
-    padding: 12px !important;
-    border-radius: 12px !important;
+    padding: 10px !important;
+    border-radius: 10px !important;
   }
   #kampdag .kd-card h4 {
-    font-size: 14px !important;
-    margin-bottom: 6px !important;
+    font-size: 13px !important;
+    margin-bottom: 4px !important;
+  }
+  #kampdag #kdKeeperPanel {
+    margin-top: 6px !important;
+  }
+  #kampdag .kd-keeper-rows {
+    gap: 6px !important;
+    margin-top: 6px !important;
+  }
+  #kampdag .kd-keeper-row {
+    gap: 6px !important;
+  }
+  #kampdag .kd-keeper-row select,
+  #kampdag .kd-keeper-row input {
+    min-width: 0 !important;
   }
 
   /* ── KONKURRANSER: compact ── */
@@ -2468,5 +2496,31 @@ body.gated #mainApp {
   .results-container h3 {
     font-size: 15px !important;
     margin-bottom: 8px !important;
+  }
+
+  /* ── LIGA: compact match rows ── */
+  .liga-match-row {
+    margin-bottom: 6px !important;
+  }
+  .liga-matches h3 {
+    font-size: 14px !important;
+    margin: 8px 0 4px !important;
+  }
+  .results-container {
+    padding: 10px 12px !important;
+  }
+
+  /* ── KONKURRANSER: compact exercises ── */
+  #competitions h4 {
+    font-size: 14px !important;
+    margin-bottom: 4px !important;
+  }
+  #competitions .comp-exercises label {
+    font-size: 13px !important;
+    margin-bottom: 2px !important;
+  }
+  #competitions .comp-exercises input {
+    padding: 7px 10px !important;
+    font-size: 13px !important;
   }
 }
