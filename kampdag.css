@@ -114,3 +114,27 @@
     min-width:auto;
   }
 }
+
+@media (max-width: 640px){
+  #kampdag .kd-card{
+    padding:12px;
+    border-radius:12px;
+  }
+  #kampdag .kd-card h4{
+    font-size:14px;
+    margin-bottom:6px;
+  }
+  #kampdag .kd-keeper-card{
+    padding:10px;
+    border-radius:10px;
+  }
+  #kampdag .kd-keeper-panel{
+    padding:8px;
+    border-radius:10px;
+  }
+  #kampdag .kd-keeper-row{
+    padding:6px 8px;
+    border-radius:8px;
+    gap:6px;
+  }
+}
