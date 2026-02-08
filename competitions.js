@@ -300,6 +300,24 @@
   }
 
   function renderSetup(players) {
+    // Check if there's a paused (draft) competition that can be resumed
+    const storeRes = loadStore();
+    const store = storeRes.data;
+    const draftComp = store.competitions.find(c => c.status === 'draft');
+    const resumeHtml = draftComp ? `
+      <div class="comp-card" style="border-left:4px solid #f59e0b; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <div style="font-weight:800;">⏸️ Pågående konkurranse</div>
+            <div class="comp-muted">${escapeHtml(draftComp.title || 'Uten navn')} · ${(draftComp.exercises || []).length} øvelse(r) · ${(draftComp.participantIds || []).length} deltaker(e)</div>
+          </div>
+          <button class="btn-primary comp-btn" data-comp-action="resumeDraft" data-comp-draft-id="${escapeHtml(draftComp.id)}">
+            <i class="fas fa-play"></i> Fortsett konkurranse
+          </button>
+        </div>
+      </div>
+    ` : '';
+
     const list = players
       .map(
         (p) => `
@@ -311,6 +329,7 @@
       .join('');
 
     return `
+      ${resumeHtml}
       <div class="comp-card">
         <h3>Opprett ny konkurranse</h3>
         <p class="comp-help">
@@ -677,6 +696,17 @@
       if (action === 'goPlayers') {
         const playersBtn = qs('.nav-btn[data-tab="players"]') || qs('[data-tab="players"]');
         if (playersBtn) playersBtn.click();
+        return;
+      }
+
+      if (action === 'resumeDraft') {
+        const draftId = t.getAttribute('data-comp-draft-id');
+        if (draftId) {
+          ui.activeCompetitionId = draftId;
+          ui.view = 'running';
+          ui.activeExerciseIndex = 0;
+          render();
+        }
         return;
       }
 
