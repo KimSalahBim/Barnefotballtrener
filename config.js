@@ -1,6 +1,7 @@
 // Barnefotballtrener - Konfigurasjon
 // ================================================
-// VIKTIG: Fyll inn dine egne nøkler fra Supabase og Stripe
+// Stripe: LIVE nøkler (test-nøkler brukes via Vercel Preview)
+// Supabase: Offentlig anon key (trygt i frontend)
 // ================================================
 
 const CONFIG = {
@@ -12,13 +13,13 @@ const CONFIG = {
 
   // Stripe
   stripe: {
-    publishableKey: 'pk_test_51SssHuD5NzOLeQriVmf4JpQl1R6oXiK2BGjlYt5SQHwCfmRp6K5bW0o2tiJs4BeWBvsC8NQeUMZKjlCr9ZwvAmA900ktL0vICe' // Hent fra Stripe Dashboard
+    publishableKey: 'pk_live_51SssHjDo19YzWAtS4XOeVVKY0zLN04owzlVmGaIDk79BfZoiRfEUWiLq3oKAlVNDI2an9FEgM2Fy9GyKJFPlLDBy00lvsqWW5d'
   },
 
   // Prisplaner (Stripe Price IDs)
   prices: {
     month: {
-      id: 'price_1SylYMD5NzOLeQrictXE2x6X',
+      id: 'price_1SyaHwDo19YzWAtSxSoUyB5Y',
       amount: 49,
       currency: 'NOK',
       interval: 'month',
@@ -26,7 +27,7 @@ const CONFIG = {
       description: '49 kr per måned'
     },
     year: {
-      id: 'price_1SylZ1D5NzOLeQriR9j3zVLb',
+      id: 'price_1SyaIVDo19YzWAtSbKIfLMqn',
       amount: 299,
       currency: 'NOK',
       interval: 'year',
@@ -34,28 +35,12 @@ const CONFIG = {
       description: '299 kr per år (spar 49%)'
     },
     lifetime: {
-      id: 'price_1SylZsD5NzOLeQriqp3g2j7t',
+      id: 'price_1SyaJ2Do19YzWAtS55jH22b9',
       amount: 799,
       currency: 'NOK',
       interval: 'one_time',
       name: 'Livstid',
       description: '799 kr - betal én gang'
-    }
-  },
-
-  // Team og Klubb priser (håndteres manuelt via kontaktskjema)
-  teamPricing: {
-    team: {
-      minQuantity: 3,
-      maxQuantity: 9,
-      pricePerPerson: 479, // 20% rabatt
-      discount: 0.20
-    },
-    club: {
-      minQuantity: 10,
-      lifetime: 401, // 33% rabatt
-      yearly: 133, // 33% rabatt
-      discount: 0.33
     }
   },
 
