@@ -1,0 +1,39 @@
+name: Supabase Backup
+
+on:
+  schedule:
+    # Hver søndag kl 03:00 UTC (04:00 norsk tid)
+    - cron: '0 3 * * 0'
+  workflow_dispatch: # Manuell kjøring fra GitHub UI
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Run pg_dump
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d_%H%M)
+          FILENAME="backup_${TIMESTAMP}.sql"
+          
+          pg_dump "${SUPABASE_DB_URL}" \
+            --no-owner \
+            --no-privileges \
+            --schema=public \
+            --format=plain \
+            > "${FILENAME}"
+          
+          # Vis filstørrelse som sanity check
+          ls -lh "${FILENAME}"
+          echo "BACKUP_FILE=${FILENAME}" >> $GITHUB_ENV
+
+      - name: Upload as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ github.run_id }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 90
