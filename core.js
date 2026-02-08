@@ -63,8 +63,7 @@
       useSkill: true
     },
     selection: {
-      training: new Set(),
-      match: new Set()
+      grouping: new Set()
     },
     liga: null
   };
@@ -187,8 +186,7 @@
     }
 
     // selections (optional)
-    state.selection.training = new Set();
-    state.selection.match = new Set();
+    state.selection.grouping = new Set();
   }
 
   function saveState() {
@@ -300,8 +298,7 @@
           if (!ok) return;
           state.players = state.players.filter(x => x.id !== id);
           // remove from selections
-          state.selection.training.delete(id);
-          state.selection.match.delete(id);
+          state.selection.grouping.delete(id);
 
           saveState();
           renderAll();
@@ -313,16 +310,15 @@
   }
 
   function renderSelections() {
-    const trainingEl = $('trainingSelection');
-    const matchEl = $('matchSelection');
+    const groupingEl = $('groupingSelection');
 
     // only active players selectable
     const selectable = state.players.filter(p => p.active).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
-    if (trainingEl) {
-      trainingEl.innerHTML = selectable.map(p => `
+    if (groupingEl) {
+      groupingEl.innerHTML = selectable.map(p => `
         <label class="player-checkbox">
-          <input type="checkbox" data-id="${p.id}" ${state.selection.training.has(p.id) ? 'checked' : ''}>
+          <input type="checkbox" data-id="${p.id}" ${state.selection.grouping.has(p.id) ? 'checked' : ''}>
           <span class="checkmark"></span>
           <div class="player-details">
             <div class="player-name">${escapeHtml(p.name)}</div>
@@ -333,44 +329,17 @@
         </label>
       `).join('');
 
-      trainingEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      groupingEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
         cb.addEventListener('change', () => {
           const id = cb.getAttribute('data-id');
           if (!id) return;
-          if (cb.checked) state.selection.training.add(id);
-          else state.selection.training.delete(id);
-          const c = $('trainingCount'); if (c) c.textContent = String(state.selection.training.size);
+          if (cb.checked) state.selection.grouping.add(id);
+          else state.selection.grouping.delete(id);
+          const c = $('groupingPlayerCount'); if (c) c.textContent = String(state.selection.grouping.size);
         });
       });
 
-      const c = $('trainingCount'); if (c) c.textContent = String(state.selection.training.size);
-    }
-
-    if (matchEl) {
-      matchEl.innerHTML = selectable.map(p => `
-        <label class="player-checkbox">
-          <input type="checkbox" data-id="${p.id}" ${state.selection.match.has(p.id) ? 'checked' : ''}>
-          <span class="checkmark"></span>
-          <div class="player-details">
-            <div class="player-name">${escapeHtml(p.name)}</div>
-            <div class="player-meta">
-              ${p.goalie ? '🧤 Keeper' : '⚽ Utespiller'}
-            </div>
-          </div>
-        </label>
-      `).join('');
-
-      matchEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.addEventListener('change', () => {
-          const id = cb.getAttribute('data-id');
-          if (!id) return;
-          if (cb.checked) state.selection.match.add(id);
-          else state.selection.match.delete(id);
-          const c = $('matchCount'); if (c) c.textContent = String(state.selection.match.size);
-        });
-      });
-
-      const c = $('matchCount'); if (c) c.textContent = String(state.selection.match.size);
+      const c = $('groupingPlayerCount'); if (c) c.textContent = String(state.selection.grouping.size);
     }
   }
 
@@ -440,10 +409,11 @@
     }
 
     const groups = Array.from({ length: n }, () => []);
+    const perm = shuffle(Array.from({ length: n }, (_, i) => i));
     let dir = 1;
     let idx = 0;
     for (const p of list) {
-      groups[idx].push(p);
+      groups[perm[idx]].push(p);
       idx += dir;
       if (idx === n) { dir = -1; idx = n - 1; }
       if (idx === -1) { dir = 1; idx = 0; }
@@ -467,8 +437,11 @@
     const total = list.length;
 
     const base = Math.floor(total / n);
-    const extra = total % n; // de første "extra" gruppene får +1
-    const sizes = Array.from({ length: n }, (_, i) => base + (i < extra ? 1 : 0));
+    const extra = total % n;
+    const indices = Array.from({ length: n }, (_, i) => i);
+    const shuffledIndices = shuffle(indices);
+    const bonusSet = new Set(shuffledIndices.slice(0, extra));
+    const sizes = Array.from({ length: n }, (_, i) => base + (bonusSet.has(i) ? 1 : 0));
 
     const groups = [];
     let cursor = 0;
@@ -480,7 +453,7 @@
     return groups;
   }
 
-  // Generisk "jevne lag" for 2..6 lag. Bruker "snake draft" for nivå-balanse.
+  // Generisk "jevne lag" for 2..6 lag. Snake-draft med randomisert start + myk keeper-korreksjon.
   function makeEvenTeams(players, teamCount) {
     if (window.Grouping && typeof window.Grouping.makeEvenTeams === 'function') {
       return window.Grouping.makeEvenTeams(players, teamCount, state.settings.useSkill);
@@ -495,23 +468,14 @@
       list = shuffle(players);
     }
 
-    const goalies = list.filter(p => p.goalie);
-    const field = list.filter(p => !p.goalie);
-
     const teams = Array.from({ length: n }, () => ({ players: [], sum: 0 }));
 
-    // fordel keepere først (så jevnt som mulig)
-    for (let i = 0; i < goalies.length; i++) {
-      const t = teams[i % n];
-      t.players.push(goalies[i]);
-      t.sum += (goalies[i].skill || 0);
-    }
-
-    // snake draft for resten
+    // Snake draft med permutasjon for variasjon
+    const perm = shuffle(Array.from({ length: n }, (_, i) => i));
     let dir = 1;
     let idx2 = 0;
-    for (const p of field) {
-      const t = teams[idx2];
+    for (const p of list) {
+      const t = teams[perm[idx2]];
       t.players.push(p);
       t.sum += (p.skill || 0);
 
@@ -520,104 +484,30 @@
       if (idx2 === -1) { dir = 1; idx2 = 0; }
     }
 
-    for (const t of teams) {
-      t.avg = t.players.length ? (t.sum / t.players.length) : 0;
+    // Post-draft keeper-korreksjon
+    const totalKeepers = list.filter(p => p.goalie).length;
+    if (totalKeepers > 0 && totalKeepers < list.length) {
+      for (let attempt = 0; attempt < n; attempt++) {
+        const noKeeper = teams.findIndex(t => t.players.length > 0 && !t.players.some(p => p.goalie));
+        if (noKeeper === -1) break;
+        const multiKeeper = teams.findIndex(t => t.players.filter(p => p.goalie).length >= 2);
+        if (multiKeeper === -1) break;
+        const keeperIdx = teams[multiKeeper].players.findIndex(p => p.goalie);
+        const fieldIdx = teams[noKeeper].players.findIndex(p => !p.goalie);
+        if (keeperIdx === -1 || fieldIdx === -1) break;
+        const keeper = teams[multiKeeper].players[keeperIdx];
+        const field = teams[noKeeper].players[fieldIdx];
+        teams[multiKeeper].players[keeperIdx] = field;
+        teams[noKeeper].players[fieldIdx] = keeper;
+        teams[multiKeeper].sum += (field.skill || 0) - (keeper.skill || 0);
+        teams[noKeeper].sum += (keeper.skill || 0) - (field.skill || 0);
+      }
     }
+
     return { teams, teamCount: n };
   }
 
-  function renderMultiTeamResults(res) {
-    const el = $('matchResults');
-    if (!el) return;
-
-    const teams = res?.teams || [];
-    el.innerHTML = teams.map((t, i) => {
-      const avgTxt = '';
-      return `
-        <div class="results-card">
-          <h3>Lag ${i + 1} <span class="small-text" style="opacity:0.8;">(${t.players.length} spillere)</span></h3>
-          <div class="results-list">
-            ${t.players.map(p => `<div class="result-item">${escapeHtml(p.name)} ${p.goalie ? ' 🧤' : ''}</div>`).join('')}
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-
-  function renderTrainingResults(groups) {
-    const el = $('trainingResults');
-    if (!el) return;
-
-    el.innerHTML = groups.map((g, i) => {
-      const avg = g.length ? (g.reduce((s, p) => s + (p.skill || 0), 0) / g.length) : 0;
-      return `
-        <div class="results-card">
-          <h3>Gruppe ${i + 1} <span class="small-text" style="opacity:0.8;">(${g.length} spillere)</span></h3>
-          <div class="results-list">
-            ${g.map(p => `<div class="result-item">${escapeHtml(p.name)} ${p.goalie ? ' 🧤' : ''}</div>`).join('')}
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  function makeBalancedTeams(players) {
-    let list = players;
-    if (state.settings.useSkill) {
-      list = sortBySkillWithRandomTies(players);
-    } else {
-      list = shuffle(players);
-    }
-
-    const goalies = list.filter(p => p.goalie);
-    const field = list.filter(p => !p.goalie);
-
-    const teamA = [];
-    const teamB = [];
-    let sumA = 0, sumB = 0;
-
-    // Distribute goalies first
-    for (let i = 0; i < goalies.length; i++) {
-      const p = goalies[i];
-      if (i % 2 === 0) { teamA.push(p); sumA += p.skill; }
-      else { teamB.push(p); sumB += p.skill; }
-    }
-
-    // Then fill remaining
-    for (const p of field) {
-      if (sumA <= sumB) { teamA.push(p); sumA += p.skill; }
-      else { teamB.push(p); sumB += p.skill; }
-    }
-
-    return { teamA, teamB, sumA, sumB };
-  }
-
-  function renderMatchResults(res) {
-    const el = $('matchResults');
-    if (!el) return;
-
-    const { teamA, teamB, sumA, sumB } = res;
-
-    const avgA = teamA.length ? (sumA / teamA.length).toFixed(1) : '0.0';
-    const avgB = teamB.length ? (sumB / teamB.length).toFixed(1) : '0.0';
-
-    el.innerHTML = `
-      <div class="results-card">
-        <h3>Lag A <span class="small-text" style="opacity:0.8;">(${teamA.length} spillere)</span></h3>
-        <div class="results-list">
-          ${teamA.map(p => `<div class="result-item">${escapeHtml(p.name)} ${p.goalie ? ' 🧤' : ''}</div>`).join('')}
-        </div>
-      </div>
-
-      <div class="results-card">
-        <h3>Lag B <span class="small-text" style="opacity:0.8;">(${teamB.length} spillere)</span></h3>
-        <div class="results-list">
-          ${teamB.map(p => `<div class="result-item">${escapeHtml(p.name)} ${p.goalie ? ' 🧤' : ''}</div>`).join('')}
-        </div>
-      </div>
-    `;
-  }
+  // (Old render functions removed - replaced by renderGroupingResults)
 
   // ------------------------------
   // UI wiring
@@ -870,10 +760,9 @@
           active: true
         });
 
-        // auto-select new player in training/match
+        // auto-select new player in grouping
         const id = state.players[state.players.length - 1].id;
-        state.selection.training.add(id);
-        state.selection.match.add(id);
+        state.selection.grouping.add(id);
 
         if (nameEl) nameEl.value = '';
         if (goalieEl) goalieEl.checked = false;
@@ -923,11 +812,24 @@
             importFile.value = '';
             return;
           }
+
+          // Warn user that import replaces all existing players
+          if (state.players.length > 0) {
+            const ok = window.confirm(
+              `⚠️ Import erstatter alle eksisterende spillere (${state.players.length} stk).\n\n` +
+              `Filen inneholder ${incomingPlayers.length} spillere.\n\n` +
+              'Vil du fortsette?'
+            );
+            if (!ok) {
+              importFile.value = '';
+              return;
+            }
+          }
+
           state.players = incomingPlayers;
 
           // reset selections to all active players
-          state.selection.training = new Set(state.players.filter(p => p.active).map(p => p.id));
-          state.selection.match = new Set(state.players.filter(p => p.active).map(p => p.id));
+          state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
 
           if (parsed.settings && typeof parsed.settings.useSkill === 'boolean') {
             state.settings.useSkill = parsed.settings.useSkill;
@@ -953,8 +855,7 @@
         const ok = window.confirm('Slette alle spillere? Dette kan ikke angres.');
         if (!ok) return;
         state.players = [];
-        state.selection.training = new Set();
-        state.selection.match = new Set();
+        state.selection.grouping = new Set();
         saveState();
         renderAll();
         publishPlayers();
@@ -963,91 +864,101 @@
     }
   }
 
-  function setupTrainingUI() {
-    const btn = $('createGroupsBtn');
+  function setupGroupingUI() {
+    const btn = $('groupingActionBtn');
     if (!btn) return;
-  // Velg alle / Fjern alle (Trening)
-  const selectAllBtn = $('trainingSelectAllBtn');
-  const clearAllBtn  = $('trainingClearAllBtn');
 
-  if (selectAllBtn) {
-    selectAllBtn.addEventListener('click', () => {
-      const activeIds = state.players
-        .filter(p => p.active)
-        .map(p => p.id);
+    let currentMode = 'even'; // 'even' | 'diff'
 
-      state.selection.training = new Set(activeIds);
-      renderSelections(); // oppdaterer UI + teller
-      showNotification('Valgte alle aktive spillere', 'success');
+    // Modusvelger
+    document.querySelectorAll('.grouping-mode-btn').forEach(mBtn => {
+      mBtn.addEventListener('click', () => {
+        document.querySelectorAll('.grouping-mode-btn').forEach(b => b.classList.remove('active'));
+        mBtn.classList.add('active');
+        currentMode = mBtn.getAttribute('data-gmode') || 'even';
+
+        // Oppdater hint og knappetekst
+        const hint = $('groupingModeHint');
+        if (hint) {
+          hint.textContent = currentMode === 'diff'
+            ? 'Differensierte grupper: beste spillere sammen, neste nivå sammen osv.'
+            : 'Jevne grupper: spillere fordeles slik at alle grupper får omtrent likt nivå.';
+        }
+        if (btn) {
+          btn.innerHTML = currentMode === 'diff'
+            ? '<i class="fas fa-people-group"></i> Lag differensierte grupper'
+            : '<i class="fas fa-people-group"></i> Lag jevne grupper';
+        }
+      });
     });
-  }
 
-  if (clearAllBtn) {
-    clearAllBtn.addEventListener('click', () => {
-      state.selection.training = new Set();
-      renderSelections();
-      showNotification('Fjernet alle valgte spillere', 'success');
-    });
-  }
+    // Velg alle / Fjern alle
+    const selectAllBtn = $('groupingSelectAllBtn');
+    const clearAllBtn = $('groupingClearAllBtn');
+
+    if (selectAllBtn) {
+      selectAllBtn.addEventListener('click', () => {
+        const activeIds = state.players.filter(p => p.active).map(p => p.id);
+        state.selection.grouping = new Set(activeIds);
+        renderSelections();
+        showNotification('Valgte alle aktive spillere', 'success');
+      });
+    }
+
+    if (clearAllBtn) {
+      clearAllBtn.addEventListener('click', () => {
+        state.selection.grouping = new Set();
+        renderSelections();
+        showNotification('Fjernet alle valgte spillere', 'success');
+      });
+    }
 
     btn.addEventListener('click', () => {
-      const players = getSelectedPlayers(state.selection.training);
+      const players = getSelectedPlayers(state.selection.grouping);
       if (players.length < 2) return showNotification('Velg minst 2 spillere', 'error');
 
-      const groupCount = Number($('trainingGroups')?.value ?? 2);
+      const groupCount = Number($('groupingCount')?.value ?? 2);
 
-      if (!state.settings.useSkill) {
-        showNotification('Slå på "Bruk ferdighetsnivå" for å lage differensierte grupper', 'error');
-        return;
+      if (currentMode === 'diff') {
+        if (!state.settings.useSkill) {
+          showNotification('Slå på "Bruk ferdighetsnivå" for differensierte grupper', 'error');
+          return;
+        }
+        const groups = (window.Grouping && window.Grouping.makeDifferentiatedGroups)
+          ? window.Grouping.makeDifferentiatedGroups(players, groupCount, true)
+          : makeDifferentiatedGroups(players, groupCount);
+        if (!groups) {
+          showNotification('Kunne ikke lage grupper', 'error');
+          return;
+        }
+        renderGroupingResults(groups);
+        showNotification('Differensierte grupper laget', 'success');
+      } else {
+        // Jevne grupper (balansert)
+        const groups = (window.Grouping && window.Grouping.makeBalancedGroups)
+          ? window.Grouping.makeBalancedGroups(players, groupCount, !!state.settings.useSkill)
+          : makeBalancedGroups(players, groupCount);
+        renderGroupingResults(groups);
+        showNotification('Jevne grupper laget', 'success');
       }
-
-      const groups = (window.Grouping && window.Grouping.makeDifferentiatedGroups) ? window.Grouping.makeDifferentiatedGroups(players, groupCount, !!state.settings.useSkill) : makeDifferentiatedGroups(players, groupCount);
-      if (!groups) {
-        showNotification('Kunne ikke lage grupper', 'error');
-        return;
-      }
-
-      renderTrainingResults(groups);
-      showNotification('Differensierte grupper laget', 'success');
     });
   }
 
-  function setupMatchUI() {
-    const btn = $('createMatchTeamsBtn');
-    if (!btn) return;
-  // Velg alle / Fjern alle (Kamp)
-  const selectAllBtn = $('matchSelectAllBtn');
-  const clearAllBtn  = $('matchClearAllBtn');
+  function renderGroupingResults(groups) {
+    const el = $('groupingResults');
+    if (!el) return;
 
-  if (selectAllBtn) {
-    selectAllBtn.addEventListener('click', () => {
-      const activeIds = state.players
-        .filter(p => p.active)
-        .map(p => p.id);
-
-      state.selection.match = new Set(activeIds);
-      renderSelections();
-      showNotification('Valgte alle aktive spillere', 'success');
-    });
-  }
-
-  if (clearAllBtn) {
-    clearAllBtn.addEventListener('click', () => {
-      state.selection.match = new Set();
-      renderSelections();
-      showNotification('Fjernet alle valgte spillere', 'success');
-    });
-  }
-
-    btn.addEventListener('click', () => {
-      const players = getSelectedPlayers(state.selection.match);
-      if (players.length < 2) return showNotification('Velg minst 2 spillere', 'error');
-
-      const teamCount = Number($('matchTeams')?.value ?? 2);
-      const res = (window.Grouping && window.Grouping.makeEvenTeams) ? window.Grouping.makeEvenTeams(players, teamCount, !!state.settings.useSkill) : makeEvenTeams(players, teamCount);
-      renderMultiTeamResults(res);
-      showNotification('Lagdeling klar', 'success');
-    });
+    el.innerHTML = groups.map((g, i) => {
+      const avg = g.length ? (g.reduce((s, p) => s + (p.skill || 0), 0) / g.length) : 0;
+      return `
+        <div class="results-card">
+          <h3>Gruppe ${i + 1} <span class="small-text" style="opacity:0.8;">(${g.length} spillere${state.settings.useSkill ? ` · snitt ${avg.toFixed(1)}` : ''})</span></h3>
+          <div class="results-list">
+            ${g.map(p => `<div class="result-item">${escapeHtml(p.name)} ${p.goalie ? ' 🧤' : ''}</div>`).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   function setupLigaUI() {
@@ -1306,6 +1217,45 @@
           `;
         });
       });
+
+      // Liga: Editable team names after league is started
+      // Show editable inputs above matches
+      const editNamesHtml = `
+        <div style="margin-bottom:12px;">
+          <div style="font-weight:800; font-size:13px; margin-bottom:6px;">Rediger lagnavn:</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            ${league.teams.map((t, i) => `
+              <input class="input liga-edit-name" data-team-idx="${i}" type="text" value="${escapeHtml(t.name)}" 
+                style="flex:1; min-width:100px; max-width:180px; font-size:13px; padding:6px 8px;">
+            `).join('')}
+          </div>
+        </div>
+      `;
+      matchesEl.insertAdjacentHTML('afterbegin', editNamesHtml);
+
+      matchesEl.querySelectorAll('input.liga-edit-name').forEach(inp => {
+        inp.addEventListener('change', () => {
+          const idx = Number(inp.getAttribute('data-team-idx'));
+          const newName = String(inp.value || '').trim();
+          if (!newName || idx < 0 || idx >= league.teams.length) return;
+
+          const oldName = league.teams[idx].name;
+          if (oldName === newName) return;
+
+          // Update team name
+          league.teams[idx].name = newName;
+          // Update all matches referencing this team
+          for (const m of league.matches) {
+            if (m.home === oldName) m.home = newName;
+            if (m.away === oldName) m.away = newName;
+          }
+
+          state.liga = league;
+          saveState();
+          render(league);
+          showNotification(`Lagnavn endret: ${oldName} → ${newName}`, 'success');
+        });
+      });
     }
 
     // initial names
@@ -1378,15 +1328,13 @@
     console.log('[core.js] ✅ State lastet, spillere:', state.players.length);
 
     // default select all active players
-    state.selection.training = new Set(state.players.filter(p => p.active).map(p => p.id));
-    state.selection.match = new Set(state.players.filter(p => p.active).map(p => p.id));
+    state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
 
     renderLogo();
     setupTabs();
     setupSkillToggle();
     setupPlayersUI();
-    setupTrainingUI();
-    setupMatchUI();
+    setupGroupingUI();
     setupLigaUI();
 
     renderAll();
