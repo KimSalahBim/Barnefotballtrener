@@ -119,7 +119,7 @@
         <p>Kampdag-funksjon som automatisk sikrer lik spilletid og en presis bytteplan.</p>
         <p>Lag differensierte grupper til øvelser på trening.</p>
         <p>Få hjelp til å sette sammen jevne lag i trening og kamp.</p>
-        <p>Bygg din treningsøkt raskt og effektivt – velg øvelser, del inn i grupper og eksporter til PDF.</p>
+        <p>Lag treningsøkta raskt og effektivt – velg øvelser, del inn i grupper og eksporter til PDF.</p>
         <p>Konkurranse-funksjon som lar deg legge til spillere og antall konkurranser – tabell oppdateres fortløpende.</p>
         <p>Liga-funksjon hvis man spiller «turnering» på trening – legg inn resultater og få tabell oppdatert fortløpende.</p>
       </div>
@@ -566,11 +566,8 @@
       <button class="nav-btn active" data-tab="players" type="button">
         <i class="fas fa-users"></i> Spillere
       </button>
-      <button class="nav-btn" data-tab="training" type="button">
-        <i class="fas fa-running"></i> Treningsgrupper
-      </button>
-      <button class="nav-btn" data-tab="match" type="button">
-        <i class="fas fa-futbol"></i> Laginndeling
+      <button class="nav-btn" data-tab="grouping" type="button">
+        <i class="fas fa-people-group"></i> Gruppeinndeling
       </button>
       <button class="nav-btn" data-tab="kampdag" type="button">
         <i class="fas fa-clipboard-list"></i> Kampdag
@@ -582,7 +579,7 @@
         <i class="fas fa-trophy"></i> Liga
       </button>
       <button class="nav-btn" data-tab="workout" type="button">
-        <i class="fas fa-dumbbell"></i> Bygg din treningsøkt
+        <i class="fas fa-dumbbell"></i> Lag treningsøkt
       </button>
     </nav>
 
@@ -693,76 +690,48 @@
         <div id="playerList" class="player-list"></div>
       </div>
 
-      <!-- TRENING TAB -->
-      <div id="training" class="tab-content">
+      <!-- GRUPPEINNDELING TAB (sammenslått fra Treningsgrupper + Laginndeling) -->
+      <div id="grouping" class="tab-content">
         <div class="tab-header">
-          <h2><i class="fas fa-running"></i> Treningsgrupper</h2>
-          <p class="tab-description">Lag differensierte treningsgrupper basert på ferdighetsnivå .</p>
+          <h2><i class="fas fa-people-group"></i> Gruppeinndeling</h2>
+          <p class="tab-description">Del spillerne inn i jevne eller differensierte grupper.</p>
         </div>
 
         <div class="settings-card">
+          <!-- Modusvelger -->
+          <div class="grouping-mode-selector" style="display:flex; gap:6px; margin-bottom:12px;">
+            <button class="grouping-mode-btn active" data-gmode="even" type="button">Jevne grupper</button>
+            <button class="grouping-mode-btn" data-gmode="diff" type="button">Differensierte grupper</button>
+          </div>
+          <div id="groupingModeHint" class="small-text" style="opacity:0.8; margin-bottom:10px;">
+            Jevne grupper: spillere fordeles slik at alle grupper får omtrent likt nivå.
+          </div>
+
           <div class="settings-row">
-            <div class="settings-label">Antall grupper:</div>
+            <div class="settings-label" id="groupingCountLabel">Antall grupper:</div>
             <div class="number-control">
-              <button class="number-btn minus" type="button" onclick="changeNumber('trainingGroups', -1)">−</button>
-              <input type="number" id="trainingGroups" class="number-input" value="2" min="2" max="6">
-              <button class="number-btn plus" type="button" onclick="changeNumber('trainingGroups', 1)">+</button>
+              <button class="number-btn minus" type="button" onclick="changeNumber('groupingCount', -1)">−</button>
+              <input type="number" id="groupingCount" class="number-input" value="2" min="2" max="6">
+              <button class="number-btn plus" type="button" onclick="changeNumber('groupingCount', 1)">+</button>
             </div>
           </div>
 
           <div class="selection-header">
-  <div class="selection-title">Velg spillere (<span id="trainingCount">0</span>)</div>
-
-  <div class="selection-actions">
-    <button id="trainingSelectAllBtn" class="btn-small" type="button">Velg alle</button>
-    <button id="trainingClearAllBtn" class="btn-small" type="button">Fjern alle</button>
-  </div>
-</div>
-
-<div id="trainingSelection" class="player-selection"></div>
-
-          <button id="createGroupsBtn" class="btn-primary" type="button">
-            <i class="fas fa-users"></i> Lag grupper
-          </button>
-        </div>
-
-        <div id="trainingResults" class="results-container"></div>
-      </div>
-
-      <!-- KAMP TAB -->
-      <div id="match" class="tab-content">
-        <div class="tab-header">
-          <h2><i class="fas fa-futbol"></i> Laginndeling</h2>
-          <p class="tab-description">Del spillerne i jevne lag basert på ferdighetsnivå.</p>
-        </div>
-
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-label">Antall lag:</div>
-            <div class="number-control">
-              <button class="number-btn minus" type="button" onclick="changeNumber('matchTeams', -1)">−</button>
-              <input type="number" id="matchTeams" class="number-input" value="2" min="2" max="6">
-              <button class="number-btn plus" type="button" onclick="changeNumber('matchTeams', 1)">+</button>
+            <div class="selection-title">Velg spillere (<span id="groupingPlayerCount">0</span>)</div>
+            <div class="selection-actions">
+              <button id="groupingSelectAllBtn" class="btn-small" type="button">Velg alle</button>
+              <button id="groupingClearAllBtn" class="btn-small" type="button">Fjern alle</button>
             </div>
           </div>
 
-          <div class="selection-header">
-  <div class="selection-title">Velg spillere (<span id="matchCount">0</span>)</div>
+          <div id="groupingSelection" class="player-selection"></div>
 
-  <div class="selection-actions">
-    <button id="matchSelectAllBtn" class="btn-small" type="button">Velg alle</button>
-    <button id="matchClearAllBtn" class="btn-small" type="button">Fjern alle</button>
-  </div>
-</div>
-
-<div id="matchSelection" class="player-selection"></div>
-
-          <button id="createMatchTeamsBtn" class="btn-primary" type="button">
-            <i class="fas fa-balance-scale"></i> Lag lag
+          <button id="groupingActionBtn" class="btn-primary" type="button">
+            <i class="fas fa-people-group"></i> Lag jevne grupper
           </button>
         </div>
 
-        <div id="matchResults" class="results-container"></div>
+        <div id="groupingResults" class="results-container"></div>
       </div>
 
       <!-- KAMPDAG TAB -->
@@ -884,6 +853,9 @@
             <button id="kdCopy" class="btn-secondary" type="button">
               <i class="fas fa-copy"></i> Kopier plan
             </button>
+            <button id="kdExportPdf" class="btn-secondary" type="button">
+              <i class="fas fa-file-pdf"></i> Eksporter PDF
+            </button>
           </div>
           <div id="kdMeta" class="small-text" style="margin-top:10px; opacity:0.85;"></div>
         </div>
@@ -962,7 +934,7 @@
       <!-- BYGG DIN TRENINGSØKT TAB -->
       <div id="workout" class="tab-content">
         <div class="tab-header">
-          <h2><i class="fas fa-dumbbell"></i> Bygg din treningsøkt</h2>
+          <h2><i class="fas fa-dumbbell"></i> Lag treningsøkt</h2>
           <p class="tab-description">
             Bygg økta øvelse for øvelse, del inn i grupper (valgfritt) og eksporter til PDF for deling/utskrift.
           </p>
