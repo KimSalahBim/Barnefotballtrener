@@ -130,7 +130,39 @@
   function STORE_KEY()    { return k('workout_templates_v1'); }
   function WORKOUTS_KEY() { return k('workout_sessions_v1'); }
   function DRAFT_KEY()    { return k('workout_draft_v1'); }
+  function FREQ_KEY()     { return k('exercise_freq_v1'); }
   const SCHEMA_VERSION = 1;
+
+  // Exercise frequency tracking
+  function loadFrequency() {
+    try {
+      const raw = safeGet(FREQ_KEY());
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  }
+  function trackExerciseUsage(exerciseKey) {
+    if (!exerciseKey || exerciseKey === 'drikkepause') return; // don't track drink break
+    try {
+      const freq = loadFrequency();
+      freq[exerciseKey] = (freq[exerciseKey] || 0) + 1;
+      safeSet(FREQ_KEY(), JSON.stringify(freq));
+    } catch {}
+  }
+  function getSortedExercises() {
+    const freq = loadFrequency();
+    const sorted = [...EXERCISES];
+    // Drikkepause always first (index 0), then sort rest by frequency desc
+    const drink = sorted.findIndex(e => e.key === 'drikkepause');
+    const drinkEx = drink >= 0 ? sorted.splice(drink, 1)[0] : null;
+    sorted.sort((a, b) => {
+      const fa = freq[a.key] || 0;
+      const fb = freq[b.key] || 0;
+      if (fb !== fa) return fb - fa;
+      return a.label.localeCompare(b.label, 'nb');
+    });
+    if (drinkEx) sorted.unshift(drinkEx);
+    return sorted;
+  }
 
   function defaultStore() {
     return { schemaVersion: SCHEMA_VERSION, templates: [] };
@@ -229,7 +261,7 @@
       exerciseKey: 'tag',
       customName: '',
       minutes: 10,
-      groupCount: 2,
+      groupCount: 1,
       groupMode: 'even', // even | diff | none
       comment: ''
     };
@@ -336,7 +368,7 @@
   }
 
   function optionHtml(selectedKey) {
-    return EXERCISES.map(x => {
+    return getSortedExercises().map(x => {
       const sel = x.key === selectedKey ? 'selected' : '';
       return `<option value="${escapeHtml(x.key)}" ${sel}>${escapeHtml(x.label)}</option>`;
     }).join('');
@@ -558,12 +590,14 @@
           const chosen = pickRandomExerciseKey();
           sel.value = chosen;
           ex.exerciseKey = chosen;
+          trackExerciseUsage(chosen);
           const meta = EX_BY_KEY.get(chosen);
           if (meta && Number(ex.minutes) <= 0) ex.minutes = meta.defaultMin ?? 10;
           if (customWrap) customWrap.classList.add('wo-hidden');
           ex.customName = '';
         } else {
           ex.exerciseKey = v;
+          trackExerciseUsage(v);
           const meta = EX_BY_KEY.get(v);
           // Sett default minutter kun hvis bruker ikke har skrevet noe "tungt" (0 eller tom)
           if (meta && Number(ex.minutes) <= 0) ex.minutes = meta.defaultMin ?? 10;
@@ -1532,8 +1566,8 @@ function serializeWorkoutFromState() {
       display:flex; gap:14px; align-items:center;
       box-shadow: 0 6px 18px rgba(11,91,211,0.20);
     }
-    .logo{width:72px; height:72px; border-radius:14px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden;}
-    .logo img{width:72px; height:72px; object-fit:cover;}
+    .logo{width:96px; height:96px; border-radius:14px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+    .logo img{width:96px; height:96px; object-fit:cover;}
     .h-title{font-size:18px; font-weight:900; line-height:1.2;}
     .h-sub{opacity:0.9; font-size:13px; margin-top:2px;}
     .meta{margin-left:auto; text-align:right;}
@@ -1566,6 +1600,8 @@ function serializeWorkoutFromState() {
     }
     .btn.secondary{background:#1f2a3d;}
     .note{color:var(--muted); font-size:12px; margin-top:8px;}
+    .footer{text-align:center; margin-top:20px; font-size:11px; color:var(--muted); padding:10px 0; border-top:1px solid var(--line);}
+    tr{page-break-inside:avoid;}
     @media (max-width:720px){
       .exp-parallel{grid-template-columns:1fr;}
       .meta{display:none;}
@@ -1622,6 +1658,7 @@ function serializeWorkoutFromState() {
       <button class="btn secondary" onclick="window.close()">Lukk</button>
     </div>
     <div class="note">Tips: I utskriftsdialogen velger du “Lagre som PDF”. På mobil kan dette ligge under Del → Skriv ut.</div>
+    <div class="footer">Laget med Barnefotballtrener.no</div>
   </div>
 </body>
 </html>`;
