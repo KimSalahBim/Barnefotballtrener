@@ -2442,12 +2442,12 @@ body.gated #mainApp {
     flex: 1 1 45% !important;
   }
   #kampdag .settings-card {
-    margin-top: 8px !important;
+    margin-top: 6px !important;
   }
   #kampdag .settings-row {
     gap: 6px !important;
     margin-top: 4px !important;
-    margin-bottom: 6px !important;
+    margin-bottom: 4px !important;
   }
   #kampdag .btn-secondary {
     flex: 1 1 auto !important;
@@ -2475,6 +2475,13 @@ body.gated #mainApp {
   #kampdag .kd-keeper-row input {
     min-width: 0 !important;
   }
+  #kampdag .selection-header {
+    margin-top: 6px !important;
+    margin-bottom: 2px !important;
+  }
+  #kampdag .selection-title {
+    font-size: 14px !important;
+  }
 
   /* ── KONKURRANSER: compact ── */
   #competitions .settings-card {
@@ -2485,17 +2492,108 @@ body.gated #mainApp {
   }
 
   /* ── LIGA: compact controls ── */
-  #liga .team-names label {
+  #liga .settings-row {
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+  }
+  #liga .settings-label {
     font-size: 13px !important;
+    min-width: 0 !important;
     margin-bottom: 2px !important;
   }
+  #liga .team-names {
+    margin-bottom: 6px !important;
+  }
+  #liga .team-names label {
+    font-size: 12px !important;
+    margin-bottom: 1px !important;
+  }
   #liga .team-names input {
-    padding: 7px 10px !important;
+    padding: 6px 10px !important;
     font-size: 14px !important;
+    margin-bottom: 4px !important;
+  }
+  .liga-matches h3 {
+    font-size: 14px !important;
+    margin: 6px 0 3px !important;
+  }
+  .liga-match-row {
+    margin-bottom: 4px !important;
   }
   .results-container h3 {
     font-size: 15px !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* ── WORKOUT (Bygg din treningsøkt): compact ── */
+  .wo-blocks {
+    gap: 8px !important;
+    margin-top: 8px !important;
+  }
+  .wo-block {
+    padding: 8px !important;
+    border-radius: 10px !important;
+  }
+  .wo-block-header {
+    gap: 4px !important;
+  }
+  .wo-block-title {
+    font-size: 13px !important;
+  }
+  .wo-subcard {
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+    margin-top: 6px !important;
+  }
+  .wo-field {
+    min-width: 0 !important;
+  }
+  .wo-label {
+    font-size: 12px !important;
+    margin-bottom: 2px !important;
+  }
+  .wo-input {
+    padding: 5px 8px !important;
+    font-size: 13px !important;
+    border-radius: 8px !important;
+  }
+  .wo-inline {
+    gap: 6px !important;
+  }
+  .wo-minutes {
+    max-width: 90px !important;
+    min-width: 70px !important;
+  }
+  .wo-groups-settings label {
+    font-size: 12px !important;
+  }
+  .wo-groups-settings select,
+  .wo-groups-settings input {
+    padding: 5px 8px !important;
+    font-size: 13px !important;
+  }
+  .wo-group-actions {
+    gap: 4px !important;
+  }
+  .wo-group-actions button {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+  .wo-groupsout {
+    margin-top: 6px !important;
+  }
+  .wo-meta-card {
+    padding: 10px 12px !important;
+  }
+  .wo-meta-field {
+    min-width: 100px !important;
+  }
+  .wo-meta-field-wide {
+    min-width: 140px !important;
+  }
+  .wo-parallel-pick {
+    padding: 8px !important;
+    border-radius: 10px !important;
   }
 
   /* ── LIGA: compact match rows ── */
