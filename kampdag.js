@@ -148,6 +148,9 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
 
     if (genBtn) genBtn.addEventListener('click', generateKampdagPlan);
     if (copyBtn) copyBtn.addEventListener('click', copyKampdagPlan);
+
+    const pdfBtn = $('kdExportPdf');
+    if (pdfBtn) pdfBtn.addEventListener('click', exportKampdagPdf);
   }
 
   // ------------------------------
@@ -780,5 +783,171 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       .catch(() => {
         alert('Klarte ikke å kopiere. Marker teksten manuelt.');
       });
+  }
+
+  function exportKampdagPdf() {
+    if (!lastPlanText) {
+      if (typeof window.showNotification === 'function') {
+        window.showNotification('Generer en plan først', 'error');
+      }
+      return;
+    }
+
+    const present = getPresentPlayers();
+    const format = parseInt($('kdFormat')?.value, 10) || 7;
+    const T = clamp(parseInt($('kdMinutes')?.value, 10) || 48, 10, 200);
+    const idToName = {};
+    present.forEach(p => idToName[p.id] = p.name);
+
+    const logoUrl = (() => {
+      try {
+        const front = document.querySelector('.login-logo');
+        if (front && front.getAttribute('src')) return new URL(front.getAttribute('src'), window.location.href).href;
+        const appLogo = document.querySelector('.app-logo');
+        if (appLogo && appLogo.getAttribute('src')) return new URL(appLogo.getAttribute('src'), window.location.href).href;
+        return new URL('apple-touch-icon.png', window.location.href).href;
+      } catch { return 'apple-touch-icon.png'; }
+    })();
+
+    const today = new Date().toLocaleDateString('nb-NO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Parse lastPlanText for structured output
+    const lines = lastPlanText.split('\n');
+    let sectionHtml = '';
+    let currentSection = '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      if (trimmed === 'Startoppstilling' || trimmed === 'Beregnet spilletid' || trimmed === 'Bytteplan') {
+        if (currentSection) sectionHtml += '</div>';
+        currentSection = trimmed;
+        sectionHtml += `<div class="kd-section"><div class="kd-section-title">${escapeHtml(trimmed)}</div>`;
+        continue;
+      }
+
+      if (trimmed.startsWith('Start (') || trimmed.startsWith('Benk (')) {
+        sectionHtml += `<div class="kd-sub-title">${escapeHtml(trimmed)}</div>`;
+      } else if (trimmed.startsWith('Minutt ')) {
+        sectionHtml += `<div class="kd-event-header">${escapeHtml(trimmed)}</div>`;
+      } else if (trimmed.startsWith('- ')) {
+        sectionHtml += `<div class="kd-player">${escapeHtml(trimmed.slice(2))}</div>`;
+      } else if (trimmed.startsWith('Inn: ') || trimmed.startsWith('Ut: ') || trimmed.startsWith('Keeper: ')) {
+        const isIn = trimmed.startsWith('Inn:');
+        const isKeeper = trimmed.startsWith('Keeper:');
+        const cls = isIn ? 'kd-in' : (isKeeper ? 'kd-keeper' : 'kd-out');
+        sectionHtml += `<div class="${cls}">${escapeHtml(trimmed)}</div>`;
+      } else if (trimmed.includes(': ') && trimmed.includes(' min')) {
+        sectionHtml += `<div class="kd-time-row">${escapeHtml(trimmed)}</div>`;
+      } else if (trimmed === 'Start (ingen bytter)') {
+        sectionHtml += `<div class="kd-note">${escapeHtml(trimmed)}</div>`;
+      } else {
+        sectionHtml += `<div class="kd-line">${escapeHtml(trimmed)}</div>`;
+      }
+    }
+    if (currentSection) sectionHtml += '</div>';
+
+    const html = `<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kampdag – Barnefotballtrener</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#ffffff; --muted:#556070; --line:#e6e9ef;
+      --brand:#0b5bd3; --brand2:#19b0ff; --soft:#f6f8fc;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial; background:var(--soft); color:#111; line-height:1.45;}
+    .wrap{max-width:980px; margin:0 auto; padding:18px;}
+    .header{
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      color:#fff; border-radius:18px; padding:16px 18px;
+      display:flex; gap:14px; align-items:center;
+      box-shadow:0 6px 18px rgba(11,91,211,0.20);
+    }
+    .logo{width:96px; height:96px; border-radius:14px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+    .logo img{width:96px; height:96px; object-fit:cover;}
+    .h-title{font-size:20px; font-weight:900; line-height:1.2;}
+    .h-sub{opacity:0.9; font-size:13px; margin-top:2px;}
+    .meta{margin-left:auto; text-align:right;}
+    .meta .m1{font-weight:800;}
+    .meta .m2{opacity:0.9; font-size:13px; margin-top:2px;}
+    .card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:14px; margin-top:12px;}
+    .kd-section{margin-bottom:16px;}
+    .kd-section-title{font-size:15px; font-weight:900; text-transform:uppercase; letter-spacing:0.04em; color:var(--brand); margin:14px 0 8px; padding-bottom:4px; border-bottom:2px solid var(--line);}
+    .kd-sub-title{font-weight:800; font-size:13px; margin:10px 0 4px; color:#1a2333;}
+    .kd-player{padding:3px 0 3px 12px; font-size:13px; color:#374151;}
+    .kd-event-header{font-weight:900; font-size:14px; margin:12px 0 4px; padding:6px 10px; background:var(--soft); border-radius:10px; border-left:4px solid var(--brand);}
+    .kd-in{padding:2px 0 2px 16px; font-size:13px; color:#16a34a; font-weight:700;}
+    .kd-out{padding:2px 0 2px 16px; font-size:13px; color:#dc2626; font-weight:700;}
+    .kd-keeper{padding:2px 0 2px 16px; font-size:13px; color:#7c3aed; font-weight:700;}
+    .kd-note{padding:2px 0 2px 16px; font-size:12px; color:var(--muted); font-style:italic;}
+    .kd-time-row{padding:3px 0 3px 12px; font-size:13px; display:flex; justify-content:space-between; border-bottom:1px solid #f1f5f9;}
+    .kd-line{padding:2px 0; font-size:13px;}
+    .summary{text-align:center; margin-top:16px; padding:12px; background:var(--soft); border-radius:14px;}
+    .summary-title{font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:900;}
+    .summary-value{font-size:1.3rem; font-weight:900; margin-top:4px;}
+    .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;}
+    .btn{border:0; border-radius:12px; padding:10px 12px; font-weight:800; background:var(--brand); color:#fff; cursor:pointer;}
+    .note{color:var(--muted); font-size:12px; margin-top:8px;}
+    .footer{text-align:center; margin-top:20px; font-size:11px; color:var(--muted); padding:10px 0; border-top:1px solid var(--line);}
+    @media (max-width:720px){
+      .meta{display:none;}
+    }
+    @media print{
+      * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      body{background:#fff;}
+      .wrap{max-width:none; padding:0;}
+      .actions,.note{display:none !important;}
+      .header{border-radius:0; box-shadow:none;}
+      .card{border-radius:0; border-left:0; border-right:0;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="logo"><img src="${escapeHtml(logoUrl)}" alt="Barnefotballtrener"></div>
+      <div>
+        <div class="h-title">Kampdag – ${format}-er fotball</div>
+        <div class="h-sub">${escapeHtml(today)} · ${T} min · ${present.length} spillere</div>
+      </div>
+      <div class="meta">
+        <div class="m1">Barnefotballtrener</div>
+        <div class="m2">Kampdag</div>
+      </div>
+    </div>
+
+    <div class="card">
+      ${sectionHtml}
+    </div>
+
+    <div class="summary">
+      <div class="summary-title">Kampoppsett</div>
+      <div class="summary-value">${format}-er · ${T} min · ${present.length} spillere</div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" onclick="window.print()">Skriv ut / Lagre som PDF</button>
+    </div>
+    <div class="note">Tips: I utskriftsdialogen velger du "Lagre som PDF".</div>
+    <div class="footer">Laget med Barnefotballtrener.no</div>
+  </div>
+</body>
+</html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) {
+      if (typeof window.showNotification === 'function') {
+        window.showNotification('Popup ble blokkert. Tillat popups for å eksportere.', 'error');
+      }
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
   }
 })();
