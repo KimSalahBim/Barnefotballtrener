@@ -318,6 +318,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'User has no email' });
     }
 
+    // Owner bypass: app-eier har alltid full tilgang uten Stripe-sjekk
+    const OWNER_EMAILS = (process.env.OWNER_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    if (OWNER_EMAILS.includes(normalizeEmail(email))) {
+      console.log('[subscription-status] ✅ Owner bypass for', email);
+      return res.status(200).json({
+        active: true,
+        trial: false,
+        lifetime: true,
+        plan: 'owner',
+        subscription_id: null,
+        status: 'owner',
+        current_period_end: null,
+        cancel_at_period_end: false,
+        cancel_at: null,
+        trial_ends_at: null,
+        canStartTrial: false,
+        reason: 'owner',
+      });
+    }
+
     const customer = await findOrCreateCustomer(email, user.id);
 
     // Ensure deterministic binding for future lookups.
