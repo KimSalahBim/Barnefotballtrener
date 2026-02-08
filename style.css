@@ -2730,3 +2730,12 @@ body.gated #mainApp {
   border-color: transparent;
   box-shadow: 0 4px 12px rgba(11, 91, 211, 0.25);
 }
+
+/* ── iOS/mobil auto-zoom fix ──
+   Mobil-nettlesere (Safari + Chrome) zoomer inn på input med font-size < 16px.
+   Setter minimum 16px på alle interaktive felter på mobil. */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
