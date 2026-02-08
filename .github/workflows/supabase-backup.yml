@@ -24,14 +24,13 @@ jobs:
           TIMESTAMP=$(date +%Y-%m-%d_%H%M)
           FILENAME="backup_${TIMESTAMP}.sql"
           
-          pg_dump "${SUPABASE_DB_URL}" \
+          /usr/lib/postgresql/17/bin/pg_dump "${SUPABASE_DB_URL}" \
             --no-owner \
             --no-privileges \
             --schema=public \
             --format=plain \
             > "${FILENAME}"
           
-          # Vis filstørrelse som sanity check
           ls -lh "${FILENAME}"
           echo "BACKUP_FILE=${FILENAME}" >> $GITHUB_ENV
 
