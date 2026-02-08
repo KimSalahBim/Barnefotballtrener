@@ -1632,14 +1632,7 @@ body {
     transition: transform .12s ease, box-shadow .12s ease;
   }
 
-  /* Bygg din treningsøkt: full bredde på mobil */
-  .app-nav .nav-btn[data-tab="workout"]{
-    grid-column: 1 / -1;
-    min-height: 44px;
-    font-size: 10px;
-    font-weight: 800;
-    gap: 4px;
-  }
+  /* Alle 6 faner er nå symmetriske i 3x2 grid */
 
   /* Ikoner mindre */
   .app-nav .nav-btn i,
@@ -2702,4 +2695,38 @@ body.gated #mainApp {
     padding: 7px 10px !important;
     font-size: 13px !important;
   }
+}
+
+/* ========================
+   Gruppeinndeling modus-velger
+   ======================== */
+.grouping-mode-selector {
+  display: flex;
+  gap: 6px;
+}
+
+.grouping-mode-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 12px;
+  border: 2px solid var(--gray-200, #e5e7eb);
+  background: var(--gray-50, #f9fafb);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-600, #4b5563);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.25;
+}
+
+.grouping-mode-btn:hover {
+  border-color: var(--egge-light-blue, #19b0ff);
+}
+
+.grouping-mode-btn.active {
+  background: linear-gradient(135deg, var(--egge-blue, #0b5bd3) 0%, var(--egge-light-blue, #19b0ff) 100%);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(11, 91, 211, 0.25);
 }
