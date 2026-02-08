@@ -88,7 +88,9 @@
     return `${getUserKeyPrefix()}${name}`;
   }
 
-  const STORAGE_KEY = k('competitions');
+  // Lazy-evaluated key: uid may not be available at IIFE-init (auth is async).
+  // Computing per-call ensures correct key even after auth completes.
+  function STORAGE_KEY() { return k('competitions'); }
   const SCHEMA_VERSION = 1;
 
   function defaultStore() {
@@ -96,7 +98,7 @@
   }
 
   function loadStore() {
-    const raw = safeGet(STORAGE_KEY);
+    const raw = safeGet(STORAGE_KEY());
     if (!raw) return { ok: true, data: defaultStore(), corrupt: false };
 
     try {
@@ -113,7 +115,7 @@
   }
 
   function saveStore(store) {
-    safeSet(STORAGE_KEY, JSON.stringify(store));
+    safeSet(STORAGE_KEY(), JSON.stringify(store));
   }
 
   // -------------------------
@@ -679,7 +681,7 @@
       }
 
       if (action === 'resetStore') {
-        safeRemove(STORAGE_KEY);
+        safeRemove(STORAGE_KEY());
         ui.view = 'setup';
         ui.activeCompetitionId = null;
         ui.detailId = null;
@@ -927,6 +929,46 @@
 
   // Hooks: render når tab åpnes, og når spillere endres
   
+  // Migrate data from anon key to real user key (fixes early-evaluation bug)
+  function migrateAnonData() {
+    try {
+      const prefix = getUserKeyPrefix();
+      if (prefix === 'bft:anon:') return; // Still anon, nothing to migrate
+      
+      const anonKey = 'bft:anon:competitions';
+      const anonRaw = safeGet(anonKey);
+      if (!anonRaw) return; // No anon data to migrate
+      
+      const realKey = STORAGE_KEY();
+      const realRaw = safeGet(realKey);
+      
+      if (!realRaw) {
+        // No data under real key yet — move anon data there
+        safeSet(realKey, anonRaw);
+        safeRemove(anonKey);
+        console.log('[Competitions] Migrated data from anon key to', realKey);
+      } else {
+        // Both exist — merge competitions arrays
+        try {
+          const anonData = JSON.parse(anonRaw);
+          const realData = JSON.parse(realRaw);
+          const existingIds = new Set((realData.competitions || []).map(c => c.id));
+          const newComps = (anonData.competitions || []).filter(c => !existingIds.has(c.id));
+          if (newComps.length > 0) {
+            realData.competitions = [...(realData.competitions || []), ...newComps];
+            safeSet(realKey, JSON.stringify(realData));
+            console.log('[Competitions] Merged', newComps.length, 'competitions from anon key');
+          }
+          safeRemove(anonKey);
+        } catch (e) {
+          console.warn('[Competitions] Migration merge failed:', e);
+        }
+      }
+    } catch (e) {
+      console.warn('[Competitions] Migration failed:', e);
+    }
+  }
+
   // Register event listener IMMEDIATELY
   console.log('[Competitions] Script loaded - registering event listener');
   window.addEventListener('players:updated', (e) => {
@@ -957,9 +999,29 @@
   window.competitions = {
     render,
     _debug: {
-      key: STORAGE_KEY,
+      get key() { return STORAGE_KEY(); },
       loadStore,
       saveStore
     }
   };
+
+  // Auth timing fix: competitions may have been loaded/saved with 'anon' key
+  // if auth wasn't ready at IIFE execution. Rehydrate once auth resolves.
+  (function rehydrateAfterAuth() {
+    const initialPrefix = getUserKeyPrefix();
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts++;
+      const currentPrefix = getUserKeyPrefix();
+      if (currentPrefix !== initialPrefix) {
+        clearInterval(timer);
+        console.log('[Competitions] auth resolved, rehydrating storage from', initialPrefix, '→', currentPrefix);
+        migrateAnonData();
+        render();
+      } else if (attempts >= 40) {
+        // 40 × 150ms = 6s — give up
+        clearInterval(timer);
+      }
+    }, 150);
+  })();
 })();
