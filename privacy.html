@@ -11,88 +11,126 @@
   <main class="legal">
     <h1>Personvernerklæring</h1>
 
-    <p><strong>Sist oppdatert:</strong> 4. februar 2026</p>
+    <p><strong>Sist oppdatert:</strong> 8. februar 2026</p>
 
-    <h2>1. Hvem vi er</h2>
+    <h2>1. Behandlingsansvarlig</h2>
     <p>
-      Barnefotballtrener er en norsk webapp/PWA for trenere i barnefotball.
-      Har du spørsmål om personvern, kontakt oss på
-      <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.
+      Barnefotballtrener er en norsk webapp/PWA for trenere i barnefotball,
+      driftet av Kim Strømmen (enkeltpersonforetak), Steinkjer, Norge.
+      Kontakt: <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.
     </p>
 
-    <h2>2. Hvilke data vi behandler</h2>
+    <h2>2. Hvilke personopplysninger vi behandler</h2>
 
     <h3>2.1 Konto og innlogging</h3>
     <ul>
-      <li><strong>E-postadresse</strong> (fra Google-login) for å identifisere kontoen din.</li>
-      <li><strong>Supabase bruker-ID</strong> (teknisk identifikator) for kontoen.</li>
+      <li><strong>E-postadresse</strong> og <strong>navn</strong> (fra Google-innlogging) for å identifisere kontoen din.</li>
+      <li><strong>Bruker-ID</strong> (teknisk identifikator i Supabase).</li>
     </ul>
+    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) – nødvendig for å levere tjenesten.</p>
 
-    <h3>2.2 Prøveperiode (hvis aktivert)</h3>
+    <h3>2.2 Betaling og abonnement</h3>
     <p>
-      Hvis appen tilbyr prøveperiode, lagres tekniske felter knyttet til prøveperioden (start/slutt og evt. plan)
-      i vår database (Supabase) for å kunne gi/stenge tilgang riktig.
+      Betaling håndteres av <strong>Stripe</strong> som selvstendig databehandler.
+      Vi mottar tekniske opplysninger som Stripe customer-id, subscription-id, status og periodedatoer.
+      Vi lagrer aldri kortnummer eller fullstendige betalingsopplysninger.
+    </p>
+    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b).</p>
+
+    <h3>2.3 Innhold du lager i appen (spillerlister m.m.)</h3>
+    <p>
+      Spillerlister, lagoppsett, treningsøkter og konkurransedata lagres <strong>lokalt i nettleseren</strong>
+      på enheten din (localStorage), knyttet til din bruker-ID. Disse dataene sendes ikke til våre servere
+      som en del av normal bruk. Sletter du nettleserdata eller bytter enhet, forsvinner lokale data.
+    </p>
+    <p>
+      <strong>Viktig for trenere:</strong> Dersom du legger inn opplysninger om barn (f.eks. fornavn),
+      oppfordrer vi sterkt til å kun bruke fornavn og ikke lagre sensitive opplysninger
+      (helseopplysninger, fødselsnummer e.l.). Du er selv behandlingsansvarlig for spillerdata
+      du registrerer, i tråd med din klubbs personvernrutiner.
     </p>
 
-    <h3>2.3 Betaling og abonnement</h3>
+    <h3>2.4 Tekniske logger</h3>
     <p>
-      Betaling håndteres av Stripe. Vi mottar og bruker tekniske opplysninger som er nødvendig for å gi tilgang,
-      typisk <em>Stripe customer-id</em>, <em>subscription-id</em>, status og periodedatoer. Vi lagrer ikke kortnummer
-      eller fullstendige betalingsopplysninger.
+      Vercel (vår hosting-leverandør) kan logge tekniske opplysninger som tidspunkt, IP-adresse,
+      nettlesertype og URL-er. Disse brukes til sikkerhet og feilsøking, og slettes automatisk
+      etter kort tid i tråd med Vercels retningslinjer.
+    </p>
+    <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) – sikkerhet og drift.</p>
+
+    <h2>3. Databehandlere og tredjeparter</h2>
+    <table style="width:100%; border-collapse:collapse; margin:10px 0;">
+      <tr style="border-bottom:1px solid #ddd;">
+        <th style="text-align:left; padding:6px;">Tjeneste</th>
+        <th style="text-align:left; padding:6px;">Formål</th>
+        <th style="text-align:left; padding:6px;">Land</th>
+      </tr>
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:6px;">Supabase</td>
+        <td style="padding:6px;">Autentisering, bruker-ID, prøvetilgang</td>
+        <td style="padding:6px;">EU (Frankfurt)</td>
+      </tr>
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:6px;">Stripe</td>
+        <td style="padding:6px;">Betalingsbehandling, abonnementshåndtering</td>
+        <td style="padding:6px;">USA (EU SCCs)</td>
+      </tr>
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:6px;">Vercel</td>
+        <td style="padding:6px;">Hosting, serverless API</td>
+        <td style="padding:6px;">USA (EU SCCs)</td>
+      </tr>
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:6px;">Google</td>
+        <td style="padding:6px;">Innlogging (OAuth)</td>
+        <td style="padding:6px;">USA (EU SCCs)</td>
+      </tr>
+    </table>
+    <p>
+      Overføring til USA skjer med Standard Contractual Clauses (SCCs) som overføringsgrunnlag
+      i tråd med GDPR kapittel V.
     </p>
 
-    <h3>2.4 Innhold du lager i appen</h3>
-    <p>
-      Spillerlister, lagoppsett og treningsdata lagres som hovedregel <strong>lokalt i nettleseren på enheten din</strong>
-      (for eksempel localStorage). Disse dataene sendes ikke til oss som en del av normal bruk. Sletter du nettleserdata
-      eller bytter enhet, kan lokale data forsvinne.
-    </p>
-
-    <h3>2.5 Tekniske logger</h3>
-    <p>
-      Som de fleste nettjenester kan vi motta tekniske logger fra drift/hosting (for eksempel tidspunkt, feilkoder, IP-adresse,
-      nettlesertype og URL-er) for sikkerhet og feilsøking.
-    </p>
-
-    <h2>3. Hvorfor vi behandler data</h2>
+    <h2>4. Lagringstid</h2>
     <ul>
-      <li>Levere tjenesten: innlogging, tilgangskontroll og grunnleggende funksjoner.</li>
-      <li>Betaling/abonnement: verifisere status og gi riktig tilgang.</li>
-      <li>Sikkerhet og drift: forebygge misbruk og feilsøke problemer.</li>
-      <li>Kundeservice: svare på henvendelser.</li>
+      <li>Kontoopplysninger: lagres så lenge kontoen eksisterer. Ved sletting av konto fjernes data fra Supabase.</li>
+      <li>Betalingsdata i Stripe: lagres i tråd med Stripes retningslinjer og norske regnskapskrav (5 år).</li>
+      <li>Lokale data (spillerlister m.m.): styrer du selv via nettleseren. Bruk eksport-funksjonen for backup.</li>
+      <li>Tekniske logger (Vercel): slettes automatisk etter kort tid (typisk 30 dager).</li>
     </ul>
 
-    <h2>4. Hvem vi deler data med</h2>
+    <h2>5. Dine rettigheter</h2>
+    <p>Etter GDPR har du rett til:</p>
     <ul>
-      <li><strong>Stripe</strong>: betalingsbehandling og kundportal for administrasjon/kansellering.</li>
-      <li><strong>Supabase</strong>: autentisering og lagring av prøvetilgang (og tekniske kontofelter).</li>
-      <li><strong>Vercel</strong>: hosting av nettsted og serverless API.</li>
-      <li><strong>Google</strong>: innlogging via Google OAuth.</li>
+      <li><strong>Innsyn</strong> – få vite hvilke opplysninger vi har om deg.</li>
+      <li><strong>Retting</strong> – korrigere uriktige opplysninger.</li>
+      <li><strong>Sletting</strong> – be om at kontoen og tilhørende data slettes.</li>
+      <li><strong>Dataportabilitet</strong> – få utlevert data i et maskinlesbart format.</li>
+      <li><strong>Innsigelse</strong> – protestere mot behandling basert på berettiget interesse.</li>
     </ul>
-
-    <h2>5. Lagringstid</h2>
-    <ul>
-      <li>Kontoopplysninger lagres så lenge kontoen eksisterer.</li>
-      <li>Betalingshistorikk i Stripe lagres i tråd med Stripes og gjeldende regnskaps-/lovkrav.</li>
-      <li>Lokale data på enheten din styrer du selv (sletting skjer ved å slette nettleserdata).</li>
-    </ul>
-
-    <h2>6. Dine valg og rettigheter</h2>
     <p>
-      Du kan be om innsyn, retting eller sletting av kontodata vi kontrollerer, ved å kontakte oss.
-      Merk at data som kun ligger lokalt på enheten din må du håndtere selv.
+      For å utøve rettighetene dine, kontakt <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.
+      Du har også rett til å klage til <strong>Datatilsynet</strong> (datatilsynet.no).
     </p>
 
-    <h2>7. Informasjon om barn</h2>
+    <h2>6. Informasjonssikkerhet</h2>
     <p>
-      Appen er ment brukt av voksne trenere. Dersom du legger inn opplysninger om barn (for eksempel navn i en spillerliste),
-      anbefaler vi at du kun bruker det som er nødvendig og følger klubbens rutiner for personvern. Når slike opplysninger
-      lagres lokalt på enheten din, har vi normalt ikke tilgang til dem.
+      Vi bruker HTTPS for all kommunikasjon, autentisering via Google OAuth (ingen passord hos oss),
+      og betalingsdata håndteres direkte av Stripe (PCI DSS-sertifisert). Tilgang til backend-systemer
+      er begrenset til nødvendig personell.
+    </p>
+
+    <h2>7. Informasjonskapsler (cookies)</h2>
+    <p>
+      Barnefotballtrener bruker ikke tredjeparts sporingscookies eller annonsepiksler.
+      Autentiseringscookies fra Supabase er nødvendige for innlogging og krever ikke samtykke
+      etter ekomloven § 2-7b (teknisk nødvendige cookies).
     </p>
 
     <h2>8. Endringer</h2>
     <p>
-      Vi kan oppdatere denne erklæringen ved behov. Datoen øverst viser når den sist ble oppdatert.
+      Vi kan oppdatere denne erklæringen ved behov. Ved vesentlige endringer varsler vi i appen.
+      Datoen øverst viser når den sist ble oppdatert.
     </p>
 
     <p><a href="/">Tilbake</a></p>
