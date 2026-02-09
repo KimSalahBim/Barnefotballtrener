@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // api/create-portal-session.js
 // Lager Stripe Customer Portal-session.
 // Støtter to flows: "manage" (standard) og "cancel" (starter kanselleringsflyt)

@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // api/delete-account.js
 // GDPR Art. 17 - Right to Erasure ("Right to be Forgotten")
 // Allows users to permanently delete their account and all associated data

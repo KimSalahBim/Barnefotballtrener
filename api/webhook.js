@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // api/webhook.js
 // Stripe Webhook endpoint (Test + Live).
 // Formål nå: verifiser signatur og kvitter (200) uten å endre app-logikk.
