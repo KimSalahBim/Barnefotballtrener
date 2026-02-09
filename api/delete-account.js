@@ -104,17 +104,18 @@ export default async function handler(req, res) {
         const customer = customers[0];
         const customerId = customer.id;
 
-        // Cancel all active subscriptions
+        // Cancel all subscriptions (including trialing, past_due, unpaid)
         const subscriptions = await stripe.subscriptions.list({
           customer: customerId,
-          status: 'active',
+          status: 'all',
           limit: 100,
         });
 
         for (const sub of subscriptions.data || []) {
+          if (!sub || sub.status === 'canceled') continue;
           try {
             await stripe.subscriptions.cancel(sub.id);
-            deletionResults.steps_completed.push('Cancelled active subscription');
+            deletionResults.steps_completed.push('Cancelled subscription (' + sub.status + ')');
           } catch (cancelErr) {
             console.error('[delete-account] Failed to cancel subscription:', cancelErr);
             deletionResults.errors.push('Could not cancel a subscription');
