@@ -629,6 +629,13 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
       for (var attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         try {
           status = await svc.checkSubscription(attempt > 0 ? { forceFresh: true } : undefined);
+
+          // checkSubscription() returnerer soft-fail objekter i stedet for å kaste.
+          // Behandle disse som retryable errors slik at fallback-logikken kjører.
+          if (status && (status.reason === 'status_error' || status.reason === 'no_session')) {
+            throw new Error('Subscription check soft-failed: ' + status.reason);
+          }
+
           lastError = null;
           break;
         } catch (e) {
