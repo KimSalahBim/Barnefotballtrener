@@ -256,6 +256,11 @@ export default async function handler(req, res) {
                        req.connection?.remoteAddress || 
                        'unknown';
 
+    // Idempotency: hindrer duplikate checkout sessions ved dobbeltklikk/retry.
+    // 5-min vindu: same user+plan innen 5 min gir samme session.
+    const fiveMinWindow = Math.floor(Date.now() / (5 * 60 * 1000));
+    const checkoutIdempotencyKey = idKey('bf_checkout', [userId, planType, priceId, String(fiveMinWindow)]);
+
     const session = await stripe.checkout.sessions.create({
       mode,
       customer: customerId,
@@ -296,7 +301,7 @@ export default async function handler(req, res) {
               },
             }
           : undefined,
-    });
+    }, { idempotencyKey: checkoutIdempotencyKey });
 
     // Validering: Stripe skal alltid returnere url for hosted checkout
     if (!session.url) {
