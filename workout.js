@@ -142,7 +142,7 @@
     } catch { return {}; }
   }
   function trackExerciseUsage(exerciseKey) {
-    if (!exerciseKey || exerciseKey === 'drikkepause') return; // don't track drink break
+    if (!exerciseKey || exerciseKey === 'drink') return; // don't track drink break
     try {
       const freq = loadFrequency();
       freq[exerciseKey] = (freq[exerciseKey] || 0) + 1;
@@ -153,7 +153,7 @@
     const freq = loadFrequency();
     const sorted = [...EXERCISES];
     // Drikkepause always first (index 0), then sort rest by frequency desc
-    const drink = sorted.findIndex(e => e.key === 'drikkepause');
+    const drink = sorted.findIndex(e => e.key === 'drink');
     const drinkEx = drink >= 0 ? sorted.splice(drink, 1)[0] : null;
     sorted.sort((a, b) => {
       const fa = freq[a.key] || 0;
