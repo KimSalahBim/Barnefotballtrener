@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - Auth UI Handler
 // ================================================
 // Håndterer UI for innlogging, logout og subscription status

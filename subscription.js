@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // subscription.js
 // Håndterer abonnement-modal + åpner Stripe Customer Portal (manage / cancel)
 // Krever at window.supabase (Supabase client) er initialisert (fra auth.js)

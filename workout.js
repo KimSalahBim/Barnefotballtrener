@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - workout.js
 // ================================================
 // Bygg din treningsøkt: øvelse-for-øvelse, (valgfritt) oppmøte/spillere, gruppeinndeling og eksport.

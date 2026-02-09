@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - Pricing + Magic Link Logic (ROBUST)
 // =======================================================
 // Denne fila håndterer:

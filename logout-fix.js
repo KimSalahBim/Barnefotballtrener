@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // logout-fix.js — Holmes v3.2 (force logout + timeouts + safe storage cleanup)
 // ==========================================================================
 // Goal: Logout must ALWAYS work, even when Edge Tracking Prevention blocks storage

@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - core.js
 // ================================================
 // Kjernelogikk for appen (spillere, navigasjon, trening, kamp).

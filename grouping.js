@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // grouping.js — shared group/teams algorithms (single source of truth)
 // Used by: core.js (Treningsgrupper/Laginndeling) + workout.js (Bygg din treningsøkt)
 // Design: pure functions (no app state), caller passes useSkill boolean.

@@ -1,3 +1,4 @@
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - Konfigurasjon
 // ================================================
 // Stripe: LIVE nøkler (test-nøkler brukes via Vercel Preview)
