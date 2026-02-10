@@ -82,11 +82,25 @@ export default async function handler(req, res) {
       },
       
       app_data: {
-        // User's player lists, training data, etc. are stored in localStorage
-        // We can't access that from backend, so we provide instructions
-        note: 'Your player lists and training data are stored locally in your browser. Use the "Export" button in the app to download this data.',
+        players: [], // Fylles fra Supabase under
+        note: 'Settings and training data are stored locally in your browser. Use the "Export" button in the app to download this data.',
       },
     };
+
+    // 2b) Fetch player data from Supabase
+    try {
+      const { data: playerData, error: playerError } = await supabaseAdmin
+        .from('players')
+        .select('id, name, skill, goalie, active, updated_at')
+        .eq('user_id', userId);
+
+      if (!playerError && playerData) {
+        exportData.app_data.players = playerData;
+      }
+    } catch (playerErr) {
+      console.error('[export-data] Players fetch error:', playerErr);
+      exportData.app_data.players_error = 'Could not fetch player data';
+    }
 
     // 3) Fetch Stripe subscription data (if customer exists)
     try {

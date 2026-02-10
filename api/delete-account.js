@@ -165,6 +165,24 @@ export default async function handler(req, res) {
       deletionResults.errors.push('Database error during deletion');
     }
 
+    // 4b) Delete player data from Supabase
+    try {
+      const { error: playerDelErr } = await supabaseAdmin
+        .from('players')
+        .delete()
+        .eq('user_id', userId);
+
+      if (playerDelErr) {
+        console.error('[delete-account] Failed to delete player data:', playerDelErr);
+        deletionResults.errors.push('Could not delete player data');
+      } else {
+        deletionResults.steps_completed.push('Deleted player data from database');
+      }
+    } catch (playerDbErr) {
+      console.error('[delete-account] Player database error:', playerDbErr);
+      deletionResults.errors.push('Database error during player deletion');
+    }
+
     // 5) Delete Supabase Auth user (THIS MUST BE LAST - deletes the session token!)
     try {
       const { error: authDeleteErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
