@@ -183,6 +183,23 @@ export default async function handler(req, res) {
       deletionResults.errors.push('Database error during player deletion');
     }
 
+    // 4c) Delete error logs from Supabase
+    try {
+      const { error: errLogDelErr } = await supabaseAdmin
+        .from('error_logs')
+        .delete()
+        .eq('user_id', userId);
+
+      if (errLogDelErr) {
+        console.error('[delete-account] Failed to delete error logs:', errLogDelErr);
+        // Ikke-kritisk: ON DELETE SET NULL anonymiserer uansett
+      } else {
+        deletionResults.steps_completed.push('Deleted error logs from database');
+      }
+    } catch (errLogDbErr) {
+      console.error('[delete-account] Error log database error:', errLogDbErr);
+    }
+
     // 5) Delete Supabase Auth user (THIS MUST BE LAST - deletes the session token!)
     try {
       const { error: authDeleteErr } = await supabaseAdmin.auth.admin.deleteUser(userId);

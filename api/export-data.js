@@ -102,6 +102,22 @@ export default async function handler(req, res) {
       exportData.app_data.players_error = 'Could not fetch player data';
     }
 
+    // 2c) Fetch error logs from Supabase
+    try {
+      const { data: errorData, error: errorErr } = await supabaseAdmin
+        .from('error_logs')
+        .select('id, message, source, lineno, colno, user_agent, url, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (!errorErr && errorData) {
+        exportData.app_data.error_logs = errorData;
+      }
+    } catch (errLogErr) {
+      console.error('[export-data] Error logs fetch error:', errLogErr);
+    }
+
     // 3) Fetch Stripe subscription data (if customer exists)
     try {
       const normalizedEmail = normalizeEmail(email);
