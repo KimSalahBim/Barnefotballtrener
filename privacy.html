@@ -11,7 +11,7 @@
   <main class="legal">
     <h1>Personvernerklæring</h1>
 
-    <p><strong>Sist oppdatert:</strong> 8. februar 2026</p>
+    <p><strong>Sist oppdatert:</strong> 10. februar 2026</p>
 
     <h2>1. Behandlingsansvarlig</h2>
     <p>
@@ -37,20 +37,33 @@
     </p>
     <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b).</p>
 
-    <h3>2.3 Innhold du lager i appen (spillerlister m.m.)</h3>
+    <h3>2.3 Spillerdata</h3>
     <p>
-      Spillerlister, lagoppsett, treningsøkter og konkurransedata lagres <strong>lokalt i nettleseren</strong>
-      på enheten din (localStorage), knyttet til din bruker-ID. Disse dataene sendes ikke til våre servere
-      som en del av normal bruk. Sletter du nettleserdata eller bytter enhet, forsvinner lokale data.
+      Spillerlister lagres i vår database (Supabase, EU/Frankfurt) knyttet til din bruker-ID.
+      For hver spiller lagres: fornavn, ferdighetsnivå (1–6), om spilleren kan stå i mål,
+      og om spilleren er aktiv. Spillerdata synkroniseres også til nettleserens lokale lagring
+      for raskere oppstart og offline-bruk.
     </p>
     <p>
-      <strong>Viktig for trenere:</strong> Dersom du legger inn opplysninger om barn (f.eks. fornavn),
-      oppfordrer vi sterkt til å kun bruke fornavn og ikke lagre sensitive opplysninger
-      (helseopplysninger, fødselsnummer e.l.). Du er selv behandlingsansvarlig for spillerdata
-      du registrerer, i tråd med din klubbs personvernrutiner.
+      <strong>Viktig for trenere:</strong> Vi oppfordrer sterkt til å kun bruke fornavn
+      og ikke lagre sensitive opplysninger (helseopplysninger, fødselsnummer, etternavn e.l.).
+      Appen advarer deg dersom du forsøker å legge inn et fullt navn.
+    </p>
+    <p>
+      Som trener er du medansvarlig for spillerdataene du registrerer (GDPR art. 26).
+      Sørg for at dette er i tråd med din klubbs personvernrutiner og at foresatte er
+      informert om at barnas fornavn brukes i et digitalt treningsverktøy.
+    </p>
+    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) – nødvendig for appens kjernefunksjonalitet.</p>
+
+    <h3>2.4 Annet appinnhold</h3>
+    <p>
+      Lagoppsett, treningsøkter, konkurransedata og ligaer lagres <strong>lokalt i nettleseren</strong>
+      (localStorage). Disse dataene sendes ikke til våre servere.
+      Sletter du nettleserdata eller bytter enhet, forsvinner disse lokale dataene.
     </p>
 
-    <h3>2.4 Tekniske logger</h3>
+    <h3>2.5 Tekniske logger</h3>
     <p>
       Vercel (vår hosting-leverandør) kan logge tekniske opplysninger som tidspunkt, IP-adresse,
       nettlesertype og URL-er. Disse brukes til sikkerhet og feilsøking, og slettes automatisk
@@ -67,7 +80,7 @@
       </tr>
       <tr style="border-bottom:1px solid #eee;">
         <td style="padding:6px;">Supabase</td>
-        <td style="padding:6px;">Autentisering, bruker-ID, prøvetilgang</td>
+        <td style="padding:6px;">Autentisering, bruker-ID, prøvetilgang, lagring av spillerdata</td>
         <td style="padding:6px;">EU (Frankfurt)</td>
       </tr>
       <tr style="border-bottom:1px solid #eee;">
@@ -87,36 +100,40 @@
       </tr>
     </table>
     <p>
-      Overføring til USA skjer med Standard Contractual Clauses (SCCs) som overføringsgrunnlag
-      i tråd med GDPR kapittel V.
+      Spillerdata lagres i Supabase sitt EU-datasenter (Frankfurt) og overføres ikke til land utenfor EU/EØS.
+      For øvrige tjenester med servere i USA skjer overføring med Standard Contractual Clauses (SCCs)
+      som overføringsgrunnlag i tråd med GDPR kapittel V.
     </p>
 
     <h2>4. Lagringstid</h2>
     <ul>
-      <li>Kontoopplysninger: lagres så lenge kontoen eksisterer. Ved sletting av konto fjernes data fra Supabase.</li>
+      <li>Kontoopplysninger og spillerdata: lagres så lenge kontoen eksisterer. Ved sletting av konto fjernes alle data fra Supabase automatisk.</li>
       <li>Betalingsdata i Stripe: lagres i tråd med Stripes retningslinjer og norske regnskapskrav (5 år).</li>
-      <li>Lokale data (spillerlister m.m.): styrer du selv via nettleseren. Bruk eksport-funksjonen for backup.</li>
+      <li>Lokale data (lagoppsett, treningsøkter, liga m.m.): lagres i nettleseren og styres av deg. Bruk eksport-funksjonen for backup.</li>
       <li>Tekniske logger (Vercel): slettes automatisk etter kort tid (typisk 30 dager).</li>
     </ul>
 
     <h2>5. Dine rettigheter</h2>
     <p>Etter GDPR har du rett til:</p>
     <ul>
-      <li><strong>Innsyn</strong> – få vite hvilke opplysninger vi har om deg.</li>
-      <li><strong>Retting</strong> – korrigere uriktige opplysninger.</li>
-      <li><strong>Sletting</strong> – be om at kontoen og tilhørende data slettes.</li>
-      <li><strong>Dataportabilitet</strong> – få utlevert data i et maskinlesbart format.</li>
+      <li><strong>Innsyn</strong> – få vite hvilke opplysninger vi har om deg. Bruk «Eksporter data»-knappen i appen for å laste ned alt.</li>
+      <li><strong>Retting</strong> – korrigere uriktige opplysninger direkte i appen.</li>
+      <li><strong>Sletting</strong> – slett kontoen din via «Slett konto»-knappen i appen. Dette fjerner alle dine data permanent.</li>
+      <li><strong>Dataportabilitet</strong> – eksport-funksjonen gir deg data i maskinlesbart JSON-format.</li>
       <li><strong>Innsigelse</strong> – protestere mot behandling basert på berettiget interesse.</li>
     </ul>
     <p>
-      For å utøve rettighetene dine, kontakt <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.
+      Du kan utøve de fleste rettighetene direkte i appen. For ytterligere henvendelser,
+      kontakt <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.
       Du har også rett til å klage til <strong>Datatilsynet</strong> (datatilsynet.no).
     </p>
 
     <h2>6. Informasjonssikkerhet</h2>
     <p>
       Vi bruker HTTPS for all kommunikasjon, autentisering via Google OAuth (ingen passord hos oss),
-      og betalingsdata håndteres direkte av Stripe (PCI DSS-sertifisert). Tilgang til backend-systemer
+      og betalingsdata håndteres direkte av Stripe (PCI DSS-sertifisert).
+      Spillerdata i Supabase er beskyttet med Row Level Security (RLS) slik at hver bruker
+      kun har tilgang til sine egne data. Tilgang til backend-systemer
       er begrenset til nødvendig personell.
     </p>
 
