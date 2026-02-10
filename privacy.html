@@ -63,7 +63,15 @@
       Sletter du nettleserdata eller bytter enhet, forsvinner disse lokale dataene.
     </p>
 
-    <h3>2.5 Tekniske logger</h3>
+    <h3>2.5 Feillogging</h3>
+    <p>
+      For å oppdage og rette tekniske feil lagrer vi automatisk feilmeldinger som oppstår
+      i appen mens du er innlogget. Feilloggen inneholder: feilmelding, filnavn, linjenummer,
+      nettlesertype og hvilken side feilen oppstod på. Feillogger anonymiseres dersom du sletter kontoen din.
+    </p>
+    <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) – sikkerhet og drift.</p>
+
+    <h3>2.6 Tekniske logger (Vercel)</h3>
     <p>
       Vercel (vår hosting-leverandør) kan logge tekniske opplysninger som tidspunkt, IP-adresse,
       nettlesertype og URL-er. Disse brukes til sikkerhet og feilsøking, og slettes automatisk
@@ -108,6 +116,7 @@
     <h2>4. Lagringstid</h2>
     <ul>
       <li>Kontoopplysninger og spillerdata: lagres så lenge kontoen eksisterer. Ved sletting av konto fjernes alle data fra Supabase automatisk.</li>
+      <li>Feillogger: anonymiseres ved kontosletting. Anonymiserte logger kan oppbevares for driftsformål.</li>
       <li>Betalingsdata i Stripe: lagres i tråd med Stripes retningslinjer og norske regnskapskrav (5 år).</li>
       <li>Lokale data (lagoppsett, treningsøkter, liga m.m.): lagres i nettleseren og styres av deg. Bruk eksport-funksjonen for backup.</li>
       <li>Tekniske logger (Vercel): slettes automatisk etter kort tid (typisk 30 dager).</li>
