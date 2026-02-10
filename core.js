@@ -56,6 +56,183 @@
   }
 
   // ------------------------------
+  // Supabase sync (spillere)
+  // ------------------------------
+  function getSupabaseClient() {
+    // window.supabase er Supabase-klienten (satt av auth.js)
+    try {
+      const sb = window.supabase || window.supabaseClient;
+      if (sb && sb.from) return sb;
+    } catch (_) {}
+    return null;
+  }
+
+  function getUserId() {
+    try {
+      if (window.authService && typeof window.authService.getUserId === 'function') {
+        return window.authService.getUserId() || null;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  async function supabaseLoadPlayers() {
+    const sb = getSupabaseClient();
+    const uid = getUserId();
+    if (!sb || !uid) return null; // kan ikke synce, bruk localStorage
+
+    try {
+      const { data, error } = await sb
+        .from('players')
+        .select('id, name, skill, goalie, active')
+        .eq('user_id', uid);
+
+      if (error) {
+        console.warn('[core.js] Supabase load feilet:', error.message);
+        return null;
+      }
+
+      console.log('[core.js] Supabase: hentet', (data || []).length, 'spillere');
+      return data || [];
+    } catch (e) {
+      console.warn('[core.js] Supabase load exception:', e.message);
+      return null;
+    }
+  }
+
+  async function supabaseSavePlayers(players) {
+    const sb = getSupabaseClient();
+    const uid = getUserId();
+    if (!sb || !uid) return;
+
+    try {
+      if (players.length === 0) {
+        // Slett alle
+        await sb.from('players').delete().eq('user_id', uid);
+        return;
+      }
+
+      // Upsert alle nåværende spillere (atomisk per rad)
+      const rows = players.map(p => ({
+        id: p.id,
+        user_id: uid,
+        name: p.name,
+        skill: p.skill,
+        goalie: p.goalie,
+        active: p.active,
+        updated_at: new Date().toISOString()
+      }));
+
+      const { error: upsertErr } = await sb
+        .from('players')
+        .upsert(rows, { onConflict: 'user_id,id' });
+
+      if (upsertErr) {
+        console.warn('[core.js] Supabase upsert feilet:', upsertErr.message);
+      }
+    } catch (e) {
+      console.warn('[core.js] Supabase save exception:', e.message);
+    }
+  }
+
+  // Slett enkeltspiller direkte fra Supabase (kalles ved brukersletting)
+  async function supabaseDeletePlayer(playerId) {
+    const sb = getSupabaseClient();
+    const uid = getUserId();
+    if (!sb || !uid || !playerId) return;
+
+    try {
+      await sb.from('players').delete().eq('user_id', uid).eq('id', playerId);
+    } catch (e) {
+      console.warn('[core.js] Supabase delete player exception:', e.message);
+    }
+  }
+
+  // Full erstatning: slett alle + upsert nye. Brukes ved import og clearAll.
+  async function supabaseReplaceAllPlayers(players) {
+    const sb = getSupabaseClient();
+    const uid = getUserId();
+    if (!sb || !uid) return;
+
+    try {
+      // Slett alle eksisterende
+      await sb.from('players').delete().eq('user_id', uid);
+
+      // Sett inn nye (hvis noen)
+      if (players.length > 0) {
+        const rows = players.map(p => ({
+          id: p.id,
+          user_id: uid,
+          name: p.name,
+          skill: p.skill,
+          goalie: p.goalie,
+          active: p.active,
+          updated_at: new Date().toISOString()
+        }));
+        const { error } = await sb.from('players').insert(rows);
+        if (error) console.warn('[core.js] Supabase replace-insert feilet:', error.message);
+      }
+    } catch (e) {
+      console.warn('[core.js] Supabase replaceAll exception:', e.message);
+    }
+  }
+
+  // Debounce: vent 1.5s etter siste endring før Supabase-sync
+  let _supabaseSaveTimer = null;
+  function debouncedSupabaseSave() {
+    clearTimeout(_supabaseSaveTimer);
+    _supabaseSaveTimer = setTimeout(() => {
+      supabaseSavePlayers(state.players).catch(e => {
+        console.warn('[core.js] Supabase debounced sync feilet:', e.message);
+      });
+    }, 1500);
+  }
+
+  async function migrateLocalToSupabase() {
+    // Engangs: flytt localStorage-spillere til Supabase hvis Supabase er tom
+    const sb = getSupabaseClient();
+    const uid = getUserId();
+    if (!sb || !uid) return;
+
+    // Allerede migrert?
+    if (safeGet(k('migrated_to_supabase')) === 'true') return;
+
+    const localRaw = safeGet(k('players'));
+    if (!localRaw) return; // ingenting lokalt å migrere
+
+    let localPlayers;
+    try {
+      const parsed = JSON.parse(localRaw);
+      if (Array.isArray(parsed)) localPlayers = normalizePlayers(parsed);
+      else if (parsed && Array.isArray(parsed.players)) localPlayers = normalizePlayers(parsed.players);
+      else return;
+    } catch (_) { return; }
+
+    if (localPlayers.length === 0) return;
+
+    // Sjekk om Supabase allerede har data
+    try {
+      const { data } = await sb
+        .from('players')
+        .select('id')
+        .eq('user_id', uid)
+        .limit(1);
+
+      if (data && data.length > 0) {
+        console.log('[core.js] Supabase har allerede spillere, skipper migrering');
+        return;
+      }
+    } catch (_) { return; }
+
+    // Migrer
+    console.log('[core.js] Migrerer', localPlayers.length, 'spillere fra localStorage til Supabase');
+    await supabaseSavePlayers(localPlayers);
+
+    // Marker som migrert
+    safeSet(k('migrated_to_supabase'), 'true');
+  }
+
+  // ------------------------------
   // State
   // ------------------------------
   const state = {
@@ -142,7 +319,7 @@
   }
 
   function loadState() {
-    // settings
+    // settings (alltid fra localStorage - små data)
     const s = safeGet(k('settings'));
     if (s) {
       try {
@@ -151,34 +328,28 @@
       } catch {}
     }
 
-    // players
+    // players — last fra localStorage som rask fallback (synkron)
     const p = safeGet(k('players'));
-    console.log('[core.js] loadState: localStorage players:', p ? 'FUNNET' : 'TOM');
     if (p) {
       try {
         const parsed = JSON.parse(p);
-        console.log('[core.js] loadState: parsed type:', Array.isArray(parsed) ? 'array' : 'object', 'has .players?', parsed?.players ? 'ja' : 'nei');
         if (parsed && typeof parsed === "object" && Array.isArray(parsed.players)) {
-          console.log('[core.js] loadState: Gammelt format - henter', parsed.players.length, 'spillere');
           state.players = normalizePlayers(parsed.players);
         } else if (Array.isArray(parsed)) {
-          console.log('[core.js] loadState: Nytt format - henter', parsed.length, 'spillere');
           state.players = normalizePlayers(parsed);
         } else {
-          console.log('[core.js] loadState: Ukjent format!');
           state.players = [];
         }
-        console.log('[core.js] loadState: state.players har nå', state.players.length, 'spillere');
       } catch (e) {
-        console.error('[core.js] loadState: FEIL ved parsing:', e);
+        console.error('[core.js] loadState: localStorage parse feil:', e);
         state.players = [];
       }
     } else {
-      console.log('[core.js] loadState: Ingen players i localStorage - setter tom array');
       state.players = [];
     }
+    console.log('[core.js] loadState: localStorage ga', state.players.length, 'spillere');
 
-    // liga (optional)
+    // liga (alltid fra localStorage)
     const l = safeGet(k('liga'));
     if (l) {
       try { state.liga = JSON.parse(l); } catch { state.liga = null; }
@@ -186,14 +357,61 @@
       state.liga = null;
     }
 
-    // selections (optional)
+    // selections
     state.selection.grouping = new Set();
+  }
+
+  // Asynkron Supabase-lasting - kalles etter initApp for å oppdatere med server-data
+  async function loadPlayersFromSupabase() {
+    try {
+      // Prøv migrering først (engangs, hvis localStorage har data og Supabase er tom)
+      await migrateLocalToSupabase();
+
+      // Hvis bruker allerede har redigert, ikke overskriv med server-data
+      if (state._localEdited) {
+        console.log('[core.js] Bruker har redigert lokalt, skipper Supabase-oppdatering');
+        return;
+      }
+
+      const sbPlayers = await supabaseLoadPlayers();
+      if (sbPlayers === null) {
+        console.log('[core.js] Supabase utilgjengelig, bruker localStorage');
+        return;
+      }
+
+      // Sjekk igjen etter async-operasjonen (bruker kan ha redigert mens vi ventet)
+      if (state._localEdited) return;
+
+      if (sbPlayers.length === 0 && state.players.length > 0) {
+        console.log('[core.js] Supabase tom, syncer', state.players.length, 'spillere opp');
+        await supabaseSavePlayers(state.players);
+        return;
+      }
+
+      if (sbPlayers.length > 0) {
+        state.players = normalizePlayers(sbPlayers);
+        safeSet(k('players'), JSON.stringify(state.players));
+        console.log('[core.js] Supabase: bruker', state.players.length, 'spillere som source of truth');
+
+        state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
+        renderAll();
+        publishPlayers();
+      }
+    } catch (e) {
+      console.warn('[core.js] loadPlayersFromSupabase feilet:', e.message);
+    }
   }
 
   function saveState() {
     safeSet(k('settings'), JSON.stringify(state.settings));
     safeSet(k('players'), JSON.stringify(state.players));
     safeSet(k('liga'), JSON.stringify(state.liga));
+
+    // Marker at bruker har gjort endringer (brukes av loadPlayersFromSupabase)
+    state._localEdited = true;
+
+    // Debounced sync til Supabase (venter 1.5s etter siste endring)
+    debouncedSupabaseSave();
   }
 
   // ------------------------------
@@ -302,6 +520,9 @@
           state.selection.grouping.delete(id);
 
           saveState();
+          // Slett direkte fra Supabase (ikke vent på debounce)
+          clearTimeout(_supabaseSaveTimer); // unngå redundant debounce-upsert
+          supabaseDeletePlayer(id);
           renderAll();
           publishPlayers();
           showNotification('Spiller slettet', 'info');
@@ -838,6 +1059,9 @@
           }
 
           saveState();
+          // Full erstatning i Supabase (gamle spillere med andre IDer må fjernes)
+          clearTimeout(_supabaseSaveTimer); // unngå redundant debounce
+          supabaseReplaceAllPlayers(state.players);
           renderAll();
           publishPlayers();
           showNotification('Importert', 'success');
@@ -858,6 +1082,9 @@
         state.players = [];
         state.selection.grouping = new Set();
         saveState();
+        // Slett alle fra Supabase umiddelbart
+        clearTimeout(_supabaseSaveTimer); // unngå redundant debounce
+        supabaseSavePlayers([]);
         renderAll();
         publishPlayers();
         showNotification('Alle spillere slettet', 'info');
@@ -1325,7 +1552,7 @@
     window.appInitialized = true;
 
     loadState();
-    console.log('[core.js] ✅ State lastet, spillere:', state.players.length);
+    console.log('[core.js] ✅ State lastet (localStorage), spillere:', state.players.length);
 
     // default select all active players
     state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
@@ -1339,6 +1566,9 @@
 
     renderAll();
     publishPlayers();
+
+    // Asynkron: hent spillere fra Supabase (oppdaterer UI hvis server har nyere data)
+    loadPlayersFromSupabase();
 
     console.log('[core.js] ✅ initApp FERDIG');
   };
