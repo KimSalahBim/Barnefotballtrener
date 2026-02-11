@@ -2864,6 +2864,38 @@ html, body {
   text-align: center;
 }
 
+.team-item-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.team-item-edit,
+.team-item-delete {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--gray-400);
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.team-item-edit:hover {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.team-item-delete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
 .team-dropdown-add {
   display: flex;
   align-items: center;

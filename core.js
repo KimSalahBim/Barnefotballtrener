@@ -465,6 +465,10 @@
       html += '<div class="team-dropdown-item' + (isActive ? ' active' : '') + '" data-team-id="' + t.id + '">' +
         '<span class="team-color-dot" style="background:' + escapeHtml(t.color) + '"></span>' +
         '<span class="team-item-name">' + escapeHtml(t.name) + '</span>' +
+        '<span class="team-item-actions">' +
+          '<button class="team-item-edit" data-team-id="' + t.id + '" title="Rediger"><i class="fas fa-pen"></i></button>' +
+          (state.teams.length > 1 ? '<button class="team-item-delete" data-team-id="' + t.id + '" title="Slett"><i class="fas fa-trash"></i></button>' : '') +
+        '</span>' +
         '<span class="team-item-check">' + (isActive ? '<i class="fas fa-check"></i>' : '') + '</span>' +
         '</div>';
     });
@@ -491,8 +495,34 @@
       });
     }
 
+    // Edit buttons
+    container.querySelectorAll('.team-item-edit').forEach(function(editBtn) {
+      editBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var tid = editBtn.getAttribute('data-team-id');
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.remove('show');
+        if (btn) btn.classList.remove('open');
+        showEditTeamModal(tid);
+      });
+    });
+
+    // Delete buttons
+    container.querySelectorAll('.team-item-delete').forEach(function(delBtn) {
+      delBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var tid = delBtn.getAttribute('data-team-id');
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.remove('show');
+        if (btn) btn.classList.remove('open');
+        confirmDeleteTeam(tid);
+      });
+    });
+
     container.querySelectorAll('.team-dropdown-item').forEach(function(item) {
-      item.addEventListener('click', function() {
+      item.addEventListener('click', function(e) {
+        // Ikke bytt lag hvis bruker klikket edit/delete
+        if (e.target.closest('.team-item-edit') || e.target.closest('.team-item-delete')) return;
         var tid = item.getAttribute('data-team-id');
         if (tid && tid !== state.currentTeamId) {
           switchTeam(tid);
@@ -608,29 +638,124 @@
   }
 
   // Slett lag (kalles fra innstillinger eller kontekstmeny)
-  window.deleteCurrentTeam = async function() {
+  function confirmDeleteTeam(teamId) {
+    var team = state.teams.find(function(t) { return t.id === teamId; });
+    if (!team) return;
+
     if (state.teams.length <= 1) {
       showNotification('Du kan ikke slette ditt siste lag.', 'warning');
       return;
     }
 
-    var team = state.teams.find(function(t) { return t.id === state.currentTeamId; });
-    var teamName = team ? team.name : 'dette laget';
-
-    if (!confirm('Er du sikker på at du vil slette "' + teamName + '"?\n\nAlle spillere, treningsøkter og ligadata for dette laget blir permanent slettet.')) {
+    if (!confirm('Er du sikker på at du vil slette "' + team.name + '"?\n\nAlle spillere, treningsøkter og ligadata for dette laget blir permanent slettet.')) {
       return;
     }
 
-    var deletedId = state.currentTeamId;
-    var success = await deleteTeam(deletedId);
-    if (success) {
-      state.teams = state.teams.filter(function(t) { return t.id !== deletedId; });
-      var nextTeam = state.teams[0];
-      if (nextTeam) {
-        await switchTeam(nextTeam.id);
+    (async function() {
+      var success = await deleteTeam(teamId);
+      if (success) {
+        state.teams = state.teams.filter(function(t) { return t.id !== teamId; });
+        // Hvis slettet lag var aktivt, bytt til neste
+        if (teamId === state.currentTeamId) {
+          var nextTeam = state.teams[0];
+          if (nextTeam) await switchTeam(nextTeam.id);
+        } else {
+          renderTeamSwitcher();
+        }
+        showNotification('Laget "' + team.name + '" er slettet.', 'success');
       }
-      showNotification('Laget "' + teamName + '" er slettet.', 'success');
-    }
+    })();
+  }
+
+  // Rediger lag
+  function showEditTeamModal(teamId) {
+    var team = state.teams.find(function(t) { return t.id === teamId; });
+    if (!team) return;
+
+    var existing = $('editTeamModal');
+    if (existing) existing.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'editTeamModal';
+    modal.className = 'team-modal-overlay';
+    modal.innerHTML =
+      '<div class="team-modal-box">' +
+        '<h3>Rediger lag</h3>' +
+        '<label for="editTeamNameInput">Lagnavn</label>' +
+        '<input type="text" id="editTeamNameInput" value="' + escapeHtml(team.name) + '" maxlength="30">' +
+        '<label style="margin-top:14px">Farge</label>' +
+        '<div class="team-color-picker">' +
+          TEAM_COLORS.map(function(c) {
+            return '<div class="team-color-option' + (c === team.color ? ' selected' : '') + '" data-color="' + c + '" style="background:' + c + '"></div>';
+          }).join('') +
+        '</div>' +
+        '<div class="team-modal-actions">' +
+          '<button class="team-modal-cancel" type="button">Avbryt</button>' +
+          '<button class="team-modal-create" type="button">Lagre</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    var selectedColor = team.color;
+
+    modal.querySelectorAll('.team-color-option').forEach(function(dot) {
+      dot.addEventListener('click', function() {
+        modal.querySelectorAll('.team-color-option').forEach(function(d) { d.classList.remove('selected'); });
+        dot.classList.add('selected');
+        selectedColor = dot.getAttribute('data-color');
+      });
+    });
+
+    modal.querySelector('.team-modal-cancel').addEventListener('click', function() {
+      modal.remove();
+    });
+
+    modal.querySelector('.team-modal-create').addEventListener('click', async function() {
+      var nameInput = $('editTeamNameInput');
+      var newName = (nameInput.value || '').trim();
+      if (!newName) {
+        nameInput.style.borderColor = 'var(--error)';
+        nameInput.focus();
+        return;
+      }
+
+      var sb = getSupabaseClient();
+      var uid = getUserId();
+      if (!sb || !uid) { modal.remove(); return; }
+
+      try {
+        var updateData = { name: newName, color: selectedColor };
+        var result = await sb.from('teams').update(updateData).eq('id', teamId).eq('user_id', uid);
+        if (result.error) {
+          console.warn('[core.js] Oppdatering av lag feilet:', result.error.message);
+          showNotification('Kunne ikke oppdatere laget.', 'error');
+          return;
+        }
+
+        // Oppdater lokal state
+        team.name = newName;
+        team.color = selectedColor;
+        modal.remove();
+        renderTeamSwitcher();
+        showNotification('Laget er oppdatert.', 'success');
+      } catch (e) {
+        console.warn('[core.js] Oppdatering av lag feilet:', e.message);
+        showNotification('Kunne ikke oppdatere laget.', 'error');
+      }
+    });
+
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) modal.remove();
+    });
+
+    setTimeout(function() {
+      var input = $('editTeamNameInput');
+      if (input) { input.focus(); input.select(); }
+    }, 100);
+  }
+  window.deleteCurrentTeam = function() {
+    confirmDeleteTeam(state.currentTeamId);
   };
 
 
