@@ -82,16 +82,31 @@ export default async function handler(req, res) {
       },
       
       app_data: {
+        teams: [], // Fylles fra Supabase under
         players: [], // Fylles fra Supabase under
         note: 'Settings and training data are stored locally in your browser. Use the "Export" button in the app to download this data.',
       },
     };
 
-    // 2b) Fetch player data from Supabase
+    // 2b) Fetch teams from Supabase
+    try {
+      const { data: teamData, error: teamError } = await supabaseAdmin
+        .from('teams')
+        .select('id, name, color, created_at')
+        .eq('user_id', userId);
+
+      if (!teamError && teamData) {
+        exportData.app_data.teams = teamData;
+      }
+    } catch (teamErr) {
+      console.error('[export-data] Teams fetch error:', teamErr);
+    }
+
+    // 2c) Fetch player data from Supabase
     try {
       const { data: playerData, error: playerError } = await supabaseAdmin
         .from('players')
-        .select('id, name, skill, goalie, active, updated_at')
+        .select('id, name, skill, goalie, active, team_id, updated_at')
         .eq('user_id', userId);
 
       if (!playerError && playerData) {

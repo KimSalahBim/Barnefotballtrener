@@ -200,6 +200,22 @@ export default async function handler(req, res) {
       console.error('[delete-account] Error log database error:', errLogDbErr);
     }
 
+    // 4d) Delete teams from Supabase (CASCADE sletter spillere automatisk, men vi har allerede slettet dem)
+    try {
+      const { error: teamDelErr } = await supabaseAdmin
+        .from('teams')
+        .delete()
+        .eq('user_id', userId);
+
+      if (teamDelErr) {
+        console.error('[delete-account] Failed to delete teams:', teamDelErr);
+      } else {
+        deletionResults.steps_completed.push('Deleted teams from database');
+      }
+    } catch (teamDbErr) {
+      console.error('[delete-account] Team database error:', teamDbErr);
+    }
+
     // 5) Delete Supabase Auth user (THIS MUST BE LAST - deletes the session token!)
     try {
       const { error: authDeleteErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
