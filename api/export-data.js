@@ -117,6 +117,20 @@ export default async function handler(req, res) {
       exportData.app_data.players_error = 'Could not fetch player data';
     }
 
+    // 2d) Fetch user_data (settings, workouts, competitions, etc.)
+    try {
+      const { data: userData, error: udError } = await supabaseAdmin
+        .from('user_data')
+        .select('team_id, key, value, updated_at')
+        .eq('user_id', userId);
+
+      if (!udError && userData) {
+        exportData.app_data.user_data = userData;
+      }
+    } catch (udErr) {
+      console.error('[export-data] user_data fetch error:', udErr);
+    }
+
     // 2c) Fetch error logs from Supabase
     try {
       const { data: errorData, error: errorErr } = await supabaseAdmin

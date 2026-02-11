@@ -200,7 +200,23 @@ export default async function handler(req, res) {
       console.error('[delete-account] Error log database error:', errLogDbErr);
     }
 
-    // 4d) Delete teams from Supabase (CASCADE sletter spillere automatisk, men vi har allerede slettet dem)
+    // 4d) Delete user_data from Supabase
+    try {
+      const { error: udDelErr } = await supabaseAdmin
+        .from('user_data')
+        .delete()
+        .eq('user_id', userId);
+
+      if (udDelErr) {
+        console.error('[delete-account] Failed to delete user_data:', udDelErr);
+      } else {
+        deletionResults.steps_completed.push('Deleted user_data from database');
+      }
+    } catch (udDbErr) {
+      console.error('[delete-account] user_data database error:', udDbErr);
+    }
+
+    // 4e) Delete teams from Supabase (CASCADE sletter spillere automatisk, men vi har allerede slettet dem)
     try {
       const { error: teamDelErr } = await supabaseAdmin
         .from('teams')
