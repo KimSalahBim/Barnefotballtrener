@@ -186,6 +186,7 @@
 
   function saveStore(store) {
     safeSet(STORE_KEY(), JSON.stringify(store));
+    if (window._bftCloud) window._bftCloud.save('workout_templates_v1', JSON.stringify(store));
   }
 
   // Separate store for saved workouts (økt-historikk) to avoid schema migration for templates
@@ -211,6 +212,7 @@
 
   function saveWorkoutsStore(store) {
     safeSet(WORKOUTS_KEY(), JSON.stringify(store));
+    if (window._bftCloud) window._bftCloud.save('workout_sessions_v1', JSON.stringify(store));
   }
 
   function loadDraft() {
@@ -221,6 +223,7 @@
 
   function saveDraft(draft) {
     try { safeSet(DRAFT_KEY(), JSON.stringify(draft)); } catch {}
+    if (window._bftCloud) window._bftCloud.save('workout_draft_v1', JSON.stringify(draft));
   }
 
   // -------------------------
@@ -1868,6 +1871,9 @@ function serializeWorkoutFromState() {
         restoreDraftIfAny();
         renderPlayersPanel();
         renderBlocks();
+
+        // Last cloud-data for nytt lag
+        loadWorkoutCloudData();
       } catch (err) {
         console.warn('[workout.js] team:changed handler feilet:', err && err.message ? err.message : err);
       }
@@ -1888,12 +1894,70 @@ function serializeWorkoutFromState() {
           renderTemplates();
           renderWorkouts();
           restoreDraftIfAny();
+
+          // Last cloud-data for treningsøkter
+          loadWorkoutCloudData();
         } else if (attempts >= 40) {
           // 40 × 150ms = 6s — give up, auth likely stuck or user is genuinely anon
           clearInterval(timer);
         }
       }, 150);
     })();
+  }
+
+  // Last treningsdata fra cloud (Supabase user_data)
+  async function loadWorkoutCloudData() {
+    if (!window._bftCloud) return;
+    try {
+      var rows = await window._bftCloud.loadAll();
+      if (rows === null) return; // Supabase feil → ikke gjør noe
+      if (rows.length === 0) {
+        // Cloud tom → bootstrap: push lokal data opp
+        var tRaw = safeGet(STORE_KEY());
+        if (tRaw && tRaw !== '{}' && tRaw !== '[]') window._bftCloud.save('workout_templates_v1', tRaw);
+        var sRaw = safeGet(WORKOUTS_KEY());
+        if (sRaw && sRaw !== '{}' && sRaw !== '[]') window._bftCloud.save('workout_sessions_v1', sRaw);
+        var dRaw = safeGet(DRAFT_KEY());
+        if (dRaw) window._bftCloud.save('workout_draft_v1', dRaw);
+        return;
+      }
+
+      var updated = false;
+      rows.forEach(function(row) {
+        if (row.key === 'workout_templates_v1' && row.value) {
+          var localRaw = safeGet(STORE_KEY());
+          var cloudStr = JSON.stringify(row.value);
+          if (!localRaw || localRaw === '{}' || localRaw === '[]') {
+            safeSet(STORE_KEY(), cloudStr);
+            updated = true;
+          }
+        }
+        if (row.key === 'workout_sessions_v1' && row.value) {
+          var localRaw = safeGet(WORKOUTS_KEY());
+          var cloudStr = JSON.stringify(row.value);
+          if (!localRaw || localRaw === '{}' || localRaw === '[]') {
+            safeSet(WORKOUTS_KEY(), cloudStr);
+            updated = true;
+          }
+        }
+        if (row.key === 'workout_draft_v1' && row.value) {
+          var localRaw = safeGet(DRAFT_KEY());
+          if (!localRaw) {
+            safeSet(DRAFT_KEY(), JSON.stringify(row.value));
+            updated = true;
+          }
+        }
+      });
+
+      if (updated) {
+        console.log('[workout.js] Cloud data lastet');
+        renderTemplates();
+        renderWorkouts();
+        restoreDraftIfAny();
+      }
+    } catch (e) {
+      console.warn('[workout.js] Cloud load feilet:', e.message);
+    }
   }
 
   document.addEventListener('DOMContentLoaded', initIfPresent);

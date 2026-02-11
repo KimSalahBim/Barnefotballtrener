@@ -118,6 +118,7 @@
 
   function saveStore(store) {
     safeSet(STORAGE_KEY(), JSON.stringify(store));
+    if (window._bftCloud) window._bftCloud.save('competitions', JSON.stringify(store));
   }
 
   // -------------------------
@@ -1019,6 +1020,9 @@
     console.log('[Competitions] team:changed', e && e.detail ? e.detail.teamId : '');
     if (ui.view === 'detail') ui.view = 'history';
     render();
+
+    // Last cloud-data for nytt lag
+    loadCompetitionsCloudData();
   });
   
   document.addEventListener('click', (e) => {
@@ -1063,10 +1067,40 @@
         console.log('[Competitions] auth resolved, rehydrating storage from', initialPrefix, '→', currentPrefix);
         migrateAnonData();
         render();
+
+        // Last cloud-data for konkurranser
+        loadCompetitionsCloudData();
       } else if (attempts >= 40) {
         // 40 × 150ms = 6s — give up
         clearInterval(timer);
       }
     }, 150);
   })();
+
+  async function loadCompetitionsCloudData() {
+    if (!window._bftCloud) return;
+    try {
+      var rows = await window._bftCloud.loadAll();
+      if (rows === null) return; // Supabase feil → ikke gjør noe
+      if (rows.length === 0) {
+        // Cloud tom → bootstrap: push lokal data opp
+        var cRaw = safeGet(STORAGE_KEY());
+        if (cRaw && cRaw !== '[]') window._bftCloud.save('competitions', cRaw);
+        return;
+      }
+
+      rows.forEach(function(row) {
+        if (row.key === 'competitions' && row.value) {
+          var localRaw = safeGet(STORAGE_KEY());
+          if (!localRaw || localRaw === '[]') {
+            safeSet(STORAGE_KEY(), JSON.stringify(row.value));
+            console.log('[Competitions] Cloud data lastet');
+            render();
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('[Competitions] Cloud load feilet:', e.message);
+    }
+  }
 })();

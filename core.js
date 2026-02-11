@@ -201,6 +201,78 @@
   }
 
   // ------------------------------
+  // Cloud sync: user_data (settings, liga, workouts, competitions)
+  // localStorage = cache, Supabase = source of truth
+  // ------------------------------
+  var _cloudSyncTimers = {};
+
+  async function supabaseLoadAllUserData() {
+    var sb = getSupabaseClient();
+    var uid = getUserId();
+    var tid = state.currentTeamId;
+    if (!sb || !uid || uid === 'anon' || !tid || tid === 'default') return null;
+
+    try {
+      var result = await sb.from('user_data')
+        .select('key, value, updated_at')
+        .eq('user_id', uid)
+        .eq('team_id', tid);
+
+      if (result.error) {
+        console.warn('[core.js] Cloud load feilet:', result.error.message);
+        return null;
+      }
+
+      return result.data || [];
+    } catch (e) {
+      console.warn('[core.js] Cloud load feilet:', e.message);
+      return null;
+    }
+  }
+
+  function debouncedCloudSync(key, jsonData) {
+    clearTimeout(_cloudSyncTimers[key]);
+    // Snapshot kontekst for å unngå feil-lag sync ved team-bytte
+    var dataSnap = typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData);
+    var tidSnap = state.currentTeamId;
+    var uidSnap = getUserId();
+    _cloudSyncTimers[key] = setTimeout(function() {
+      if (!uidSnap || uidSnap === 'anon' || !tidSnap || tidSnap === 'default') return;
+      try {
+        var parsed = JSON.parse(dataSnap);
+        var sb = getSupabaseClient();
+        if (!sb) return;
+
+        // Hvis data er null/undefined, slett raden (unngår NOT NULL violation)
+        if (parsed === null || parsed === undefined) {
+          sb.from('user_data').delete()
+            .eq('user_id', uidSnap).eq('team_id', tidSnap).eq('key', key)
+            .then(function() {}).catch(function() {});
+          return;
+        }
+
+        sb.from('user_data').upsert({
+          user_id: uidSnap,
+          team_id: tidSnap,
+          key: key,
+          value: parsed,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,team_id,key' }).then(function(result) {
+          if (result.error) console.warn('[core.js] Cloud sync feilet for', key, ':', result.error.message);
+        }).catch(function() {});
+      } catch (e) {
+        console.warn('[core.js] Cloud sync parse feilet for', key);
+      }
+    }, 2000);
+  }
+
+  // Eksponér for andre moduler (workout.js, competitions.js)
+  window._bftCloud = {
+    save: function(key, jsonString) { debouncedCloudSync(key, jsonString); },
+    loadAll: function() { return supabaseLoadAllUserData(); }
+  };
+
+  // ------------------------------
   // Team management (Supabase)
   // ------------------------------
   const MAX_TEAMS = 3;
@@ -285,6 +357,11 @@
         console.warn('[core.js] deleteTeam feilet:', result.error.message);
         return false;
       }
+
+      // Slett user_data for dette laget
+      try {
+        await sb.from('user_data').delete().eq('user_id', uid).eq('team_id', teamId);
+      } catch (_) {}
 
       // Fjern localStorage-data for dette laget
       var prefix = 'bft:' + uid + ':' + teamId + ':';
@@ -423,6 +500,9 @@
 
     // 8. Hent spillere fra Supabase for nytt lag
     await loadPlayersFromSupabase();
+
+    // 9. Hent øvrig data (settings, liga, workouts, competitions) fra cloud
+    loadCloudUserData();
 
     console.log('[core.js] Byttet til lag:', teamId);
   }
@@ -997,6 +1077,65 @@
     }
   }
 
+  // Last settings/liga fra cloud (Supabase user_data)
+  async function loadCloudUserData() {
+    try {
+      var tid = state.currentTeamId; // snapshot FØR async
+      var rows = await supabaseLoadAllUserData();
+
+      // null = feil/utilgjengelig → ikke gjør noe
+      if (rows === null) return;
+
+      // Sjekk at vi fortsatt er på samme lag
+      if (state.currentTeamId !== tid) return;
+
+      if (rows.length === 0) {
+        // Cloud er tom → bootstrap: push lokal data opp
+        bootstrapCloudFromLocal();
+        return;
+      }
+
+      rows.forEach(function(row) {
+        if (state.currentTeamId !== tid) return; // lag byttet under async
+
+        if (row.key === 'settings' && row.value) {
+          try {
+            if (typeof row.value.useSkill === 'boolean') {
+              state.settings.useSkill = row.value.useSkill;
+              safeSet(k('settings'), JSON.stringify(state.settings));
+            }
+          } catch (_) {}
+        }
+
+        if (row.key === 'liga' && row.value) {
+          try {
+            state.liga = row.value;
+            safeSet(k('liga'), JSON.stringify(state.liga));
+          } catch (_) {}
+        }
+      });
+
+      if (state.currentTeamId === tid) {
+        renderAll();
+        console.log('[core.js] Cloud data lastet (settings, liga)');
+      }
+    } catch (e) {
+      console.warn('[core.js] loadCloudUserData feilet:', e.message);
+    }
+  }
+
+  function bootstrapCloudFromLocal() {
+    // Engangs: push eksisterende lokal data til cloud (settings, liga)
+    // Kalles kun når user_data er tom for dette laget
+    var settingsRaw = safeGet(k('settings'));
+    if (settingsRaw) debouncedCloudSync('settings', settingsRaw);
+
+    var ligaRaw = safeGet(k('liga'));
+    if (ligaRaw) debouncedCloudSync('liga', ligaRaw);
+
+    console.log('[core.js] Bootstrap: pusher lokal data til cloud');
+  }
+
   function saveState() {
     safeSet(k('settings'), JSON.stringify(state.settings));
     safeSet(k('players'), JSON.stringify(state.players));
@@ -1007,6 +1146,10 @@
 
     // Debounced sync til Supabase (venter 1.5s etter siste endring)
     debouncedSupabaseSave();
+
+    // Cloud sync for settings og liga
+    debouncedCloudSync('settings', JSON.stringify(state.settings));
+    debouncedCloudSync('liga', JSON.stringify(state.liga));
   }
 
   // ------------------------------
@@ -2195,6 +2338,9 @@
 
       // Asynkron: hent spillere fra Supabase
       loadPlayersFromSupabase();
+
+      // Asynkron: last øvrig data fra cloud (settings, liga, etc)
+      loadCloudUserData();
 
       console.log('[core.js] initApp FERDIG');
     })();
