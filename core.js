@@ -865,6 +865,7 @@
         state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
         renderAll();
         publishPlayers();
+        renderTeamSwitcher();
       }
     } catch (e) {
       console.warn('[core.js] loadPlayersFromSupabase feilet:', e.message);
