@@ -119,9 +119,10 @@
         (window.authService && typeof window.authService.getUserId === 'function'
           ? (window.authService.getUserId() || 'anon')
           : 'anon');
-      return `bft:${uid}`;
+      const tid = window._bftTeamId || 'default';
+      return `bft:${uid}:${tid}`;
     } catch {
-      return 'bft:anon';
+      return 'bft:anon:default';
     }
   }
   function k(suffix) { return `${getUserKeyPrefix()}:${suffix}`; }
@@ -1856,6 +1857,21 @@ function serializeWorkoutFromState() {
     });
 
     console.log('[workout.js] init complete');
+
+    // Re-render team-scoped storage when team changes
+    window.addEventListener('team:changed', function(e) {
+      try {
+        console.log('[workout.js] team:changed', e && e.detail ? e.detail.teamId : '');
+        state.groupsCache.clear();
+        renderTemplates();
+        renderWorkouts();
+        restoreDraftIfAny();
+        renderPlayersPanel();
+        renderBlocks();
+      } catch (err) {
+        console.warn('[workout.js] team:changed handler feilet:', err && err.message ? err.message : err);
+      }
+    });
 
     // Auth timing fix: templates/workouts/draft may have been loaded with 'anon'
     // key if auth wasn't ready at DOMContentLoaded. Rehydrate once auth resolves.

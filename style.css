@@ -2736,3 +2736,289 @@ body.gated #mainApp {
 html, body {
   overflow-x: hidden;
 }
+
+/* ===== TEAM SWITCHER ===== */
+.team-switcher-wrapper {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.team-switcher-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.team-switcher-btn:hover {
+  border-color: var(--egge-light-blue);
+  box-shadow: 0 4px 12px rgba(13, 71, 161, 0.1);
+}
+
+.team-switcher-btn.open {
+  border-color: var(--egge-light-blue);
+  box-shadow: 0 4px 12px rgba(13, 71, 161, 0.15);
+}
+
+.team-color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.team-switcher-name {
+  flex: 1;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.team-switcher-count {
+  font-size: 13px;
+  color: var(--gray-400);
+  font-weight: 400;
+}
+
+.team-switcher-arrow {
+  color: var(--gray-400);
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.team-switcher-btn.open .team-switcher-arrow {
+  transform: rotate(180deg);
+}
+
+.team-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+  border: 1px solid var(--gray-200);
+  z-index: 100;
+  overflow: hidden;
+  display: none;
+  animation: teamDropdownFade 0.15s ease-out;
+}
+
+.team-dropdown.show {
+  display: block;
+}
+
+@keyframes teamDropdownFade {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.team-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.team-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.team-dropdown-item:hover {
+  background: var(--gray-50);
+}
+
+.team-dropdown-item.active {
+  background: #e8f0fe;
+}
+
+.team-dropdown-item.active .team-item-name {
+  color: var(--egge-blue);
+}
+
+.team-item-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.team-item-check {
+  color: var(--egge-blue);
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+
+.team-dropdown-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: background 0.15s;
+  color: var(--egge-light-blue);
+  font-weight: 500;
+  font-size: 14px;
+  border-top: 2px solid var(--gray-100);
+}
+
+.team-dropdown-add:hover {
+  background: #e8f0fe;
+}
+
+.team-dropdown-add i {
+  font-size: 13px;
+  width: 14px;
+  text-align: center;
+}
+
+/* Team modal */
+.team-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: teamModalFade 0.15s;
+}
+
+@keyframes teamModalFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.team-modal-box {
+  background: white;
+  border-radius: 20px;
+  padding: 32px;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  animation: teamModalSlide 0.2s ease-out;
+}
+
+@keyframes teamModalSlide {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.team-modal-box h3 {
+  font-size: 18px;
+  color: var(--gray-800);
+  margin-bottom: 6px;
+}
+
+.team-modal-desc {
+  color: var(--gray-500);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.team-modal-box label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-700);
+  margin-bottom: 6px;
+}
+
+.team-modal-box input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--gray-200);
+  border-radius: 12px;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.team-modal-box input:focus {
+  border-color: var(--egge-light-blue);
+}
+
+.team-color-picker {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 24px;
+}
+
+.team-color-option {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: all 0.15s;
+}
+
+.team-color-option:hover {
+  transform: scale(1.15);
+}
+
+.team-color-option.selected {
+  border-color: var(--gray-800);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--gray-300);
+}
+
+.team-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.team-modal-cancel {
+  padding: 10px 20px;
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  background: white;
+  color: var(--gray-500);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.team-modal-create {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--egge-blue) 0%, var(--egge-light-blue) 100%);
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(13, 71, 161, 0.3);
+  font-family: inherit;
+}
+
+/* Mobile team switcher */
+@media (max-width: 600px) {
+  .team-switcher-btn {
+    padding: 9px 14px;
+  }
+  .team-switcher-name {
+    font-size: 14px;
+  }
+  .team-modal-box {
+    padding: 24px;
+    margin: 0 12px;
+  }
+}

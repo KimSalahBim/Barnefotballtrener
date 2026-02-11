@@ -79,9 +79,10 @@
         (window.authService && typeof window.authService.getUserId === 'function'
           ? window.authService.getUserId()
           : null) || 'anon';
-      return `bft:${uid}:`;
+      const tid = window._bftTeamId || 'default';
+      return `bft:${uid}:${tid}:`;
     } catch (e) {
-      return 'bft:anon:';
+      return 'bft:anon:default:';
     }
   }
 
@@ -964,10 +965,16 @@
   function migrateAnonData() {
     try {
       const prefix = getUserKeyPrefix();
-      if (prefix === 'bft:anon:') return; // Still anon, nothing to migrate
+      if (prefix.startsWith('bft:anon:')) return; // Still anon, nothing to migrate
       
-      const anonKey = 'bft:anon:competitions';
-      const anonRaw = safeGet(anonKey);
+      // Støtt både legacy anon-key og ny team-aware anon-key
+      var anonKeys = ['bft:anon:competitions', 'bft:anon:default:competitions'];
+      var anonKey = null;
+      var anonRaw = null;
+      for (var i = 0; i < anonKeys.length; i++) {
+        var raw = safeGet(anonKeys[i]);
+        if (raw) { anonKey = anonKeys[i]; anonRaw = raw; break; }
+      }
       if (!anonRaw) return; // No anon data to migrate
       
       const realKey = STORAGE_KEY();
@@ -1004,6 +1011,13 @@
   console.log('[Competitions] Script loaded - registering event listener');
   window.addEventListener('players:updated', (e) => {
     console.log('[Competitions] players:updated event mottatt:', e.detail);
+    render();
+  });
+
+  // Re-render when team changes (team-scoped storage keys)
+  window.addEventListener('team:changed', function(e) {
+    console.log('[Competitions] team:changed', e && e.detail ? e.detail.teamId : '');
+    if (ui.view === 'detail') ui.view = 'history';
     render();
   });
   

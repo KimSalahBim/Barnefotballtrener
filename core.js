@@ -45,9 +45,10 @@
       const uid = (window.authService && typeof window.authService.getUserId === 'function')
   ? (window.authService.getUserId() || 'anon')
   : 'anon';
-      return `bft:${uid}`;
+      const tid = (state && state.currentTeamId) ? state.currentTeamId : (window._bftTeamId || 'default');
+      return `bft:${uid}:${tid}`;
     } catch (e) {
-      return 'bft:anon';
+      return 'bft:anon:default';
     }
   }
 
@@ -76,23 +77,25 @@
     return null;
   }
 
-  async function supabaseLoadPlayers() {
+  async function supabaseLoadPlayers(teamIdOverride, userIdOverride) {
     const sb = getSupabaseClient();
-    const uid = getUserId();
-    if (!sb || !uid) return null; // kan ikke synce, bruk localStorage
+    const uid = userIdOverride || getUserId();
+    const tid = teamIdOverride || state.currentTeamId;
+    if (!sb || !uid || !tid) return null;
 
     try {
       const { data, error } = await sb
         .from('players')
-        .select('id, name, skill, goalie, active')
-        .eq('user_id', uid);
+        .select('id, name, skill, goalie, active, team_id')
+        .eq('user_id', uid)
+        .eq('team_id', tid);
 
       if (error) {
         console.warn('[core.js] Supabase load feilet:', error.message);
         return null;
       }
 
-      console.log('[core.js] Supabase: hentet', (data || []).length, 'spillere');
+      console.log('[core.js] Supabase: hentet', (data || []).length, 'spillere for lag', tid);
       return data || [];
     } catch (e) {
       console.warn('[core.js] Supabase load exception:', e.message);
@@ -100,15 +103,16 @@
     }
   }
 
-  async function supabaseSavePlayers(players) {
+  async function supabaseSavePlayers(players, teamIdOverride, userIdOverride) {
     const sb = getSupabaseClient();
-    const uid = getUserId();
-    if (!sb || !uid) return;
+    const uid = userIdOverride || getUserId();
+    const tid = teamIdOverride || state.currentTeamId;
+    if (!sb || !uid || !tid) return;
 
     try {
       if (players.length === 0) {
-        // Slett alle
-        await sb.from('players').delete().eq('user_id', uid);
+        // Slett alle for dette laget
+        await sb.from('players').delete().eq('user_id', uid).eq('team_id', tid);
         return;
       }
 
@@ -116,6 +120,7 @@
       const rows = players.map(p => ({
         id: p.id,
         user_id: uid,
+        team_id: tid,
         name: p.name,
         skill: p.skill,
         goalie: p.goalie,
@@ -139,10 +144,11 @@
   async function supabaseDeletePlayer(playerId) {
     const sb = getSupabaseClient();
     const uid = getUserId();
-    if (!sb || !uid || !playerId) return;
+    const tid = state.currentTeamId;
+    if (!sb || !uid || !playerId || !tid) return;
 
     try {
-      await sb.from('players').delete().eq('user_id', uid).eq('id', playerId);
+      await sb.from('players').delete().eq('user_id', uid).eq('team_id', tid).eq('id', playerId);
     } catch (e) {
       console.warn('[core.js] Supabase delete player exception:', e.message);
     }
@@ -152,17 +158,19 @@
   async function supabaseReplaceAllPlayers(players) {
     const sb = getSupabaseClient();
     const uid = getUserId();
-    if (!sb || !uid) return;
+    const tid = state.currentTeamId;
+    if (!sb || !uid || !tid) return;
 
     try {
-      // Slett alle eksisterende
-      await sb.from('players').delete().eq('user_id', uid);
+      // Slett alle eksisterende for dette laget
+      await sb.from('players').delete().eq('user_id', uid).eq('team_id', tid);
 
       // Sett inn nye (hvis noen)
       if (players.length > 0) {
         const rows = players.map(p => ({
           id: p.id,
           user_id: uid,
+          team_id: tid,
           name: p.name,
           skill: p.skill,
           goalie: p.goalie,
@@ -181,23 +189,467 @@
   let _supabaseSaveTimer = null;
   function debouncedSupabaseSave() {
     clearTimeout(_supabaseSaveTimer);
-    _supabaseSaveTimer = setTimeout(() => {
-      supabaseSavePlayers(state.players).catch(e => {
+    // Snapshot nåværende kontekst for å unngå at team-bytte sender til feil lag
+    var uidSnap = getUserId();
+    var tidSnap = state.currentTeamId;
+    var playersSnap = (state.players || []).map(function(p) { return { id: p.id, name: p.name, skill: p.skill, goalie: p.goalie, active: p.active }; });
+    _supabaseSaveTimer = setTimeout(function() {
+      supabaseSavePlayers(playersSnap, tidSnap, uidSnap).catch(function(e) {
         console.warn('[core.js] Supabase debounced sync feilet:', e.message);
       });
     }, 1500);
   }
 
-  async function migrateLocalToSupabase() {
-    // Engangs: flytt localStorage-spillere til Supabase hvis Supabase er tom
-    const sb = getSupabaseClient();
-    const uid = getUserId();
+  // ------------------------------
+  // Team management (Supabase)
+  // ------------------------------
+  const MAX_TEAMS = 3;
+  const TEAM_COLORS = ['#1976d2', '#d32f2f', '#2e7d32', '#f57c00', '#7b1fa2', '#00838f'];
+
+  function generateTeamId() {
+    var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    var id = 't_';
+    for (var i = 0; i < 8; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
+    return id;
+  }
+
+  async function loadTeams() {
+    var sb = getSupabaseClient();
+    var uid = getUserId();
+    if (!sb || !uid) return [];
+
+    try {
+      var result = await sb
+        .from('teams')
+        .select('id, name, color, created_at')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: true });
+
+      if (result.error) {
+        console.warn('[core.js] loadTeams feilet:', result.error.message);
+        return [];
+      }
+      return result.data || [];
+    } catch (e) {
+      console.warn('[core.js] loadTeams exception:', e.message);
+      return [];
+    }
+  }
+
+  async function createTeam(name, color) {
+    var sb = getSupabaseClient();
+    var uid = getUserId();
+    if (!sb || !uid) return null;
+
+    if (state.teams.length >= MAX_TEAMS) {
+      showNotification('Du kan ha maks ' + MAX_TEAMS + ' lag.', 'warning');
+      return null;
+    }
+
+    var team = {
+      id: generateTeamId(),
+      user_id: uid,
+      name: name.trim(),
+      color: color || TEAM_COLORS[state.teams.length % TEAM_COLORS.length]
+    };
+
+    try {
+      var result = await sb.from('teams').insert(team);
+      if (result.error) {
+        console.warn('[core.js] createTeam feilet:', result.error.message);
+        showNotification('Kunne ikke opprette lag.', 'error');
+        return null;
+      }
+      console.log('[core.js] Opprettet lag:', team.name);
+      return team;
+    } catch (e) {
+      console.warn('[core.js] createTeam exception:', e.message);
+      return null;
+    }
+  }
+
+  async function deleteTeam(teamId) {
+    var sb = getSupabaseClient();
+    var uid = getUserId();
+    if (!sb || !uid || !teamId) return false;
+
+    if (state.teams.length <= 1) {
+      showNotification('Du kan ikke slette ditt siste lag.', 'warning');
+      return false;
+    }
+
+    try {
+      // Spillere slettes automatisk via ON DELETE CASCADE
+      var result = await sb.from('teams').delete().eq('id', teamId).eq('user_id', uid);
+      if (result.error) {
+        console.warn('[core.js] deleteTeam feilet:', result.error.message);
+        return false;
+      }
+
+      // Fjern localStorage-data for dette laget
+      var prefix = 'bft:' + uid + ':' + teamId + ':';
+      try {
+        var keysToRemove = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var key = localStorage.key(i);
+          if (key && key.startsWith(prefix)) keysToRemove.push(key);
+        }
+        keysToRemove.forEach(function(key) { localStorage.removeItem(key); });
+      } catch (_) {}
+
+      console.log('[core.js] Slettet lag:', teamId);
+      return true;
+    } catch (e) {
+      console.warn('[core.js] deleteTeam exception:', e.message);
+      return false;
+    }
+  }
+
+  async function ensureDefaultTeam() {
+    // Hvis bruker ikke har noen lag, opprett et standardlag
+    // og migrer eksisterende spillere til det
+    var sb = getSupabaseClient();
+    var uid = getUserId();
     if (!sb || !uid) return;
 
-    // Allerede migrert?
-    if (safeGet(k('migrated_to_supabase')) === 'true') return;
+    var teams = await loadTeams();
+    if (teams.length > 0) {
+      state.teams = teams;
+      return;
+    }
 
-    const localRaw = safeGet(k('players'));
+    // Opprett standardlag
+    var team = await createTeam('Mitt lag', '#1976d2');
+    if (!team) return;
+
+    // Migrer spillere uten team_id (server-side migration bør ha gjort dette,
+    // men som backup migrerer vi klient-side også)
+    try {
+      var orphans = await sb
+        .from('players')
+        .select('id')
+        .eq('user_id', uid)
+        .is('team_id', null);
+
+      if (orphans.data && orphans.data.length > 0) {
+        await sb
+          .from('players')
+          .update({ team_id: team.id })
+          .eq('user_id', uid)
+          .is('team_id', null);
+        console.log('[core.js] Migrerte', orphans.data.length, 'spillere til standardlag');
+      }
+    } catch (e) {
+      console.warn('[core.js] Migrering av spillere feilet:', e.message);
+    }
+
+    state.teams = [team];
+  }
+
+  function migrateLocalStorageToTeamPrefix() {
+    // Engangs: flytt localStorage-data fra gammel prefix (bft:uid:xxx) til ny (bft:uid:teamId:xxx)
+    // Dette gjelder settings, liga, workout-data, competitions etc.
+    var uid = getUserId();
+    var tid = state.currentTeamId;
+    if (!uid || uid === 'anon' || !tid || tid === 'default') return;
+
+    var migrationKey = 'bft:' + uid + ':ls_migrated_to_team';
+    if (safeGet(migrationKey) === 'true') return;
+
+    var oldPrefix = 'bft:' + uid + ':';
+    var newPrefix = 'bft:' + uid + ':' + tid + ':';
+
+    // Nøkler som skal migreres (suffixer)
+    var suffixes = [
+      'settings', 'liga',
+      'exercise_freq_v1', 'parallel', 'single',
+      'workout_draft_v1', 'workout_sessions_v1', 'workout_templates_v1',
+      'competitions', 'migrated_to_supabase'
+    ];
+
+    var migrated = 0;
+    suffixes.forEach(function(suffix) {
+      var oldKey = oldPrefix + suffix;
+      var newKey = newPrefix + suffix;
+      var val = safeGet(oldKey);
+      if (val !== null && safeGet(newKey) === null) {
+        safeSet(newKey, val);
+        migrated++;
+      }
+    });
+
+    if (migrated > 0) {
+      console.log('[core.js] Migrerte', migrated, 'localStorage-nøkler til team-prefix');
+    }
+
+    safeSet(migrationKey, 'true');
+  }
+
+  async function switchTeam(teamId) {
+    if (teamId === state.currentTeamId) return;
+
+    // 1. Avbryt pending saves for nåværende lag
+    clearTimeout(_supabaseSaveTimer);
+
+    // 2. Lagre nåværende state
+    saveState();
+
+    // 3. Bytt lag
+    state.currentTeamId = teamId;
+    window._bftTeamId = teamId;
+
+    // Lagre valgt lag i bruker-scoped localStorage (ikke team-scoped)
+    try {
+      var uid = getUserId() || 'anon';
+      localStorage.setItem('bft:' + uid + ':activeTeamId', teamId);
+    } catch (_) {}
+
+    // 4. Nullstill state
+    state.players = [];
+    state.liga = null;
+    state.selection.grouping = new Set();
+    state._localEdited = false;
+
+    // 5. Last inn data for nytt lag
+    loadState();
+
+    // 6. Oppdater UI
+    renderAll();
+    publishPlayers();
+    renderTeamSwitcher();
+
+    // 7. Notifiser andre moduler om team-bytte
+    try { window.dispatchEvent(new CustomEvent('team:changed', { detail: { teamId: teamId } })); } catch (_) {}
+
+    // 8. Hent spillere fra Supabase for nytt lag
+    await loadPlayersFromSupabase();
+
+    console.log('[core.js] Byttet til lag:', teamId);
+  }
+
+  function getActiveTeamId() {
+    // Prøv å hente sist valgte lag fra localStorage
+    try {
+      var uid = getUserId() || 'anon';
+      return localStorage.getItem('bft:' + uid + ':activeTeamId') || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ------------------------------
+  // Team Switcher UI
+  var _teamSwitcherOutsideClickAttached = false;
+
+  // ------------------------------
+  function renderTeamSwitcher() {
+    var container = $('teamSwitcherWrapper');
+    if (!container) return;
+
+    var team = state.teams.find(function(t) { return t.id === state.currentTeamId; });
+    if (!team) return;
+
+    // Teller spillere per lag fra Supabase-cache i state
+    var playerCount = state.players.length;
+
+    var html = '<button class="team-switcher-btn" id="teamSwitcherBtn" type="button">' +
+      '<span class="team-color-dot" style="background:' + escapeHtml(team.color) + '"></span>' +
+      '<span class="team-switcher-name">' + escapeHtml(team.name) + '</span>' +
+      '<span class="team-switcher-count">' + playerCount + ' spillere</span>' +
+      '<span class="team-switcher-arrow"><i class="fas fa-chevron-down"></i></span>' +
+      '</button>';
+
+    html += '<div class="team-dropdown" id="teamDropdown">';
+    state.teams.forEach(function(t) {
+      var isActive = t.id === state.currentTeamId;
+      html += '<div class="team-dropdown-item' + (isActive ? ' active' : '') + '" data-team-id="' + t.id + '">' +
+        '<span class="team-color-dot" style="background:' + escapeHtml(t.color) + '"></span>' +
+        '<span class="team-item-name">' + escapeHtml(t.name) + '</span>' +
+        '<span class="team-item-check">' + (isActive ? '<i class="fas fa-check"></i>' : '') + '</span>' +
+        '</div>';
+    });
+
+    if (state.teams.length < MAX_TEAMS) {
+      html += '<div class="team-dropdown-add" id="teamDropdownAdd">' +
+        '<i class="fas fa-plus"></i>' +
+        '<span>Opprett nytt lag</span>' +
+        '<span style="margin-left:auto;font-size:12px;color:var(--gray-400)">' + state.teams.length + ' av ' + MAX_TEAMS + '</span>' +
+        '</div>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Event listeners
+    var btn = $('teamSwitcherBtn');
+    if (btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.toggle('show');
+        btn.classList.toggle('open');
+      });
+    }
+
+    container.querySelectorAll('.team-dropdown-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        var tid = item.getAttribute('data-team-id');
+        if (tid && tid !== state.currentTeamId) {
+          switchTeam(tid);
+        }
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.remove('show');
+        if (btn) btn.classList.remove('open');
+      });
+    });
+
+    var addBtn = $('teamDropdownAdd');
+    if (addBtn) {
+      addBtn.addEventListener('click', function() {
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.remove('show');
+        if (btn) btn.classList.remove('open');
+        showNewTeamModal();
+      });
+    }
+
+    // Lukk dropdown ved klikk utenfor (attach kun én gang)
+    if (!_teamSwitcherOutsideClickAttached) {
+      _teamSwitcherOutsideClickAttached = true;
+      document.addEventListener('click', function(e) {
+        var c = $('teamSwitcherWrapper');
+        if (!c) return;
+        if (!c.contains(e.target)) {
+          var dd = $('teamDropdown');
+          if (dd) dd.classList.remove('show');
+          var b = $('teamSwitcherBtn');
+          if (b) b.classList.remove('open');
+        }
+      });
+    }
+  }
+
+  function showNewTeamModal() {
+    // Fjern eventuell eksisterende modal
+    var existing = $('newTeamModal');
+    if (existing) existing.remove();
+
+    var usedColors = state.teams.map(function(t) { return t.color; });
+    var defaultColor = TEAM_COLORS.find(function(c) { return usedColors.indexOf(c) === -1; }) || TEAM_COLORS[0];
+
+    var modal = document.createElement('div');
+    modal.id = 'newTeamModal';
+    modal.className = 'team-modal-overlay';
+    modal.innerHTML =
+      '<div class="team-modal-box">' +
+        '<h3>Opprett nytt lag</h3>' +
+        '<p class="team-modal-desc">Hvert lag har sin egen spillerliste, liga og treningshistorikk.</p>' +
+        '<label for="newTeamNameInput">Lagnavn</label>' +
+        '<input type="text" id="newTeamNameInput" placeholder="F.eks. J11 Steinkjer" maxlength="30">' +
+        '<label style="margin-top:14px">Farge</label>' +
+        '<div class="team-color-picker">' +
+          TEAM_COLORS.map(function(c) {
+            return '<div class="team-color-option' + (c === defaultColor ? ' selected' : '') + '" data-color="' + c + '" style="background:' + c + '"></div>';
+          }).join('') +
+        '</div>' +
+        '<div class="team-modal-actions">' +
+          '<button class="team-modal-cancel" type="button">Avbryt</button>' +
+          '<button class="team-modal-create" type="button">Opprett lag</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    var selectedColor = defaultColor;
+
+    // Color picker
+    modal.querySelectorAll('.team-color-option').forEach(function(dot) {
+      dot.addEventListener('click', function() {
+        modal.querySelectorAll('.team-color-option').forEach(function(d) { d.classList.remove('selected'); });
+        dot.classList.add('selected');
+        selectedColor = dot.getAttribute('data-color');
+      });
+    });
+
+    // Cancel
+    modal.querySelector('.team-modal-cancel').addEventListener('click', function() {
+      modal.remove();
+    });
+
+    // Create
+    modal.querySelector('.team-modal-create').addEventListener('click', async function() {
+      var nameInput = $('newTeamNameInput');
+      var name = (nameInput.value || '').trim();
+      if (!name) {
+        nameInput.style.borderColor = 'var(--error)';
+        nameInput.focus();
+        return;
+      }
+
+      var team = await createTeam(name, selectedColor);
+      if (team) {
+        state.teams.push(team);
+        modal.remove();
+        switchTeam(team.id);
+        showNotification('Lag "' + name + '" opprettet!', 'success');
+      }
+    });
+
+    // Close on overlay click
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) modal.remove();
+    });
+
+    // Focus input
+    setTimeout(function() {
+      var input = $('newTeamNameInput');
+      if (input) input.focus();
+    }, 100);
+  }
+
+  // Slett lag (kalles fra innstillinger eller kontekstmeny)
+  window.deleteCurrentTeam = async function() {
+    if (state.teams.length <= 1) {
+      showNotification('Du kan ikke slette ditt siste lag.', 'warning');
+      return;
+    }
+
+    var team = state.teams.find(function(t) { return t.id === state.currentTeamId; });
+    var teamName = team ? team.name : 'dette laget';
+
+    if (!confirm('Er du sikker på at du vil slette "' + teamName + '"?\n\nAlle spillere, treningsøkter og ligadata for dette laget blir permanent slettet.')) {
+      return;
+    }
+
+    var deletedId = state.currentTeamId;
+    var success = await deleteTeam(deletedId);
+    if (success) {
+      state.teams = state.teams.filter(function(t) { return t.id !== deletedId; });
+      var nextTeam = state.teams[0];
+      if (nextTeam) {
+        await switchTeam(nextTeam.id);
+      }
+      showNotification('Laget "' + teamName + '" er slettet.', 'success');
+    }
+  };
+
+
+  async function migrateLocalToSupabase(teamIdOverride, userIdOverride) {
+    // Engangs: flytt localStorage-spillere til Supabase hvis Supabase er tom for dette laget
+    const sb = getSupabaseClient();
+    const uid = userIdOverride || getUserId();
+    const tid = teamIdOverride || state.currentTeamId;
+    if (!sb || !uid || !tid) return;
+
+    // Bruk eksplisitt prefix (unngå avhengighet av state under async)
+    var prefixSnap = 'bft:' + uid + ':' + tid;
+    var migratedKey = prefixSnap + ':migrated_to_supabase';
+    var playersKey = prefixSnap + ':players';
+
+    // Allerede migrert?
+    if (safeGet(migratedKey) === 'true') return;
+
+    const localRaw = safeGet(playersKey);
     if (!localRaw) return; // ingenting lokalt å migrere
 
     let localPlayers;
@@ -216,6 +668,7 @@
         .from('players')
         .select('id')
         .eq('user_id', uid)
+        .eq('team_id', tid)
         .limit(1);
 
       if (data && data.length > 0) {
@@ -226,10 +679,10 @@
 
     // Migrer
     console.log('[core.js] Migrerer', localPlayers.length, 'spillere fra localStorage til Supabase');
-    await supabaseSavePlayers(localPlayers);
+    await supabaseSavePlayers(localPlayers, tid, uid);
 
     // Marker som migrert
-    safeSet(k('migrated_to_supabase'), 'true');
+    safeSet(migratedKey, 'true');
   }
 
   // ------------------------------
@@ -243,7 +696,9 @@
     selection: {
       grouping: new Set()
     },
-    liga: null
+    liga: null,
+    teams: [],
+    currentTeamId: null
   };
 
   // Expose for other modules (kampdag.js)
@@ -364,8 +819,16 @@
   // Asynkron Supabase-lasting - kalles etter initApp for å oppdatere med server-data
   async function loadPlayersFromSupabase() {
     try {
+      // Snapshot kontekst for å detektere team-bytte under async operasjoner
+      var uidSnap = getUserId();
+      var tidSnap = state.currentTeamId;
+      var playersKeySnap = k('players');
+
       // Prøv migrering først (engangs, hvis localStorage har data og Supabase er tom)
-      await migrateLocalToSupabase();
+      await migrateLocalToSupabase(tidSnap, uidSnap);
+
+      // Hvis team/user endret mens vi ventet, avbryt
+      if (getUserId() !== uidSnap || state.currentTeamId !== tidSnap) return;
 
       // Hvis bruker allerede har redigert, ikke overskriv med server-data
       if (state._localEdited) {
@@ -373,24 +836,30 @@
         return;
       }
 
-      const sbPlayers = await supabaseLoadPlayers();
+      const sbPlayers = await supabaseLoadPlayers(tidSnap, uidSnap);
       if (sbPlayers === null) {
         console.log('[core.js] Supabase utilgjengelig, bruker localStorage');
         return;
       }
+
+      // Hvis team/user endret mens vi ventet, avbryt
+      if (getUserId() !== uidSnap || state.currentTeamId !== tidSnap) return;
 
       // Sjekk igjen etter async-operasjonen (bruker kan ha redigert mens vi ventet)
       if (state._localEdited) return;
 
       if (sbPlayers.length === 0 && state.players.length > 0) {
         console.log('[core.js] Supabase tom, syncer', state.players.length, 'spillere opp');
-        await supabaseSavePlayers(state.players);
+        await supabaseSavePlayers(state.players, tidSnap, uidSnap);
         return;
       }
 
       if (sbPlayers.length > 0) {
+        // Siste sjekk før vi overskriver state
+        if (getUserId() !== uidSnap || state.currentTeamId !== tidSnap) return;
+
         state.players = normalizePlayers(sbPlayers);
-        safeSet(k('players'), JSON.stringify(state.players));
+        safeSet(playersKeySnap, JSON.stringify(state.players));
         console.log('[core.js] Supabase: bruker', state.players.length, 'spillere som source of truth');
 
         state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
@@ -1544,33 +2013,65 @@
   // initApp (called by auth.js / auth-ui.js)
   // ------------------------------
   window.initApp = function initApp() {
-    console.log('[core.js] 🚀 initApp STARTER');
+    console.log('[core.js] initApp STARTER');
     if (window.appInitialized) {
-      console.log('[core.js] ⚠️ App allerede initialisert');
+      console.log('[core.js] App allerede initialisert');
       return;
     }
     window.appInitialized = true;
 
-    loadState();
-    console.log('[core.js] ✅ State lastet (localStorage), spillere:', state.players.length);
+    // Asynkron: last lag og deretter data
+    (async function() {
+      try {
+        // 1. Last lag fra Supabase (opprett standardlag hvis nødvendig)
+        await ensureDefaultTeam();
 
-    // default select all active players
-    state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
+        if (state.teams.length === 0) {
+          console.warn('[core.js] Ingen lag tilgjengelig, bruker fallback');
+          state.currentTeamId = 'default';
+        } else {
+          // Bruk sist valgte lag, eller første lag
+          var savedTeamId = getActiveTeamId();
+          var validTeam = savedTeamId && state.teams.some(function(t) { return t.id === savedTeamId; });
+          state.currentTeamId = validTeam ? savedTeamId : state.teams[0].id;
+        }
 
-    renderLogo();
-    setupTabs();
-    setupSkillToggle();
-    setupPlayersUI();
-    setupGroupingUI();
-    setupLigaUI();
+        // Eksponer for andre moduler
+        window._bftTeamId = state.currentTeamId;
 
-    renderAll();
-    publishPlayers();
+        // 1b. Migrer localStorage fra gammel prefix (bft:uid:xxx) til ny (bft:uid:teamId:xxx)
+        migrateLocalStorageToTeamPrefix();
 
-    // Asynkron: hent spillere fra Supabase (oppdaterer UI hvis server har nyere data)
-    loadPlayersFromSupabase();
+        console.log('[core.js] Aktivt lag:', state.currentTeamId, '(' + state.teams.length + ' lag totalt)');
+      } catch (e) {
+        console.warn('[core.js] Feil ved lasting av lag:', e.message);
+        state.currentTeamId = 'default';
+        window._bftTeamId = 'default';
+      }
 
-    console.log('[core.js] ✅ initApp FERDIG');
+      // 2. Last state (spillere, settings, liga) for valgt lag
+      loadState();
+      console.log('[core.js] State lastet, spillere:', state.players.length);
+
+      // default select all active players
+      state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
+
+      renderLogo();
+      setupTabs();
+      setupSkillToggle();
+      setupPlayersUI();
+      setupGroupingUI();
+      setupLigaUI();
+
+      renderAll();
+      renderTeamSwitcher();
+      publishPlayers();
+
+      // Asynkron: hent spillere fra Supabase
+      loadPlayersFromSupabase();
+
+      console.log('[core.js] initApp FERDIG');
+    })();
   };
 
 })();
