@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8" />
+  
+  <script>
+(function () {
+  try {
+    var h = String(window.location.hostname || '').toLowerCase();
+    var isDebugHost = (h === 'localhost') || (h.length >= 10 && h.slice(-10) === '.vercel.app');
+    window.__BF_IS_DEBUG_HOST = !!isDebugHost;
+    if (isDebugHost) { try { document.documentElement.classList.add('bf-debug-host'); } catch (e) {} }
+    if (isDebugHost) {
+      var s = document.createElement('script');
+      s.src = 'debug.js';
+      s.defer = true;
+      document.head.appendChild(s);
+    } else {
+      window.__BF_DEBUG_ENABLED = false;
+      window.__BF_IS_DEBUG_HOST = false;
+    }
+  } catch (e) {
+    window.__BF_DEBUG_ENABLED = false;
+      window.__BF_IS_DEBUG_HOST = false;
+  }
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Barnefotballtrener – kampdag, bytter og plan på mobilen</title>
+
+  <meta name="description" content="Barnefotballtrener gjør kampdag og trening enklere på mobilen: lik spilletid, bytteplan, treningsøkt-bygger, treningsgrupper og konkurranser." />
+  <link rel="canonical" href="https://barnefotballtrener.no/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Barnefotballtrener" />
+  <meta property="og:title" content="Barnefotballtrener – kampdag, bytter og plan på mobilen" />
+  <meta property="og:description" content="Kampdag og trening på mobilen: lik spilletid, bytteplan, treningsøkt-bygger og treningsgrupper — uten Excel." />
+  <meta property="og:url" content="https://barnefotballtrener.no/" />
+  <meta property="og:image" content="https://barnefotballtrener.no/icon-512.png" />
+
+  <!-- Structured data (minimal) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Barnefotballtrener",
+    "applicationCategory": "SportsApplication",
+    "operatingSystem": "Web",
+    "url": "https://barnefotballtrener.no/",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Barnefotballtrener",
+      "url": "https://barnefotballtrener.no/",
+      "contactPoint": [{
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "email": "support@barnefotballtrener.no",
+        "availableLanguage": ["Norwegian"]
+      }]
+    }
+  }
+  </script>
+
+  <!-- PWA -->
+  <meta name="theme-color" content="#0b5bd3" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Barnefotballtrener">
+
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <!-- Ikoner -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="auth-styles.css">
+  <link rel="stylesheet" href="pricing.css">
+  <link rel="stylesheet" href="kampdag.css">
+  <link rel="stylesheet" href="competitions.css">
+  <link rel="stylesheet" href="core-ui.css">
+
+  <!-- Umami Analytics (personvernvennlig, ingen cookies) -->
+  <script data-cfasync="false" defer src="/stats/script.js" data-website-id="bfd1e6d5-042b-4b8f-bd05-ee5aa7f70f5e"></script>
+</head>
+
+<body>
+  <!-- LOGIN SCREEN (oppdatert med Google) -->
+  <div id="passwordProtection" class="password-protection">
+    <div class="password-box">
+      <div class="password-header">
+  <img class="login-logo" src="apple-touch-icon.png" alt="Barnefotballtrener logo">
+  <h1>Barnefotballtrener</h1>
+  <p class="landing-tagline">En hjelpende hånd i en hektisk barnefotballhverdag.</p>
+</div>
+
+      <!-- Mini-landing (pre-login / SEO) -->
+<!-- Google Sign In Button -->
+      <button id="googleSignInBtn" class="btn-google" type="button">
+        <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          <path fill="none" d="M0 0h48v48H0z"/>
+        </svg>
+        <span>Fortsett med Google</span>
+      </button>
+
+      <!-- Secondary CTA (stays on login page, no new logic) -->
+      <button type="button" class="btn-secondary btn-secondary-link" id="publicSeePricingBtn" aria-label="Se priser" onclick="try{if(window.authService&&typeof window.authService.showPricingPage==='function'){window.authService.showPricingPage();}else{location.hash='landingPricing';}}catch(e){location.hash='landingPricing';}">
+        <i class="fas fa-tags" aria-hidden="true"></i>
+        Se priser
+      </button>
+      
+      <div class="landing-kps" aria-label="Kort om hva du får">
+        <p>Legg enkelt til spillere – angi nivå om du ønsker.</p>
+        <p>Kampdag-funksjon som automatisk sikrer lik spilletid og en presis bytteplan.</p>
+        <p>Lag differensierte grupper til øvelser på trening.</p>
+        <p>Få hjelp til å sette sammen jevne lag i trening og kamp.</p>
+        <p>Lag treningsøkta raskt og effektivt – velg øvelser, del inn i grupper og eksporter til PDF.</p>
+        <p>Konkurranse-funksjon som lar deg legge til spillere og antall konkurranser – tabell oppdateres fortløpende.</p>
+        <p>Liga-funksjon hvis man spiller «turnering» på trening – legg inn resultater og få tabell oppdatert fortløpende.</p>
+      </div>
+<noscript>
+        <a href="#landingPricing" class="btn-secondary btn-secondary-link" role="button" aria-label="Se priser">
+          <i class="fas fa-tags" aria-hidden="true"></i>
+          Se priser
+        </a>
+      </noscript>
+
+            <div id="magicLinkSection" class="magic-link-section" aria-label="Testinnlogging">
+<!-- Divider -->
+      <div class="divider" style="margin: 14px 0; text-align:center; opacity:.75;">
+        <span style="background: #fff; padding: 0 10px;">eller</span>
+      </div>
+
+      <!-- Magic link -->
+      <input
+        id="magicLinkEmail"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        placeholder="E-post (Hotmail, iCloud, osv.)"
+        class="login-input"
+      />
+
+      <button id="magicLinkBtn" class="login-btn" type="button">
+        Send innloggingslenke
+      </button>
+
+      <p id="magicLinkHint" class="small-text" style="margin-top:10px; opacity:.8; text-align:center;">
+        Magic link er kun tilgjengelig i testmiljø (staging/localhost). I produksjon brukes Google-innlogging.
+      </p>
+      </div>
+
+      <!-- Public landing content (static HTML for SEO; hidden after login) -->
+      <div id="publicLanding" class="public-landing">
+<section id="landingPricing" class="landing-section" aria-label="Priser">
+          <h2>Priser</h2>
+          <div class="landing-prices" role="list">
+            <div class="landing-price" role="listitem">
+              <div class="price-title">Måned</div>
+              <div class="price-amount">49 kr</div>
+            </div>
+            <div class="landing-price" role="listitem">
+              <div class="price-title">År</div>
+              <div class="price-amount">299 kr</div>
+            </div>
+            <div class="landing-price" role="listitem">
+              <div class="price-title">Livstid</div>
+              <div class="price-amount">799 kr</div>
+            </div>
+          </div>
+          <p class="landing-muted">Betaling håndteres av Stripe. Du kan administrere og avslutte abonnement i appen.</p>
+        </section>
+
+        <section class="landing-section" aria-label="Spørsmål og svar">
+          <h2>Spørsmål og svar</h2>
+
+          <details class="landing-faq">
+            <summary>Kan jeg avslutte når som helst?</summary>
+            <p>Ja. Du kan avslutte selv i appen. Du beholder tilgang ut perioden du har betalt for.</p>
+          </details>
+
+          <details class="landing-faq">
+            <summary>Fungerer dette på iPhone og Android?</summary>
+            <p>Ja. Appen er laget for mobil nettleser og kan brukes som PWA.</p>
+          </details>
+
+          <details class="landing-faq">
+            <summary>Hvordan får jeg hjelp?</summary>
+            <p>Send e-post til <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.</p>
+          </details>
+
+          <details class="landing-faq">
+            <summary>Hva med personvern og data om barn?</summary>
+            <p>Barnefotballtrener er laget for voksne trenere. Spillerdata lagres kryptert i skyen og synkroniseres mellom enhetene dine. Vi anbefaler at du kun bruker fornavn for barns personvern. Appen samler ikke inn sporingscookies eller annonsedata.</p>
+            <p>Les mer i <a href="/privacy.html">personvernerklæringen</a>.</p>
+          </details>
+        </section>
+
+        <section class="landing-trust" aria-label="Trygghet">
+        <p class="landing-trust-note">Trygt for klubber: betaling via Stripe, og abonnent kan avslutte selv. Ingen annonser eller sporingspiksler.</p>
+
+          <div class="trust-item"><i class="fas fa-credit-card" aria-hidden="true"></i><span>Betaling via Stripe</span></div>
+          <div class="trust-item"><i class="fas fa-sliders" aria-hidden="true"></i><span>Administrer i appen</span></div>
+          <div class="trust-item"><i class="fas fa-flag" aria-hidden="true"></i><span>Norsk</span></div>
+        </section>
+
+        
+        <!-- Nøkkelfunksjoner (tags) -->
+        <div class="landing-chips" aria-label="Nøkkelfunksjoner">
+          <span class="landing-chip">Spilletid-generator</span>
+          <span class="landing-chip">Bytteplan</span>
+          <span class="landing-chip">Treningsgrupper</span>
+          <span class="landing-chip">Jevne lag</span>
+          <span class="landing-chip">Konkurranser</span>
+          <span class="landing-chip">Liga</span>
+          <span class="landing-chip">Treningsøkt-bygger</span>
+                  <span class="landing-chip">Spilletid barnefotball</span>
+          <span class="landing-chip">Lik spilletid fotball</span>
+</div>
+
+<nav class="landing-footer-links" aria-label="Lenker">
+          <a href="/privacy.html">Personvern</a>
+          <span class="dot" aria-hidden="true">•</span>
+          <a href="/terms.html">Vilkår</a>
+          <span class="dot" aria-hidden="true">•</span>
+          <a href="mailto:support@barnefotballtrener.no">Kontakt</a>
+        </nav>
+      </div>
+
+      <!-- Legal text -->
+      <p class="small-text" style="margin-top: 20px; font-size: 0.8em; opacity: 0.7; text-align: center; line-height: 1.4;">
+        Ved å logge inn godtar du våre 
+        <a href="/terms.html" style="color: #0b5bd3; text-decoration: underline;">vilkår</a> og 
+        <a href="/privacy.html" style="color: #0b5bd3; text-decoration: underline;">personvernerklæring</a>
+      </p>
+
+    </div>
+  </div>
+
+<!-- PRICING PAGE -->
+<div id="pricingPage" class="pricing-page" style="display:none;">
+  <button id="closePricingBtn" class="btn-secondary" type="button">Tilbake</button>
+
+  <div class="pricing-container">
+    <!-- Header -->
+    <div class="pricing-header">
+      <div class="pricing-logo">
+        <span style="font-size: 48px;">⚽</span>
+      </div>
+      <h1>Velg din plan</h1>
+      <p>Start din gratis 7-dagers prøveperiode i dag</p>
+    </div>
+
+    <!-- Trial Banner -->
+    <div class="trial-banner">
+      <i class="fas fa-gift"></i>
+      <span>Månedlig og årlig plan inkluderer 7 dager gratis prøveperiode</span>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="pricing-cards">
+      <!-- Månedlig -->
+      <div class="pricing-card">
+        <div class="card-header">
+          <h3>Månedlig</h3>
+          <div class="price">
+            <span class="amount">49</span>
+            <span class="currency">kr/mnd</span>
+          </div>
+        </div>
+
+        <div class="card-features">
+          <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
+          <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
+          <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
+          <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
+          <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
+        </div>
+
+        <button
+          type="button"
+          class="btn-select"
+          data-plan="month"
+          data-price-id="price_1SyaHwDo19YzWAtSxSoUyB5Y"
+        >
+          Start gratis prøveperiode
+        </button>
+
+        <div class="card-note">Avbryt når som helst</div>
+      </div>
+
+      <!-- Årlig (POPULAR) -->
+      <div class="pricing-card popular">
+        <div class="badge-popular">Mest populær</div>
+
+        <div class="card-header">
+          <h3>Årlig</h3>
+          <div class="price">
+            <span class="amount">299</span>
+            <span class="currency">kr/år</span>
+          </div>
+          <div class="savings">Spar 49%</div>
+        </div>
+
+        <div class="card-features">
+          <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
+          <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
+          <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
+          <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
+          <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
+          <div class="feature"><i class="fas fa-star"></i> Prioritert support</div>
+        </div>
+
+        <button
+          type="button"
+          class="btn-select primary"
+          data-plan="year"
+          data-price-id="price_1SyaIVDo19YzWAtSbKIfLMqn"
+        >
+          Start gratis prøveperiode
+        </button>
+
+        <div class="card-note">Kun 25 kr/mnd</div>
+      </div>
+
+      <!-- Livstid -->
+      <div class="pricing-card premium">
+        <div class="card-header">
+          <h3>Livstid</h3>
+          <div class="price">
+            <span class="amount">799</span>
+            <span class="currency">kr</span>
+          </div>
+          <div class="savings">Best verdi</div>
+        </div>
+
+        <div class="card-features">
+          <div class="feature"><i class="fas fa-check"></i> Ubegrenset spillere</div>
+          <div class="feature"><i class="fas fa-check"></i> Alle funksjoner</div>
+          <div class="feature"><i class="fas fa-check"></i> Kampdag-planlegger</div>
+          <div class="feature"><i class="fas fa-check"></i> Liga-system</div>
+          <div class="feature"><i class="fas fa-check"></i> Eksport/Import</div>
+          <div class="feature"><i class="fas fa-infinity"></i> Livstidstilgang</div>
+          <div class="feature"><i class="fas fa-crown"></i> Premium support</div>
+        </div>
+
+        <button
+          type="button"
+          class="btn-select"
+          data-plan="lifetime"
+          data-price-id="price_1SyaJ2Do19YzWAtS55jH22b9"
+        >
+          Kjøp nå
+        </button>
+
+        <div class="card-note">Engangsbetaling</div>
+      </div>
+    </div>
+  </div>
+  <!-- IKKE lukk #pricingPage her – FAQ + modalene under er del av prissiden -->
+
+
+      <!-- FAQ -->
+      <div class="faq-section">
+        <h2>Ofte stilte spørsmål</h2>
+        <div class="faq-grid">
+          <div class="faq-item">
+            <h4><i class="fas fa-question-circle"></i> Hvordan fungerer prøveperioden?</h4>
+            <p>Du får full tilgang i 7 dager helt gratis. Ingen betalingsinfo kreves før prøveperioden er over.</p>
+          </div>
+          <div class="faq-item">
+            <h4><i class="fas fa-question-circle"></i> Kan jeg bytte plan senere?</h4>
+            <p>Ja, du kan oppgradere eller nedgradere når som helst. Endringen trer i kraft umiddelbart.</p>
+          </div>
+          <div class="faq-item">
+            <h4><i class="fas fa-question-circle"></i> Hvordan betaler jeg?</h4>
+            <p>Vi aksepterer alle vanlige betalingskort, Vipps og Apple Pay via Stripe.</p>
+          </div>
+          <div class="faq-item">
+            <h4><i class="fas fa-question-circle"></i> Hva skjer når jeg avbryter?</h4>
+            <p>Du beholder tilgang til slutten av betalingsperioden. All data lagres i 30 dager.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Back to Login -->
+<div class="back-to-login">
+  <button onclick="authService.showLoginScreen()" class="btn-back">
+    <i class="fas fa-arrow-left"></i> Tilbake til innlogging
+  </button>
+</div>  <!-- /.back-to-login -->
+
+</div> <!-- /#pricingPage -->
+
+
+  <!-- Abonnement / innstillinger (modal) -->
+<div id="subscriptionModal" class="bf-modal hidden" role="dialog" aria-modal="true" aria-labelledby="subscriptionModalTitle">
+  <div class="bf-modal__backdrop" data-close="subscriptionModal"></div>
+
+  <div class="bf-modal__panel">
+    <div class="bf-modal__header">
+      <h3 id="subscriptionModalTitle">Abonnement</h3>
+      <button class="icon-btn" type="button" data-close="subscriptionModal" aria-label="Lukk">✕</button>
+    </div>
+
+    <div class="bf-modal__body">
+      <div id="subscriptionUserLine" class="small-text" style="opacity:.8;"></div>
+
+      <div class="bf-subcard">
+        <div class="bf-subrow">
+          <span>Status</span>
+          <strong id="subscriptionStatus">—</strong>
+        </div>
+        <div class="bf-subrow">
+          <span>Plan</span>
+          <strong id="subscriptionPlan">—</strong>
+        </div>
+      </div>
+
+      <div class="small-text" style="margin-top:10px; opacity:.8;">
+        Abonnementshåndtering i appen (uten Stripe-portal).  
+        Du kan fortsatt kontakte support ved behov.
+      </div>
+    </div>
+
+    <div class="bf-modal__footer">
+      <button id="openPricingFromModal" class="btn-secondary" type="button">
+        <i class="fas fa-tags"></i> Se planer
+      </button>
+
+      <button id="copySupportEmailBtn" class="btn-secondary" type="button">
+        <i class="fas fa-copy"></i> Kopiér support-epost
+      </button>
+
+      <!-- GDPR Art. 20: Right to Data Portability -->
+      <button id="exportDataBtn" class="btn-secondary" type="button" title="Last ned alle dine data (GDPR Art. 20)">
+        <i class="fas fa-download"></i> Eksporter mine data
+      </button>
+
+      <!-- NY: Stripe Customer Portal -->
+      <button id="managePortalBtn" class="btn-primary" type="button">
+        <i class="fas fa-gear"></i> Administrer abonnement
+      </button>
+
+      <!-- GDPR Art. 17: Right to Erasure -->
+      <button id="deleteAccountBtn" class="btn-danger" type="button" title="Slett konto permanent (GDPR Art. 17)" style="margin-top: 20px; width: 100%;">
+        <i class="fas fa-trash"></i> Slett konto permanent
+      </button>
+
+      <button class="btn-primary" type="button" data-close="subscriptionModal" style="margin-top: 10px;">
+        OK
+      </button>
+    </div>
+  </div>
+</div> <!-- /#subscriptionModal -->
+
+  
+    <!-- Team Contact Modal -->
+    <div id="teamContactModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <span class="modal-close" onclick="closeTeamContactForm()">&times;</span>
+        <h2>Team-lisens forespørsel</h2>
+        <form id="teamContactForm" class="contact-form">
+          <div class="form-group">
+            <label>Navn *</label>
+            <input type="text" name="name" required>
+          </div>
+          <div class="form-group">
+            <label>E-post *</label>
+            <input type="email" name="email" required>
+          </div>
+          <div class="form-group">
+            <label>Telefon</label>
+            <input type="tel" name="phone">
+          </div>
+          <div class="form-group">
+            <label>Antall trenere *</label>
+            <input type="number" name="quantity" min="3" max="9" required>
+          </div>
+          <div class="form-group">
+            <label>Melding</label>
+            <textarea name="message" rows="4"></textarea>
+          </div>
+          <button type="submit" class="btn-submit">Send forespørsel</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Club Contact Modal -->
+    <div id="clubContactModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <span class="modal-close" onclick="closeClubContactForm()">&times;</span>
+        <h2>Klubb-lisens forespørsel</h2>
+        <form id="clubContactForm" class="contact-form">
+          <div class="form-group">
+            <label>Klubbnavn *</label>
+            <input type="text" name="clubName" required>
+          </div>
+          <div class="form-group">
+            <label>Kontaktperson *</label>
+            <input type="text" name="name" required>
+          </div>
+          <div class="form-group">
+            <label>E-post *</label>
+            <input type="email" name="email" required>
+          </div>
+          <div class="form-group">
+            <label>Telefon</label>
+            <input type="tel" name="phone">
+          </div>
+          <div class="form-group">
+            <label>Antall trenere *</label>
+            <input type="number" name="quantity" min="10" required>
+          </div>
+          <div class="form-group">
+            <label>Ønsket plan *</label>
+            <select name="planType" required>
+              <option value="">Velg...</option>
+              <option value="yearly">Årlig (133 kr/person/år)</option>
+              <option value="lifetime">Livstid (401 kr/person)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Melding</label>
+            <textarea name="message" rows="4"></textarea>
+          </div>
+          <button type="submit" class="btn-submit">Send forespørsel</button>
+        </form>
+      </div>
+    </div>
+
+  <!-- HOVEDAPP -->
+  <div id="mainApp" class="app-container" style="display:none;">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div id="logoContainer"></div>
+      </div>
+
+      <div class="header-right">
+        <!-- Subscription Status Badge -->
+        <div id="subscriptionBadge" class="subscription-badge" style="margin-right: 10px;">
+          <i class="fas fa-crown"></i>
+          <span id="subscriptionText">Pro</span>
+        </div>
+
+<button id="refreshBtn" class="icon-btn" type="button" aria-label="Oppdater">
+  <i class="fas fa-rotate-right"></i>
+</button>
+        <button id="manageSubscriptionBtn" class="icon-btn" type="button" aria-label="Innstillinger">
+  <i class="fas fa-gear"></i>
+</button>
+        <button id="logoutBtn" class="icon-btn" type="button" aria-label="Logg ut">
+  <i class="fas fa-right-from-bracket"></i>
+</button>
+      </div>
+    </header>
+
+    <!-- Lag-velger -->
+    <div class="team-switcher-wrapper" id="teamSwitcherWrapper"></div>
+
+    <!-- Navigasjon -->
+    <nav class="app-nav">
+      <button class="nav-btn active" data-tab="players" type="button">
+        <i class="fas fa-users"></i> Spillere
+      </button>
+      <button class="nav-btn" data-tab="grouping" type="button">
+        <i class="fas fa-people-group"></i> Gruppeinndeling
+      </button>
+      <button class="nav-btn" data-tab="kampdag" type="button">
+        <i class="fas fa-clipboard-list"></i> Kampdag
+      </button>
+      <button class="nav-btn" data-tab="competitions" type="button">
+  <i class="fas fa-medal"></i> Konkurranser
+</button>
+      <button class="nav-btn" data-tab="liga" type="button">
+        <i class="fas fa-trophy"></i> Liga
+      </button>
+      <button class="nav-btn" data-tab="workout" type="button">
+        <i class="fas fa-dumbbell"></i> Lag treningsøkt
+      </button>
+    </nav>
+
+    <!-- Innhold -->
+    <main>
+      <!-- SPILLERE TAB -->
+      <div id="players" class="tab-content active">
+        <div class="tab-header">
+          <h2><i class="fas fa-users"></i> Spillerhåndtering</h2>
+          <p class="tab-description">
+            Legg til, rediger eller fjern spillere. Du kan velge om ferdighetsnivå skal brukes.
+          </p>
+        </div>
+
+        <!-- Nivå av/på -->
+        <div class="settings-card" style="margin-bottom:8px; padding:8px 12px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div>
+              <div style="font-weight:700; font-size:14px;">Bruk ferdighetsnivå</div>
+              <div id="skillToggleHint" class="small-text" style="opacity:0.8; font-size:11px; line-height:1.2;">
+                Nivå er aktivert. (Brukes i gruppering og lagdeling.)
+              </div>
+            </div>
+            <label class="switch">
+              <input id="skillToggle" type="checkbox">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Legg til spiller form -->
+        <div class="player-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="playerName">Navn <small style="color: #666;">(kun fornavn anbefales)</small></label>
+              <input 
+                type="text" 
+                id="playerName" 
+                placeholder="F.eks. Marie" 
+                autocomplete="off"
+                maxlength="50"
+                title="Maks 50 tegn. Kun fornavn anbefales for barns personvern.">
+            </div>
+
+            <div class="form-group">
+              <label for="playerSkill">Ferdighetsnivå</label>
+              <select id="playerSkill">
+                <option value="1">1 - Nybegynner</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6 - Avansert</option>
+              </select>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="playerGoalie">
+                <span>Kan stå i mål</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <button id="addPlayerBtn" class="btn-primary" type="button">
+                <i class="fas fa-plus"></i> Legg til spiller
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-container">
+          <div class="stat-card">
+            <div class="stat-value" id="totalPlayers">0</div>
+            <div class="stat-label">Spillere</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-value" id="totalGoalies">0</div>
+            <div class="stat-label">Målvakter</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-value" id="playerCount">0</div>
+            <div class="stat-label">Aktive</div>
+          </div>
+        </div>
+
+        <!-- Handlinger -->
+        <div class="actions-container">
+          <button id="exportBtn" class="btn-secondary" type="button">
+            <i class="fas fa-download"></i> Eksporter
+          </button>
+
+          <button id="importBtn" class="btn-secondary" type="button">
+            <i class="fas fa-upload"></i> Importer
+          </button>
+
+          <input type="file" id="importFile" accept=".json" style="display:none">
+
+          <button id="clearAllBtn" class="btn-danger" type="button">
+            <i class="fas fa-trash"></i> Slett alle
+          </button>
+        </div>
+
+        <!-- Spillerliste -->
+        <div id="playerList" class="player-list"></div>
+      </div>
+
+      <!-- GRUPPEINNDELING TAB (sammenslått fra Treningsgrupper + Laginndeling) -->
+      <div id="grouping" class="tab-content">
+        <div class="tab-header">
+          <h2><i class="fas fa-people-group"></i> Gruppeinndeling</h2>
+          <p class="tab-description">Del spillerne inn i jevne eller differensierte grupper.</p>
+        </div>
+
+        <div class="settings-card">
+          <!-- Modusvelger -->
+          <div class="grouping-mode-selector" style="display:flex; gap:6px; margin-bottom:12px;">
+            <button class="grouping-mode-btn active" data-gmode="even" type="button">Jevne grupper</button>
+            <button class="grouping-mode-btn" data-gmode="diff" type="button">Differensierte grupper</button>
+          </div>
+          <div id="groupingModeHint" class="small-text" style="opacity:0.8; margin-bottom:10px;">
+            Jevne grupper: spillere fordeles slik at alle grupper får omtrent likt nivå.
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label" id="groupingCountLabel">Antall grupper:</div>
+            <div class="number-control">
+              <button class="number-btn minus" type="button" onclick="changeNumber('groupingCount', -1)">−</button>
+              <input type="number" id="groupingCount" class="number-input" value="2" min="2" max="6">
+              <button class="number-btn plus" type="button" onclick="changeNumber('groupingCount', 1)">+</button>
+            </div>
+          </div>
+
+          <div class="selection-header">
+            <div class="selection-title">Velg spillere (<span id="groupingPlayerCount">0</span>)</div>
+            <div class="selection-actions">
+              <button id="groupingSelectAllBtn" class="btn-small" type="button">Velg alle</button>
+              <button id="groupingClearAllBtn" class="btn-small" type="button">Fjern alle</button>
+            </div>
+          </div>
+
+          <div id="groupingSelection" class="player-selection"></div>
+
+          <button id="groupingActionBtn" class="btn-primary" type="button">
+            <i class="fas fa-people-group"></i> Lag jevne grupper
+          </button>
+        </div>
+
+        <div id="groupingResults" class="results-container"></div>
+      </div>
+
+      <!-- KAMPDAG TAB -->
+      <div id="kampdag" class="tab-content">
+        <div class="tab-header">
+          <h2><i class="fas fa-clipboard-list"></i> Kampdag</h2>
+          <p class="tab-description">
+            Lag start/benk, beregn spilletid og få en bytteplan med færre og mer ryddige bytter.
+          </p>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-row" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:220px;">
+              <label for="kdFormat" style="display:block; font-weight:700; margin-bottom:6px;">Format</label>
+              <select id="kdFormat" class="input" style="width:100%;">
+                <option value="3">3-er (ingen keeper)</option>
+                <option value="5">5-er</option>
+                <option value="7" selected>7-er</option>
+                <option value="9">9-er</option>
+                <option value="11">11-er</option>
+              </select>
+            </div>
+
+            <div style="flex:1; min-width:220px;">
+              <label for="kdMinutes" style="display:block; font-weight:700; margin-bottom:6px;">Kampvarighet (min)</label>
+              <input id="kdMinutes" type="number" class="input" value="60" min="10" max="200" style="width:100%;">
+            </div>
+
+            <div style="flex:1; min-width:220px;">
+              <div style="font-weight:700; margin-bottom:6px;">Auto</div>
+              <div id="kdAutoInfo" class="small-text" style="opacity:0.85;">
+                Velg oppmøte først.
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <button id="kdSelectAll" class="btn-secondary" type="button">Velg alle</button>
+            <button id="kdDeselectAll" class="btn-secondary" type="button">Fjern alle</button>
+            <button id="kdRefresh" class="btn-secondary" type="button">Oppdater spillere</button>
+          </div>
+        </div>
+
+        <div class="selection-header">
+          <div class="selection-title">Oppmøte (<span id="kdPresentCount">0</span>)</div>
+        </div>
+        <div id="kdPlayerSelection" class="player-selection"></div>
+
+        <!-- Keeper -->
+        <div class="settings-card" style="margin-top:14px;">
+          <div class="settings-row" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:800;">Keeper</div>
+              <div id="kdKeeperHint" class="small-text" style="opacity:0.8;">
+                Velg antall keepere, deretter hvem + minutter.
+              </div>
+            </div>
+
+            <label class="checkbox-label" style="margin:0;">
+              <input id="kdManualKeeper" type="checkbox">
+              <span>Manuell keeper</span>
+            </label>
+          </div>
+
+          <div id="kdKeeperPanel" style="display:none; margin-top:12px;">
+            <div class="settings-row" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+              <div style="min-width:240px;">
+                <label for="kdKeeperCount" style="display:block; font-weight:700; margin-bottom:6px;">Antall keepere</label>
+                <select id="kdKeeperCount" class="input" style="width:100%;">
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                </select>
+              </div>
+
+              <div style="flex:1; min-width:240px;">
+                <label style="display:block; font-weight:700; margin-bottom:6px;">Oppsummering</label>
+                <div id="kdKeeperSummary" class="small-text" style="opacity:0.85;">–</div>
+              </div>
+            </div>
+
+            <div class="kd-keeper-rows" style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
+              <div class="kd-keeper-row" data-row="1" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <select id="kdKeeper1" class="input" style="flex:2; min-width:220px;"></select>
+                <input id="kdKeeperMin1" type="number" class="input" value="0" min="0" style="width:120px;">
+                <span class="small-text" style="opacity:0.8;">min</span>
+              </div>
+
+              <div class="kd-keeper-row" data-row="2" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;">
+                <select id="kdKeeper2" class="input" style="flex:2; min-width:220px;"></select>
+                <input id="kdKeeperMin2" type="number" class="input" value="0" min="0" style="width:120px;">
+                <span class="small-text" style="opacity:0.8;">min</span>
+              </div>
+
+              <div class="kd-keeper-row" data-row="3" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;">
+                <select id="kdKeeper3" class="input" style="flex:2; min-width:220px;"></select>
+                <input id="kdKeeperMin3" type="number" class="input" value="0" min="0" style="width:120px;">
+                <span class="small-text" style="opacity:0.8;">min</span>
+              </div>
+
+              <div class="kd-keeper-row" data-row="4" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;">
+                <select id="kdKeeper4" class="input" style="flex:2; min-width:220px;"></select>
+                <input id="kdKeeperMin4" type="number" class="input" value="0" min="0" style="width:120px;">
+                <span class="small-text" style="opacity:0.8;">min</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Generer + output -->
+        <div class="settings-card" style="margin-top:14px;">
+          <div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="kdGenerate" class="btn-primary" type="button">
+              <i class="fas fa-wand-magic-sparkles"></i> Generer plan
+            </button>
+            <button id="kdCopy" class="btn-secondary" type="button">
+              <i class="fas fa-copy"></i> Kopier plan
+            </button>
+            <button id="kdExportPdf" class="btn-secondary" type="button">
+              <i class="fas fa-file-pdf"></i> Eksporter PDF
+            </button>
+          </div>
+          <div id="kdMeta" class="small-text" style="margin-top:10px; opacity:0.85;"></div>
+        </div>
+
+        <div id="kdLineup" class="results-container"></div>
+        <div id="kdPlan" class="results-container"></div>
+      </div>
+<!-- KONKURRANSER TAB -->
+<div id="competitions" class="tab-content">
+  <div class="tab-header">
+    <h2><i class="fas fa-medal"></i> Konkurranser</h2>
+    <p class="tab-description">
+      Organiser konkurranser: velg deltakere, legg inn øvelser og registrer plasseringer – poengsummer oppdateres automatisk i en tabell.
+    </p>
+  </div>
+
+<div class="settings-card">
+  <p class="small-text" style="opacity:0.85;">
+    Organiser konkurranser: velg deltakere, legg inn øvelser og registrer plasseringer.
+  </p>
+  <div id="competitionsRoot"></div>
+</div>
+
+  </div>
+
+      <!-- LIGA TAB -->
+      <div id="liga" class="tab-content">
+        <div class="tab-header">
+          <h2><i class="fas fa-trophy"></i> Liga</h2>
+          <p class="tab-description">Sett opp en enkel liga med lag, kamper og tabell.</p>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-label">Antall lag:</div>
+            <div class="number-control">
+              <button class="number-btn minus" type="button" onclick="changeNumber('ligaTeams', -1)">−</button>
+              <input type="number" id="ligaTeams" class="number-input" value="3" min="2" max="5">
+              <button class="number-btn plus" type="button" onclick="changeNumber('ligaTeams', 1)">+</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-label">Antall runder:</div>
+            <div class="number-control">
+              <button class="number-btn minus" type="button" onclick="changeNumber('ligaRounds', -1)">−</button>
+              <input type="number" id="ligaRounds" class="number-input" value="2" min="1" max="5">
+              <button class="number-btn plus" type="button" onclick="changeNumber('ligaRounds', 1)">+</button>
+            </div>
+          </div>
+
+          <div id="ligaTeamNames" class="team-names"></div>
+
+          <div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="startLigaBtn" class="btn-primary" type="button">
+              <i class="fas fa-play"></i> Start liga
+            </button>
+
+            <button id="resetLigaBtn" class="btn-danger" type="button">
+              <i class="fas fa-rotate-left"></i> Nullstill
+            </button>
+          </div>
+        </div>
+
+        <div class="results-container">
+          <h3>Kamper</h3>
+          <div id="ligaMatches"></div>
+        </div>
+
+        <div class="results-container">
+          <h3>Tabell</h3>
+          <div id="ligaTable"></div>
+        </div>
+      </div>
+
+      <!-- BYGG DIN TRENINGSØKT TAB -->
+      <div id="workout" class="tab-content">
+        <div class="tab-header">
+          <h2><i class="fas fa-dumbbell"></i> Lag treningsøkt</h2>
+          <p class="tab-description">
+            Bygg økta øvelse for øvelse, del inn i grupper (valgfritt) og eksporter til PDF for deling/utskrift.
+          </p>
+        </div>
+
+        <div class="settings-card wo-meta-card">
+          <div class="wo-meta-fields">
+            <div class="wo-meta-field">
+              <label for="woDate" class="wo-label">Dato</label>
+              <input id="woDate" type="date" class="input">
+            </div>
+
+            <div class="wo-meta-field wo-meta-field-wide">
+              <label for="woTitle" class="wo-label">Navn på økta (valgfritt)</label>
+              <input id="woTitle" type="text" class="input" placeholder="f.eks. Tirsdag – pasning og spill">
+            </div>
+
+            <div class="wo-meta-total">
+              <div class="small-text" style="opacity:0.85; font-weight:800;">Total tid</div>
+              <div id="woTotal" style="font-size:1.4rem; font-weight:900;">0 min</div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px;">
+            <div>
+              <div style="font-weight:800; font-size:14px;">Velg spillere til økta</div>
+              <div class="small-text" style="opacity:0.85; font-size:11px;">Slå av for mal uten oppmøte.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="woUsePlayersToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div id="woPlayersPanel" style="display:none; margin-top:12px;">
+            <div class="selection-header">
+              <div class="selection-title">Oppmøte på trening (<span id="woPlayerCount">0</span>)</div>
+              <div class="selection-actions">
+                <button id="woSelectAllBtn" class="btn-small" type="button">Velg alle</button>
+                <button id="woClearAllBtn" class="btn-small" type="button">Fjern alle</button>
+              </div>
+            </div>
+            <div id="woPlayerSelection" class="player-selection"></div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div style="font-weight:900;">Øvelser</div>
+            <button id="woAddExerciseBtn" class="btn-primary" type="button">
+              <i class="fas fa-plus"></i> Legg til ny øvelse
+            </button>
+          </div>
+
+          <div id="woBlocks" class="wo-blocks"></div>
+
+          <button id="woAddExerciseBtnBottom" class="btn-primary" type="button" style="width:100%; margin-top:10px;">
+            <i class="fas fa-plus"></i> Legg til ny øvelse
+          </button>
+
+          <div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+            <button id="woSuggestBtn" class="btn-secondary" type="button">
+              <i class="fas fa-magic"></i> Lag en treningsøkt for meg
+            </button>
+            <button id="woSaveTemplateBtn" class="btn-secondary" type="button">
+              <i class="fas fa-save"></i> Lagre som mal
+            </button>
+            <button id="woSaveWorkoutBtn" class="btn-secondary" type="button">
+              <i class="fas fa-bookmark"></i> Lagre økt
+            </button>
+            <button id="woExportBtn" class="btn-primary" type="button">
+              <i class="fas fa-file-pdf"></i> Eksporter / PDF
+            </button>
+
+            <button id="woDownloadJsonBtn" class="btn-secondary" type="button">
+              <i class="fas fa-download"></i> Last ned øktfil
+            </button>
+            <button id="woShareJsonBtn" class="btn-secondary" type="button">
+              <i class="fas fa-share-alt"></i> Del øktfil
+            </button>
+            <button id="woImportJsonBtn" class="btn-secondary" type="button">
+              <i class="fas fa-file-import"></i> Importer øktfil
+            </button>
+            <input id="woImportFile" type="file" accept=".json,application/json,text/plain" style="display:none;" />
+            <div class="wo-hint">Øktfil inneholder ikke spillere. Medtrener velger spillere lokalt etter import.</div>
+          </div>
+        </div>
+
+        <div class="settings-card" style="text-align:center; padding:12px; margin-top:10px;">
+          <div class="small-text" style="opacity:0.85; font-weight:800;">Total tid</div>
+          <div id="woTotalBottom" style="font-size:1.4rem; font-weight:900;">0 min</div>
+        </div>
+
+        <div class="results-container">
+          <h3>Mine økter</h3>
+          <div id="woWorkouts" class="wo-templates"></div>
+        </div>
+
+        <div class="results-container">
+          <h3>Mine maler</h3>
+          <div id="woTemplates" class="wo-templates"></div>
+        </div>
+      </div>
+
+    </main>
+  </div> <!-- /#mainApp -->
+
+
+<!-- Notification -->
+<div id="notification" class="notification" style="display:none;"></div>
+
+<!-- Footer (legal links) -->
+<footer style="text-align: center; padding: 20px; color: #666; font-size: 0.9em; border-top: 1px solid #eee; margin-top: 40px;">
+  <p>
+    <a href="/privacy.html" style="color: #0b5bd3; text-decoration: none; margin: 0 10px;">Personvernerklæring</a> |
+    <a href="/terms.html" style="color: #0b5bd3; text-decoration: none; margin: 0 10px;">Vilkår for bruk</a> |
+    <a href="mailto:support@barnefotballtrener.no" style="color: #0b5bd3; text-decoration: none; margin: 0 10px;">Kontakt</a>
+  </p>
+  <p style="margin-top: 10px; font-size: 0.85em; color: #999;">
+    © 2026 Barnefotballtrener | Laget med ❤️ for norske fotballtrenere
+  </p>
+</footer>
+
+<!-- Scripts - VIKTIG REKKEFØLGE! -->
+<script src="env.js"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="error-logger.js"></script>
+<script src="subscription.js"></script>
+<script src="auth-ui.js"></script>
+<script src="pricing.js"></script>
+<script src="grouping.js"></script>
+<script src="core.js"></script>
+<script src="kampdag.js"></script>
+<script src="competitions.js"></script>
+<script src="workout.js"></script>
+<script src="logout-fix.js"></script>
+
+</body>
+</html>
