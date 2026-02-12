@@ -894,6 +894,12 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;}
     .btn{border:0; border-radius:12px; padding:10px 12px; font-weight:800; background:var(--brand); color:#fff; cursor:pointer;}
     .note{color:var(--muted); font-size:12px; margin-top:8px;}
+    .guide{margin-top:12px;}
+    .guide-title{font-weight:900; font-size:13px; margin-bottom:8px; color:#1a2333;}
+    .guide-steps{display:flex; flex-direction:column; gap:6px;}
+    .guide-step{display:flex; align-items:center; gap:8px; font-size:13px; color:#374151; padding:8px 10px; background:var(--soft); border-radius:10px; border-left:3px solid var(--brand);}
+    .step-num{background:var(--brand); color:#fff; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; flex-shrink:0;}
+    .step-icon{font-size:16px;}
     .footer{text-align:center; margin-top:20px; font-size:11px; color:var(--muted); padding:10px 0; border-top:1px solid var(--line);}
     @media (max-width:720px){
       .meta{display:none;}
@@ -902,7 +908,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       body{background:#fff;}
       .wrap{max-width:none; padding:0;}
-      .actions,.note{display:none !important;}
+      .actions,.note,.guide{display:none !important;}
       .header{border-radius:0; box-shadow:none;}
       .card{border-radius:0; border-left:0; border-right:0;}
     }
@@ -932,9 +938,43 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     </div>
 
     <div class="actions">
-      <button class="btn" onclick="window.print()">Skriv ut / Lagre som PDF</button>
+      <button class="btn" onclick="window.print()">Lagre som PDF</button>
     </div>
-    <div class="note">Tips: I utskriftsdialogen velger du "Lagre som PDF".</div>
+    <div class="guide" id="saveGuide"></div>
+    <script>
+    (function(){
+      var ua = navigator.userAgent;
+      var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
+      var isAndroid = /Android/i.test(ua);
+      var g = document.getElementById('saveGuide');
+      if (!g) return;
+      if (isIOS) {
+        g.innerHTML =
+          '<div class="guide-title">Slik lagrer du som PDF på iPhone/iPad</div>' +
+          '<div class="guide-steps">' +
+          '<div class="guide-step"><span class="step-num">1</span> Trykk på <b>Lagre som PDF</b>-knappen over</div>' +
+          '<div class="guide-step"><span class="step-num">2</span> Trykk på <b>Del-ikonet</b> <span class="step-icon">↑</span> øverst i Valg-dialogen</div>' +
+          '<div class="guide-step"><span class="step-num">3</span> Velg <b>Arkiver i Filer</b> for å lagre PDF-en</div>' +
+          '</div>';
+      } else if (isAndroid) {
+        g.innerHTML =
+          '<div class="guide-title">Slik lagrer du som PDF på Android</div>' +
+          '<div class="guide-steps">' +
+          '<div class="guide-step"><span class="step-num">1</span> Trykk på <b>Lagre som PDF</b>-knappen over</div>' +
+          '<div class="guide-step"><span class="step-num">2</span> Velg <b>Lagre som PDF</b> som skriver</div>' +
+          '<div class="guide-step"><span class="step-num">3</span> Trykk på den gule <b>Last ned</b>-knappen</div>' +
+          '</div>';
+      } else {
+        g.innerHTML =
+          '<div class="guide-title">Slik lagrer du som PDF</div>' +
+          '<div class="guide-steps">' +
+          '<div class="guide-step"><span class="step-num">1</span> Trykk på <b>Lagre som PDF</b>-knappen over</div>' +
+          '<div class="guide-step"><span class="step-num">2</span> Velg <b>Lagre som PDF</b> i stedet for en skriver</div>' +
+          '<div class="guide-step"><span class="step-num">3</span> Klikk <b>Lagre</b></div>' +
+          '</div>';
+      }
+    })();
+    </script>
     <div class="footer">Laget med Barnefotballtrener.no</div>
   </div>
 </body>
