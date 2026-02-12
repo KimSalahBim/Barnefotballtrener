@@ -51,6 +51,40 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
   // ------------------------------
   let kdSelected = new Set();
   let lastPlanText = '';
+  let lastBest = null;          // last generated plan result
+  let lastPresent = [];         // last present players
+  let lastP = 7;                // last format
+  let lastT = 48;               // last total minutes
+
+  // Formation state
+  let kdFormationOn = false;
+  let kdFormation = null;       // e.g. [2,3,1]
+  let kdFormationKey = '';      // e.g. '2-3-1'
+  let kdPositions = {};         // playerId -> Set of zones ('F','M','A')
+
+  // Frequency state
+  let kdFrequency = 'normal';   // 'rare','normal','frequent'
+
+  // Timer state
+  let kdTimerInterval = null;
+  let kdTimerStart = null;      // Date.now() when started
+  let kdTimerPaused = false;
+  let kdTimerPausedElapsed = 0; // ms elapsed when paused
+
+  // Formation presets per format
+  const FORMATIONS = {
+    3: { '1-1-1': [1,1,1] },
+    5: { '2-1-1': [2,1,1], '1-2-1': [1,2,1], '2-2-0': [2,2,0] },
+    7: { '2-3-1': [2,3,1], '3-2-1': [3,2,1], '2-2-2': [2,2,2], '1-3-2': [1,3,2] },
+    9: { '3-3-2': [3,3,2], '3-4-1': [3,4,1], '2-4-2': [2,4,2] },
+    11: { '4-3-3': [4,3,3], '4-4-2': [4,4,2], '3-5-2': [3,5,2] },
+  };
+
+  const FREQ_PARAMS = {
+    rare:     { minGap: 8, maxGap: 12, stopsMin: 3, stopsMax: 6 },
+    normal:   { minGap: 5, maxGap: 10, stopsMin: 6, stopsMax: 10 },
+    frequent: { minGap: 3, maxGap: 5,  stopsMin: 8, stopsMax: 14 },
+  };
 
   // ------------------------------
   // Init
@@ -64,6 +98,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       kdSelected = new Set(getPlayersArray().map(p => p.id));
       renderKampdagPlayers();
       updateKampdagCounts();
+      if (kdFormationOn) { renderPositionList(); updateCoverage(); }
       console.log('[Kampdag] Players re-rendered, count:', getPlayersArray().length);
     } catch (err) {
       console.error('[Kampdag] Error in players:updated handler:', err);
@@ -116,12 +151,14 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       kdSelected = new Set(getPlayersArray().map(p => p.id));
       renderKampdagPlayers();
       refreshKeeperUI();
+      if (kdFormationOn) { renderPositionList(); updateCoverage(); }
     });
 
     if (deselectAllBtn) deselectAllBtn.addEventListener('click', () => {
       kdSelected = new Set();
       renderKampdagPlayers();
       refreshKeeperUI();
+      if (kdFormationOn) { renderPositionList(); updateCoverage(); }
     });
 
     if (refreshBtn) refreshBtn.addEventListener('click', () => {
@@ -152,6 +189,41 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const pdfBtn = $('kdExportPdf');
     if (pdfBtn) pdfBtn.addEventListener('click', exportKampdagPdf);
+
+    const startBtn = $('kdStartMatch');
+    if (startBtn) startBtn.addEventListener('click', startMatchTimer);
+
+    const pauseBtn = $('kdTimerPause');
+    if (pauseBtn) pauseBtn.addEventListener('click', toggleTimerPause);
+
+    const stopBtn = $('kdTimerStop');
+    if (stopBtn) stopBtn.addEventListener('click', stopMatchTimer);
+
+    // Frequency buttons
+    const freqContainer = $('kdFreqOptions');
+    if (freqContainer) {
+      freqContainer.querySelectorAll('.kd-freq-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          freqContainer.querySelectorAll('.kd-freq-btn').forEach(b => b.classList.remove('kd-freq-active'));
+          btn.classList.add('kd-freq-active');
+          kdFrequency = btn.getAttribute('data-freq') || 'normal';
+        });
+      });
+    }
+
+    // Formation toggle
+    const formToggle = $('kdFormationToggle');
+    if (formToggle) formToggle.addEventListener('change', () => {
+      kdFormationOn = formToggle.checked;
+      const panel = $('kdFormationPanel');
+      if (panel) panel.style.display = kdFormationOn ? 'block' : 'none';
+      if (kdFormationOn) renderFormationGrid();
+    });
+
+    // Formation changes when format changes
+    if (formatEl) formatEl.addEventListener('change', () => {
+      if (kdFormationOn) renderFormationGrid();
+    });
   }
 
   // ------------------------------
@@ -185,6 +257,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
         updateKampdagCounts();
         refreshKeeperUI();
         updateKeeperSummary();
+        if (kdFormationOn) { renderPositionList(); updateCoverage(); }
       });
     });
 
@@ -295,6 +368,211 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const ok = (chosen === kc) && (sum === T);
     summary.textContent = `Velg keeper(e) — Sum: ${sum}/${T} (${ok ? 'OK' : 'SJEKK'})`;
+  }
+
+  // ------------------------------
+  // Formation & positions
+  // ------------------------------
+  function getDefaultFormationKey(format) {
+    const map = { 3: '1-1-1', 5: '2-1-1', 7: '2-3-1', 9: '3-3-2', 11: '4-3-3' };
+    return map[format] || '2-3-1';
+  }
+
+  function renderFormationGrid() {
+    const grid = $('kdFormationGrid');
+    if (!grid) return;
+    const format = parseInt($('kdFormat')?.value, 10) || 7;
+    const opts = FORMATIONS[format] || FORMATIONS[7];
+
+    if (!kdFormationKey || !opts[kdFormationKey]) {
+      kdFormationKey = getDefaultFormationKey(format);
+    }
+    kdFormation = opts[kdFormationKey] || Object.values(opts)[0];
+
+    grid.innerHTML = Object.entries(opts).map(([key, arr]) => {
+      const active = key === kdFormationKey ? 'kd-formation-active' : '';
+      return `<div class="kd-formation-opt ${active}" data-fkey="${key}">
+        <div class="kd-f-name">${key}</div>
+        <div class="kd-f-desc">${arr[0]} forsvar · ${arr[1]} midtbane · ${arr[2]} angrep</div>
+      </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.kd-formation-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const key = opt.getAttribute('data-fkey');
+        kdFormationKey = key;
+        kdFormation = opts[key];
+        grid.querySelectorAll('.kd-formation-opt').forEach(o => o.classList.remove('kd-formation-active'));
+        opt.classList.add('kd-formation-active');
+        updateCoverage();
+      });
+    });
+
+    renderPositionList();
+    updateCoverage();
+  }
+
+  function renderPositionList() {
+    const container = $('kdPositionList');
+    if (!container) return;
+    const present = getPresentPlayers();
+
+    // Initialize positions for new players
+    present.forEach(p => {
+      if (!kdPositions[p.id]) kdPositions[p.id] = new Set(['F', 'M', 'A']);
+    });
+
+    container.innerHTML = present.map(p => {
+      const pos = kdPositions[p.id] || new Set(['F', 'M', 'A']);
+      return `<div class="kd-pos-row">
+        <div class="kd-pos-name">${escapeHtml(p.name)}</div>
+        <div class="kd-pos-checks">
+          <button type="button" class="kd-pos-btn ${pos.has('F') ? 'kd-pos-f-on' : ''}" data-pid="${p.id}" data-zone="F">F</button>
+          <button type="button" class="kd-pos-btn ${pos.has('M') ? 'kd-pos-m-on' : ''}" data-pid="${p.id}" data-zone="M">M</button>
+          <button type="button" class="kd-pos-btn ${pos.has('A') ? 'kd-pos-a-on' : ''}" data-pid="${p.id}" data-zone="A">A</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    container.querySelectorAll('.kd-pos-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pid = btn.getAttribute('data-pid');
+        const zone = btn.getAttribute('data-zone');
+        if (!kdPositions[pid]) kdPositions[pid] = new Set(['F', 'M', 'A']);
+        const pos = kdPositions[pid];
+        if (pos.has(zone)) { pos.delete(zone); } else { pos.add(zone); }
+        // If all removed, re-add all (can't have no zones)
+        if (pos.size === 0) { pos.add('F'); pos.add('M'); pos.add('A'); }
+        // Update all buttons in this row
+        const row = btn.closest('.kd-pos-row');
+        if (row) {
+          row.querySelectorAll('.kd-pos-btn').forEach(b => {
+            const z = b.getAttribute('data-zone');
+            const onClass = { F: 'kd-pos-f-on', M: 'kd-pos-m-on', A: 'kd-pos-a-on' }[z];
+            b.classList.toggle(onClass, pos.has(z));
+          });
+        }
+        updateCoverage();
+      });
+    });
+  }
+
+  function updateCoverage() {
+    const el = $('kdCoverage');
+    if (!el || !kdFormation) { if (el) el.style.display = 'none'; return; }
+
+    const present = getPresentPlayers();
+    const counts = { F: 0, M: 0, A: 0 };
+    present.forEach(p => {
+      const pos = kdPositions[p.id] || new Set(['F', 'M', 'A']);
+      if (pos.has('F')) counts.F++;
+      if (pos.has('M')) counts.M++;
+      if (pos.has('A')) counts.A++;
+    });
+
+    const needs = { F: kdFormation[0], M: kdFormation[1], A: kdFormation[2] };
+    const zones = [
+      { key: 'F', name: 'Forsvar', need: needs.F, have: counts.F, color: '#16a34a' },
+      { key: 'M', name: 'Midtbane', need: needs.M, have: counts.M, color: '#2563eb' },
+      { key: 'A', name: 'Angrep', need: needs.A, have: counts.A, color: '#dc2626' },
+    ];
+
+    const warn = zones.some(z => z.have < z.need);
+    el.style.display = 'block';
+    el.style.background = warn ? 'rgba(245,158,11,0.08)' : 'rgba(34,197,94,0.06)';
+    el.style.color = warn ? '#d97706' : '#16a34a';
+
+    el.innerHTML = `<div style="font-weight:800; margin-bottom:6px;">${warn ? '⚠ ' : ''}Sonedekning for ${kdFormationKey}</div>` +
+      zones.map(z => {
+        const pct = Math.min(100, Math.round((z.have / Math.max(1, present.length)) * 100));
+        const low = z.have < z.need;
+        return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${z.color};flex-shrink:0;"></span>
+          <span style="width:72px;">${z.name} (${z.need})</span>
+          <div style="flex:1;height:6px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${low ? '#d97706' : z.color};border-radius:3px;"></div>
+          </div>
+          <span style="width:32px;text-align:right;font-weight:800;${low ? 'color:#d97706;' : ''}">${z.have}${low ? ' ⚠' : ''}</span>
+        </div>`;
+      }).join('') +
+      (warn ? `<div style="margin-top:6px;font-size:12px;">Noen spillere vil bli plassert utenfor preferanse.</div>` : '');
+  }
+
+  // Assign positions to a lineup based on formation + preferences
+  function assignZones(lineup, keeperId, formation) {
+    if (!formation) return null;
+    const outfield = lineup.filter(id => id !== keeperId);
+    let [defN, midN, attN] = formation;
+    const formationSum = defN + midN + attN;
+
+    // If no keeper set, outfield has 1 extra player vs formation design.
+    // Inflate zone needs to accommodate: distribute extras to largest zones first.
+    let diff = outfield.length - formationSum;
+    if (diff < 0) return null; // fewer players than formation needs
+    if (diff > 0) {
+      // Distribute extra slots to zones, largest first
+      const inflate = [
+        { zone: 'M', n: midN },
+        { zone: 'F', n: defN },
+        { zone: 'A', n: attN }
+      ].sort((a, b) => b.n - a.n);
+      let idx = 0;
+      while (diff > 0) {
+        if (inflate[idx].zone === 'F') defN++;
+        else if (inflate[idx].zone === 'M') midN++;
+        else attN++;
+        diff--;
+        idx = (idx + 1) % inflate.length;
+      }
+    }
+
+    const zones = { F: [], M: [], A: [] };
+    const zoneNeeds = { F: defN, M: midN, A: attN };
+    const assigned = new Set();
+    const overflows = [];
+
+    // Phase 1: Single-zone preference (most constrained)
+    for (const id of outfield) {
+      if (assigned.has(id)) continue;
+      const prefs = kdPositions[id] || new Set(['F', 'M', 'A']);
+      if (prefs.size !== 1) continue;
+      const zone = [...prefs][0];
+      if (zones[zone].length < zoneNeeds[zone]) {
+        zones[zone].push(id); assigned.add(id);
+      }
+    }
+
+    // Phase 2: Dual-zone preference
+    for (const id of outfield) {
+      if (assigned.has(id)) continue;
+      const prefs = kdPositions[id] || new Set(['F', 'M', 'A']);
+      if (prefs.size !== 2) continue;
+      const avail = [...prefs].filter(z => zones[z].length < zoneNeeds[z])
+        .sort((a, b) => (zoneNeeds[b] - zones[b].length) - (zoneNeeds[a] - zones[a].length));
+      if (avail.length) { zones[avail[0]].push(id); assigned.add(id); }
+    }
+
+    // Phase 3: Flexible (3 zones or unset)
+    for (const id of outfield) {
+      if (assigned.has(id)) continue;
+      const prefs = kdPositions[id] || new Set(['F', 'M', 'A']);
+      const avail = ['F', 'M', 'A'].filter(z => zones[z].length < zoneNeeds[z])
+        .filter(z => prefs.has(z))
+        .sort((a, b) => (zoneNeeds[b] - zones[b].length) - (zoneNeeds[a] - zones[a].length));
+      if (avail.length) { zones[avail[0]].push(id); assigned.add(id); }
+    }
+
+    // Phase 4: Force-place (overflow)
+    for (const id of outfield) {
+      if (assigned.has(id)) continue;
+      const avail = ['F', 'M', 'A'].filter(z => zones[z].length < zoneNeeds[z]);
+      if (avail.length) {
+        zones[avail[0]].push(id); assigned.add(id);
+        overflows.push(id);
+      }
+    }
+
+    return { zones, overflows };
   }
 
   // ------------------------------
@@ -580,12 +858,13 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const keeperTimeline = buildKeeperTimeline(T);
     const seed = Date.now();
 
-    let times = generateSubTimes(T, seed, 6, 10, 5, 10);
+    const fp = FREQ_PARAMS[kdFrequency] || FREQ_PARAMS.normal;
+    let times = generateSubTimes(T, seed, fp.stopsMin, fp.stopsMax, fp.minGap, fp.maxGap);
 
     const keeperTimes = keeperChangeTimes(keeperTimeline).filter(x => x < T);
     times = uniqSorted([...times, ...keeperTimes]).filter(x => x >= 0 && x <= T);
 
-    const MAX_STOPS = clamp(Math.round(T / 5) + 3, 8, 12); // inkl 0 og T
+    const MAX_STOPS = clamp(Math.round(T / Math.max(3, fp.minGap)) + 3, 8, 20);
     let best = null;
 
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -598,18 +877,33 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       if (diff <= 4) break;
 
       if (times.length < MAX_STOPS) {
-        times = splitLongestInterval(times, T, 5);
+        times = splitLongestInterval(times, T, fp.minGap);
         times = uniqSorted([...times, ...keeperTimes]).filter(x => x >= 0 && x <= T);
       } else {
         break;
       }
     }
 
+    // Stop any running timer before generating new plan
+    if (kdTimerInterval || kdTimerStart) {
+      stopMatchTimer();
+    }
+
+    // Store for timer and export
+    lastBest = best;
+    lastPresent = present;
+    lastP = P;
+    lastT = T;
+
     renderKampdagOutput(present, best, P, T);
 
     if (metaEl) {
       metaEl.textContent = `Bytter ved: ${best.times.join(' / ')} (min) — Maks avvik: ${best.diff.toFixed(1)} min`;
     }
+
+    // Show start match button
+    const startBtn = $('kdStartMatch');
+    if (startBtn) startBtn.style.display = '';
   }
 
   function renderKampdagOutput(presentPlayers, best, P, T) {
@@ -623,9 +917,6 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const startIds = first.lineup.slice();
     const benchIds = presentPlayers.map(p => p.id).filter(id => !startIds.includes(id));
 
-    const startList = startIds.map(id => `<div class="group-player"><span class="player-icon">⚽</span><span class="player-name">${escapeHtml(idToName[id] || id)}</span></div>`).join('');
-    const benchList = benchIds.map(id => `<div class="group-player"><span class="player-icon">⚪</span><span class="player-name">${escapeHtml(idToName[id] || id)}</span></div>`).join('');
-
     const minutesArr = Object.keys(best.minutes).map(id => ({ id, name: idToName[id] || id, min: best.minutes[id] }));
     minutesArr.sort((a, b) => b.min - a.min);
 
@@ -636,47 +927,212 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       </div>
     `).join('');
 
-    if (lineupEl) {
-      lineupEl.innerHTML = `
-        <div class="results-container">
-          <h3>Startoppstilling</h3>
-          <div class="group-card">
-            <div class="group-header">
-              <div class="group-name">Start (første periode)</div>
-              <div class="group-stats">${P} på banen · ${benchIds.length} på benk</div>
-            </div>
-            <div class="group-players">${startList || '<div class="small-text">–</div>'}</div>
+    const useFormation = kdFormationOn && kdFormation;
+    const format = parseInt($('kdFormat')?.value, 10) || 7;
 
-            <div class="group-header" style="margin-top:12px;">
-              <div class="group-name">Benk (første periode)</div>
-              <div class="group-stats"></div>
-            </div>
-            <div class="group-players">${benchList || '<div class="small-text">–</div>'}</div>
-          </div>
+    // Build timeline chart HTML (zone-colored bars per player)
+    let timelineChartHtml = '';
+    if (useFormation && format !== 3) {
+      const zoneColors = { F: '#4ade80', M: '#60a5fa', A: '#f87171', K: '#c084fc', X: '#fbbf24' };
+      const sortedPlayers = minutesArr.slice();
+      const segments = best.segments;
+      const rows = sortedPlayers.map(m => {
+        const segs = [];
+        for (let si = 0; si < segments.length; si++) {
+          const seg = segments[si];
+          const nextSeg = segments[si + 1];
+          const segEnd = nextSeg ? nextSeg.start : T;
+          const inLineup = seg.lineup.includes(m.id);
+          if (!inLineup) {
+            segs.push({ start: seg.start, end: segEnd, color: 'transparent' });
+            continue;
+          }
+          if (seg.keeperId === m.id) {
+            segs.push({ start: seg.start, end: segEnd, color: zoneColors.K });
+            continue;
+          }
+          const zr = assignZones(seg.lineup, seg.keeperId, kdFormation);
+          let zone = 'X';
+          if (zr) {
+            if (zr.zones.F.includes(m.id)) zone = 'F';
+            else if (zr.zones.M.includes(m.id)) zone = 'M';
+            else if (zr.zones.A.includes(m.id)) zone = 'A';
+            if (zr.overflows.includes(m.id)) zone = 'X';
+          }
+          segs.push({ start: seg.start, end: segEnd, color: zoneColors[zone] || zoneColors.X });
+        }
+        const barsHtml = segs.map(s => {
+          const pct = ((s.end - s.start) / T * 100).toFixed(1);
+          return `<div class="kd-tl-seg" style="width:${pct}%;background:${s.color};"></div>`;
+        }).join('');
+        return `<div class="kd-tl-row">
+          <div class="kd-tl-name">${escapeHtml(m.name)}</div>
+          <div class="kd-tl-bar-wrap">${barsHtml}</div>
+          <div class="kd-tl-min">${m.min.toFixed(1)}</div>
+        </div>`;
+      }).join('');
 
-          <h3 style="margin-top:16px;">Beregnet spilletid</h3>
-          <div class="group-card">
-            <div class="group-header">
-              <div class="group-name">Mål: ≤ 4 min differanse</div>
-              <div class="group-stats">Keeper kan få litt ekstra</div>
-            </div>
-            <div class="group-players">${minutesHtml}</div>
+      // Axis ticks
+      const ticks = [];
+      const step = T <= 30 ? 5 : (T <= 60 ? 10 : 15);
+      for (let t = 0; t <= T; t += step) ticks.push(t);
+      if (ticks[ticks.length - 1] !== T) ticks.push(T);
+      const axisHtml = `<div class="kd-tl-axis">${ticks.map(t => `<span>${t}</span>`).join('')}</div>`;
+
+      const hasOverflow = best.segments.some(seg => {
+        const zr = assignZones(seg.lineup, seg.keeperId, kdFormation);
+        return zr && zr.overflows.length > 0;
+      });
+
+      timelineChartHtml = `
+        <div class="kd-timeline-chart">
+          <div class="kd-timeline-title">${T} MIN · ${format}-ER · ${kdFormationKey} · ${presentPlayers.length} SPILLERE</div>
+          ${rows}
+          ${axisHtml}
+          <div class="kd-tl-legend">
+            <div class="kd-tl-legend-item"><div class="kd-tl-legend-dot" style="background:#4ade80;"></div> Forsvar</div>
+            <div class="kd-tl-legend-item"><div class="kd-tl-legend-dot" style="background:#60a5fa;"></div> Midtbane</div>
+            <div class="kd-tl-legend-item"><div class="kd-tl-legend-dot" style="background:#f87171;"></div> Angrep</div>
+            ${best.keeperMinutes && Object.values(best.keeperMinutes).some(v => v > 0) ? `<div class="kd-tl-legend-item"><div class="kd-tl-legend-dot" style="background:#c084fc;"></div> Keeper</div>` : ''}
+            ${hasOverflow ? `<div class="kd-tl-legend-item"><div class="kd-tl-legend-dot" style="background:#fbbf24;"></div> Utenfor pref.</div>` : ''}
           </div>
-        </div>
-      `;
+        </div>`;
     }
 
+    if (lineupEl) {
+      let startHtml = '';
+      if (useFormation && format !== 3) {
+        // Pitch view with zones
+        const zoneResult = assignZones(startIds, first.keeperId, kdFormation);
+        if (zoneResult) {
+          const { zones } = zoneResult;
+          const keeperName = first.keeperId ? escapeHtml(idToName[first.keeperId] || first.keeperId) : '';
+          startHtml = `
+            <div class="results-container">
+              <h3>Startoppstilling · ${kdFormationKey}</h3>
+              <div class="kd-pitch">
+                ${kdFormation[2] > 0 ? `<div class="kd-pitch-row">${zones.A.map(id => `<span class="kd-pitch-player kd-pp-a">${escapeHtml(idToName[id] || id)}</span>`).join('')}</div>` : ''}
+                <div class="kd-pitch-row">${zones.M.map(id => `<span class="kd-pitch-player kd-pp-m">${escapeHtml(idToName[id] || id)}</span>`).join('')}</div>
+                <div class="kd-pitch-row">${zones.F.map(id => `<span class="kd-pitch-player kd-pp-f">${escapeHtml(idToName[id] || id)}</span>`).join('')}</div>
+                ${keeperName ? `<div class="kd-pitch-row"><span class="kd-pitch-player kd-pp-k">🧤 ${keeperName}</span></div>` : ''}
+              </div>
+              <div class="kd-bench-strip"><b>Benk:</b> ${benchIds.map(id => escapeHtml(idToName[id] || id)).join(' · ') || '–'}</div>
+
+              <h3 style="margin-top:16px;">Beregnet spilletid</h3>
+              ${timelineChartHtml}
+            </div>`;
+        }
+      }
+
+      if (!startHtml) {
+        // Original flat list
+        const startList = startIds.map(id => `<div class="group-player"><span class="player-icon">⚽</span><span class="player-name">${escapeHtml(idToName[id] || id)}</span></div>`).join('');
+        const benchList = benchIds.map(id => `<div class="group-player"><span class="player-icon">⚪</span><span class="player-name">${escapeHtml(idToName[id] || id)}</span></div>`).join('');
+        startHtml = `
+          <div class="results-container">
+            <h3>Startoppstilling</h3>
+            <div class="group-card">
+              <div class="group-header">
+                <div class="group-name">Start (første periode)</div>
+                <div class="group-stats">${P} på banen · ${benchIds.length} på benk</div>
+              </div>
+              <div class="group-players">${startList || '<div class="small-text">–</div>'}</div>
+              <div class="group-header" style="margin-top:12px;">
+                <div class="group-name">Benk (første periode)</div>
+                <div class="group-stats"></div>
+              </div>
+              <div class="group-players">${benchList || '<div class="small-text">–</div>'}</div>
+            </div>
+            <h3 style="margin-top:16px;">Beregnet spilletid</h3>
+            <div class="group-card">
+              <div class="group-header">
+                <div class="group-name">Mål: ≤ 4 min differanse</div>
+                <div class="group-stats">Keeper kan få litt ekstra</div>
+              </div>
+              <div class="group-players">${minutesHtml}</div>
+            </div>
+          </div>`;
+      }
+      lineupEl.innerHTML = startHtml;
+    }
+
+    // Build events with zone info
     const events = buildEvents(best.segments);
 
-    const planCards = events.map(ev => {
+    const planCards = events.map((ev, idx) => {
       const keeperName = ev.keeperId ? (idToName[ev.keeperId] || ev.keeperId) : null;
+      const seg = best.segments[idx];
+      const nextSeg = best.segments[idx + 1];
+      const periodEnd = nextSeg ? nextSeg.start : T;
 
+      if (useFormation && format !== 3) {
+        // Zone-grouped card (dark theme)
+        const zoneResult = assignZones(seg.lineup, seg.keeperId, kdFormation);
+        if (zoneResult) {
+          const { zones, overflows } = zoneResult;
+          const overflowSet = new Set(overflows);
+          const isFirst = idx === 0;
+          const prevLineup = !isFirst ? new Set(best.segments[idx - 1].lineup) : new Set();
+          const newIds = isFirst ? new Set() : new Set(seg.lineup.filter(id => !prevLineup.has(id)));
+
+          const renderZone = (label, zoneKey, ids) => {
+            if (!ids.length) return '';
+            return `
+              <div class="kd-zone-label kd-zl-${zoneKey.toLowerCase()}"><span class="kd-zone-dot" style="background:${{A:'#f87171',M:'#60a5fa',F:'#4ade80'}[zoneKey]}"></span> ${label}</div>
+              <div class="kd-zone-players">
+                ${ids.map(id => {
+                  const cls = [newIds.has(id) ? 'kd-new' : '', overflowSet.has(id) ? 'kd-overflow' : ''].filter(Boolean).join(' ');
+                  return `<span class="kd-zone-player ${cls}">${escapeHtml(idToName[id] || id)}</span>`;
+                }).join('')}
+              </div>
+              ${ids.some(id => overflowSet.has(id)) ? `<div class="kd-overflow-hint">Plassert her for lik spilletid</div>` : ''}`;
+          };
+
+          // Swaps (only for non-first segments)
+          let swapsHtml = '';
+          if (!isFirst && (ev.ins.length || ev.outs.length)) {
+            const inLines = ev.ins.map(id => {
+              let posHint = '';
+              for (const [z, arr] of Object.entries(zones)) {
+                if (arr.includes(id)) { posHint = { F: 'forsvar', M: 'midtbane', A: 'angrep' }[z]; break; }
+              }
+              const isOF = overflowSet.has(id);
+              return `<div class="kd-swap-row">
+                <span class="kd-swap-in">↑</span>
+                <span class="kd-swap-name">${escapeHtml(idToName[id] || id)}</span>
+                <span class="kd-swap-hint ${isOF ? 'kd-swap-hint-of' : ''}">${posHint}${isOF ? ' ⚠' : ''}</span>
+              </div>`;
+            }).join('');
+            const outLines = ev.outs.map(id =>
+              `<div class="kd-swap-row">
+                <span class="kd-swap-out">↓</span>
+                <span style="color:#94a3b8;">${escapeHtml(idToName[id] || id)}</span>
+              </div>`
+            ).join('');
+            swapsHtml = `<div class="kd-dc-swaps">${inLines}${outLines}</div>`;
+          }
+
+          return `
+            <div class="kd-dark-card">
+              <div class="kd-dc-header">
+                <div class="kd-dc-title">Minutt ${ev.minute} – ${periodEnd}</div>
+                ${keeperName ? `<div class="kd-dc-keeper">🧤 ${escapeHtml(keeperName)}</div>` : ''}
+              </div>
+              <div class="kd-dc-body">
+                ${renderZone('Angrep', 'A', zones.A)}
+                ${renderZone('Midtbane', 'M', zones.M)}
+                ${renderZone('Forsvar', 'F', zones.F)}
+                ${isFirst ? '<div class="kd-dc-note">Start (ingen bytter)</div>' : ''}
+                ${swapsHtml}
+              </div>
+            </div>`;
+        }
+      }
+
+      // Fallback: original flat cards
       const ins = ev.ins.map(id => `<div class="small-text">Inn: <b>${escapeHtml(idToName[id] || id)}</b></div>`).join('');
       const outs = ev.outs.map(id => `<div class="small-text">Ut: <b>${escapeHtml(idToName[id] || id)}</b></div>`).join('');
-
-      const empty = (!ev.ins.length && !ev.outs.length)
-        ? `<div class="small-text" style="opacity:0.8;">Start (ingen bytter)</div>`
-        : '';
+      const empty = (!ev.ins.length && !ev.outs.length) ? `<div class="small-text" style="opacity:0.8;">Start (ingen bytter)</div>` : '';
 
       return `
         <div class="group-card" style="margin-bottom:12px;">
@@ -739,16 +1195,28 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     presentPlayers.forEach(p => idToName[p.id] = p.name);
 
     const lines = [];
-    lines.push('Startoppstilling');
+    const useFormation = kdFormationOn && kdFormation;
+    const format = parseInt($('kdFormat')?.value, 10) || 7;
+
+    lines.push('Startoppstilling' + (useFormation ? ` · ${kdFormationKey}` : ''));
 
     const first = best.segments[0];
     const startIds = first.lineup.slice();
     const benchIds = presentPlayers.map(p => p.id).filter(id => !startIds.includes(id));
 
-    lines.push(' Start (første periode)');
-    startIds.forEach(id => lines.push(`  - ${idToName[id] || id}`));
-    lines.push(' Benk (første periode)');
-    benchIds.forEach(id => lines.push(`  - ${idToName[id] || id}`));
+    if (useFormation && format !== 3) {
+      const zr = assignZones(startIds, first.keeperId, kdFormation);
+      if (zr) {
+        if (first.keeperId) lines.push(` Keeper: ${idToName[first.keeperId] || first.keeperId}`);
+        if (zr.zones.F.length) lines.push(` Forsvar: ${zr.zones.F.map(id => idToName[id] || id).join(', ')}`);
+        if (zr.zones.M.length) lines.push(` Midtbane: ${zr.zones.M.map(id => idToName[id] || id).join(', ')}`);
+        if (zr.zones.A.length) lines.push(` Angrep: ${zr.zones.A.map(id => idToName[id] || id).join(', ')}`);
+      }
+    } else {
+      lines.push(' Start (første periode)');
+      startIds.forEach(id => lines.push(`  - ${idToName[id] || id}`));
+    }
+    lines.push(` Benk: ${benchIds.map(id => idToName[id] || id).join(', ') || '–'}`);
 
     lines.push('');
     lines.push('Beregnet spilletid');
@@ -759,12 +1227,31 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     lines.push('');
     lines.push('Bytteplan');
     const events = buildEvents(best.segments);
-    events.forEach(ev => {
-      lines.push(` Minutt ${ev.minute}`);
+    events.forEach((ev, idx) => {
+      const seg = best.segments[idx];
+      const nextSeg = best.segments[idx + 1];
+      const periodEnd = nextSeg ? nextSeg.start : T;
+
+      lines.push(` Minutt ${ev.minute} – ${periodEnd}`);
       if (ev.keeperId) lines.push(`  Keeper: ${idToName[ev.keeperId] || ev.keeperId}`);
-      if (!ev.ins.length && !ev.outs.length) lines.push('  Start (ingen bytter)');
-      ev.ins.forEach(id => lines.push(`  Inn: ${idToName[id] || id}`));
-      ev.outs.forEach(id => lines.push(`  Ut: ${idToName[id] || id}`));
+
+      if (useFormation && format !== 3) {
+        const zr = assignZones(seg.lineup, seg.keeperId, kdFormation);
+        if (zr) {
+          const parts = [];
+          if (zr.zones.F.length) parts.push(`F: ${zr.zones.F.map(id => idToName[id] || id).join(', ')}`);
+          if (zr.zones.M.length) parts.push(`M: ${zr.zones.M.map(id => idToName[id] || id).join(', ')}`);
+          if (zr.zones.A.length) parts.push(`A: ${zr.zones.A.map(id => idToName[id] || id).join(', ')}`);
+          if (parts.length) lines.push(`  Soner: ${parts.join(' | ')}`);
+        }
+      }
+
+      if (idx === 0) {
+        lines.push('  Start (ingen bytter)');
+      } else {
+        ev.ins.forEach(id => lines.push(`  Inn: ${idToName[id] || id}`));
+        ev.outs.forEach(id => lines.push(`  Ut: ${idToName[id] || id}`));
+      }
     });
 
     return lines.join('\n');
@@ -821,15 +1308,35 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       const trimmed = line.trim();
       if (!trimmed) continue;
 
-      if (trimmed === 'Startoppstilling' || trimmed === 'Beregnet spilletid' || trimmed === 'Bytteplan') {
+      if (trimmed.startsWith('Startoppstilling') || trimmed === 'Beregnet spilletid' || trimmed === 'Bytteplan') {
         if (currentSection) sectionHtml += '</div>';
         currentSection = trimmed;
         sectionHtml += `<div class="kd-section"><div class="kd-section-title">${escapeHtml(trimmed)}</div>`;
         continue;
       }
 
-      if (trimmed.startsWith('Start (') || trimmed.startsWith('Benk (')) {
-        sectionHtml += `<div class="kd-sub-title">${escapeHtml(trimmed)}</div>`;
+      if (trimmed.startsWith('Start (') || trimmed.startsWith('Benk:') || trimmed.startsWith('Benk (')) {
+        if (trimmed === 'Start (ingen bytter)') {
+          sectionHtml += `<div class="kd-note">${escapeHtml(trimmed)}</div>`;
+        } else {
+          sectionHtml += `<div class="kd-sub-title">${escapeHtml(trimmed)}</div>`;
+        }
+      } else if (trimmed.startsWith('Forsvar:') || trimmed.startsWith('Midtbane:') || trimmed.startsWith('Angrep:')) {
+        const isF = trimmed.startsWith('Forsvar:');
+        const isA = trimmed.startsWith('Angrep:');
+        const color = isF ? '#16a34a' : (isA ? '#dc2626' : '#2563eb');
+        sectionHtml += `<div class="kd-line" style="color:${color}; font-weight:700;">${escapeHtml(trimmed)}</div>`;
+      } else if (trimmed.startsWith('Soner: ')) {
+        // Compact zone line: "Soner: F: Per, Kari | M: Nils | A: Mia"
+        const parts = trimmed.slice(7).split(' | ');
+        const colorMap = { F: '#16a34a', M: '#2563eb', A: '#dc2626' };
+        const html = parts.map(p => {
+          const z = p.charAt(0);
+          const names = escapeHtml(p.slice(3));
+          const c = colorMap[z] || '#374151';
+          return `<span style="color:${c};font-weight:700;">${z}:</span> ${names}`;
+        }).join(' &nbsp;|&nbsp; ');
+        sectionHtml += `<div class="kd-line" style="font-size:12px;">${html}</div>`;
       } else if (trimmed.startsWith('Minutt ')) {
         sectionHtml += `<div class="kd-event-header">${escapeHtml(trimmed)}</div>`;
       } else if (trimmed.startsWith('- ')) {
@@ -841,8 +1348,6 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
         sectionHtml += `<div class="${cls}">${escapeHtml(trimmed)}</div>`;
       } else if (trimmed.includes(': ') && trimmed.includes(' min')) {
         sectionHtml += `<div class="kd-time-row">${escapeHtml(trimmed)}</div>`;
-      } else if (trimmed === 'Start (ingen bytter)') {
-        sectionHtml += `<div class="kd-note">${escapeHtml(trimmed)}</div>`;
       } else {
         sectionHtml += `<div class="kd-line">${escapeHtml(trimmed)}</div>`;
       }
@@ -919,7 +1424,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     <div class="header">
       <div class="logo"><img src="${escapeHtml(logoUrl)}" alt="Barnefotballtrener"></div>
       <div>
-        <div class="h-title">Kampdag – ${format}-er fotball</div>
+        <div class="h-title">Kampdag – ${format}-er fotball${kdFormationOn && kdFormationKey ? ` · ${kdFormationKey}` : ''}</div>
         <div class="h-sub">${escapeHtml(today)} · ${T} min · ${present.length} spillere</div>
       </div>
       <div class="meta">
@@ -990,5 +1495,122 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     w.document.open();
     w.document.write(html);
     w.document.close();
+  }
+
+  // ------------------------------
+  // Match timer
+  // ------------------------------
+  // Timer pre-computed data
+  let kdTimerEvents = null;
+  let kdTimerIdToName = {};
+  let kdTimerVibrated = new Set(); // track which sub times already vibrated
+
+  function startMatchTimer() {
+    if (!lastBest || !lastBest.segments.length) return;
+    kdTimerStart = Date.now();
+    kdTimerPaused = false;
+    kdTimerPausedElapsed = 0;
+    kdTimerVibrated = new Set();
+
+    // Pre-compute events and names
+    kdTimerEvents = buildEvents(lastBest.segments);
+    kdTimerIdToName = {};
+    lastPresent.forEach(p => kdTimerIdToName[p.id] = p.name);
+
+    const wrap = $('kdTimerWrap');
+    if (wrap) wrap.style.display = '';
+
+    const pauseBtn = $('kdTimerPause');
+    if (pauseBtn) pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+
+    if (kdTimerInterval) clearInterval(kdTimerInterval);
+    kdTimerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+  }
+
+  function toggleTimerPause() {
+    if (!kdTimerStart) return;
+    const pauseBtn = $('kdTimerPause');
+    if (kdTimerPaused) {
+      // Resume: adjust start time
+      kdTimerStart = Date.now() - kdTimerPausedElapsed;
+      kdTimerPaused = false;
+      if (pauseBtn) pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+      if (!kdTimerInterval) kdTimerInterval = setInterval(updateTimer, 1000);
+    } else {
+      // Pause
+      kdTimerPausedElapsed = Date.now() - kdTimerStart;
+      kdTimerPaused = true;
+      if (pauseBtn) pauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+      if (kdTimerInterval) { clearInterval(kdTimerInterval); kdTimerInterval = null; }
+    }
+  }
+
+  function stopMatchTimer() {
+    if (kdTimerInterval) { clearInterval(kdTimerInterval); kdTimerInterval = null; }
+    kdTimerStart = null;
+    kdTimerPaused = false;
+    kdTimerPausedElapsed = 0;
+    const wrap = $('kdTimerWrap');
+    if (wrap) wrap.style.display = 'none';
+  }
+
+  function updateTimer() {
+    if (!kdTimerStart || !lastBest) return;
+
+    const elapsed = kdTimerPaused ? kdTimerPausedElapsed : (Date.now() - kdTimerStart);
+    const elapsedMin = elapsed / 60000;
+    const totalSec = Math.floor(elapsed / 1000);
+    const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+    const ss = String(totalSec % 60).padStart(2, '0');
+
+    const clockEl = $('kdTimerClock');
+    if (clockEl) clockEl.textContent = `${mm}:${ss}`;
+
+    // Find next sub time
+    const subTimes = lastBest.times.filter(t => t > 0 && t < lastT);
+    const nextSub = subTimes.find(t => t > elapsedMin);
+    const nextEl = $('kdTimerNext');
+    const subsEl = $('kdTimerSubs');
+
+    if (elapsedMin >= lastT) {
+      // Match over
+      if (nextEl) nextEl.textContent = 'Kampen er ferdig!';
+      if (subsEl) { subsEl.style.display = 'none'; }
+      if (kdTimerInterval) { clearInterval(kdTimerInterval); kdTimerInterval = null; }
+      return;
+    }
+
+    if (nextSub !== undefined) {
+      const remaining = nextSub - elapsedMin;
+      const remMin = Math.floor(remaining);
+      const remSec = Math.round((remaining - remMin) * 60);
+      if (nextEl) nextEl.textContent = `Neste bytte om ${remMin}:${String(remSec).padStart(2, '0')} (minutt ${nextSub})`;
+
+      // Show upcoming subs (use pre-computed events)
+      const nextEvent = kdTimerEvents ? kdTimerEvents.find(ev => ev.minute === nextSub) : null;
+      if (nextEvent && subsEl) {
+        const inNames = nextEvent.ins.map(id => kdTimerIdToName[id] || id);
+        const outNames = nextEvent.outs.map(id => kdTimerIdToName[id] || id);
+        if (inNames.length || outNames.length) {
+          subsEl.style.display = '';
+          subsEl.innerHTML =
+            (inNames.length ? `<span style="color:#16a34a;font-weight:700;">↑ ${inNames.map(n => escapeHtml(n)).join(', ')}</span>` : '') +
+            (inNames.length && outNames.length ? ' &nbsp; ' : '') +
+            (outNames.length ? `<span style="color:#dc2626;font-weight:700;">↓ ${outNames.map(n => escapeHtml(n)).join(', ')}</span>` : '');
+        } else {
+          subsEl.style.display = 'none';
+        }
+      }
+
+      // Vibrate once when sub time is reached
+      if (remaining <= 0.017 && !kdTimerVibrated.has(nextSub)) { // ~1 sec
+        kdTimerVibrated.add(nextSub);
+        try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+      }
+    } else {
+      if (nextEl) nextEl.textContent = 'Ingen flere bytter planlagt';
+      if (subsEl) subsEl.style.display = 'none';
+    }
   }
 })();
