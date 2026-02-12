@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/stats/api/:match*",
+      "destination": "https://api-gateway.umami.dev/api/:match*"
+    },
+    {
       "source": "/stats/:match*",
       "destination": "https://cloud.umami.is/:match*"
     }
