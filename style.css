@@ -3091,3 +3091,19 @@ html, body {
     margin: 0 12px;
   }
 }
+
+/* Desktop: Kampdag player selection in 2 columns */
+@media (min-width: 769px) {
+  #kdPlayerSelection {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+  }
+}
+
+/* Desktop: Kampdag preferences row compact */
+@media (min-width: 769px) {
+  #kdFreqOptions {
+    max-width: 360px;
+  }
+}

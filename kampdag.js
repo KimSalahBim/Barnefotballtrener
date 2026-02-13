@@ -199,6 +199,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     });
     if (minutesEl) minutesEl.addEventListener('input', () => {
       refreshKeeperUI();
+      autoFillKeeperMinutes();
       updateKampdagCounts();
       updateKeeperSummary();
     });
@@ -230,6 +231,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
 
     if (keeperCountEl) keeperCountEl.addEventListener('change', () => {
       refreshKeeperUI();
+      autoFillKeeperMinutes();
       updateKeeperSummary();
     });
 
@@ -337,6 +339,26 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
   // ------------------------------
   // Keeper UI
   // ------------------------------
+  /**
+   * Auto-distribute keeper minutes evenly when count changes.
+   * 70 min / 3 keepers → 24, 23, 23 (largest remainder gets extra).
+   */
+  function autoFillKeeperMinutes() {
+    const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 0, 0, 4);
+    if (kc === 0) return;
+    const T = clamp(parseInt($('kdMinutes')?.value, 10) || 48, 10, 200);
+    const base = Math.floor(T / kc);
+    let remainder = T - base * kc;
+
+    for (let i = 1; i <= kc; i++) {
+      const el = $(`kdKeeperMin${i}`);
+      if (!el) continue;
+      const extra = remainder > 0 ? 1 : 0;
+      el.value = base + extra;
+      if (extra) remainder--;
+    }
+  }
+
   function refreshKeeperUI() {
     const format = parseInt($('kdFormat')?.value, 10) || 7;
 
@@ -562,14 +584,24 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
   function assignZones(lineup, keeperId, formation, positions) {
     if (!formation) return null;
     const posMap = positions || getPositionsMap();
-    const outfield = lineup.filter(id => id !== keeperId);
-    let [defN, midN, attN] = formation;
-    const formationSum = defN + midN + attN;
 
-    // If no keeper set, outfield has 1 extra player vs formation design.
-    // Inflate zone needs to accommodate: distribute extras to largest zones first.
+    // Auto-pick keeper if none assigned but formation expects one (format > 3)
+    // Formation [D, M, A] sums to outfield count; keeper is the extra slot.
+    let effectiveKeeperId = keeperId;
+    const formationSum = formation[0] + formation[1] + formation[2];
+    if (!effectiveKeeperId && lineup.length > formationSum) {
+      // Pick a goalie-flagged player if possible, else last in lineup
+      const players = (typeof getPlayersArray === 'function') ? getPlayersArray() : [];
+      const goalies = lineup.filter(id => players.some(p => p.id === id && p.goalie));
+      effectiveKeeperId = goalies.length ? goalies[0] : lineup[lineup.length - 1];
+    }
+
+    const outfield = lineup.filter(id => id !== effectiveKeeperId);
+    let [defN, midN, attN] = formation;
+
+    // If fewer outfield than formation needs, can't assign
     let diff = outfield.length - formationSum;
-    if (diff < 0) return null; // fewer players than formation needs
+    if (diff < 0) return null;
     if (diff > 0) {
       // Distribute extra slots to zones, largest first
       const inflate = [
@@ -633,7 +665,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       }
     }
 
-    return { zones, overflows };
+    return { zones, overflows, keeperId: effectiveKeeperId || null };
   }
 
   // ------------------------------
@@ -1027,11 +1059,11 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
             segs.push({ start: seg.start, end: segEnd, color: 'transparent' });
             continue;
           }
-          if (seg.keeperId === m.id) {
+          const zr = assignZones(seg.lineup, seg.keeperId, kdFormation);
+          if (zr && zr.keeperId === m.id) {
             segs.push({ start: seg.start, end: segEnd, color: zoneColors.K });
             continue;
           }
-          const zr = assignZones(seg.lineup, seg.keeperId, kdFormation);
           let zone = 'X';
           if (zr) {
             if (zr.zones.F.includes(m.id)) zone = 'F';
@@ -1086,7 +1118,8 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
         const zoneResult = assignZones(startIds, first.keeperId, kdFormation);
         if (zoneResult) {
           const { zones } = zoneResult;
-          const keeperName = first.keeperId ? escapeHtml(idToName[first.keeperId] || first.keeperId) : '';
+          const effectiveKid = zoneResult.keeperId || first.keeperId;
+          const keeperName = effectiveKid ? escapeHtml(idToName[effectiveKid] || effectiveKid) : '';
           startHtml = `
             <div class="kd-dark-output">
               <h3 class="kd-dark-heading">Startoppstilling · ${kdFormationKey}</h3>
