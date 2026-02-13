@@ -693,6 +693,18 @@
         </div>
 
         <!-- Spillerliste -->
+        <div id="posHelpCard" class="settings-card" style="margin-bottom:8px; padding:10px 14px; background:linear-gradient(135deg,#f0f7ff,#f8fafc); border:1px solid #e0ecf8;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+            <div style="font-size:13px; line-height:1.5; color:#374151;">
+              <span style="font-weight:800;">💡 Posisjonspreferanser</span> — Trykk
+              <span style="display:inline-block;width:20px;height:17px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a;font-size:10px;font-weight:800;text-align:center;line-height:17px;border:1.5px solid rgba(34,197,94,0.3);">F</span>
+              <span style="display:inline-block;width:22px;height:17px;border-radius:4px;background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;font-weight:800;text-align:center;line-height:17px;border:1.5px solid rgba(59,130,246,0.3);">M</span>
+              <span style="display:inline-block;width:20px;height:17px;border-radius:4px;background:rgba(239,68,68,0.12);color:#dc2626;font-size:10px;font-weight:800;text-align:center;line-height:17px;border:1.5px solid rgba(239,68,68,0.3);">A</span>
+              for å angi om spilleren foretrekker forsvar, midtbane eller angrep. Brukes av <b>Kampdag</b> til å plassere spillerne i riktig sone på banen.
+            </div>
+            <button type="button" onclick="this.closest('#posHelpCard').style.display='none'" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:18px;line-height:1;padding:0 2px;" aria-label="Lukk">×</button>
+          </div>
+        </div>
         <div id="playerList" class="player-list"></div>
       </div>
 
@@ -775,6 +787,16 @@
             </div>
           </div>
 
+          <!-- Byttefrekvens -->
+          <div class="settings-row" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px;">
+            <div style="font-weight:700; font-size:13px; min-width:100px;">Byttefrekvens</div>
+            <div id="kdFreqOptions" style="display:flex; gap:6px; flex:1;">
+              <button type="button" class="btn-secondary kd-freq-btn" data-freq="rare" style="flex:1; font-size:12px; padding:7px 4px;">8-12 min<br><span class="small-text" style="opacity:0.7;">Sjelden</span></button>
+              <button type="button" class="btn-secondary kd-freq-btn kd-freq-active" data-freq="normal" style="flex:1; font-size:12px; padding:7px 4px;">5-8 min<br><span class="small-text" style="opacity:0.7;">Normal</span></button>
+              <button type="button" class="btn-secondary kd-freq-btn" data-freq="frequent" style="flex:1; font-size:12px; padding:7px 4px;">3-5 min<br><span class="small-text" style="opacity:0.7;">Hyppig</span></button>
+            </div>
+          </div>
+
           <div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
             <button id="kdSelectAll" class="btn-secondary" type="button">Velg alle</button>
             <button id="kdDeselectAll" class="btn-secondary" type="button">Fjern alle</button>
@@ -787,23 +809,46 @@
         </div>
         <div id="kdPlayerSelection" class="player-selection"></div>
 
-        <!-- Keeper -->
-        <div class="settings-card" style="margin-top:14px;">
-          <div class="settings-row" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <!-- Formasjon -->
+        <div class="settings-card" style="margin-top:8px; padding:8px 12px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
             <div>
-              <div style="font-weight:800;">Keeper</div>
-              <div id="kdKeeperHint" class="small-text" style="opacity:0.8;">
-                Velg antall keepere, deretter hvem + minutter.
-              </div>
+              <div style="font-weight:700; font-size:14px;">Formasjoner og roller</div>
+              <div class="small-text" style="opacity:0.8; font-size:11px; line-height:1.2;">Vis posisjoner (F/M/A) i bytteplan, banevisning og PDF.</div>
             </div>
-
-            <label class="checkbox-label" style="margin:0;">
-              <input id="kdManualKeeper" type="checkbox">
-              <span>Manuell keeper</span>
+            <label class="switch">
+              <input id="kdFormationToggle" type="checkbox">
+              <span class="slider"></span>
             </label>
           </div>
 
-          <div id="kdKeeperPanel" style="display:none; margin-top:12px;">
+          <div id="kdFormationPanel" style="display:none; margin-top:10px;">
+            <div id="kdFormationGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>
+
+            <div style="margin-top:12px;">
+              <div style="font-weight:700; font-size:13px; margin-bottom:6px;">Posisjonspreferanse</div>
+              <div class="small-text" style="opacity:0.8; margin-bottom:8px;">Sett posisjoner i Spillere-fanen (F/M/A-knappene). Oppdateres automatisk her.</div>
+              <div id="kdPositionList"></div>
+            </div>
+
+            <div id="kdCoverage" style="margin-top:10px; padding:10px 12px; border-radius:10px; font-size:12px; display:none;"></div>
+          </div>
+        </div>
+
+        <!-- Keeper -->
+        <div class="settings-card" style="margin-top:8px; padding:8px 12px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div>
+              <div style="font-weight:700; font-size:14px;">Manuell keeper</div>
+              <div id="kdKeeperHint" class="small-text" style="opacity:0.8; font-size:11px; line-height:1.2;">Velg hvem som står i mål og hvor lenge.</div>
+            </div>
+            <label class="switch">
+              <input id="kdManualKeeper" type="checkbox">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div id="kdKeeperPanel" style="display:none; margin-top:10px;">
             <div class="settings-row" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
               <div style="min-width:240px;">
                 <label for="kdKeeperCount" style="display:block; font-weight:700; margin-bottom:6px;">Antall keepere</label>
@@ -860,10 +905,34 @@
               <i class="fas fa-copy"></i> Kopier plan
             </button>
             <button id="kdExportPdf" class="btn-secondary" type="button">
-              <i class="fas fa-file-pdf"></i> Eksporter PDF
+              <i class="fas fa-file-pdf"></i> Lagre som PDF
+            </button>
+            <button id="kdStartMatch" class="btn-secondary" type="button" style="display:none;">
+              <i class="fas fa-play"></i> Start kamp
             </button>
           </div>
           <div id="kdMeta" class="small-text" style="margin-top:10px; opacity:0.85;"></div>
+        </div>
+
+        <!-- Live timer (hidden until started) -->
+        <div id="kdTimerWrap" style="display:none; position:sticky; top:0; z-index:50;">
+          <div class="settings-card" style="margin-top:0; border-top-left-radius:0; border-top-right-radius:0; background:var(--card); border-bottom:2px solid var(--brand,#3b82f6);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div id="kdTimerClock" style="font-size:28px; font-weight:900; font-variant-numeric:tabular-nums;">00:00</div>
+                <div id="kdTimerNext" class="small-text" style="opacity:0.85;">Neste bytte om --:--</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button id="kdTimerPause" class="btn-secondary" type="button" style="padding:8px 12px;">
+                  <i class="fas fa-pause"></i>
+                </button>
+                <button id="kdTimerStop" class="btn-secondary" type="button" style="padding:8px 12px;">
+                  <i class="fas fa-stop"></i>
+                </button>
+              </div>
+            </div>
+            <div id="kdTimerSubs" class="small-text" style="margin-top:8px; display:none;"></div>
+          </div>
         </div>
 
         <div id="kdLineup" class="results-container"></div>
@@ -955,12 +1024,7 @@
 
             <div class="wo-meta-field wo-meta-field-wide">
               <label for="woTitle" class="wo-label">Navn på økta (valgfritt)</label>
-              <input id="woTitle" type="text" class="input" placeholder="f.eks. Tirsdag – pasning og spill">
-            </div>
-
-            <div class="wo-meta-total">
-              <div class="small-text" style="opacity:0.85; font-weight:800;">Total tid</div>
-              <div id="woTotal" style="font-size:1.4rem; font-weight:900;">0 min</div>
+              <input id="woTitle" type="text" class="input" placeholder="f.eks. Tirsdag – pe="font-size:1.4rem; font-weight:900;">0 min</div>
             </div>
           </div>
 
@@ -985,7 +1049,6 @@
             </div>
             <div id="woPlayerSelection" class="player-selection"></div>
           </div>
-        </div>
 
         <div class="settings-card">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">

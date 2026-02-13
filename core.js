@@ -77,6 +77,9 @@
     return null;
   }
 
+  // Session flag: skip positions in Supabase calls if column doesn't exist yet
+  let _positionsColumnMissing = false;
+
   async function supabaseLoadPlayers(teamIdOverride, userIdOverride) {
     const sb = getSupabaseClient();
     const uid = userIdOverride || getUserId();
@@ -86,11 +89,23 @@
     try {
       const { data, error } = await sb
         .from('players')
-        .select('id, name, skill, goalie, active, team_id')
+        .select('id, name, skill, goalie, active, team_id, positions')
         .eq('user_id', uid)
         .eq('team_id', tid);
 
       if (error) {
+        // If positions column doesn't exist yet, retry without it
+        if (error.message && (error.message.includes('positions') || error.code === '42703' || error.message.includes('column'))) {
+          console.warn('[core.js] positions column not found, retrying SELECT without it');
+          _positionsColumnMissing = true;
+          const { data: d2, error: e2 } = await sb
+            .from('players')
+            .select('id, name, skill, goalie, active, team_id')
+            .eq('user_id', uid)
+            .eq('team_id', tid);
+          if (e2) { console.warn('[core.js] Retry load also failed:', e2.message); return null; }
+          return d2 || [];
+        }
         console.warn('[core.js] Supabase load feilet:', error.message);
         return null;
       }
@@ -117,7 +132,7 @@
       }
 
       // Upsert alle nåværende spillere (atomisk per rad)
-      const rows = players.map(p => ({
+      const baseRow = (p) => ({
         id: p.id,
         user_id: uid,
         team_id: tid,
@@ -126,7 +141,11 @@
         goalie: p.goalie,
         active: p.active,
         updated_at: new Date().toISOString()
-      }));
+      });
+      const rows = players.map(p => _positionsColumnMissing
+        ? baseRow(p)
+        : { ...baseRow(p), positions: p.positions || ['F','M','A'] }
+      );
 
       const { error: upsertErr } = await sb
         .from('players')
@@ -134,6 +153,20 @@
 
       if (upsertErr) {
         console.warn('[core.js] Supabase upsert feilet:', upsertErr.message);
+        // If error is likely due to missing positions column, retry without it
+        if (!_positionsColumnMissing && upsertErr.message && (upsertErr.message.includes('positions') || upsertErr.code === '42703' || upsertErr.message.includes('column'))) {
+          _positionsColumnMissing = true;
+          console.warn('[core.js] Retrying upsert without positions field (cached for session)...');
+          const rowsNoPos = rows.map(({ positions, ...rest }) => rest);
+          const { error: retryErr } = await sb
+            .from('players')
+            .upsert(rowsNoPos, { onConflict: 'user_id,id' });
+          if (retryErr) {
+            console.warn('[core.js] Retry also failed:', retryErr.message);
+          } else {
+            console.log('[core.js] Retry without positions succeeded');
+          }
+        }
       }
     } catch (e) {
       console.warn('[core.js] Supabase save exception:', e.message);
@@ -167,18 +200,26 @@
 
       // Sett inn nye (hvis noen)
       if (players.length > 0) {
-        const rows = players.map(p => ({
-          id: p.id,
-          user_id: uid,
-          team_id: tid,
-          name: p.name,
-          skill: p.skill,
-          goalie: p.goalie,
-          active: p.active,
+        const baseRow = (p) => ({
+          id: p.id, user_id: uid, team_id: tid,
+          name: p.name, skill: p.skill, goalie: p.goalie, active: p.active,
           updated_at: new Date().toISOString()
-        }));
+        });
+        const rows = players.map(p => _positionsColumnMissing
+          ? baseRow(p)
+          : { ...baseRow(p), positions: p.positions || ['F','M','A'] }
+        );
         const { error } = await sb.from('players').insert(rows);
-        if (error) console.warn('[core.js] Supabase replace-insert feilet:', error.message);
+        if (error) {
+          console.warn('[core.js] Supabase replace-insert feilet:', error.message);
+          if (!_positionsColumnMissing && error.message && (error.message.includes('positions') || error.code === '42703' || error.message.includes('column'))) {
+            _positionsColumnMissing = true;
+            console.warn('[core.js] Retrying insert without positions field...');
+            const rowsNoPos = rows.map(({ positions, ...rest }) => rest);
+            const { error: retryErr } = await sb.from('players').insert(rowsNoPos);
+            if (retryErr) console.warn('[core.js] Retry also failed:', retryErr.message);
+          }
+        }
       }
     } catch (e) {
       console.warn('[core.js] Supabase replaceAll exception:', e.message);
@@ -192,7 +233,7 @@
     // Snapshot nåværende kontekst for å unngå at team-bytte sender til feil lag
     var uidSnap = getUserId();
     var tidSnap = state.currentTeamId;
-    var playersSnap = (state.players || []).map(function(p) { return { id: p.id, name: p.name, skill: p.skill, goalie: p.goalie, active: p.active }; });
+    var playersSnap = (state.players || []).map(function(p) { return { id: p.id, name: p.name, skill: p.skill, goalie: p.goalie, active: p.active, positions: (p.positions || ['F','M','A']).slice() }; });
     _supabaseSaveTimer = setTimeout(function() {
       supabaseSavePlayers(playersSnap, tidSnap, uidSnap).catch(function(e) {
         console.warn('[core.js] Supabase debounced sync feilet:', e.message);
@@ -967,12 +1008,14 @@
       if (!Number.isFinite(skill)) skill = 3;
       skill = Math.max(1, Math.min(6, Math.round(skill)));
 
+      const validPos = Array.isArray(p.positions) ? p.positions.filter(z => ['F','M','A'].includes(z)) : [];
       out.push({
         id,
         name,
         skill,
         goalie: Boolean(p.goalie),
-        active: p.active === false ? false : true
+        active: p.active === false ? false : true,
+        positions: validPos.length > 0 ? validPos : ['F','M','A']
       });
     }
     return out;
@@ -1067,7 +1110,7 @@
         safeSet(playersKeySnap, JSON.stringify(state.players));
         console.log('[core.js] Supabase: bruker', state.players.length, 'spillere som source of truth');
 
-        state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
+        state.selection.grouping = new Set(state.players.map(p => p.id));
         renderAll();
         publishPlayers();
         renderTeamSwitcher();
@@ -1171,12 +1214,17 @@
 
     const sorted = [...state.players].sort((a, b) => a.name.localeCompare(b.name, 'nb'));
     container.innerHTML = sorted.map(p => {
+      const pos = p.positions || ['F','M','A'];
       return `
-        <div class="player-card" data-id="${p.id}">
-          <input type="checkbox" class="player-active-toggle" ${p.active ? 'checked' : ''}>
+        <div class="player-card" data-id="${escapeHtml(p.id)}">
           <div class="player-info">
             <div class="player-name">${escapeHtml(p.name)}</div>
             <div class="player-tags">${state.settings.useSkill ? `<span class="tag">Nivå ${p.skill}</span>` : ''}${p.goalie ? `<span class="tag">🧤</span>` : `<span class="tag">⚽</span>`}</div>
+          </div>
+          <div class="player-positions" title="Posisjoner (kampdag)">
+            <button type="button" class="pos-btn${pos.includes('F') ? ' pos-f-on' : ''}" data-zone="F">F</button>
+            <button type="button" class="pos-btn${pos.includes('M') ? ' pos-m-on' : ''}" data-zone="M">M</button>
+            <button type="button" class="pos-btn${pos.includes('A') ? ' pos-a-on' : ''}" data-zone="A">A</button>
           </div>
           <button class="icon-btn edit" type="button" title="Rediger">✏️</button>
           <button class="icon-btn delete" type="button" title="Slett">🗑️</button>
@@ -1190,16 +1238,32 @@
       const p = state.players.find(x => x.id === id);
       if (!p) return;
 
-      const activeToggle = card.querySelector('.player-active-toggle');
-      if (activeToggle) {
-        activeToggle.addEventListener('change', () => {
-          p.active = !!activeToggle.checked;
+      // Ensure player is always active (active toggle removed from UI)
+      if (!p.active) { p.active = true; saveState(); }
+
+      // Position preference buttons (F/M/A)
+      card.querySelectorAll('.pos-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const zone = btn.getAttribute('data-zone');
+          let pos = p.positions || ['F','M','A'];
+          if (pos.includes(zone)) {
+            pos = pos.filter(z => z !== zone);
+          } else {
+            pos = [...new Set([...pos, zone])];
+          }
+          // Can't have zero positions - reset to all
+          if (pos.length === 0) pos = ['F','M','A'];
+          p.positions = pos;
+          // Update ALL button visuals in this card (not just clicked one)
+          card.querySelectorAll('.pos-btn').forEach(b => {
+            const z = b.getAttribute('data-zone');
+            const cls = { F: 'pos-f-on', M: 'pos-m-on', A: 'pos-a-on' }[z];
+            b.classList.toggle(cls, pos.includes(z));
+          });
           saveState();
-          updateStats();
-          renderSelections();
           publishPlayers();
         });
-      }
+      });
 
       const editBtn = card.querySelector('button.edit');
       if (editBtn) {
@@ -1273,12 +1337,12 @@
     const groupingEl = $('groupingSelection');
 
     // only active players selectable
-    const selectable = state.players.filter(p => p.active).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+    const selectable = state.players.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
     if (groupingEl) {
       groupingEl.innerHTML = selectable.map(p => `
         <label class="player-checkbox">
-          <input type="checkbox" data-id="${p.id}" ${state.selection.grouping.has(p.id) ? 'checked' : ''}>
+          <input type="checkbox" data-id="${escapeHtml(p.id)}" ${state.selection.grouping.has(p.id) ? 'checked' : ''}>
           <span class="checkmark"></span>
           <div class="player-details">
             <div class="player-name">${escapeHtml(p.name)}</div>
@@ -1717,7 +1781,8 @@
           name,
           skill: Number.isFinite(skill) ? Math.max(1, Math.min(6, Math.round(skill))) : 3,
           goalie,
-          active: true
+          active: true,
+          positions: ['F','M','A']
         });
 
         // auto-select new player in grouping
@@ -1789,7 +1854,7 @@
           state.players = incomingPlayers;
 
           // reset selections to all active players
-          state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
+          state.selection.grouping = new Set(state.players.map(p => p.id));
 
           if (parsed.settings && typeof parsed.settings.useSkill === 'boolean') {
             state.settings.useSkill = parsed.settings.useSkill;
@@ -2323,7 +2388,7 @@
       console.log('[core.js] State lastet, spillere:', state.players.length);
 
       // default select all active players
-      state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
+      state.selection.grouping = new Set(state.players.map(p => p.id));
 
       renderLogo();
       setupTabs();

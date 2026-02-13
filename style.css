@@ -602,6 +602,25 @@ body {
 .player-info {
     flex: 1;
 }
+/* Position preference buttons (F/M/A) on player cards */
+.player-positions {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+.pos-btn {
+  width: 28px; height: 24px; border-radius: 5px;
+  border: 1.5px solid var(--gray-200);
+  background: var(--gray-50); color: var(--gray-400);
+  font-size: 11px; font-weight: 800; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; transition: all 0.12s;
+}
+.pos-btn:hover { border-color: var(--gray-300); }
+.pos-btn.pos-f-on { background: rgba(34,197,94,0.1); color: #16a34a; border-color: rgba(34,197,94,0.3); }
+.pos-btn.pos-m-on { background: rgba(59,130,246,0.1); color: #2563eb; border-color: rgba(59,130,246,0.3); }
+.pos-btn.pos-a-on { background: rgba(239,68,68,0.1); color: #dc2626; border-color: rgba(239,68,68,0.3); }
 
 .player-name {
     font-weight: 700;
@@ -1078,6 +1097,13 @@ body {
         font-size: 14px;
     }
     
+    /* Safari iOS zoomer inn ved font-size < 16px på input-fokus */
+    .input,
+    input.input,
+    select.input {
+        font-size: 16px !important;
+    }
+
     .tab-header,
     .player-form,
     .player-list-container,
@@ -1740,58 +1766,53 @@ body {
     opacity: 0.85;
   }
 
-  /* ── Spillere-fanen: 2-kolonne kompakt grid ── */
+  /* ── Spillere-fanen: ryddig 1-kolonne liste ── */
   .player-list {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 4px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
     padding: 8px !important;
   }
   .player-card {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    gap: 4px !important;
+    gap: 8px !important;
     background: var(--gray-50);
     border: 1px solid var(--gray-200);
-    border-radius: 8px;
-    padding: 4px 5px !important;
+    border-radius: 10px;
+    padding: 10px 12px !important;
     overflow: hidden;
-  }
-  .player-card .player-active-toggle {
-    width: 15px !important;
-    height: 15px !important;
-    margin: 0 !important;
-    flex-shrink: 0;
   }
   .player-card .player-info {
     flex: 1;
     min-width: 0;
   }
   .player-card .player-name {
-    font-size: 11px !important;
+    font-size: 14px !important;
     font-weight: 700;
     margin: 0 !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.2;
+    line-height: 1.3;
   }
   .player-card .player-tags {
     display: flex;
-    gap: 2px;
+    gap: 4px;
+    margin-top: 2px;
   }
   .player-card .player-tags .tag {
-    font-size: 9px !important;
-    padding: 0 3px !important;
-    border-radius: 3px;
+    font-size: 11px !important;
+    padding: 1px 5px !important;
+    border-radius: 4px;
     white-space: nowrap;
     line-height: 1.4;
   }
   .player-card .icon-btn {
-    width: 20px !important;
-    height: 20px !important;
-    font-size: 11px !important;
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px !important;
     padding: 0 !important;
     border: none !important;
     background: transparent !important;
@@ -1801,6 +1822,22 @@ body {
     align-items: center;
     justify-content: center;
   }
+  .player-card .player-positions {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .player-card .pos-btn {
+    width: 26px; height: 24px; border-radius: 5px;
+    border: 1.5px solid var(--gray-200);
+    background: var(--gray-50); color: var(--gray-400);
+    font-size: 10px; font-weight: 800; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0; transition: all 0.12s;
+  }
+  .player-card .pos-btn.pos-f-on { background: rgba(34,197,94,0.12); color: #16a34a; border-color: rgba(34,197,94,0.35); }
+  .player-card .pos-btn.pos-m-on { background: rgba(59,130,246,0.12); color: #2563eb; border-color: rgba(59,130,246,0.35); }
+  .player-card .pos-btn.pos-a-on { background: rgba(239,68,68,0.12); color: #dc2626; border-color: rgba(239,68,68,0.35); }
 }
 .selection-header{
   display:flex;
@@ -2108,7 +2145,7 @@ body.gated #mainApp {
 .wo-meta-fields { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
 .wo-meta-field { flex:1; min-width:140px; }
 .wo-meta-field-wide { flex:2; min-width:200px; }
-.wo-meta-field .input { width:100%; padding:7px 10px; font-size:14px; border-radius:10px; -webkit-appearance:none; appearance:none; }
+.wo-meta-field .input { width:100%; padding:7px 10px; font-size:16px; border-radius:10px; -webkit-appearance:none; appearance:none; }
 .wo-meta-field input[type="date"] { text-align:left; min-height:0; }
 .wo-meta-total { min-width:100px; text-align:right; }
 @media (max-width: 600px) {
@@ -3052,5 +3089,21 @@ html, body {
   .team-modal-box {
     padding: 24px;
     margin: 0 12px;
+  }
+}
+
+/* Desktop: Kampdag player selection in 2 columns */
+@media (min-width: 769px) {
+  #kdPlayerSelection {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+  }
+}
+
+/* Desktop: Kampdag preferences row compact */
+@media (min-width: 769px) {
+  #kdFreqOptions {
+    max-width: 360px;
   }
 }
