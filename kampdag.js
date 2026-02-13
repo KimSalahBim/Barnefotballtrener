@@ -846,7 +846,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
           // Account for guaranteed future keeper time
           if (keeperSet.has(p.id)) {
             const futureKeeper = remainingKeeperTime(p.id, end);
-            effectiveMinutes += futureKeeper;
+            effectiveMinutes += futureKeeper * 0.3;
           }
           const deficit = paceTarget - effectiveMinutes;
           const jitter = (rng() - 0.5) * 0.3;
@@ -980,6 +980,66 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
           break;
         }
         if (!swapped) break;
+      }
+
+      // Phase 3: Enforce keeper floor — keepers must have > nkAvg
+      // Keepers should ALWAYS end up with more total time than outfielders.
+      for (let fRound = 0; fRound < 5; fRound++) {
+        const nkAvg2 = nonKeepers.reduce((s, id) => s + minutes[id], 0) / nonKeepers.length;
+        const floorTarget = nkAvg2 + 2; // Keepers must be at least 2 min above avg
+
+        let worstKeeper2 = null;
+        let worstDeficit = 0;
+        for (const kid of keepers) {
+          const deficit = floorTarget - minutes[kid];
+          if (deficit > 0.5 && deficit > worstDeficit) {
+            worstKeeper2 = kid;
+            worstDeficit = deficit;
+          }
+        }
+        if (!worstKeeper2) break;
+
+        // Find non-keeper most OVER average to swap out
+        const overNK = nonKeepers.reduce((a, b) => minutes[a] > minutes[b] ? a : b);
+        const transfer2 = Math.round(Math.max(1, Math.min(worstDeficit, 10)));
+
+        let swapped2 = false;
+        const segIndices2 = segments.map((_, i) => i)
+          .sort((a, b) => (segments[b].end - segments[b].start) - (segments[a].end - segments[a].start));
+
+        for (const idx of segIndices2) {
+          const seg = segments[idx];
+          if (!seg.lineup.includes(overNK)) continue;
+          if (seg.lineup.includes(worstKeeper2)) continue;
+
+          const dt = seg.end - seg.start;
+
+          // For short segments (≤3 min): do a whole-segment swap (no split)
+          if (dt <= 3) {
+            const newLineup = seg.lineup.map(id => id === overNK ? worstKeeper2 : id);
+            seg.lineup = newLineup;
+            minutes[overNK] -= dt;
+            minutes[worstKeeper2] += dt;
+            swapped2 = true;
+            break;
+          }
+
+          const actual = Math.min(transfer2, dt - 1);
+          if (actual < 1) continue;
+
+          const splitTime = Math.round(seg.end - actual);
+          const newLineup = seg.lineup.map(id => id === overNK ? worstKeeper2 : id);
+          const segA = { start: seg.start, end: splitTime, dt: splitTime - seg.start, lineup: seg.lineup.slice(), keeperId: seg.keeperId };
+          const segB = { start: splitTime, end: seg.end, dt: seg.end - splitTime, lineup: newLineup, keeperId: seg.keeperId };
+
+          minutes[overNK] -= actual;
+          minutes[worstKeeper2] += actual;
+          segments.splice(idx, 1, segA, segB);
+          swapsAdded.push({ time: splitTime, out: overNK, in: worstKeeper2, amount: actual });
+          swapped2 = true;
+          break;
+        }
+        if (!swapped2) break;
       }
     }
 
