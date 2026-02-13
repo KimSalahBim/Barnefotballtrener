@@ -737,14 +737,12 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const b = times[bestIdx + 1];
     const len = b - a;
 
-    if (len <= minGap * 2) {
-      const mid = a + Math.max(1, Math.floor(len / 2));
-      if (mid <= a || mid >= b) return times;
-      return uniqSorted([...times, mid]).filter(x => x >= 0 && x <= T);
-    }
+    // Don't split if it would create segments shorter than minGap
+    if (len < minGap * 2) return times;
 
     let mid = a + Math.round(len / 2);
     mid = clamp(mid, a + minGap, b - minGap);
+    if (mid <= a || mid >= b) return times;
     return uniqSorted([...times, mid]).filter(x => x >= 0 && x <= T);
   }
 
@@ -926,7 +924,25 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     let times = generateSubTimes(T, seed, fp.stopsMin, fp.stopsMax, fp.minGap, fp.maxGap);
 
     const keeperTimes = keeperChangeTimes(keeperTimeline).filter(x => x < T);
-    times = uniqSorted([...times, ...keeperTimes]).filter(x => x >= 0 && x <= T);
+    // Merge keeper times, but snap to nearest existing time if gap would be < minGap
+    const snappedKeeper = keeperTimes.map(kt => {
+      // Find nearest existing time
+      let nearest = times[0], nearestDist = Math.abs(kt - times[0]);
+      for (const t of times) {
+        const d = Math.abs(kt - t);
+        if (d < nearestDist) { nearest = t; nearestDist = d; }
+      }
+      // If inserting kt would create a segment < minGap, snap to nearest
+      if (nearestDist > 0 && nearestDist < fp.minGap) return nearest;
+      // Also check the other neighbor
+      const sorted = [...times, kt].sort((a, b) => a - b);
+      const idx = sorted.indexOf(kt);
+      const prevGap = idx > 0 ? kt - sorted[idx - 1] : Infinity;
+      const nextGap = idx < sorted.length - 1 ? sorted[idx + 1] - kt : Infinity;
+      if (prevGap < fp.minGap || nextGap < fp.minGap) return nearest;
+      return kt;
+    });
+    times = uniqSorted([...times, ...snappedKeeper]).filter(x => x >= 0 && x <= T);
 
     const MAX_STOPS = clamp(Math.round(T / Math.max(3, fp.minGap)) + 3, 8, 20);
     let best = null;
@@ -942,7 +958,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
 
       if (times.length < MAX_STOPS) {
         times = splitLongestInterval(times, T, fp.minGap);
-        times = uniqSorted([...times, ...keeperTimes]).filter(x => x >= 0 && x <= T);
+        times = uniqSorted([...times, ...snappedKeeper]).filter(x => x >= 0 && x <= T);
       } else {
         break;
       }
