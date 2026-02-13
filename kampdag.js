@@ -806,6 +806,19 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const keeperSet = new Set(Object.keys(keeperMins).filter(id => keeperMins[id] > 0));
     const idSet = new Set(ids);
 
+    // Pre-calculate remaining keeper time from any point
+    // For each keeper, how many minutes of keeper duty remain after time t?
+    function remainingKeeperTime(keeperId, afterTime) {
+      let remaining = 0;
+      (keeperTimeline || []).forEach(seg => {
+        if (seg.keeperId !== keeperId) return;
+        const overlapStart = Math.max(seg.start, afterTime);
+        const overlapEnd = seg.end;
+        if (overlapEnd > overlapStart) remaining += (overlapEnd - overlapStart);
+      });
+      return remaining;
+    }
+
     const segments = [];
 
     for (let i = 0; i < times.length - 1; i++) {
@@ -821,11 +834,21 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       if (keeperId && idSet.has(keeperId)) lineup.push(keeperId);
 
       // Calculate deficit: how far behind target pace is each player?
+      // For keepers: subtract their remaining keeper time from minutes,
+      // because those minutes are guaranteed and shouldn't count as "ahead".
+      // Actually: ADD remaining keeper time to their effective pace target,
+      // so they're treated as if they need LESS outfield time.
       const paceTarget = target * start / T;
       const scored = playersList
         .filter(p => !lineup.includes(p.id))
         .map(p => {
-          const deficit = paceTarget - minutes[p.id];
+          let effectiveMinutes = minutes[p.id];
+          // Account for guaranteed future keeper time
+          if (keeperSet.has(p.id)) {
+            const futureKeeper = remainingKeeperTime(p.id, end);
+            effectiveMinutes += futureKeeper;
+          }
+          const deficit = paceTarget - effectiveMinutes;
           const jitter = (rng() - 0.5) * 0.3;
           return { id: p.id, score: deficit + jitter };
         })
@@ -902,6 +925,62 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       }
 
       if (!swapped) break;
+    }
+
+    // Phase 2: Enforce keeper cap — max(keeperTime + 5, nkAvg * 1.20)
+    // This ensures keepers get at least 5 min outfield, but not excessively more
+    if (nonKeepers.length > 0) {
+      const keepers = ids.filter(id => keeperSet.has(id));
+      for (let kRound = 0; kRound < 5; kRound++) {
+        const nkAvg = nonKeepers.reduce((s, id) => s + minutes[id], 0) / nonKeepers.length;
+
+        // Find keeper most over cap
+        let worstKeeper = null;
+        let worstExcess = 0;
+        for (const kid of keepers) {
+          const kTime = keeperMinutes[kid] || 0;
+          const cap = Math.max(kTime + 5, nkAvg * 1.20);
+          const excess = minutes[kid] - cap;
+          if (excess > 1 && excess > worstExcess) {
+            worstKeeper = kid;
+            worstExcess = excess;
+          }
+        }
+        if (!worstKeeper) break;
+
+        // Find non-keeper most under average to swap in
+        const underP = nonKeepers.reduce((a, b) => minutes[a] < minutes[b] ? a : b);
+        const transfer = Math.round(Math.max(2, Math.min(worstExcess, 10)));
+
+        let swapped = false;
+        const segIndices = segments.map((_, i) => i)
+          .sort((a, b) => (segments[b].end - segments[b].start) - (segments[a].end - segments[a].start));
+
+        for (const idx of segIndices) {
+          const seg = segments[idx];
+          // Only swap keeper out of segments where they are NOT the active keeper
+          if (seg.keeperId === worstKeeper) continue;
+          if (!seg.lineup.includes(worstKeeper)) continue;
+          if (seg.lineup.includes(underP)) continue;
+
+          const dt = seg.end - seg.start;
+          const actual = Math.min(transfer, dt - 2);
+          if (actual < 2) continue;
+
+          const splitTime = Math.round(seg.end - actual);
+          const newLineup = seg.lineup.map(id => id === worstKeeper ? underP : id);
+          const segA = { start: seg.start, end: splitTime, dt: splitTime - seg.start, lineup: seg.lineup.slice(), keeperId: seg.keeperId };
+          const segB = { start: splitTime, end: seg.end, dt: seg.end - splitTime, lineup: newLineup, keeperId: seg.keeperId };
+
+          minutes[worstKeeper] -= actual;
+          minutes[underP] += actual;
+          segments.splice(idx, 1, segA, segB);
+          swapsAdded.push({ time: splitTime, out: worstKeeper, in: underP, amount: actual });
+          swapped = true;
+          break;
+        }
+        if (!swapped) break;
+      }
     }
 
     return swapsAdded;
