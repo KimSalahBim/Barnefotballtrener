@@ -1110,7 +1110,7 @@
         safeSet(playersKeySnap, JSON.stringify(state.players));
         console.log('[core.js] Supabase: bruker', state.players.length, 'spillere som source of truth');
 
-        state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
+        state.selection.grouping = new Set(state.players.map(p => p.id));
         renderAll();
         publishPlayers();
         renderTeamSwitcher();
@@ -1217,7 +1217,6 @@
       const pos = p.positions || ['F','M','A'];
       return `
         <div class="player-card" data-id="${escapeHtml(p.id)}">
-          <input type="checkbox" class="player-active-toggle" ${p.active ? 'checked' : ''}>
           <div class="player-info">
             <div class="player-name">${escapeHtml(p.name)}</div>
             <div class="player-tags">${state.settings.useSkill ? `<span class="tag">Nivå ${p.skill}</span>` : ''}${p.goalie ? `<span class="tag">🧤</span>` : `<span class="tag">⚽</span>`}</div>
@@ -1239,16 +1238,8 @@
       const p = state.players.find(x => x.id === id);
       if (!p) return;
 
-      const activeToggle = card.querySelector('.player-active-toggle');
-      if (activeToggle) {
-        activeToggle.addEventListener('change', () => {
-          p.active = !!activeToggle.checked;
-          saveState();
-          updateStats();
-          renderSelections();
-          publishPlayers();
-        });
-      }
+      // Ensure player is always active (active toggle removed from UI)
+      if (!p.active) { p.active = true; saveState(); }
 
       // Position preference buttons (F/M/A)
       card.querySelectorAll('.pos-btn').forEach(btn => {
@@ -1346,7 +1337,7 @@
     const groupingEl = $('groupingSelection');
 
     // only active players selectable
-    const selectable = state.players.filter(p => p.active).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+    const selectable = state.players.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
     if (groupingEl) {
       groupingEl.innerHTML = selectable.map(p => `
@@ -1863,7 +1854,7 @@
           state.players = incomingPlayers;
 
           // reset selections to all active players
-          state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
+          state.selection.grouping = new Set(state.players.map(p => p.id));
 
           if (parsed.settings && typeof parsed.settings.useSkill === 'boolean') {
             state.settings.useSkill = parsed.settings.useSkill;
@@ -2397,7 +2388,7 @@
       console.log('[core.js] State lastet, spillere:', state.players.length);
 
       // default select all active players
-      state.selection.grouping = new Set(state.players.filter(p => p.active).map(p => p.id));
+      state.selection.grouping = new Set(state.players.map(p => p.id));
 
       renderLogo();
       setupTabs();

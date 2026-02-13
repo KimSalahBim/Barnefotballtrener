@@ -810,19 +810,19 @@
         <div id="kdPlayerSelection" class="player-selection"></div>
 
         <!-- Formasjon -->
-        <div class="settings-card" style="margin-top:14px;">
-          <div class="settings-row" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div class="settings-card" style="margin-top:8px; padding:8px 12px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
             <div>
-              <div style="font-weight:800;">Formasjoner og roller</div>
-              <div class="small-text" style="opacity:0.8;">Vis posisjoner (F/M/A) i bytteplan, banevisning og PDF</div>
+              <div style="font-weight:700; font-size:14px;">Formasjoner og roller</div>
+              <div class="small-text" style="opacity:0.8; font-size:11px; line-height:1.2;">Vis posisjoner (F/M/A) i bytteplan, banevisning og PDF.</div>
             </div>
-            <label class="checkbox-label" style="margin:0;">
+            <label class="switch">
               <input id="kdFormationToggle" type="checkbox">
-              <span>Aktiver</span>
+              <span class="slider"></span>
             </label>
           </div>
 
-          <div id="kdFormationPanel" style="display:none; margin-top:12px;">
+          <div id="kdFormationPanel" style="display:none; margin-top:10px;">
             <div id="kdFormationGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>
 
             <div style="margin-top:12px;">
@@ -836,22 +836,19 @@
         </div>
 
         <!-- Keeper -->
-        <div class="settings-card" style="margin-top:14px;">
-          <div class="settings-row" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div class="settings-card" style="margin-top:8px; padding:8px 12px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
             <div>
-              <div style="font-weight:800;">Keeper</div>
-              <div id="kdKeeperHint" class="small-text" style="opacity:0.8;">
-                Velg antall keepere, deretter hvem + minutter.
-              </div>
+              <div style="font-weight:700; font-size:14px;">Manuell keeper</div>
+              <div id="kdKeeperHint" class="small-text" style="opacity:0.8; font-size:11px; line-height:1.2;">Velg hvem som står i mål og hvor lenge.</div>
             </div>
-
-            <label class="checkbox-label" style="margin:0;">
+            <label class="switch">
               <input id="kdManualKeeper" type="checkbox">
-              <span>Manuell keeper</span>
+              <span class="slider"></span>
             </label>
           </div>
 
-          <div id="kdKeeperPanel" style="display:none; margin-top:12px;">
+          <div id="kdKeeperPanel" style="display:none; margin-top:10px;">
             <div class="settings-row" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
               <div style="min-width:240px;">
                 <label for="kdKeeperCount" style="display:block; font-weight:700; margin-bottom:6px;">Antall keepere</label>

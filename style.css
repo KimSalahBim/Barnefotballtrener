@@ -1784,12 +1784,6 @@ body {
     padding: 10px 12px !important;
     overflow: hidden;
   }
-  .player-card .player-active-toggle {
-    width: 18px !important;
-    height: 18px !important;
-    margin: 0 !important;
-    flex-shrink: 0;
-  }
   .player-card .player-info {
     flex: 1;
     min-width: 0;
