@@ -693,6 +693,18 @@
         </div>
 
         <!-- Spillerliste -->
+        <div id="posHelpCard" class="settings-card" style="margin-bottom:8px; padding:10px 14px; background:linear-gradient(135deg,#f0f7ff,#f8fafc); border:1px solid #e0ecf8;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+            <div style="font-size:13px; line-height:1.5; color:#374151;">
+              <span style="font-weight:800;">💡 Posisjonspreferanser</span> — Trykk
+              <span style="display:inline-block;width:20px;height:17px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a;font-size:10px;font-weight:800;text-align:center;line-height:17px;border:1.5px solid rgba(34,197,94,0.3);">F</span>
+              <span style="display:inline-block;width:22px;height:17px;border-radius:4px;background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;font-weight:800;text-align:center;line-height:17px;border:1.5px solid rgba(59,130,246,0.3);">M</span>
+              <span style="display:inline-block;width:20px;height:17px;border-radius:4px;background:rgba(239,68,68,0.12);color:#dc2626;font-size:10px;font-weight:800;text-align:center;line-height:17px;border:1.5px solid rgba(239,68,68,0.3);">A</span>
+              for å angi om spilleren foretrekker forsvar, midtbane eller angrep. Brukes av <b>Kampdag</b> til å plassere spillerne i riktig sone på banen.
+            </div>
+            <button type="button" onclick="this.closest('#posHelpCard').style.display='none'" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:18px;line-height:1;padding:0 2px;" aria-label="Lukk">×</button>
+          </div>
+        </div>
         <div id="playerList" class="player-list"></div>
       </div>
 
@@ -1040,7 +1052,6 @@
             </div>
             <div id="woPlayerSelection" class="player-selection"></div>
           </div>
-        </div>
 
         <div class="settings-card">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
