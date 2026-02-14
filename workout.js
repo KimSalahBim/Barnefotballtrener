@@ -44,44 +44,764 @@
   }
 
   // -------------------------
-  // Exercise catalog
+  // Exercise catalog (Øvelsesbank)
   // -------------------------
-  // "Drikkepause" skal ligge øverst (krav).
+  // "Drikkepause" skal ligge øverst (krav). Øvelser gruppert i kategorier.
+  // Hver øvelse har: key, label, defaultMin, category, og valgfritt:
+  // description, setup, steps[], coaching[], variations[], ages[], players, equipment, diagram{}
   const EXERCISES = [
-    { key: 'drink', label: 'Drikkepause', defaultMin: 2 },
-    { key: 'tag', label: 'Lek/Sisten (oppvarming)', defaultMin: 8 },
-    { key: 'warm_ball', label: 'Oppvarming med ball', defaultMin: 10 },
-    { key: 'warm_no_ball', label: 'Oppvarming uten ball', defaultMin: 8 },
-    { key: 'driving', label: 'Føring av ball', defaultMin: 10 },
-    { key: 'pass_pair', label: 'Pasning parvis', defaultMin: 10 },
-    { key: 'pass_turn', label: 'Pasning med vending', defaultMin: 10 },
-    { key: 'pass_square', label: 'Pasningsfirkant', defaultMin: 12 },
-    { key: 'long_pass', label: 'Langpasninger', defaultMin: 10 },
-    { key: 'dribble', label: 'Dribling', defaultMin: 10 },
-    { key: 'shot', label: 'Skudd', defaultMin: 12 },
-    { key: 'cross_finish', label: 'Innlegg/avslutning', defaultMin: 12 },
-    { key: 'juggle', label: 'Triksing med ball', defaultMin: 8 },
-    { key: '1v1', label: '1 mot 1', defaultMin: 10 },
-    { key: '2v1', label: '2 mot 1', defaultMin: 10 },
-    { key: '3v2', label: '3 mot 2', defaultMin: 12 },
-    { key: 'competitions', label: 'Konkurranser', defaultMin: 10 },
-    { key: 'ssg', label: 'Smålagsspill', defaultMin: 18 },
-    { key: 'square_german', label: 'Firkant/Tysker', defaultMin: 12 },
-    { key: 'overload', label: 'Overtallsspill', defaultMin: 12 },
-    { key: 'possession_joker', label: 'Possession med joker', defaultMin: 12 },
-    { key: 'possession_even', label: 'Possession likt antall', defaultMin: 12 },
-    { key: 'game_activity', label: 'Spillaktivitet', defaultMin: 18 },
-    { key: 'keeper', label: 'Keepertrening', defaultMin: 12 },
-    // "Overrask meg" er en trigger, ikke en faktisk øvelse
-    { key: 'surprise', label: 'Overrask meg', defaultMin: 10, isSurprise: true },
-    // Manuell
-    { key: 'custom', label: 'Skriv inn selv', defaultMin: 10, isCustom: true }
+    // ── DRIKKEPAUSE (alltid øverst, ingen info) ──
+    { key: 'drink', label: 'Drikkepause', defaultMin: 2, category: 'special' },
+
+    // ═══════════════════════════
+    // 🏃 OPPVARMING
+    // ═══════════════════════════
+    {
+      key: 'tag', label: 'Lek / Sisten', defaultMin: 8, category: 'oppvarming',
+      ages: ['6-7','8-9','10-12'], players: '6-20',
+      equipment: 'Kjegler til avgrensning, vester til fangere',
+      description: 'Klassisk sistenlek som oppvarming. Alle i bevegelse fra start. Barna kjenner reglene, så organisering tar minimalt tid. Perfekt for å få opp puls og engasjement.',
+      setup: 'Avgrens et område på ca. 20x20 meter med kjegler. Gi 1-2 spillere vester — de er fangere.',
+      steps: [
+        'Fangerne (med vest) jakter de andre spillerne.',
+        'Den som blir tatt, fryser på stedet med beina fra hverandre.',
+        'Frie spillere kan redde frosne ved å krype mellom beina deres.',
+        'Bytt fangere hvert 2. minutt.'
+      ],
+      coaching: [
+        'Oppmuntre til retningsforandringer og finter',
+        'Ros de som redder lagkamerater',
+        'Gjør området mindre for mer intensitet'
+      ],
+      variations: [
+        'Alle med ball: fangere sparker ballen ut av området',
+        'Havsisten: alle må drible med ball'
+      ],
+      diagram: { width:220, height:160, field:'small', elements:[
+        {type:'cone',x:20,y:20},{type:'cone',x:200,y:20},{type:'cone',x:20,y:140},{type:'cone',x:200,y:140},
+        {type:'player',x:60,y:50,team:'b',label:'F'},{type:'player',x:160,y:100,team:'b',label:'F'},
+        {type:'player',x:90,y:110,team:'a',label:''},{type:'player',x:140,y:40,team:'a',label:''},
+        {type:'player',x:50,y:90,team:'a',label:''},{type:'player',x:170,y:65,team:'a',label:''},
+        {type:'player',x:110,y:75,team:'a',label:''},
+        {type:'arrow',from:[60,50],to:[90,80],style:'run'},{type:'arrow',from:[160,100],to:[140,70],style:'run'}
+      ]}
+    },
+    {
+      key: 'warm_ball', label: 'Ballmestring', defaultMin: 10, category: 'oppvarming',
+      ages: ['6-7','8-9','10-12'], players: '4-20',
+      equipment: '1 ball per spiller, kjegler',
+      description: 'Individuell ballkontroll der hver spiller har sin egen ball. Føring med ulike deler av foten, vendinger, tempo-endringer. Bygger selvtillit og kontroll.',
+      setup: 'Avgrens et område på ca. 15x15 meter. Alle spillere med egen ball inne i området.',
+      steps: [
+        'Spillerne fører ball fritt i området med korte touch.',
+        'Treneren roper kommandoer: "Innsiden!", "Utsiden!", "Sålen!".',
+        'På signal: stopp ball med sålen, vend og skift retning.',
+        'Øk tempo gradvis. Avslutt med "hvem klarer flest vendinger på 30 sek?".'
+      ],
+      coaching: [
+        'Ballen tett i foten, korte touch',
+        'Løft blikket! Se etter rom og andre spillere',
+        'Bruk begge føtter'
+      ],
+      variations: [
+        'Kobling med nummersisten: trener roper tall, de med tallet blir fanger',
+        'Legg til kjegler som slalåmløype'
+      ],
+      diagram: { width:220, height:160, field:'small', elements:[
+        {type:'cone',x:20,y:20},{type:'cone',x:200,y:20},{type:'cone',x:20,y:140},{type:'cone',x:200,y:140},
+        {type:'player',x:60,y:50,team:'a',label:''},{type:'ball',x:68,y:56},
+        {type:'player',x:150,y:45,team:'a',label:''},{type:'ball',x:158,y:51},
+        {type:'player',x:100,y:100,team:'a',label:''},{type:'ball',x:108,y:106},
+        {type:'player',x:45,y:115,team:'a',label:''},{type:'ball',x:53,y:121},
+        {type:'player',x:170,y:110,team:'a',label:''},{type:'ball',x:178,y:116},
+        {type:'arrow',from:[60,50],to:[80,70],style:'run'},{type:'arrow',from:[150,45],to:[130,65],style:'run'}
+      ]}
+    },
+    {
+      key: 'rondo_easy', label: 'Rondo (lett)', defaultMin: 10, category: 'oppvarming',
+      ages: ['8-9','10-12'], players: '5-8',
+      equipment: '1 ball, kjegler til firkant',
+      description: 'Pasningsspill med overtall i firkant: 4 mot 1 eller 5 mot 2. Spillerne på utsiden holder ballen, den i midten prøver å vinne den. Kjerneøvelse i moderne fotball.',
+      setup: 'Sett opp en firkant på ca. 6x6 meter (8x8 for 5v2). Spillere på utsiden, 1-2 i midten.',
+      steps: [
+        'Spillerne på utsiden passer ballen med maks 2 touch.',
+        'Spilleren i midten jager ballen og prøver å ta den.',
+        'Ved erobring: den som mistet ballen bytter inn i midten.',
+        'Tell antall pasninger i strekk — sett rekord!'
+      ],
+      coaching: [
+        'Åpne kroppen mot banen, ikke bare mot ballen',
+        'Spill med innsiden for presisjon',
+        'Beveg deg etter pasning for å gi ny vinkel',
+        'Forsvareren: press på ballfører, steng pasningslinjer'
+      ],
+      variations: [
+        '4v1 for yngre/lavere nivå, 5v2 for eldre/høyere nivå',
+        'Kun 1 touch for mer intensitet'
+      ],
+      diagram: { width:220, height:170, field:'none', elements:[
+        {type:'cone',x:50,y:25},{type:'cone',x:170,y:25},{type:'cone',x:170,y:145},{type:'cone',x:50,y:145},
+        {type:'player',x:110,y:20,team:'a',label:'A'},{type:'player',x:175,y:85,team:'a',label:'B'},
+        {type:'player',x:110,y:150,team:'a',label:'C'},{type:'player',x:45,y:85,team:'a',label:'D'},
+        {type:'player',x:110,y:85,team:'b',label:'X'},
+        {type:'arrow',from:[110,20],to:[175,85],style:'pass'},{type:'arrow',from:[110,85],to:[110,30],style:'run'}
+      ]}
+    },
+
+    // ═══════════════════════════
+    // ⚽ TEKNIKK
+    // ═══════════════════════════
+    {
+      key: 'driving', label: 'Føring av ball', defaultMin: 10, category: 'teknikk',
+      ages: ['6-7','8-9','10-12'], players: '4-16',
+      equipment: '1 ball per spiller, 6-10 kjegler',
+      description: 'Spillerne fører ballen gjennom en kjegleløype med ulike deler av foten. Trener kontroll i fart og evnen til å holde ballen tett mens man beveger seg fremover.',
+      setup: 'Sett opp 6-10 kjegler i sikk-sakk med 2-3 meters mellomrom. 2-4 spillere starter samtidig i parallelle løyper.',
+      steps: [
+        'Før ballen med innsiden gjennom hele løypen.',
+        'Tilbake med utsiden av foten.',
+        'Tredje runde: veksle innside/utside rundt hver kjegle.',
+        'Fjerde runde: fri føring med maks fart!'
+      ],
+      coaching: [
+        'Korte touch, ballen nær foten',
+        'Blikket opp mellom kjeglene',
+        'Bruk begge føtter',
+        'Press tempoet gradvis'
+      ],
+      variations: [
+        'Siste kjegle = skudd på mål for motivasjon',
+        'Stafett mellom to lag for konkurranse'
+      ],
+      diagram: { width:220, height:120, field:'none', elements:[
+        {type:'cone',x:30,y:60},{type:'cone',x:65,y:35},{type:'cone',x:100,y:60},
+        {type:'cone',x:135,y:35},{type:'cone',x:170,y:60},{type:'cone',x:200,y:35},
+        {type:'player',x:15,y:60,team:'a',label:''},{type:'ball',x:23,y:66},
+        {type:'arrow',from:[23,66],to:[60,40],style:'run'},{type:'arrow',from:[60,40],to:[95,65],style:'run'},
+        {type:'arrow',from:[95,65],to:[130,40],style:'run'},{type:'arrow',from:[130,40],to:[165,65],style:'run'}
+      ]}
+    },
+    {
+      key: 'pass_pair', label: 'Pasning parvis', defaultMin: 10, category: 'teknikk',
+      ages: ['6-7','8-9','10-12'], players: '4-20',
+      equipment: '1 ball per par, kjegler som markering',
+      description: 'Grunnøvelsen i pasningsspill. To og to spillere sender ballen til hverandre med innsidetouch. Fokus på teknikk, mottak og presisjon.',
+      setup: 'Spillerne stiller seg parvis med 5-10 meters avstand (kortere for yngre). Hvert par har én ball.',
+      steps: [
+        'Spiller A sender innsidepasning til B.',
+        'B tar imot med innsiden (demper ballen), legger til rette.',
+        'B passer tilbake til A.',
+        'Etter 2 min: øk avstand. Etter 4 min: bruk kun venstre fot.'
+      ],
+      coaching: [
+        'Støttefoten peker mot mottakeren',
+        'Treffe midt på ballen med innsiden',
+        'Åpent mottak: demp og legg klar i én bevegelse',
+        'Kommuniser! Rop "her!" eller bruk navn'
+      ],
+      variations: [
+        'Mottak med høyre, pass med venstre (og omvendt)',
+        'Legg til "vegg": en tredje spiller i midten som spiller videre'
+      ],
+      diagram: { width:220, height:100, field:'none', elements:[
+        {type:'player',x:40,y:50,team:'a',label:'A'},{type:'player',x:180,y:50,team:'a',label:'B'},
+        {type:'ball',x:100,y:45},
+        {type:'arrow',from:[50,50],to:[170,50],style:'pass'},
+        {type:'cone',x:40,y:28},{type:'cone',x:180,y:28}
+      ]}
+    },
+    {
+      key: 'pass_move', label: 'Pasning og bevegelse', defaultMin: 10, category: 'teknikk',
+      ages: ['8-9','10-12'], players: '6-12',
+      equipment: '2-3 baller, kjegler',
+      description: 'Etter å ha spilt pasning, beveger spilleren seg til ny posisjon for å motta igjen. Trener det viktigste prinsippet i lagspill: spill og flytt deg!',
+      setup: 'Sett opp en trekant med kjegler (8-10m mellom). Spillere fordelt på hjørnene, ball starter hos én.',
+      steps: [
+        'A passer til B og løper mot Bs posisjon.',
+        'B tar imot, passer til C, og løper mot Cs posisjon.',
+        'C tar imot, passer til neste, og følger ballen.',
+        'Hold flyten gående. Ball og spillere sirkulerer hele tiden.'
+      ],
+      coaching: [
+        'Beveg deg MED EN GANG etter pasning',
+        'Mottaker: se deg rundt FØR ballen kommer',
+        'Tempo på pasningene — trill ballen med fart',
+        'Førstekontakt legger ballen klar for neste pasning'
+      ],
+      variations: [
+        'To baller i omløp samtidig for mer intensitet',
+        'Legg til en forsvarer i midten (halvt rondo-prinsipp)'
+      ],
+      diagram: { width:220, height:170, field:'none', elements:[
+        {type:'cone',x:110,y:20},{type:'cone',x:190,y:140},{type:'cone',x:30,y:140},
+        {type:'player',x:110,y:28,team:'a',label:'A'},{type:'player',x:186,y:132,team:'a',label:'B'},
+        {type:'player',x:34,y:132,team:'a',label:'C'},
+        {type:'arrow',from:[110,28],to:[186,132],style:'pass'},
+        {type:'arrow',from:[115,38],to:[180,125],style:'run'}
+      ]}
+    },
+    {
+      key: 'pass_square', label: 'Pasningsfirkant', defaultMin: 12, category: 'teknikk',
+      ages: ['8-9','10-12'], players: '4-12',
+      equipment: 'Kjegler, 1-3 baller',
+      description: 'Klassisk pasningsøvelse. Spillerne står i en firkant og passer ballen rundt med mottak, vending og videre pasning. Trener orientering, presisjon og å løfte blikket.',
+      setup: 'Fire kjegler i firkant, ca. 8x8 meter. Én spiller ved hvert hjørne (flere spillere: 2-3 per hjørne i kø).',
+      steps: [
+        'A passer til B med innsiden og løper etter ballen til Bs plass.',
+        'B tar imot, vender med ball, og passer videre til C.',
+        'Mønsteret fortsetter rundt firkanten.',
+        'Bytt retning hvert 2. minutt!'
+      ],
+      coaching: [
+        'Åpne kroppen før mottak — se dit du skal spille',
+        'Førstetouch legger ballen klar for pasning',
+        'Innsiden for kort, driv for lang distanse',
+        'Ballen skal aldri ligge stille'
+      ],
+      variations: [
+        'Legg til en forsvarer i midten (rondo-variant)',
+        'Krev kun 2 touch: mottak + pasning'
+      ],
+      diagram: { width:220, height:170, field:'none', elements:[
+        {type:'cone',x:40,y:25},{type:'cone',x:180,y:25},{type:'cone',x:180,y:145},{type:'cone',x:40,y:145},
+        {type:'player',x:40,y:33,team:'a',label:'A'},{type:'player',x:180,y:33,team:'a',label:'B'},
+        {type:'player',x:180,y:137,team:'a',label:'C'},{type:'player',x:40,y:137,team:'a',label:'D'},
+        {type:'ball',x:55,y:30},
+        {type:'arrow',from:[50,33],to:[170,33],style:'pass'},
+        {type:'arrow',from:[55,43],to:[168,38],style:'run'}
+      ]}
+    },
+    {
+      key: 'dribble', label: 'Dribling 1 mot 1', defaultMin: 10, category: 'teknikk',
+      ages: ['6-7','8-9','10-12'], players: '4-16',
+      equipment: 'Baller, småmål eller kjegler, vester',
+      description: 'Én angriper mot én forsvarer. Angriperen prøver å drible forbi og score. Ren duelltrening som bygger selvtillit og mot til å ta på seg spillere.',
+      setup: 'Liten bane (10x15m) med to kjeglemål. Spillerne i to køer, én angriper og én forsvarer per runde.',
+      steps: [
+        'Angriperen starter med ball fra enden av banen.',
+        'Forsvareren starter fra midtlinjen og møter angriperen.',
+        'Angriperen prøver å drible forbi og score i småmål.',
+        'Bytt rolle etter hver runde.'
+      ],
+      coaching: [
+        'Angriper: løp MOT forsvareren, brems i siste øyeblikk',
+        'Bruk finter og kroppsvendinger for å lure',
+        'Forsvarer: stå sidelengs, tving angriperen dit du vil',
+        'Ikke stup inn — vær tålmodig!'
+      ],
+      variations: [
+        '2v1 for å trene samarbeid i overtall',
+        'Tidsbegrensning: 8 sekunder per forsøk'
+      ],
+      diagram: { width:220, height:160, field:'none', elements:[
+        {type:'goal',x:85,y:5,w:50,h:12},
+        {type:'player',x:110,y:55,team:'b',label:'F'},{type:'player',x:110,y:120,team:'a',label:'A'},
+        {type:'ball',x:118,y:126},
+        {type:'arrow',from:[110,120],to:[110,65],style:'run'},
+        {type:'cone',x:75,y:55},{type:'cone',x:145,y:55}
+      ]}
+    },
+    {
+      key: 'turn', label: 'Vendinger', defaultMin: 10, category: 'teknikk',
+      ages: ['8-9','10-12'], players: '4-16',
+      equipment: '1 ball per spiller, kjegler',
+      description: 'Trening av ulike vendeteknikker: Cruyff-vending, innsidevending, utsidedraging. Evnen til å snu med ball er avgjørende for å komme ut av press.',
+      setup: 'Spillerne fører ball mot en kjegle, utfører vending, og fører ball tilbake. 3-4 parallelle stasjoner.',
+      steps: [
+        'Før ballen mot kjeglen i rolig tempo.',
+        'Ved kjeglen: utfør vendeteknikk (trener viser hvilken).',
+        'Akseler ut av vendingen og før ball tilbake.',
+        'Roter mellom teknikkene: innsidevending, Cruyff, sålevending.'
+      ],
+      coaching: [
+        'Brems ned FØR vendingen, akseler ETTER',
+        'Bruk kroppen til å skjerme ballen',
+        'Se deg rundt i vendingsøyeblikket',
+        'Øv begge retninger!'
+      ],
+      variations: [
+        'Legg til en passiv forsvarer som presser lett',
+        'Vend og slå pasning til neste i køen'
+      ],
+      diagram: { width:220, height:110, field:'none', elements:[
+        {type:'player',x:30,y:45,team:'a',label:''},{type:'ball',x:40,y:50},
+        {type:'cone',x:150,y:45},
+        {type:'arrow',from:[40,45],to:[140,45],style:'run'},
+        {type:'arrow',from:[150,55],to:[50,60],style:'run'},
+        {type:'player',x:30,y:85,team:'a',label:''},{type:'cone',x:150,y:85}
+      ]}
+    },
+    {
+      key: 'receive_turn', label: 'Mottak og vending', defaultMin: 10, category: 'teknikk',
+      ages: ['8-9','10-12'], players: '6-12',
+      equipment: '1 ball per par, kjegler',
+      description: 'Spilleren mottar pasning med ryggen mot spilleretning, vender med førstetouch, og spiller videre. Trener orientert førstetouch — en nøkkelferdighet.',
+      setup: 'Spillerne i par, 10m avstand. Én kjegle bak mottakeren (representerer retningen å vende mot).',
+      steps: [
+        'A passer til B som har ryggen mot Bs kjegle.',
+        'B tar imot med åpent mottak: vender kroppen og ballen i én bevegelse.',
+        'B fører ballen forbi kjeglen og passer tilbake til A.',
+        'Bytt roller etter 5 repetisjoner.'
+      ],
+      coaching: [
+        'Sjekk over skulderen FØR ballen kommer',
+        'Åpne kroppen mot dit du vil vende',
+        'Førstetouch i retning du skal spille',
+        'Bruk utsiden av foten for å ta med ballen rundt'
+      ],
+      variations: [
+        'Legg til en passiv forsvarer bak mottakeren',
+        'Mottak-vending-skudd: avslutt på mål etter vending'
+      ],
+      diagram: { width:220, height:120, field:'none', elements:[
+        {type:'player',x:35,y:60,team:'a',label:'A'},{type:'player',x:140,y:60,team:'a',label:'B'},
+        {type:'cone',x:195,y:60},
+        {type:'arrow',from:[45,60],to:[130,60],style:'pass'},
+        {type:'arrow',from:[145,50],to:[190,40],style:'run'}
+      ]}
+    },
+
+    // ═══════════════════════════
+    // 🎯 AVSLUTNING
+    // ═══════════════════════════
+    {
+      key: 'shot', label: 'Skudd på mål', defaultMin: 12, category: 'avslutning',
+      ages: ['6-7','8-9','10-12'], players: '4-14',
+      equipment: 'Mål (stort eller småmål), baller, kjegler',
+      description: 'Avslutninger fra ulike posisjoner. Fokus på plassering framfor kraft. Alle barn elsker å skyte på mål — la dem gjøre det mye!',
+      setup: 'Mål med keeper (eller åpent med kjegler). Spillere i kø ca. 12-16m fra mål. Baller klare på rekke.',
+      steps: [
+        'Spilleren fører ball mot mål fra sentralt.',
+        'Avslutt på mål fra ca. 10-12 meter.',
+        'Neste runde: skudd fra venstre side.',
+        'Tredje runde: mottar pasning fra siden og avslutter direkte.'
+      ],
+      coaching: [
+        'Plassering slår kraft — sikte lavt i hjørnene',
+        'Støttefot peker mot mål',
+        'Treffe midt/øvre del av ballen for lavt skudd',
+        'Følg opp skuddet — vær klar for retur!'
+      ],
+      variations: [
+        'Konkurranse: hvem scorer flest av 5 forsøk?',
+        'Legg til en forsvarer som presser bakfra'
+      ],
+      diagram: { width:220, height:150, field:'none', elements:[
+        {type:'goal',x:70,y:5,w:80,h:16},{type:'keeper',x:110,y:18},
+        {type:'player',x:110,y:110,team:'a',label:''},{type:'ball',x:118,y:105},
+        {type:'arrow',from:[118,105],to:[110,25],style:'shot'},
+        {type:'player',x:70,y:110,team:'a',label:''},{type:'player',x:150,y:110,team:'a',label:''}
+      ]}
+    },
+    {
+      key: 'shot_race', label: 'Skuddstafett', defaultMin: 10, category: 'avslutning',
+      ages: ['6-7','8-9','10-12'], players: '6-16',
+      equipment: 'Mål, baller, kjegler',
+      description: 'To lag i stafett. Før ball gjennom kjegler og avslutt på mål. Kombinerer avslutning med fart og konkurranse — garantert engasjement!',
+      setup: 'To parallelle kjegleløyper mot ett mål. Spillerne delt i to lag i kø bak startlinjen.',
+      steps: [
+        'Første spiller i hvert lag fører ball gjennom kjeglene.',
+        'Avslutt med skudd på mål.',
+        'Løp tilbake og gi high five til neste i køen.',
+        'Laget som scorer flest mål totalt vinner!'
+      ],
+      coaching: [
+        'Fart OG kontroll gjennom kjeglene',
+        'Ro deg ned foran mål — presisjon over panikkskudd',
+        'Hei på lagkameratene!'
+      ],
+      variations: [
+        'Legg til en vending eller passningsvegg før avslutning',
+        'Keeper i mål for ekstra utfordring'
+      ],
+      diagram: { width:220, height:160, field:'none', elements:[
+        {type:'goal',x:70,y:3,w:80,h:14},
+        {type:'cone',x:65,y:55},{type:'cone',x:65,y:80},{type:'cone',x:65,y:105},
+        {type:'player',x:65,y:140,team:'a',label:''},
+        {type:'cone',x:155,y:55},{type:'cone',x:155,y:80},{type:'cone',x:155,y:105},
+        {type:'player',x:155,y:140,team:'b',label:''},
+        {type:'arrow',from:[65,140],to:[65,25],style:'run'},
+        {type:'arrow',from:[155,140],to:[155,25],style:'run'}
+      ]}
+    },
+
+    // ═══════════════════════════════
+    // ⚔️ SPILL MED MOTSTAND
+    // ═══════════════════════════════
+    {
+      key: '1v1', label: '1 mot 1', defaultMin: 10, category: 'spill_m_motstand',
+      ages: ['6-7','8-9','10-12'], players: '4-16',
+      equipment: 'Småmål eller kjegler, baller, vester',
+      description: 'Ren duelltrening på liten bane med småmål. Én angriper mot én forsvarer. Bygger ferdighet i å ta på seg en spiller og å forsvare.',
+      setup: 'Liten bane 8x12m med kjeglemål i hver ende. Par stiller opp ved hver sin baselinje.',
+      steps: [
+        'Trener spiller ball inn i banen.',
+        'Begge løper etter ballen — den som når først er angriper.',
+        'Spill 1 mot 1 til mål scores eller ballen går ut.',
+        'Ny ball fra trener, nye spillere.'
+      ],
+      coaching: [
+        'Angriper: tøff mot forsvareren, bruk finter',
+        'Forsvarer: tving angriperen dit DU vil, stå på tå',
+        'Lav tyngdepunkt for rask retningsendring',
+        'Aldri gi opp!'
+      ],
+      variations: [
+        'Angriper har 2 mål å velge mellom (må lese forsvareren)',
+        '3-sekunders tidskrav for raskere avgjørelser'
+      ],
+      diagram: { width:220, height:150, field:'none', elements:[
+        {type:'goal',x:90,y:5,w:40,h:10},{type:'goal',x:90,y:135,w:40,h:10},
+        {type:'player',x:95,y:60,team:'a',label:'A'},{type:'player',x:125,y:85,team:'b',label:'F'},
+        {type:'ball',x:103,y:66},
+        {type:'arrow',from:[95,60],to:[110,25],style:'run'},
+        {type:'cone',x:40,y:5},{type:'cone',x:40,y:145},{type:'cone',x:180,y:5},{type:'cone',x:180,y:145}
+      ]}
+    },
+    {
+      key: '2v1', label: '2 mot 1', defaultMin: 10, category: 'spill_m_motstand',
+      ages: ['8-9','10-12'], players: '6-12',
+      equipment: 'Småmål eller kjegler, baller',
+      description: 'To angripere mot én forsvarer. Trener den viktigste beslutningen i fotball: når skal jeg drible, og når skal jeg spille pasning?',
+      setup: 'Bane 10x15m. Mål i ene enden. Forsvareren fra midten, angriperne fra andre enden.',
+      steps: [
+        'Angriperparet starter med ball fra baselinjen.',
+        'Forsvareren starter fra midtlinjen og løper mot angriperne.',
+        'Angriperne samarbeider for å passere forsvareren og score.',
+        'Bytt roller: forsvareren går inn i angriperpar.'
+      ],
+      coaching: [
+        'Angriper med ball: dra forsvareren mot deg FØR du passer',
+        'Angriper uten ball: hold avstand og vinkel, vær spillbar',
+        'Forsvarer: tving ballfører til én side, steng pasningslinjen',
+        'Timing er alt — pass i riktig øyeblikk!'
+      ],
+      variations: [
+        '3v2 for mer kompleksitet',
+        'To mål: angriperne velger hvilket mål de angriper'
+      ],
+      diagram: { width:220, height:160, field:'none', elements:[
+        {type:'goal',x:80,y:3,w:60,h:14},
+        {type:'player',x:80,y:70,team:'b',label:'F'},
+        {type:'player',x:80,y:130,team:'a',label:'A'},{type:'player',x:150,y:130,team:'a',label:'B'},
+        {type:'ball',x:88,y:124},
+        {type:'arrow',from:[80,130],to:[80,80],style:'run'},
+        {type:'arrow',from:[88,124],to:[148,90],style:'pass'},
+        {type:'arrow',from:[150,130],to:[150,80],style:'run'}
+      ]}
+    },
+    {
+      key: '3v2', label: '3 mot 2', defaultMin: 12, category: 'spill_m_motstand',
+      ages: ['8-9','10-12'], players: '8-15',
+      equipment: 'Mål, baller, vester',
+      description: 'Tre angripere mot to forsvarere. Trener trekantspill, støtteløp og pasning i rom. Kampnært og utviklende.',
+      setup: 'Bane 15x20m med mål. Forsvarerne fra midten, angriperne fra baselinjen.',
+      steps: [
+        'Tre angripere starter med ball fra baselinjen.',
+        'To forsvarere møter fra midtlinjen.',
+        'Angriperne samarbeider for å skape rom og score.',
+        'Avslutt innen 10 sekunder — skaper tempo.'
+      ],
+      coaching: [
+        'Trekantformasjon: bred, ikke i linje',
+        'Spiller med ball: trekk en forsvarer, spill videre',
+        'Spillere uten ball: støtteløp og diagonale bevegelser',
+        'Avslutt! Ikke overspill — ta sjansen når du har den'
+      ],
+      variations: [
+        'Forsvarerne konter på kjeglemål ved ballvinning',
+        'Legg til keeper for mer realisme'
+      ],
+      diagram: { width:220, height:160, field:'none', elements:[
+        {type:'goal',x:70,y:3,w:80,h:14},
+        {type:'player',x:85,y:65,team:'b',label:'F'},{type:'player',x:135,y:65,team:'b',label:'F'},
+        {type:'player',x:60,y:130,team:'a',label:'A'},{type:'player',x:110,y:140,team:'a',label:'B'},
+        {type:'player',x:160,y:130,team:'a',label:'C'},{type:'ball',x:118,y:134},
+        {type:'arrow',from:[118,134],to:[65,95],style:'pass'},
+        {type:'arrow',from:[60,130],to:[60,80],style:'run'},
+        {type:'arrow',from:[160,130],to:[160,80],style:'run'}
+      ]}
+    },
+
+    // ═══════════════════════════════
+    // 🏟️ SMÅLAGSSPILL
+    // ═══════════════════════════════
+    {
+      key: 'ssg', label: 'Smålagsspill', defaultMin: 18, category: 'smalagsspill',
+      ages: ['6-7','8-9','10-12'], players: '6-16',
+      equipment: 'Mål (2 stk), vester, baller, kjegler til bane',
+      description: 'Kjerneøvelsen i barnefotball. Minimum 50% av økten bør være smålagsspill. 3v3, 4v4 eller 5v5 på tilpasset bane gir mest mulig ballkontakt i kamplike situasjoner.',
+      setup: 'Tilpass banestørrelse (3v3: 20x25m, 5v5: 30x40m). To mål, vester for lagdeling.',
+      steps: [
+        'Del inn i to lag med vester.',
+        'Vanlige regler, innkast/innspark ved sidelinje.',
+        'Spill perioder på 4-6 minutter, kort pause, nye lag.',
+        'Trener kan stoppe kort for å veilede, men la spillet flyte!'
+      ],
+      coaching: [
+        'Spre dere! Ikke alle rundt ballen',
+        'Snakk sammen — rop på ballen, gi beskjed',
+        'Etter ballvinning: se framover først!',
+        'La barna prøve og feile — ros innsats, ikke bare mål'
+      ],
+      variations: [
+        'Jokere: 1-2 spillere alltid med angripende lag',
+        'Flere mål for mer rom og gøy'
+      ],
+      diagram: { width:240, height:160, field:'half', elements:[
+        {type:'goal',x:5,y:55,w:12,h:50,vertical:true},{type:'goal',x:223,y:55,w:12,h:50,vertical:true},
+        {type:'player',x:50,y:45,team:'a',label:''},{type:'player',x:50,y:115,team:'a',label:''},
+        {type:'player',x:95,y:80,team:'a',label:''},
+        {type:'player',x:145,y:45,team:'b',label:''},{type:'player',x:145,y:115,team:'b',label:''},
+        {type:'player',x:190,y:80,team:'b',label:''},{type:'ball',x:100,y:74}
+      ]}
+    },
+    {
+      key: 'possession', label: 'Ballbesittelse', defaultMin: 12, category: 'smalagsspill',
+      ages: ['8-9','10-12'], players: '7-15',
+      equipment: 'Vester, baller, kjegler til bane',
+      description: 'Hold ballen i laget med overtall (f.eks. 4v2 med jokere). Trener pasningsspill under press, orientering og bevegelse for å bli spillbar.',
+      setup: 'Avgrens et område (12x12 til 20x20m). Del inn i to lag pluss 1-2 jokere som alltid er med ballførende lag.',
+      steps: [
+        'Laget med ball holder den så lenge som mulig.',
+        'Jokerne spiller med det ballførende laget (overtall).',
+        'Forsvarerne vinner ball = bytt!',
+        'Tell pasninger i strekk — hvem klarer 10?'
+      ],
+      coaching: [
+        'Gjør deg spillbar: avstand og vinkel til ballfører',
+        'Jokere: beveg deg, ikke stå stille!',
+        'Se opp før du får ballen — orienter deg',
+        'Forsvar: press sammen, steng midten'
+      ],
+      variations: [
+        'Uten jokere for lik kamp',
+        'Score ved å spille ballen fra side til side'
+      ],
+      diagram: { width:220, height:170, field:'small', elements:[
+        {type:'cone',x:20,y:15},{type:'cone',x:200,y:15},{type:'cone',x:20,y:155},{type:'cone',x:200,y:155},
+        {type:'player',x:55,y:40,team:'a',label:''},{type:'player',x:165,y:40,team:'a',label:''},
+        {type:'player',x:55,y:130,team:'a',label:''},{type:'player',x:165,y:130,team:'a',label:''},
+        {type:'player',x:110,y:85,team:'neutral',label:'J'},
+        {type:'player',x:90,y:70,team:'b',label:''},{type:'player',x:130,y:100,team:'b',label:''},
+        {type:'ball',x:63,y:36},{type:'arrow',from:[55,40],to:[105,80],style:'pass'}
+      ]}
+    },
+    {
+      key: 'game_activity', label: 'Fri spillaktivitet', defaultMin: 18, category: 'smalagsspill',
+      ages: ['6-7','8-9','10-12'], players: '6-20',
+      equipment: 'Mål, baller, vester',
+      description: 'Ustrukturert spill der barna styrer selv. Treneren observerer og heier, men griper minimalt inn. Gir eierskap, kreativitet og ren fotballglede.',
+      setup: 'Tilpasset bane med mål. Del inn i lag (kan være ujevne). Minimalt med regler.',
+      steps: [
+        'Del inn i lag. Forklar: "Nå er det match!".',
+        'Spillerne styrer selv — innkast, mål, igangsettinger.',
+        'Treneren observerer og heier, griper minimalt inn.',
+        'Bytt lag halvveis for variasjon.'
+      ],
+      coaching: [
+        'Tren deg i å holde igjen — la barna løse problemene selv',
+        'Ros samarbeid og innsats, ikke bare scoring',
+        'Gå gjerne inn som spiller selv om det trengs',
+        'Sørg for at alle er involvert'
+      ],
+      variations: [
+        'Alle må touche ballen før scoring teller',
+        'Spill uten keeper for mer scoring'
+      ],
+      diagram: { width:240, height:160, field:'half', elements:[
+        {type:'goal',x:5,y:55,w:12,h:50,vertical:true},{type:'goal',x:223,y:55,w:12,h:50,vertical:true},
+        {type:'player',x:40,y:50,team:'a',label:''},{type:'player',x:80,y:90,team:'a',label:''},
+        {type:'player',x:60,y:125,team:'a',label:''},
+        {type:'player',x:140,y:40,team:'b',label:''},{type:'player',x:175,y:80,team:'b',label:''},
+        {type:'player',x:155,y:120,team:'b',label:''},{type:'ball',x:115,y:78}
+      ]}
+    },
+    {
+      key: 'square_game', label: 'Spill i soner', defaultMin: 12, category: 'smalagsspill',
+      ages: ['10-12'], players: '8-16',
+      equipment: 'Mål, vester, kjegler, baller',
+      description: 'Spill i avgrenset område med soneoppgaver. F.eks. må ballen innom midtsonen før scoring. Trener romforståelse og taktisk tenkning.',
+      setup: 'Del en halvbane i 2-3 soner med kjegler. Mål i hver ende. Tydelig markering mellom sonene.',
+      steps: [
+        'Vanlig spill, men ballen MÅ ha vært i midtsonen før scoring.',
+        'Spill i perioder på 5 minutter.',
+        'Varier soneregelen underveis.',
+        'F.eks.: "score kun etter innlegg fra ytterkanten".'
+      ],
+      coaching: [
+        'Se etter rom i neste sone FØR du mottar',
+        'Bruk bredden — ikke spill gjennom midten hele tiden',
+        'Forsvar: kontroller midtsonen, press som lag',
+        'Beveg dere mellom sonene for å skape rom'
+      ],
+      variations: [
+        'Legg til jokere i midtsonen',
+        'Tidsbegrensning: 20 sek etter sonegjennomspill'
+      ],
+      diagram: { width:240, height:160, field:'half', elements:[
+        {type:'goal',x:5,y:55,w:12,h:50,vertical:true},{type:'goal',x:223,y:55,w:12,h:50,vertical:true},
+        {type:'zone_line',x1:100,y1:8,x2:100,y2:152},{type:'zone_line',x1:140,y1:8,x2:140,y2:152},
+        {type:'player',x:50,y:55,team:'a',label:''},{type:'player',x:50,y:105,team:'a',label:''},
+        {type:'player',x:120,y:80,team:'neutral',label:'J'},
+        {type:'player',x:185,y:55,team:'b',label:''},{type:'player',x:185,y:105,team:'b',label:''},
+        {type:'ball',x:58,y:100}
+      ]}
+    },
+
+    // ═══════════════════════
+    // 🧤 KEEPER
+    // ═══════════════════════
+    {
+      key: 'keeper', label: 'Keepertrening', defaultMin: 12, category: 'keeper',
+      ages: ['8-9','10-12'], players: '1-4',
+      equipment: 'Mål, baller, keeperhansker',
+      description: 'Grunnleggende keeperøvelser parallelt med resten av laget. Fokus på grunnstilling, grep, enkel skuddstopp og utkast. Alle bør prøve keeperrollen.',
+      setup: 'Keeper i mål. Trener eller medspiller skyter fra 8-12 meter. Start med rolige skudd, øk gradvis.',
+      steps: [
+        'Grunnstilling: føttene i skulderbredde, lett på tå, hendene foran.',
+        'Trener ruller ball langs bakken — keeper går ned og griper.',
+        'Trener kaster ball i brysthøyde — keeper fanger med "W-grep".',
+        'Avslutning: spillere skyter lette skudd, keeper stopper og kaster ut.'
+      ],
+      coaching: [
+        'Kropp bak ballen — sikre med hele kroppen',
+        'Grep: tomler danner W, fingre spredt',
+        'Fall til siden, ikke bakover',
+        'Utkast: underarmskast for presisjon, overkast for lengde'
+      ],
+      variations: [
+        'Keeperlek: keeper vs keeper med kast over en snor',
+        '1v1 mot keeper: spillere angriper, keeper leser situasjonen'
+      ],
+      diagram: { width:220, height:140, field:'none', elements:[
+        {type:'goal',x:60,y:3,w:100,h:18},{type:'keeper',x:110,y:20},
+        {type:'player',x:70,y:110,team:'a',label:''},{type:'player',x:150,y:110,team:'a',label:''},
+        {type:'ball',x:78,y:105},{type:'arrow',from:[78,105],to:[110,25],style:'shot'}
+      ]}
+    },
+
+    // ── EGENDEFINERT (alltid nederst) ──
+    { key: 'custom', label: 'Skriv inn selv', defaultMin: 10, isCustom: true, category: 'special' }
   ];
+
+  // Migration map for removed/renamed exercise keys
+  const KEY_MIGRATION = {
+    'warm_no_ball': 'tag',
+    'long_pass': 'pass_pair',
+    'pass_turn': 'receive_turn',
+    'cross_finish': 'shot',
+    'juggle': 'custom',
+    'competitions': 'custom',
+    'overload': '2v1',
+    'possession_joker': 'possession',
+    'possession_even': 'possession',
+    'square_german': 'square_game',
+    'surprise': 'ssg',
+  };
+
+  function migrateExerciseKey(key) {
+    return KEY_MIGRATION[key] || key;
+  }
+
+  // Migrate a stored exercise object: remap old keys, preserve customName for custom fallback
+  function migrateExerciseObj(exObj) {
+    if (!exObj || !exObj.exerciseKey) return exObj;
+    const oldKey = exObj.exerciseKey;
+    const newKey = migrateExerciseKey(oldKey);
+    if (newKey !== oldKey) {
+      exObj.exerciseKey = newKey;
+      if (newKey === 'custom' && !exObj.customName) {
+        // Preserve a readable name
+        const oldMeta = { 'juggle': 'Triksing med ball', 'competitions': 'Konkurranser' };
+        exObj.customName = oldMeta[oldKey] || oldKey;
+      }
+    }
+    return exObj;
+  }
 
   const EX_BY_KEY = new Map(EXERCISES.map(x => [x.key, x]));
 
+  // Category definitions for optgroup rendering
+  const EXERCISE_CATEGORIES = [
+    { id: 'oppvarming', label: '🏃 Oppvarming' },
+    { id: 'teknikk', label: '⚽ Teknikk' },
+    { id: 'avslutning', label: '🎯 Avslutning' },
+    { id: 'spill_m_motstand', label: '⚔️ Spill med motstand' },
+    { id: 'smalagsspill', label: '🏟️ Smålagsspill' },
+    { id: 'keeper', label: '🧤 Keeper' },
+  ];
+
+  // -------------------------
+  // SVG Diagram Renderer
+  // -------------------------
+  // Counter for unique SVG marker IDs (avoids collision when multiple SVGs on same page, e.g. PDF export)
+  let _svgIdCounter = 0;
+
+  function renderDrillSVG(diagram) {
+    if (!diagram) return '';
+    const { width, height, field, elements } = diagram;
+    const uid = '_s' + (++_svgIdCounter);
+    let s = '<svg viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:280px;height:auto;">';
+    s += '<defs>';
+    s += '<marker id="wo_ap' + uid + '" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#fff" opacity="0.9"/></marker>';
+    s += '<marker id="wo_ar' + uid + '" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#fff" opacity="0.7"/></marker>';
+    s += '<marker id="wo_as' + uid + '" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><path d="M0,0 L10,3.5 L0,7" fill="#FDD835"/></marker>';
+    s += '</defs>';
+    // Field background
+    if (field === 'small' || field === 'quarter') {
+      s += '<rect x="8" y="8" width="' + (width - 16) + '" height="' + (height - 16) + '" rx="4" fill="#3d8b37" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>';
+    } else if (field === 'half') {
+      s += '<rect x="8" y="8" width="' + (width - 16) + '" height="' + (height - 16) + '" rx="4" fill="#3d8b37" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>';
+      s += '<line x1="' + (width / 2) + '" y1="8" x2="' + (width / 2) + '" y2="' + (height - 8) + '" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>';
+    }
+    for (const el of elements) {
+      switch (el.type) {
+        case 'player': {
+          const fill = el.team === 'b' ? '#1E88E5' : el.team === 'neutral' ? '#FF9800' : '#E53935';
+          s += '<circle cx="' + el.x + '" cy="' + el.y + '" r="11" fill="' + fill + '" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>';
+          if (el.label) s += '<text x="' + el.x + '" y="' + (el.y + 4) + '" text-anchor="middle" fill="white" font-size="9" font-weight="700" font-family="sans-serif">' + el.label + '</text>';
+          break;
+        }
+        case 'keeper':
+          s += '<circle cx="' + el.x + '" cy="' + el.y + '" r="11" fill="#FDD835" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>';
+          s += '<text x="' + el.x + '" y="' + (el.y + 4) + '" text-anchor="middle" fill="#333" font-size="9" font-weight="700" font-family="sans-serif">K</text>';
+          break;
+        case 'ball':
+          s += '<circle cx="' + el.x + '" cy="' + el.y + '" r="5" fill="white" stroke="#333" stroke-width="1"/>';
+          break;
+        case 'cone':
+          s += '<polygon points="' + el.x + ',' + (el.y - 6) + ' ' + (el.x - 5) + ',' + (el.y + 4) + ' ' + (el.x + 5) + ',' + (el.y + 4) + '" fill="#FF9800" stroke="rgba(0,0,0,0.15)" stroke-width="0.5"/>';
+          break;
+        case 'goal': {
+          s += '<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h + '" rx="2" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.5"/>';
+          if (!el.vertical) {
+            for (let nx = el.x + 8; nx < el.x + el.w; nx += 10)
+              s += '<line x1="' + nx + '" y1="' + el.y + '" x2="' + nx + '" y2="' + (el.y + el.h) + '" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>';
+          }
+          break;
+        }
+        case 'arrow': {
+          const [x1, y1] = el.from, [x2, y2] = el.to;
+          if (el.style === 'pass')
+            s += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" marker-end="url(#wo_ap' + uid + ')"/>';
+          else if (el.style === 'run')
+            s += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#wo_ar' + uid + ')"/>';
+          else if (el.style === 'shot')
+            s += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#FDD835" stroke-width="2.5" marker-end="url(#wo_as' + uid + ')"/>';
+          break;
+        }
+        case 'zone_line':
+          s += '<line x1="' + el.x1 + '" y1="' + el.y1 + '" x2="' + el.x2 + '" y2="' + el.y2 + '" stroke="rgba(255,255,255,0.4)" stroke-width="1" stroke-dasharray="6,4"/>';
+          break;
+      }
+    }
+    s += '</svg>';
+    return s;
+  }
+
   function pickRandomExerciseKey() {
-    const candidates = EXERCISES.filter(x => !x.isSurprise && !x.isCustom);
+    const candidates = EXERCISES.filter(x => !x.isCustom && x.category !== 'special');
     const idx = Math.floor(Math.random() * candidates.length);
     return candidates[idx]?.key || 'ssg';
   }
@@ -294,8 +1014,7 @@
     if (!ex) return '';
     const meta = EX_BY_KEY.get(ex.exerciseKey);
     if (ex.exerciseKey === 'custom') return String(ex.customName || '').trim() || 'Egendefinert øvelse';
-    if (meta && !meta.isSurprise) return meta.label;
-    if (ex.exerciseKey === 'surprise') return 'Overrask meg';
+    if (meta) return meta.label;
     return 'Øvelse';
   }
 
@@ -373,10 +1092,40 @@
   }
 
   function optionHtml(selectedKey) {
-    return getSortedExercises().map(x => {
-      const sel = x.key === selectedKey ? 'selected' : '';
-      return `<option value="${escapeHtml(x.key)}" ${sel}>${escapeHtml(x.label)}</option>`;
-    }).join('');
+    // Build grouped dropdown with <optgroup>
+    const freq = loadFrequency();
+    const drink = EXERCISES.find(e => e.key === 'drink');
+    const custom = EXERCISES.find(e => e.key === 'custom');
+    let html = '';
+    // Drikkepause always first
+    if (drink) {
+      const sel = drink.key === selectedKey ? 'selected' : '';
+      html += '<option value="' + escapeHtml(drink.key) + '" ' + sel + '>' + escapeHtml(drink.label) + '</option>';
+    }
+    // Grouped exercises
+    for (const cat of EXERCISE_CATEGORIES) {
+      const exs = EXERCISES.filter(e => e.category === cat.id);
+      if (!exs.length) continue;
+      // Sort by frequency within category
+      exs.sort((a, b) => {
+        const fa = freq[a.key] || 0;
+        const fb = freq[b.key] || 0;
+        if (fb !== fa) return fb - fa;
+        return a.label.localeCompare(b.label, 'nb');
+      });
+      html += '<optgroup label="' + escapeHtml(cat.label) + '">';
+      for (const x of exs) {
+        const sel = x.key === selectedKey ? 'selected' : '';
+        html += '<option value="' + escapeHtml(x.key) + '" ' + sel + '>' + escapeHtml(x.label) + '</option>';
+      }
+      html += '</optgroup>';
+    }
+    // Skriv inn selv last
+    if (custom) {
+      const sel = custom.key === selectedKey ? 'selected' : '';
+      html += '<option value="' + escapeHtml(custom.key) + '" ' + sel + '>' + escapeHtml(custom.label) + '</option>';
+    }
+    return html;
   }
 
   function renderExerciseEditor(blockId, track, ex) {
@@ -384,6 +1133,8 @@
     const showCustom = ex.exerciseKey === 'custom';
     const mode = ex.groupMode || 'even';
     const groupCount = clampInt(ex.groupCount, 1, 6, 2);
+    const meta = EX_BY_KEY.get(ex.exerciseKey);
+    const hasInfo = meta && meta.description && meta.steps;
 
     return `
       <div class="wo-subcard">
@@ -394,9 +1145,15 @@
         <div class="wo-row">
           <div class="wo-field">
             <label class="wo-label">Velg øvelse</label>
-            <select id="${idp}_sel" class="input wo-input">
-              ${optionHtml(ex.exerciseKey)}
-            </select>
+            <div class="wo-select-row">
+              <select id="${idp}_sel" class="input wo-input">
+                ${optionHtml(ex.exerciseKey)}
+              </select>
+            </div>
+            ${hasInfo ? `<button type="button" id="${idp}_info" class="wo-info-expand" aria-label="Vis øvelsesinfo">
+              <span class="wo-info-expand-text"><span class="wo-info-expand-icon">📖</span> Vis beskrivelse, diagram og trenertips</span>
+              <span class="wo-info-expand-chevron">▼</span>
+            </button>` : ''}
           </div>
 
           <div class="wo-field ${showCustom ? '' : 'wo-hidden'}" id="${idp}_customWrap">
@@ -409,6 +1166,8 @@
             <input id="${idp}_min" class="input wo-input" type="number" min="0" max="300" value="${escapeHtml(String(clampInt(ex.minutes, 0, 300, 10)))}">
           </div>
         </div>
+
+        <div id="${idp}_infoPanel" class="wo-info-panel wo-hidden"></div>
 
         <div class="wo-row">
           <div class="wo-field wo-groups-settings">
@@ -573,6 +1332,39 @@
     persistDraft();
   }
 
+  function renderInfoPanel(exerciseKey) {
+    const meta = EX_BY_KEY.get(exerciseKey);
+    if (!meta || !meta.description || !meta.steps) return '';
+    const tags = [];
+    if (meta.ages) meta.ages.forEach(a => tags.push('📍 ' + a + ' år'));
+    if (meta.players) tags.push('👥 ' + meta.players);
+    if (meta.equipment) tags.push('⚙️ ' + meta.equipment);
+    let html = '<div class="wo-info-content">';
+    html += '<p class="wo-info-desc">' + escapeHtml(meta.description) + '</p>';
+    if (tags.length) {
+      html += '<div class="wo-info-tags">' + tags.map(t => '<span class="wo-info-tag">' + escapeHtml(t) + '</span>').join('') + '</div>';
+    }
+    if (meta.diagram) {
+      html += '<div class="wo-info-svg">' + renderDrillSVG(meta.diagram) + '</div>';
+    }
+    html += '<div class="wo-info-section">Oppsett</div>';
+    html += '<p class="wo-info-text">' + escapeHtml(meta.setup || '') + '</p>';
+    html += '<div class="wo-info-section">Gjennomføring</div><ol class="wo-info-steps">';
+    for (const step of meta.steps) html += '<li>' + escapeHtml(step) + '</li>';
+    html += '</ol>';
+    if (meta.coaching && meta.coaching.length) {
+      html += '<div class="wo-info-section">Coachingpunkter</div><ul class="wo-info-coaching">';
+      for (const c of meta.coaching) html += '<li>' + escapeHtml(c) + '</li>';
+      html += '</ul>';
+    }
+    if (meta.variations && meta.variations.length) {
+      html += '<div class="wo-info-section">Variasjoner</div>';
+      for (const v of meta.variations) html += '<p class="wo-info-variation">🔄 ' + escapeHtml(v) + '</p>';
+    }
+    html += '</div>';
+    return html;
+  }
+
   function bindExerciseEditor(block, track) {
     const bid = block.id;
     const ex = track === 'a' ? block.a : block.b;
@@ -587,32 +1379,45 @@
     const comment = $(`${idp}_comment`);
     const makeBtn = $(`${idp}_make`);
     const refreshBtn = $(`${idp}_refresh`);
+    const infoBtn = $(`${idp}_info`);
+    const infoPanel = $(`${idp}_infoPanel`);
+
+    // Info panel toggle (lazy render)
+    if (infoBtn && infoPanel) {
+      infoBtn.addEventListener('click', () => {
+        const isOpen = !infoPanel.classList.contains('wo-hidden');
+        if (isOpen) {
+          infoPanel.classList.add('wo-hidden');
+          infoBtn.classList.remove('wo-info-expand-active');
+          const txt = infoBtn.querySelector('.wo-info-expand-text');
+          if (txt) txt.innerHTML = '<span class="wo-info-expand-icon">📖</span> Vis beskrivelse, diagram og trenertips';
+        } else {
+          // Lazy render content
+          if (!infoPanel.dataset.rendered) {
+            infoPanel.innerHTML = renderInfoPanel(ex.exerciseKey);
+            infoPanel.dataset.rendered = '1';
+          }
+          infoPanel.classList.remove('wo-hidden');
+          infoBtn.classList.add('wo-info-expand-active');
+          const txt = infoBtn.querySelector('.wo-info-expand-text');
+          if (txt) txt.innerHTML = '<span class="wo-info-expand-icon">📖</span> Skjul øvelsesinfo';
+        }
+      });
+    }
 
     if (sel) {
       sel.addEventListener('change', () => {
         const v = String(sel.value || 'tag');
-        if (v === 'surprise') {
-          const chosen = pickRandomExerciseKey();
-          sel.value = chosen;
-          ex.exerciseKey = chosen;
-          trackExerciseUsage(chosen);
-          const meta = EX_BY_KEY.get(chosen);
-          if (meta && Number(ex.minutes) <= 0) ex.minutes = meta.defaultMin ?? 10;
+        ex.exerciseKey = v;
+        trackExerciseUsage(v);
+        const meta = EX_BY_KEY.get(v);
+        if (meta && Number(ex.minutes) <= 0) ex.minutes = meta.defaultMin ?? 10;
+
+        if (v === 'custom') {
+          if (customWrap) customWrap.classList.remove('wo-hidden');
+        } else {
           if (customWrap) customWrap.classList.add('wo-hidden');
           ex.customName = '';
-        } else {
-          ex.exerciseKey = v;
-          trackExerciseUsage(v);
-          const meta = EX_BY_KEY.get(v);
-          // Sett default minutter kun hvis bruker ikke har skrevet noe "tungt" (0 eller tom)
-          if (meta && Number(ex.minutes) <= 0) ex.minutes = meta.defaultMin ?? 10;
-
-          if (v === 'custom') {
-            if (customWrap) customWrap.classList.remove('wo-hidden');
-          } else {
-            if (customWrap) customWrap.classList.add('wo-hidden');
-            ex.customName = '';
-          }
         }
 
         // grupper stale
@@ -935,12 +1740,12 @@
         return {
           id: uuid('b_'),
           kind: 'parallel',
-          a: { ...makeDefaultExercise(), ...b.a },
-          b: { ...makeDefaultExercise(), ...b.b },
+          a: migrateExerciseObj({ ...makeDefaultExercise(), ...b.a }),
+          b: migrateExerciseObj({ ...makeDefaultExercise(), ...b.b }),
           _showPickB: false
         };
       }
-      return { id: uuid('b_'), kind: 'single', a: { ...makeDefaultExercise(), ...b.a } };
+      return { id: uuid('b_'), kind: 'single', a: migrateExerciseObj({ ...makeDefaultExercise(), ...b.a }) };
     });
 
     state.groupsCache.clear();
@@ -1089,7 +1894,17 @@ function normalizeImportedExercise(ex) {
   out.groupCount = clampInt(out.groupCount, 1, 6, d.groupCount);
   out.groupMode = (out.groupMode === 'diff' || out.groupMode === 'even') ? out.groupMode : d.groupMode;
 
-  // Exercise key
+  // Exercise key — migrate old keys first
+  if (out.exerciseKey && KEY_MIGRATION[out.exerciseKey]) {
+    const migrated = KEY_MIGRATION[out.exerciseKey];
+    if (migrated === 'custom' && !out.customName) {
+      // Preserve original name for custom fallback
+      const oldMeta = { 'juggle': 'Triksing med ball', 'competitions': 'Konkurranser' };
+      out.customName = clampText(oldMeta[out.exerciseKey] || out.exerciseKey, 60);
+    }
+    out.exerciseKey = migrated;
+  }
+
   const allowedKeys = new Set(EXERCISES.map(x => x.key));
   if (!allowedKeys.has(out.exerciseKey)) {
     // If unknown, treat as custom
@@ -1282,9 +2097,9 @@ function serializeWorkoutFromState() {
     state.blocks = w.blocks.map(b => {
       const bid = uuid('b_');
       if (b.kind === 'parallel') {
-        return { id: bid, kind: 'parallel', a: { ...makeDefaultExercise(), ...b.a }, b: { ...makeDefaultExercise(), ...b.b }, _showPickB: false };
+        return { id: bid, kind: 'parallel', a: migrateExerciseObj({ ...makeDefaultExercise(), ...b.a }), b: migrateExerciseObj({ ...makeDefaultExercise(), ...b.b }), _showPickB: false };
       }
-      return { id: bid, kind: 'single', a: { ...makeDefaultExercise(), ...b.a } };
+      return { id: bid, kind: 'single', a: migrateExerciseObj({ ...makeDefaultExercise(), ...b.a }) };
     });
 
     renderPlayersPanel();
@@ -1395,10 +2210,10 @@ function serializeWorkoutFromState() {
       { key: 'tag', min: 8 },
       { key: 'warm_ball', min: 10 },
       { key: 'pass_square', min: 12 },
-      { key: 'drink', min: 2, },
+      { key: 'drink', min: 2 },
       { parallel: true, a: { key: '2v1', min: 12 }, b: { key: 'keeper', min: 12 } },
       { key: 'ssg', min: 25 },
-      { key: 'competitions', min: 6 }
+      { key: 'shot_race', min: 6 }
     ],
     // 90 min
     [
@@ -1406,10 +2221,10 @@ function serializeWorkoutFromState() {
       { key: 'warm_ball', min: 12 },
       { key: 'driving', min: 10 },
       { key: 'drink', min: 2 },
-      { key: 'pass_turn', min: 12 },
-      { key: 'overload', min: 12 },
+      { key: 'receive_turn', min: 12 },
+      { key: '3v2', min: 12 },
       { key: 'ssg', min: 28 },
-      { key: 'competitions', min: 4 }
+      { key: 'shot', min: 4 }
     ]
   ];
 
@@ -1449,6 +2264,7 @@ function serializeWorkoutFromState() {
     const date = String($('woDate')?.value || '').trim();
     const title = String($('woTitle')?.value || '').trim() || (date ? `Trening ${date}` : 'Treningsøkt');
     const total = totalMinutes();
+    const includeExInfo = !!($('woExportDetailToggle')?.checked);
 
     const players = getPlayersSnapshot();
     const map = playerMap(players);
@@ -1485,12 +2301,31 @@ function serializeWorkoutFromState() {
       const groupsA = renderGroupLists(b, 'a');
       const groupsB = isPar ? renderGroupLists(b, 'b') : '';
 
+      function renderExInfo(ex) {
+        if (!includeExInfo) return '';
+        const meta = EX_BY_KEY.get(ex?.exerciseKey);
+        if (!meta || !meta.description) return '';
+        let info = '';
+        info += '<div class="exp-description">' + escapeHtml(meta.description) + '</div>';
+        if (meta.coaching && meta.coaching.length) {
+          info += '<div class="exp-coaching"><span class="exp-coaching-h">Tips:</span> ' + meta.coaching.map(c => escapeHtml(c)).join(' · ') + '</div>';
+        }
+        if (meta.diagram) {
+          info += '<div class="exp-svg">' + renderDrillSVG(meta.diagram) + '</div>';
+        }
+        return info;
+      }
+
+      const infoA = renderExInfo(b.a);
+      const infoB = isPar ? renderExInfo(b.b) : '';
+
       if (!isPar) {
         return `
           <tr>
             <td class="exp-col-idx">${idx + 1}</td>
             <td class="exp-col-ex">
               <div class="exp-ex-name">${escapeHtml(exAName)}</div>
+              ${infoA}
               ${commentA ? `<div class="exp-comment">${escapeHtml(commentA)}</div>` : ''}
               ${groupsA}
             </td>
@@ -1507,12 +2342,14 @@ function serializeWorkoutFromState() {
               <div class="exp-par">
                 <div class="exp-par-h">Øvelse A</div>
                 <div class="exp-ex-name">${escapeHtml(exAName)} <span class="exp-mini">(${minutesA} min)</span></div>
+                ${infoA}
                 ${commentA ? `<div class="exp-comment">${escapeHtml(commentA)}</div>` : ''}
                 ${groupsA}
               </div>
               <div class="exp-par">
                 <div class="exp-par-h">Øvelse B (parallelt)</div>
                 <div class="exp-ex-name">${escapeHtml(exBName)} <span class="exp-mini">(${minutesB} min)</span></div>
+                ${infoB}
                 ${commentB ? `<div class="exp-comment">${escapeHtml(commentB)}</div>` : ''}
                 ${groupsB}
               </div>
@@ -1587,6 +2424,11 @@ function serializeWorkoutFromState() {
     .exp-ex-name{font-weight:900; margin-bottom:3px;}
     .exp-mini{font-weight:700; color:var(--muted); font-size:12px;}
     .exp-comment{color:var(--muted); font-size:13px; margin-top:6px; margin-bottom:12px; line-height:1.45;}
+    .exp-description{color:#374151; font-size:12.5px; margin-top:4px; margin-bottom:6px; line-height:1.5;}
+    .exp-coaching{color:var(--muted); font-size:12px; margin-bottom:8px; line-height:1.5;}
+    .exp-coaching-h{font-weight:700; color:#374151;}
+    .exp-svg{margin:8px 0; display:flex; justify-content:center;}
+    .exp-svg svg{max-width:220px; width:100%; height:auto; background:#3d8b37; border-radius:8px; padding:6px;}
     .exp-parallel{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px;}
     .exp-par{border:1px solid var(--line); border-radius:14px; padding:10px; background:#fff;}
     .exp-par-h{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:800; margin-bottom:6px;}
@@ -1778,9 +2620,9 @@ function serializeWorkoutFromState() {
     state.blocks = draft.blocks.map(b => {
       const bid = (b && typeof b.id === 'string' && b.id) ? b.id : uuid('b_');
       if (b.kind === 'parallel') {
-        return { id: bid, kind: 'parallel', a: { ...makeDefaultExercise(), ...b.a }, b: { ...makeDefaultExercise(), ...b.b }, _showPickB: false };
+        return { id: bid, kind: 'parallel', a: migrateExerciseObj({ ...makeDefaultExercise(), ...b.a }), b: migrateExerciseObj({ ...makeDefaultExercise(), ...b.b }), _showPickB: false };
       }
-      return { id: bid, kind: 'single', a: { ...makeDefaultExercise(), ...b.a } };
+      return { id: bid, kind: 'single', a: migrateExerciseObj({ ...makeDefaultExercise(), ...b.a }) };
     });
 
     return true;
