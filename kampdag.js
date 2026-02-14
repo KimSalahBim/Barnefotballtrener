@@ -902,8 +902,10 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
         if (seg.lineup.includes(underP)) continue;
 
         const dt = seg.end - seg.start;
-        const actual = Math.min(transfer, dt - 2);
-        if (actual < 2) continue;
+        // Both halves must be >= 4 min so no player gets a too-short stint
+        if (dt < 8) continue;
+        const actual = Math.min(transfer, dt - 4);
+        if (actual < 4) continue;
 
         const splitTime = Math.round(seg.end - actual);
 
@@ -964,8 +966,9 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
           if (seg.lineup.includes(underP)) continue;
 
           const dt = seg.end - seg.start;
-          const actual = Math.min(transfer, dt - 2);
-          if (actual < 2) continue;
+          if (dt < 8) continue;
+          const actual = Math.min(transfer, dt - 4);
+          if (actual < 4) continue;
 
           const splitTime = Math.round(seg.end - actual);
           const newLineup = seg.lineup.map(id => id === worstKeeper ? underP : id);
@@ -1014,8 +1017,8 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
 
           const dt = seg.end - seg.start;
 
-          // For short segments (≤3 min): do a whole-segment swap (no split)
-          if (dt <= 3) {
+          // For short segments (≤4 min): do a whole-segment swap (no split needed)
+          if (dt <= 4) {
             const newLineup = seg.lineup.map(id => id === overNK ? worstKeeper2 : id);
             seg.lineup = newLineup;
             minutes[overNK] -= dt;
@@ -1024,8 +1027,10 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
             break;
           }
 
-          const actual = Math.min(transfer2, dt - 1);
-          if (actual < 1) continue;
+          // Split: both halves must be >= 4 min
+          if (dt < 8) continue;
+          const actual = Math.min(transfer2, dt - 4);
+          if (actual < 4) continue;
 
           const splitTime = Math.round(seg.end - actual);
           const newLineup = seg.lineup.map(id => id === overNK ? worstKeeper2 : id);
