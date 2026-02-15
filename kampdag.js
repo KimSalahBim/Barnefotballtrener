@@ -779,15 +779,32 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
    */
   function generateSegmentTimes(T, nsegs, keeperChangeTimes) {
     const segLen = T / nsegs;
-    const times = new Set();
-    times.add(0);
-    times.add(T);
+    const regularTimes = new Set();
+    regularTimes.add(0);
+    regularTimes.add(T);
     for (let i = 1; i < nsegs; i++) {
-      times.add(Math.round(i * segLen));
+      regularTimes.add(Math.round(i * segLen));
     }
+
     // Keeper changes are mandatory boundaries
-    (keeperChangeTimes || []).forEach(t => { if (t > 0 && t < T) times.add(t); });
-    return Array.from(times).sort((a, b) => a - b);
+    const keeperTimes = new Set();
+    (keeperChangeTimes || []).forEach(t => { if (t > 0 && t < T) keeperTimes.add(t); });
+
+    // Merge: if a regular boundary is within 2 min of a keeper boundary,
+    // remove the regular boundary (keeper boundary takes priority).
+    // This prevents 1-2 min micro-segments at keeper change points.
+    for (const rt of regularTimes) {
+      if (rt === 0 || rt === T) continue;
+      for (const kt of keeperTimes) {
+        if (Math.abs(rt - kt) > 0 && Math.abs(rt - kt) <= 2) {
+          regularTimes.delete(rt);
+          break;
+        }
+      }
+    }
+
+    const allTimes = new Set([...regularTimes, ...keeperTimes]);
+    return Array.from(allTimes).sort((a, b) => a - b);
   }
 
   /**
@@ -834,23 +851,28 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       if (keeperId && idSet.has(keeperId)) lineup.push(keeperId);
 
       // Calculate deficit: how far behind target pace is each player?
-      // For keepers: subtract their remaining keeper time from minutes,
-      // because those minutes are guaranteed and shouldn't count as "ahead".
-      // Actually: ADD remaining keeper time to their effective pace target,
-      // so they're treated as if they need LESS outfield time.
+      // For keepers: add their remaining keeper time to effective minutes,
+      // because those minutes are guaranteed and shouldn't need outfield time.
       const paceTarget = target * start / T;
       const scored = playersList
         .filter(p => !lineup.includes(p.id))
         .map(p => {
           let effectiveMinutes = minutes[p.id];
-          // Account for guaranteed future keeper time
+          // Account for guaranteed future keeper time with dynamic factor:
+          // Higher keeperTime/T ratio → lower factor (keeper needs more outfield)
+          // Lower ratio → higher factor (keeper has plenty of non-keeper time)
           if (keeperSet.has(p.id)) {
             const futureKeeper = remainingKeeperTime(p.id, end);
-            effectiveMinutes += futureKeeper * 0.3;
+            const totalKeeperTime = keeperMins[p.id] || 0;
+            const keeperRatio = totalKeeperTime / T; // 0.25 to 1.0 typically
+            // ratio=0.33 (20 of 60) → factor=0.77
+            // ratio=0.50 (30 of 60) → factor=0.60
+            // ratio=0.67 (40 of 60) → factor=0.43
+            // ratio=1.00 (60 of 60) → factor=0.10
+            const factor = Math.max(0.1, 0.93 - keeperRatio * 0.83);
+            effectiveMinutes += futureKeeper * factor;
           }
           let deficit = paceTarget - effectiveMinutes;
-          // Keeper bonus: makes keepers more likely to be selected for outfield
-          if (keeperSet.has(p.id)) deficit += 3;
           const jitter = (rng() - 0.5) * 0.3;
           return { id: p.id, score: deficit + jitter };
         })
@@ -882,11 +904,19 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const nonKeepers = ids.filter(id => !keeperSet.has(id));
     const swapsAdded = [];
 
+    // Determine adaptive split thresholds based on actual segment lengths
+    const segLens = segments.map(s => s.end - s.start);
+    const medianSegLen = segLens.slice().sort((a,b)=>a-b)[Math.floor(segLens.length/2)] || 5;
+    // Use median but floor at 4 (minimum splittable), cap at 8 (don't require huge segments).
+    // The 2-min guard on splitTime (below) prevents micro-segments independently.
+    const minSplitDt = Math.max(4, Math.min(8, medianSegLen));
+    const minSplitHalf = Math.max(2, Math.floor(minSplitDt / 2));
+
     for (let round = 0; round < maxSwaps; round++) {
       if (nonKeepers.length < 2) break;
       const nkVals = nonKeepers.map(id => minutes[id]);
       const diff = Math.max(...nkVals) - Math.min(...nkVals);
-      if (diff <= 4) break;
+      if (diff <= 2) break;
 
       const overP = nonKeepers.reduce((a, b) => minutes[a] > minutes[b] ? a : b);
       const underP = nonKeepers.reduce((a, b) => minutes[a] < minutes[b] ? a : b);
@@ -904,12 +934,15 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
         if (seg.lineup.includes(underP)) continue;
 
         const dt = seg.end - seg.start;
-        // Both halves must be >= 4 min so no player gets a too-short stint
-        if (dt < 8) continue;
-        const actual = Math.min(transfer, dt - 4);
-        if (actual < 4) continue;
+        // Adaptive: both halves must be >= minSplitHalf
+        if (dt < minSplitDt) continue;
+        const actual = Math.min(transfer, dt - minSplitHalf);
+        if (actual < minSplitHalf) continue;
 
         const splitTime = Math.round(seg.end - actual);
+
+        // Guard: never create segments shorter than 2 min
+        if (splitTime - seg.start < 2 || seg.end - splitTime < 2) continue;
 
         // Split segment: first part keeps original lineup, second part has swap
         const newLineup = seg.lineup.map(id => id === overP ? underP : id);
@@ -931,49 +964,111 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       if (!swapped) break;
     }
 
-    // Phase 2: Enforce keeper floor — keepers must have more total time than ANY non-keeper
-    // Uses precise split swaps (min stint 2) to minimize overshoot
+    // Phase 1b: Repair swaps — swap two players between existing segments
+    // No new segments created, no splits. Just swap A↔B where A has more time.
+    // This catches cases where greedy left a small imbalance that Phase 1 can't fix
+    // because segments are too short to split.
+    for (let repair = 0; repair < maxSwaps * 2; repair++) {
+      if (nonKeepers.length < 2) break;
+      const nkVals = nonKeepers.map(id => minutes[id]);
+      const nkMax = Math.max(...nkVals);
+      const nkMin = Math.min(...nkVals);
+      if (nkMax - nkMin <= 1) break;
+
+      const overP = nonKeepers.reduce((a, b) => minutes[a] > minutes[b] ? a : b);
+      const underP = nonKeepers.reduce((a, b) => minutes[a] < minutes[b] ? a : b);
+      const gap = minutes[overP] - minutes[underP];
+
+      // Find two segments: seg1 has overP but not underP, seg2 has underP but not overP
+      // Swap them if it reduces the gap. Best swap: dt difference closest to gap/2.
+      let bestSwap = null;
+      let bestImprovement = 0;
+
+      for (let i = 0; i < segments.length; i++) {
+        const s1 = segments[i];
+        if (!s1.lineup.includes(overP) || s1.lineup.includes(underP)) continue;
+        if (s1.keeperId === overP) continue; // don't move keeper from keeper segment
+        const dt1 = s1.end - s1.start;
+
+        for (let j = 0; j < segments.length; j++) {
+          if (i === j) continue;
+          const s2 = segments[j];
+          if (!s2.lineup.includes(underP) || s2.lineup.includes(overP)) continue;
+          if (s2.keeperId === underP) continue;
+          const dt2 = s2.end - s2.start;
+
+          // After swap: overP loses dt1, gains dt2. underP gains dt1, loses dt2.
+          // Net change for overP: dt2 - dt1. For underP: dt1 - dt2.
+          const newOver = minutes[overP] - dt1 + dt2;
+          const newUnder = minutes[underP] + dt1 - dt2;
+          const newGap = Math.abs(newOver - newUnder);
+          const improvement = gap - newGap;
+
+          if (improvement > bestImprovement && newGap < gap) {
+            bestSwap = { i, j, dt1, dt2 };
+            bestImprovement = improvement;
+          }
+        }
+      }
+
+      if (!bestSwap || bestImprovement < 1) break;
+
+      // Execute swap
+      const s1 = segments[bestSwap.i];
+      const s2 = segments[bestSwap.j];
+      s1.lineup = s1.lineup.map(id => id === overP ? underP : id);
+      s2.lineup = s2.lineup.map(id => id === underP ? overP : id);
+      minutes[overP] += bestSwap.dt2 - bestSwap.dt1;
+      minutes[underP] += bestSwap.dt1 - bestSwap.dt2;
+    }
+
+    // Phase 2: Balance keepers toward target
+    // If a keeper has significantly less than target, steal from highest NK.
+    // If a keeper has significantly more than target, give to lowest NK.
+    // This is fair: keepers should get the same total time as everyone else.
     if (nonKeepers.length > 0) {
       const keepers = ids.filter(id => keeperSet.has(id));
-      for (let fRound = 0; fRound < 10; fRound++) {
-        const maxNK = Math.max(...nonKeepers.map(id => minutes[id]));
-        const nkAvgF = nonKeepers.reduce((s, id) => s + minutes[id], 0) / nonKeepers.length;
-        const capLimit = Math.max(5, nkAvgF * 1.20);
+      const target = (P * (segments.length ? segments[segments.length - 1].end : 0)) / ids.length;
 
-        // Find keeper furthest below maxNK
+      for (let fRound = 0; fRound < 10; fRound++) {
+        // Find keeper furthest below target
+        // But skip keepers whose total time already >= their keeperTime
+        // (they can't be reduced below keeperTime, so boosting them further is wasteful)
         let worstKeeper = null;
         let worstDeficit = 0;
         for (const kid of keepers) {
-          const deficit = (maxNK + 1) - minutes[kid];
           const kTime = keeperMinutes[kid] || 0;
-          const cap = Math.max(kTime + 5, capLimit);
-          // Only push if result won't wildly exceed cap
-          if (deficit > 0.5 && deficit > worstDeficit && minutes[kid] + deficit <= cap + 2) {
+          const effectiveTarget = Math.max(target, kTime); // can't go below keeperTime
+          const deficit = effectiveTarget - minutes[kid];
+          if (deficit > 2 && deficit > worstDeficit) {
             worstKeeper = kid;
             worstDeficit = deficit;
           }
         }
         if (!worstKeeper) break;
 
-        const needed = Math.round(Math.max(2, Math.min(worstDeficit + 1, 10)));
+        const needed = Math.round(Math.max(2, Math.min(worstDeficit, 8)));
 
-        // Find highest-time NK to swap out, using split swaps (min 2 for floor)
+        // Find highest-time NK to swap out
         let swapped = false;
         const nkSorted = nonKeepers.slice().sort((a, b) => minutes[b] - minutes[a]);
         for (const overNK of nkSorted) {
+          // Allow stealing from NK at or above target, but don't push them below target-2
+          if (minutes[overNK] < target - 1) continue;
           if (swapped) break;
-          // Sort segments ascending by duration → pick smallest first to minimize overshoot
           const sortedSegs = segments.map((_, i) => i)
             .sort((a, b) => (segments[a].end - segments[a].start) - (segments[b].end - segments[b].start));
           for (const idx of sortedSegs) {
             const seg = segments[idx];
             if (!seg.lineup.includes(overNK)) continue;
             if (seg.lineup.includes(worstKeeper)) continue;
+            if (seg.keeperId === worstKeeper) continue; // don't mess with keeper's own keeper segments
             const dt = seg.end - seg.start;
             if (dt < 4) continue;
             const actual = Math.min(needed, dt - 2);
             if (actual < 2) continue;
             const splitTime = Math.round(seg.end - actual);
+            if (splitTime - seg.start < 2 || seg.end - splitTime < 2) continue;
             const newLineup = seg.lineup.map(id => id === overNK ? worstKeeper : id);
             const segA = { start: seg.start, end: splitTime, dt: splitTime - seg.start, lineup: seg.lineup.slice(), keeperId: seg.keeperId };
             const segB = { start: splitTime, end: seg.end, dt: seg.end - splitTime, lineup: newLineup, keeperId: seg.keeperId };
@@ -988,17 +1083,12 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
         if (!swapped) break;
       }
 
-      // Phase 3: Enforce keeper cap — max(keeperTime + 5, nkAvg * 1.20)
-      // Trims keepers that went over cap due to floor enforcement
+      // Phase 3: Trim keepers above target + 3 (cap)
       for (let kRound = 0; kRound < 8; kRound++) {
-        const nkAvg = nonKeepers.reduce((s, id) => s + minutes[id], 0) / nonKeepers.length;
-
         let worstKeeper2 = null;
         let worstExcess = 0;
         for (const kid of keepers) {
-          const kTime = keeperMinutes[kid] || 0;
-          const cap = Math.max(kTime + 5, nkAvg * 1.20);
-          const excess = minutes[kid] - cap;
+          const excess = minutes[kid] - (target + 3);
           if (excess > 1 && excess > worstExcess) {
             worstKeeper2 = kid;
             worstExcess = excess;
@@ -1010,7 +1100,6 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
         const transfer = Math.round(Math.max(4, Math.min(worstExcess, 10)));
 
         let swapped2 = false;
-        // Try split swap first (segments ≥ 8 min)
         const segIndices = segments.map((_, i) => i)
           .sort((a, b) => (segments[b].end - segments[b].start) - (segments[a].end - segments[a].start));
         for (const idx of segIndices) {
@@ -1019,10 +1108,11 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
           if (!seg.lineup.includes(worstKeeper2)) continue;
           if (seg.lineup.includes(underP)) continue;
           const dt = seg.end - seg.start;
-          if (dt < 8) continue;
-          const actual = Math.min(transfer, dt - 4);
-          if (actual < 4) continue;
+          if (dt < minSplitDt) continue;
+          const actual = Math.min(transfer, dt - minSplitHalf);
+          if (actual < minSplitHalf) continue;
           const splitTime = Math.round(seg.end - actual);
+          if (splitTime - seg.start < 2 || seg.end - splitTime < 2) continue;
           const newLineup = seg.lineup.map(id => id === worstKeeper2 ? underP : id);
           const segA = { start: seg.start, end: splitTime, dt: splitTime - seg.start, lineup: seg.lineup.slice(), keeperId: seg.keeperId };
           const segB = { start: splitTime, end: seg.end, dt: seg.end - splitTime, lineup: newLineup, keeperId: seg.keeperId };
@@ -1033,26 +1123,58 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
           swapped2 = true;
           break;
         }
-        if (!swapped2) {
-          // Whole-segment fallback — pick smallest segment, only if keeper stays above maxNK
-          const curMaxNK = Math.max(...nonKeepers.map(id => minutes[id]));
-          for (let idx = 0; idx < segments.length; idx++) {
-            const seg = segments[idx];
-            if (seg.keeperId === worstKeeper2) continue;
-            if (!seg.lineup.includes(worstKeeper2)) continue;
-            if (seg.lineup.includes(underP)) continue;
-            const dt = seg.end - seg.start;
-            if (minutes[worstKeeper2] - dt > curMaxNK - 0.5) {
-              seg.lineup = seg.lineup.map(id => id === worstKeeper2 ? underP : id);
-              minutes[worstKeeper2] -= dt;
-              minutes[underP] += dt;
-              swapped2 = true;
-              break;
-            }
+        if (!swapped2) break;
+      }
+    }
+
+    // Phase 4: Final repair swaps on ALL players (including keepers)
+    // Catches residual imbalances from keeper balancing in Phase 2/3
+    for (let repair = 0; repair < 10; repair++) {
+      const allVals = ids.map(id => minutes[id]);
+      const allMax = Math.max(...allVals);
+      const allMin = Math.min(...allVals);
+      if (allMax - allMin <= 2) break;
+
+      const overP = ids.reduce((a, b) => minutes[a] > minutes[b] ? a : b);
+      const underP = ids.reduce((a, b) => minutes[a] < minutes[b] ? a : b);
+      const gap = minutes[overP] - minutes[underP];
+
+      let bestSwap = null;
+      let bestImprovement = 0;
+
+      for (let i = 0; i < segments.length; i++) {
+        const s1 = segments[i];
+        if (!s1.lineup.includes(overP) || s1.lineup.includes(underP)) continue;
+        if (s1.keeperId === overP) continue;
+        const dt1 = s1.end - s1.start;
+
+        for (let j = 0; j < segments.length; j++) {
+          if (i === j) continue;
+          const s2 = segments[j];
+          if (!s2.lineup.includes(underP) || s2.lineup.includes(overP)) continue;
+          if (s2.keeperId === underP) continue;
+          const dt2 = s2.end - s2.start;
+
+          const newOver = minutes[overP] - dt1 + dt2;
+          const newUnder = minutes[underP] + dt1 - dt2;
+          const newGap = Math.abs(newOver - newUnder);
+          const improvement = gap - newGap;
+
+          if (improvement > bestImprovement && newGap < gap) {
+            bestSwap = { i, j, dt1, dt2 };
+            bestImprovement = improvement;
           }
-          if (!swapped2) break;
         }
       }
+
+      if (!bestSwap || bestImprovement < 1) break;
+
+      const s1 = segments[bestSwap.i];
+      const s2 = segments[bestSwap.j];
+      s1.lineup = s1.lineup.map(id => id === overP ? underP : id);
+      s2.lineup = s2.lineup.map(id => id === underP ? overP : id);
+      minutes[overP] += bestSwap.dt2 - bestSwap.dt1;
+      minutes[underP] += bestSwap.dt1 - bestSwap.dt2;
     }
 
     return swapsAdded;
@@ -1096,7 +1218,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
 
     // Phase 2: Run multiple seeds, pick best result
     let best = null;
-    const NUM_ATTEMPTS = 12;
+    const NUM_ATTEMPTS = 20;
 
     for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
       const runSeed = seed + attempt * 99991;
@@ -1110,7 +1232,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       const minClone = Object.assign({}, res.minutes);
 
       // Phase 3: Add individual swaps to reduce non-keeper diff
-      const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, 3);
+      const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, Math.max(3, Math.ceil(present.length / 4)));
 
       // Calculate real diff among non-keepers
       const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
