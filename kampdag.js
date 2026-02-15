@@ -898,19 +898,19 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
    * Max maxSwaps individual swaps. Returns the swaps and updated minutes.
    * Segments are physically split so rendering works without changes.
    */
-  function addIndividualSwaps(segments, minutes, keeperMinutes, playersList, P, maxSwaps) {
+  function addIndividualSwaps(segments, minutes, keeperMinutes, playersList, P, maxSwaps, minGap) {
     const ids = playersList.map(p => p.id);
     const keeperSet = new Set(Object.keys(keeperMinutes).filter(id => keeperMinutes[id] > 0));
     const nonKeepers = ids.filter(id => !keeperSet.has(id));
     const swapsAdded = [];
 
-    // Determine adaptive split thresholds based on actual segment lengths
-    const segLens = segments.map(s => s.end - s.start);
-    const medianSegLen = segLens.slice().sort((a,b)=>a-b)[Math.floor(segLens.length/2)] || 5;
-    // Use median but floor at 4 (minimum splittable), cap at 8 (don't require huge segments).
-    // The 2-min guard on splitTime (below) prevents micro-segments independently.
-    const minSplitDt = Math.max(4, Math.min(8, medianSegLen));
-    const minSplitHalf = Math.max(2, Math.floor(minSplitDt / 2));
+    // Split thresholds based on frequency's minGap:
+    // Both halves of a split must be >= minGap so the coach doesn't get
+    // segments shorter than the frequency they chose.
+    // minSplitDt = 2 * minGap ensures both halves meet the threshold.
+    const effectiveMinGap = minGap || 5;
+    const minSplitDt = Math.min(2 * effectiveMinGap, 12);
+    const minSplitHalf = effectiveMinGap;
 
     for (let round = 0; round < maxSwaps; round++) {
       if (nonKeepers.length < 2) break;
@@ -1232,7 +1232,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       const minClone = Object.assign({}, res.minutes);
 
       // Phase 3: Add individual swaps to reduce non-keeper diff
-      const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, Math.max(3, Math.ceil(present.length / 4)));
+      const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, Math.max(3, Math.ceil(present.length / 4)), fp.minGap);
 
       // Calculate real diff among non-keepers
       const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
