@@ -77,7 +77,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   // Frequency state
-  let kdFrequency = 'normal';   // 'rare','normal','frequent'
+  let kdFrequency = 'equal';   // 'equal' or 'calm'
 
   // Timer state
   let kdTimerInterval = null;
@@ -94,10 +94,16 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     11: { '4-3-3': [4,3,3], '4-4-2': [4,4,2], '3-5-2': [3,5,2] },
   };
 
+  // Two strategic modes based on coach priorities.
+  // "equal" = Lik spilletid: minimize diff, accept more substitutions.
+  //   No stickiness → greedy optimizes purely for equal minutes.
+  //   Low splitHalf → addIndividualSwaps can aggressively balance.
+  // "calm" = Rolig bytteplan: fewer substitutions and longer stints.
+  //   Strong stickiness → holds players on field/bench longer.
+  //   High splitHalf → avoids creating short segments.
   const FREQ_PARAMS = {
-    rare:     { minGap: 8, maxGap: 12, stopsMin: 3, stopsMax: 6 },
-    normal:   { minGap: 5, maxGap: 10, stopsMin: 6, stopsMax: 10 },
-    frequent: { minGap: 3, maxGap: 5,  stopsMin: 8, stopsMax: 14 },
+    equal: { mode: 'equal', sticky: 'mild',   swapSplitHalf: 4 },
+    calm:  { mode: 'calm',  sticky: 'strong', swapSplitHalf: 5 },
   };
 
   // ------------------------------
@@ -264,7 +270,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
         btn.addEventListener('click', () => {
           freqContainer.querySelectorAll('.kd-freq-btn').forEach(b => b.classList.remove('kd-freq-active'));
           btn.classList.add('kd-freq-active');
-          kdFrequency = btn.getAttribute('data-freq') || 'normal';
+          kdFrequency = btn.getAttribute('data-freq') || 'equal';
         });
       });
     }
@@ -742,45 +748,100 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   /**
-   * Choose optimal number of segments to minimize playing time difference.
-   * Prefers segment count where (nsegs * P) % N is smallest (less remainder = more equal).
-   * Strongly prefers segment lengths within the user's chosen interval range.
+   * Choose optimal number of segments based on mode, format and squad size.
+   *
+   * Based on exhaustive simulation across all NFF formats (3/5/7/9-er),
+   * squad sizes (N from P+1 to P+7), and both modes.
+   *
+   * "equal" mode: minimize diff, allow more segments and swaps.
+   * "calm" mode: minimize substitutions, accept higher diff (≤10 min).
+   *
+   * Uses a lookup table for known scenarios, with formula fallback.
    */
-  function chooseOptimalSegments(T, P, N, minGap, maxGap) {
-    const inRange = [];
-    const nearRange = [];
-    const benchSize = N - P;
+  function chooseOptimalSegments(T, P, N, mode) {
+    const bench = N - P;
 
-    for (let nsegs = Math.max(2, Math.floor(T / (maxGap + 3))); nsegs <= Math.ceil(T / Math.max(1, minGap - 3)) + 2; nsegs++) {
-      const avg = T / nsegs;
-      const remainder = (nsegs * P) % N;
-      const mid = (minGap + maxGap) / 2;
+    // Perfect match: bench >= P → entire lineup rotates at halftime
+    if (bench >= P) return 2;
 
-      // Penalty for too many bench periods per player (causes fragmented stints).
-      // With sticky-greedy, fewer segments = longer stints = better coach experience.
-      // benchSegsPerPlayer ≈ nsegs * benchSize / N
-      // Penalty for too many bench periods per player (causes fragmented stints).
-      // Only applies when many players compete for few spots AND result would
-      // create 4+ bench periods per player, causing jojo-substitutions.
-      const benchSegsPerPlayer = Math.round(nsegs * benchSize / N);
-      const benchPenalty = benchSize >= 3 && benchSegsPerPlayer >= 4 ? (benchSegsPerPlayer - 3) * 12 : 0;
+    // Minimal bench: only 1 sub
+    if (bench <= 1) return Math.max(2, N - Math.min(2, bench));
 
-      if (avg >= minGap && avg <= maxGap) {
-        const score = remainder * 10 + Math.abs(avg - mid) * 0.5 + benchPenalty;
-        inRange.push({ score, nsegs, avg });
-      } else if (avg >= minGap * 0.75 && avg <= maxGap * 1.25) {
-        const dist = Math.max(0, minGap - avg) + Math.max(0, avg - maxGap);
-        const score = remainder * 10 + dist * 50 + benchPenalty;
-        nearRange.push({ score, nsegs, avg });
-      }
+    // Pre-computed optimal segment counts from exhaustive simulation.
+    // Key: P_N, values: { equal: nsegs, calm: nsegs }
+    // These were found by brute-force testing nsegs 2..25 across 30 seeds,
+    // optimizing for (low diff + few subs + no short segments + few stints).
+    const LOOKUP = {
+      // 3-er (T=30, K=0, ingen keeper)
+      '3_4': { equal: 2, calm: 2 },
+      '3_5': { equal: 2, calm: 2 },
+      '3_6': { equal: 2, calm: 2 },
+      '3_7': { equal: 2, calm: 2 },
+      '3_8': { equal: 4, calm: 3 },
+      // 5-er (T=40, K=2)
+      '5_6': { equal: 6, calm: 6 },
+      '5_7': { equal: 9, calm: 6 },
+      '5_8': { equal: 7, calm: 6 },
+      '5_9': { equal: 2, calm: 2 },
+      '5_10': { equal: 2, calm: 2 },
+      '5_11': { equal: 7, calm: 2 },
+      // 7-er (T=60, K=2)
+      '7_8': { equal: 10, calm: 8 },
+      '7_9': { equal: 3, calm: 3 },
+      '7_10': { equal: 2, calm: 5 },
+      '7_11': { equal: 3, calm: 2 },
+      '7_12': { equal: 5, calm: 5 },
+      '7_13': { equal: 2, calm: 2 },
+      '7_14': { equal: 2, calm: 2 },
+      // 9-er (T=70, K=2)
+      '9_10': { equal: 12, calm: 8 },
+      '9_11': { equal: 2, calm: 5 },
+      '9_12': { equal: 3, calm: 4 },
+      '9_13': { equal: 7, calm: 4 },
+      '9_14': { equal: 2, calm: 3 },
+      '9_15': { equal: 5, calm: 2 },
+      '9_16': { equal: 5, calm: 3 },
+    };
+
+    const key = P + '_' + N;
+    const entry = LOOKUP[key];
+    if (entry) {
+      return entry[mode] || entry.equal;
     }
 
-    inRange.sort((a, b) => a.score - b.score);
-    nearRange.sort((a, b) => a.score - b.score);
+    // Fallback formula for unlisted combinations (custom T, K=1, K=3, etc.)
+    // Use outfield math: outfieldPlaces spots for outfieldCount players per segment
+    // K=1 means 1 keeper plays all T, other N-1 share (P-1) outfield spots
+    // The remainder (nsegs * outfieldPlaces) % outfieldCount determines evenness
+    const outfieldPlaces = P - (bench > 0 ? 1 : 0); // 1 keeper spot if bench > 0 (has keepers)
+    const outfieldCount = N - (bench > 0 ? 1 : 0);  // K=1 fallback: assume 1 keeper
 
-    if (inRange.length) return inRange[0].nsegs;
-    if (nearRange.length) return nearRange[0].nsegs;
-    return Math.max(2, Math.round(T / ((minGap + maxGap) / 2)));
+    if (mode === 'calm') {
+      const minSegs = 2;
+      const maxSegs = Math.min(8, Math.floor(T / 5));
+      let best = null;
+      for (let nsegs = minSegs; nsegs <= maxSegs; nsegs++) {
+        const remainder = (nsegs * outfieldPlaces) % outfieldCount;
+        const avg = T / nsegs;
+        // Prefer: low remainder, then fewer segments (= fewer subs)
+        const score = remainder * 10 + nsegs * 2;
+        if (!best || score < best.score) best = { score, nsegs };
+      }
+      return best ? best.nsegs : Math.max(2, Math.round(T / 10));
+    }
+
+    // Equal: search wide range, minimize remainder, prefer moderate segment length
+    const inRange = [];
+    for (let nsegs = 2; nsegs <= Math.min(15, Math.ceil(T / 4) + 2); nsegs++) {
+      const avg = T / nsegs;
+      if (avg >= 4 && avg <= 20) {
+        const remainder = (nsegs * outfieldPlaces) % outfieldCount;
+        const score = remainder * 10 + Math.abs(avg - 8) * 0.5 + nsegs * 0.5;
+        inRange.push({ score, nsegs });
+      }
+    }
+    inRange.sort((a, b) => a.score - b.score);
+    return inRange.length ? inRange[0].nsegs : Math.max(2, Math.round(T / 8));
   }
 
   /**
@@ -847,7 +908,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
    * Greedy lineup assignment: at each segment, pick players furthest behind target pace.
    * Keeper is always forced on field during their keeper segments.
    */
-  function greedyAssign(playersList, times, P, keeperTimeline, seed) {
+  function greedyAssign(playersList, times, P, keeperTimeline, seed, stickyMode) {
     const rng = makeRng(seed);
     const ids = playersList.map(p => p.id);
     const T = times[times.length - 1];
@@ -873,9 +934,16 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const segments = [];
 
-    // Stickiness: track consecutive segments on/off field per player.
-    // Reduces jojo-substitutions by encouraging players to stay on field
-    // for longer stints and rest on bench for consecutive segments.
+    // Stickiness parameters per mode:
+    //   strong: aggressive continuity (for calm mode)
+    //   mild: light continuity to avoid worst jojo cases (for balanced mode)
+    //   none/undefined: pure deficit-based greedy
+    const STICKY = {
+      strong: { on1: 4.0, on2: 2.0, on3: 0.5, off1: -3.0, off2: -1.0 },
+      mild:   { on1: 1.5, on2: 0.8, on3: 0.3, off1: -1.0, off2: 0 },
+    };
+    const sp = stickyMode ? STICKY[stickyMode] : null;
+
     const onFieldStreak = {};
     const offFieldStreak = {};
     ids.forEach(id => { onFieldStreak[id] = 0; offFieldStreak[id] = 0; });
@@ -908,22 +976,15 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
           }
           let deficit = paceTarget - effectiveMinutes;
 
-          // Stickiness bonus: prefer keeping players on field / on bench
-          // to avoid fragmenting their playing time into many short stints.
-          // On field: bonus to stay (decreasing with stint length)
-          //   1 seg → +4.0 (strong: just started, don't sub out yet)
-          //   2 seg → +2.0 (moderate: getting settled)
-          //   3+ seg → +0.5 (weak: ok to rotate now)
-          // Off field: penalty to stay on bench (let them rest)
-          //   1 seg → -3.0 (strong: just sat down, let them rest)
-          //   2 seg → -1.0 (mild: rested a bit)
-          //   3+ seg → 0 (rested enough, deficit takes over)
-          const onStreak = onFieldStreak[p.id];
-          const offStreak = offFieldStreak[p.id];
-          if (onStreak > 0) {
-            deficit += onStreak === 1 ? 4.0 : onStreak === 2 ? 2.0 : 0.5;
-          } else if (offStreak > 0) {
-            deficit += offStreak === 1 ? -3.0 : offStreak === 2 ? -1.0 : 0;
+          // Stickiness: bonus for staying on field, penalty for leaving bench early
+          if (sp) {
+            const onStreak = onFieldStreak[p.id];
+            const offStreak = offFieldStreak[p.id];
+            if (onStreak > 0) {
+              deficit += onStreak === 1 ? sp.on1 : onStreak === 2 ? sp.on2 : sp.on3;
+            } else if (offStreak > 0) {
+              deficit += offStreak === 1 ? sp.off1 : offStreak === 2 ? sp.off2 : 0;
+            }
           }
 
           const jitter = (rng() - 0.5) * 0.3;
@@ -963,19 +1024,16 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
    * Max maxSwaps individual swaps. Returns the swaps and updated minutes.
    * Segments are physically split so rendering works without changes.
    */
-  function addIndividualSwaps(segments, minutes, keeperMinutes, playersList, P, maxSwaps, minGap) {
+  function addIndividualSwaps(segments, minutes, keeperMinutes, playersList, P, maxSwaps, splitHalf) {
     const ids = playersList.map(p => p.id);
     const keeperSet = new Set(Object.keys(keeperMinutes).filter(id => keeperMinutes[id] > 0));
     const nonKeepers = ids.filter(id => !keeperSet.has(id));
     const swapsAdded = [];
 
-    // Split thresholds based on frequency's minGap:
-    // We allow splits that keep each half close to the intended frequency.
-    // minSplitHalf = minGap - 1 means splits produce segments slightly shorter
-    // than the frequency target, but not drastically so.
-    const effectiveMinGap = minGap || 5;
-    const minSplitHalf = Math.max(3, effectiveMinGap - 1);
-    const minSplitDt = Math.min(minSplitHalf * 2, 12);
+    // splitHalf is the minimum size of each half after a split.
+    // minSplitDt is the minimum segment length that can be split.
+    const minSplitHalf = Math.max(3, splitHalf || 4);
+    const minSplitDt = minSplitHalf * 2;
 
     for (let round = 0; round < maxSwaps; round++) {
       if (nonKeepers.length < 2) break;
@@ -1274,20 +1332,24 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const keeperTimeline = buildKeeperTimeline(T);
     const seed = Date.now();
     const N = present.length;
-    const fp = FREQ_PARAMS[kdFrequency] || FREQ_PARAMS.normal;
+    const fp = FREQ_PARAMS[kdFrequency] || FREQ_PARAMS.equal;
 
-    // Phase 1: Choose optimal segment count for best balance
-    const nsegs = chooseOptimalSegments(T, P, N, fp.minGap, fp.maxGap);
+    // Phase 1: Choose optimal segment count based on mode
+    const nsegs = chooseOptimalSegments(T, P, N, fp.mode);
     const kChangeTimes = keeperChangeTimes(keeperTimeline).filter(x => x > 0 && x < T);
     const times = generateSegmentTimes(T, nsegs, kChangeTimes);
 
     // Phase 2: Run multiple seeds, pick best result
+    // Equal mode: more swaps allowed, calm mode: conservative swaps
+    const maxSwaps = fp.mode === 'equal' ? Math.max(3, Math.ceil(N / 3)) : Math.max(2, Math.ceil(N / 5));
+    const stickyMode = nsegs >= 4 ? (fp.sticky || null) : null; // stickiness only useful with 4+ segments
+
     let best = null;
     const NUM_ATTEMPTS = 20;
 
     for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
       const runSeed = seed + attempt * 99991;
-      const res = greedyAssign(present, times, P, keeperTimeline, runSeed);
+      const res = greedyAssign(present, times, P, keeperTimeline, runSeed, stickyMode);
 
       // Deep-clone segments and minutes for individual swap mutation
       const segClone = res.segments.map(s => ({
@@ -1297,7 +1359,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       const minClone = Object.assign({}, res.minutes);
 
       // Phase 3: Add individual swaps to reduce non-keeper diff
-      const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, Math.max(3, Math.ceil(present.length / 4)), fp.minGap);
+      const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, maxSwaps, fp.swapSplitHalf);
 
       // Calculate real diff among non-keepers
       const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
