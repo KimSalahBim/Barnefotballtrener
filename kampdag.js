@@ -824,7 +824,6 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const idSet = new Set(ids);
 
     // Pre-calculate remaining keeper time from any point
-    // For each keeper, how many minutes of keeper duty remain after time t?
     function remainingKeeperTime(keeperId, afterTime) {
       let remaining = 0;
       (keeperTimeline || []).forEach(seg => {
@@ -837,6 +836,13 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     }
 
     const segments = [];
+
+    // Stickiness: track consecutive segments on/off field per player.
+    // Reduces jojo-substitutions by encouraging players to stay on field
+    // for longer stints and rest on bench for consecutive segments.
+    const onFieldStreak = {};
+    const offFieldStreak = {};
+    ids.forEach(id => { onFieldStreak[id] = 0; offFieldStreak[id] = 0; });
 
     for (let i = 0; i < times.length - 1; i++) {
       const start = times[i];
@@ -851,28 +857,39 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       if (keeperId && idSet.has(keeperId)) lineup.push(keeperId);
 
       // Calculate deficit: how far behind target pace is each player?
-      // For keepers: add their remaining keeper time to effective minutes,
-      // because those minutes are guaranteed and shouldn't need outfield time.
       const paceTarget = target * start / T;
       const scored = playersList
         .filter(p => !lineup.includes(p.id))
         .map(p => {
           let effectiveMinutes = minutes[p.id];
-          // Account for guaranteed future keeper time with dynamic factor:
-          // Higher keeperTime/T ratio → lower factor (keeper needs more outfield)
-          // Lower ratio → higher factor (keeper has plenty of non-keeper time)
+          // Account for guaranteed future keeper time with dynamic factor
           if (keeperSet.has(p.id)) {
             const futureKeeper = remainingKeeperTime(p.id, end);
             const totalKeeperTime = keeperMins[p.id] || 0;
-            const keeperRatio = totalKeeperTime / T; // 0.25 to 1.0 typically
-            // ratio=0.33 (20 of 60) → factor=0.77
-            // ratio=0.50 (30 of 60) → factor=0.60
-            // ratio=0.67 (40 of 60) → factor=0.43
-            // ratio=1.00 (60 of 60) → factor=0.10
+            const keeperRatio = totalKeeperTime / T;
             const factor = Math.max(0.1, 0.93 - keeperRatio * 0.83);
             effectiveMinutes += futureKeeper * factor;
           }
           let deficit = paceTarget - effectiveMinutes;
+
+          // Stickiness bonus: prefer keeping players on field / on bench
+          // to avoid fragmenting their playing time into many short stints.
+          // On field: bonus to stay (decreasing with stint length)
+          //   1 seg → +4.0 (strong: just started, don't sub out yet)
+          //   2 seg → +2.0 (moderate: getting settled)
+          //   3+ seg → +0.5 (weak: ok to rotate now)
+          // Off field: penalty to stay on bench (let them rest)
+          //   1 seg → -3.0 (strong: just sat down, let them rest)
+          //   2 seg → -1.0 (mild: rested a bit)
+          //   3+ seg → 0 (rested enough, deficit takes over)
+          const onStreak = onFieldStreak[p.id];
+          const offStreak = offFieldStreak[p.id];
+          if (onStreak > 0) {
+            deficit += onStreak === 1 ? 4.0 : onStreak === 2 ? 2.0 : 0.5;
+          } else if (offStreak > 0) {
+            deficit += offStreak === 1 ? -3.0 : offStreak === 2 ? -1.0 : 0;
+          }
+
           const jitter = (rng() - 0.5) * 0.3;
           return { id: p.id, score: deficit + jitter };
         })
@@ -884,6 +901,18 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       }
 
       lineup.forEach(id => { minutes[id] += dt; });
+
+      // Update on/off field streaks
+      const lineupSet = new Set(lineup);
+      ids.forEach(id => {
+        if (lineupSet.has(id)) {
+          onFieldStreak[id]++;
+          offFieldStreak[id] = 0;
+        } else {
+          offFieldStreak[id]++;
+          onFieldStreak[id] = 0;
+        }
+      });
 
       const validKeeper = (keeperId && idSet.has(keeperId) && lineup.includes(keeperId)) ? keeperId : null;
       segments.push({ start, end, dt, lineup: lineup.slice(), keeperId: validKeeper });
