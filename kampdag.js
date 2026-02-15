@@ -749,18 +749,28 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
   function chooseOptimalSegments(T, P, N, minGap, maxGap) {
     const inRange = [];
     const nearRange = [];
+    const benchSize = N - P;
 
     for (let nsegs = Math.max(2, Math.floor(T / (maxGap + 3))); nsegs <= Math.ceil(T / Math.max(1, minGap - 3)) + 2; nsegs++) {
       const avg = T / nsegs;
       const remainder = (nsegs * P) % N;
       const mid = (minGap + maxGap) / 2;
 
+      // Penalty for too many bench periods per player (causes fragmented stints).
+      // With sticky-greedy, fewer segments = longer stints = better coach experience.
+      // benchSegsPerPlayer ≈ nsegs * benchSize / N
+      // Penalty for too many bench periods per player (causes fragmented stints).
+      // Only applies when many players compete for few spots AND result would
+      // create 4+ bench periods per player, causing jojo-substitutions.
+      const benchSegsPerPlayer = Math.round(nsegs * benchSize / N);
+      const benchPenalty = benchSize >= 3 && benchSegsPerPlayer >= 4 ? (benchSegsPerPlayer - 3) * 12 : 0;
+
       if (avg >= minGap && avg <= maxGap) {
-        const score = remainder * 10 + Math.abs(avg - mid) * 0.5;
+        const score = remainder * 10 + Math.abs(avg - mid) * 0.5 + benchPenalty;
         inRange.push({ score, nsegs, avg });
       } else if (avg >= minGap * 0.75 && avg <= maxGap * 1.25) {
         const dist = Math.max(0, minGap - avg) + Math.max(0, avg - maxGap);
-        const score = remainder * 10 + dist * 50;
+        const score = remainder * 10 + dist * 50 + benchPenalty;
         nearRange.push({ score, nsegs, avg });
       }
     }
@@ -778,32 +788,58 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
    * Keeper change times are mandatory boundaries (user expects exact keeper swap).
    */
   function generateSegmentTimes(T, nsegs, keeperChangeTimes) {
-    const segLen = T / nsegs;
-    const regularTimes = new Set();
-    regularTimes.add(0);
-    regularTimes.add(T);
-    for (let i = 1; i < nsegs; i++) {
-      regularTimes.add(Math.round(i * segLen));
+    const mandatoryTimes = new Set([0, T]);
+    (keeperChangeTimes || []).forEach(t => { if (t > 0 && t < T) mandatoryTimes.add(t); });
+    const mandatory = Array.from(mandatoryTimes).sort((a, b) => a - b);
+
+    // Total segments needed across all zones between mandatory points.
+    // keeper changes already consume (mandatory.length - 2) segment boundaries,
+    // so we need to distribute (nsegs) segments across the zones proportionally.
+    const totalSegs = Math.max(nsegs, mandatory.length - 1);
+    const zones = [];
+    for (let i = 0; i < mandatory.length - 1; i++) {
+      zones.push({ start: mandatory[i], end: mandatory[i + 1], dur: mandatory[i + 1] - mandatory[i] });
     }
 
-    // Keeper changes are mandatory boundaries
-    const keeperTimes = new Set();
-    (keeperChangeTimes || []).forEach(t => { if (t > 0 && t < T) keeperTimes.add(t); });
+    // Distribute segments proportionally to zone duration
+    let remaining = totalSegs;
+    const zoneCounts = zones.map(z => {
+      const share = Math.max(1, Math.round(totalSegs * z.dur / T));
+      return share;
+    });
+    // Adjust to match total
+    let sum = zoneCounts.reduce((a, b) => a + b, 0);
+    while (sum > totalSegs) {
+      // Remove from largest zone
+      let maxIdx = 0;
+      for (let i = 1; i < zoneCounts.length; i++) {
+        if (zoneCounts[i] > zoneCounts[maxIdx]) maxIdx = i;
+      }
+      if (zoneCounts[maxIdx] <= 1) break;
+      zoneCounts[maxIdx]--;
+      sum--;
+    }
+    while (sum < totalSegs) {
+      // Add to largest zone
+      let maxIdx = 0;
+      for (let i = 1; i < zoneCounts.length; i++) {
+        if (zones[i].dur / zoneCounts[i] > zones[maxIdx].dur / zoneCounts[maxIdx]) maxIdx = i;
+      }
+      zoneCounts[maxIdx]++;
+      sum++;
+    }
 
-    // Merge: if a regular boundary is within 2 min of a keeper boundary,
-    // remove the regular boundary (keeper boundary takes priority).
-    // This prevents 1-2 min micro-segments at keeper change points.
-    for (const rt of regularTimes) {
-      if (rt === 0 || rt === T) continue;
-      for (const kt of keeperTimes) {
-        if (Math.abs(rt - kt) > 0 && Math.abs(rt - kt) <= 2) {
-          regularTimes.delete(rt);
-          break;
-        }
+    // Generate evenly spaced times within each zone
+    const allTimes = new Set([0, T]);
+    for (let z = 0; z < zones.length; z++) {
+      const zone = zones[z];
+      const count = zoneCounts[z];
+      const segLen = zone.dur / count;
+      for (let i = 0; i < count; i++) {
+        allTimes.add(Math.round(zone.start + i * segLen));
       }
     }
 
-    const allTimes = new Set([...regularTimes, ...keeperTimes]);
     return Array.from(allTimes).sort((a, b) => a - b);
   }
 
@@ -934,12 +970,12 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const swapsAdded = [];
 
     // Split thresholds based on frequency's minGap:
-    // Both halves of a split must be >= minGap so the coach doesn't get
-    // segments shorter than the frequency they chose.
-    // minSplitDt = 2 * minGap ensures both halves meet the threshold.
+    // We allow splits that keep each half close to the intended frequency.
+    // minSplitHalf = minGap - 1 means splits produce segments slightly shorter
+    // than the frequency target, but not drastically so.
     const effectiveMinGap = minGap || 5;
-    const minSplitDt = Math.min(2 * effectiveMinGap, 12);
-    const minSplitHalf = effectiveMinGap;
+    const minSplitHalf = Math.max(3, effectiveMinGap - 1);
+    const minSplitDt = Math.min(minSplitHalf * 2, 12);
 
     for (let round = 0; round < maxSwaps; round++) {
       if (nonKeepers.length < 2) break;
@@ -1093,9 +1129,9 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
             if (seg.lineup.includes(worstKeeper)) continue;
             if (seg.keeperId === worstKeeper) continue; // don't mess with keeper's own keeper segments
             const dt = seg.end - seg.start;
-            if (dt < 4) continue;
-            const actual = Math.min(needed, dt - 2);
-            if (actual < 2) continue;
+            if (dt < minSplitDt) continue;
+            const actual = Math.min(needed, dt - minSplitHalf);
+            if (actual < minSplitHalf) continue;
             const splitTime = Math.round(seg.end - actual);
             if (splitTime - seg.start < 2 || seg.end - splitTime < 2) continue;
             const newLineup = seg.lineup.map(id => id === overNK ? worstKeeper : id);
