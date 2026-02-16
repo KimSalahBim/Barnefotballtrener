@@ -114,6 +114,11 @@
     min-width:auto;
   }
 }
+@media (max-width: 420px){
+  #kdPositionList{
+    grid-template-columns:1fr !important;
+  }
+}
 
 @media (max-width: 640px){
   #kampdag .kd-card{
@@ -155,12 +160,13 @@
 
 /* Position checkboxes */
 .kd-pos-row{
-  display:flex; align-items:center; gap:6px;
-  padding:6px 8px; border-radius:8px;
-  background:var(--gray-50,#f8f9fa); margin-bottom:4px;
+  display:flex; align-items:center; gap:4px;
+  padding:4px 6px; border-radius:8px;
+  background:var(--gray-50,#f8f9fa); margin-bottom:0;
+  min-width:0;
 }
-.kd-pos-name{flex:1; font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-.kd-pos-checks{display:flex; gap:4px; flex-shrink:0;}
+.kd-pos-name{flex:1; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+.kd-pos-checks{display:flex; gap:3px; flex-shrink:0;}
 .kd-pos-btn, .kd-pos-tag{
   width:30px; height:26px; border-radius:6px; border:1.5px solid var(--gray-200,#e5e7eb);
   background:var(--gray-50,#f8f9fa); color:var(--gray-400,#9ca3af);

@@ -88,7 +88,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
   // Formation presets per format
   const FORMATIONS = {
     3: { '1-1-1': [1,1,1] },
-    5: { '2-1-1': [2,1,1], '1-2-1': [1,2,1], '2-2-0': [2,2,0] },
+    5: { '2-1-1': [2,1,1], '1-2-1': [1,2,1], '2-2': [2,2,0] },
     7: { '2-3-1': [2,3,1], '3-2-1': [3,2,1], '2-2-2': [2,2,2], '1-3-2': [1,3,2] },
     9: { '3-3-2': [3,3,2], '3-4-1': [3,4,1], '2-4-2': [2,4,2] },
     11: { '4-3-3': [4,3,3], '4-4-2': [4,4,2], '3-5-2': [3,5,2] },
@@ -200,6 +200,18 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const copyBtn = $('kdCopy');
 
     if (formatEl) formatEl.addEventListener('change', () => {
+      // Auto-set match duration based on format (Norwegian youth football defaults)
+      if (minutesEl) {
+        const fmt = parseInt(formatEl.value, 10) || 7;
+        const defaultMinutes = { 3: 20, 5: 40, 7: 60, 9: 70, 11: 80 };
+        if (defaultMinutes[fmt]) {
+          minutesEl.value = defaultMinutes[fmt];
+          // Programmatic value change doesn't fire 'input' event,
+          // so we must call the same functions manually:
+          autoFillKeeperMinutes();
+          updateKeeperSummary();
+        }
+      }
       refreshKeeperUI();
       updateKampdagCounts();
     });
@@ -506,7 +518,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       const active = key === kdFormationKey ? 'kd-formation-active' : '';
       return `<div class="kd-formation-opt ${active}" data-fkey="${key}">
         <div class="kd-f-name">${key}</div>
-        <div class="kd-f-desc">${arr[0]} forsvar · ${arr[1]} midtbane · ${arr[2]} angrep</div>
+        <div class="kd-f-desc">${[arr[0] > 0 ? arr[0]+' forsvar' : '', arr[1] > 0 ? arr[1]+' midtbane' : '', arr[2] > 0 ? arr[2]+' angrep' : ''].filter(Boolean).join(' · ')}</div>
       </div>`;
     }).join('');
 
@@ -563,7 +575,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       { key: 'F', name: 'Forsvar', need: needs.F, have: counts.F, color: '#16a34a' },
       { key: 'M', name: 'Midtbane', need: needs.M, have: counts.M, color: '#2563eb' },
       { key: 'A', name: 'Angrep', need: needs.A, have: counts.A, color: '#dc2626' },
-    ];
+    ].filter(z => z.need > 0);
 
     const warn = zones.some(z => z.have < z.need);
     el.style.display = 'block';
