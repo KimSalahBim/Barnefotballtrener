@@ -2139,6 +2139,17 @@ body.gated #mainApp {
 
 /* Workout: hint under share/import buttons */
 .wo-hint{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.35;}
+.wo-export-detail-label {
+  display:flex; align-items:center; gap:7px;
+  font-size:13px; color:var(--gray-600, #4b5563);
+  cursor:pointer; margin-top:6px;
+  -webkit-tap-highlight-color:transparent;
+}
+.wo-export-detail-label input[type="checkbox"] {
+  width:18px; height:18px; accent-color:var(--brand, #0b5bd3);
+  cursor:pointer; flex-shrink:0;
+}
+.wo-export-detail-label span { line-height:1.3; }
 
 /* Workout: meta fields (dato, tittel, total) */
 .wo-meta-card { text-align:left; padding:14px 16px; }
@@ -2158,6 +2169,106 @@ body.gated #mainApp {
 /* Workout: compact group display */
 .wo-groups-compact { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
 .wo-group-card { background:#f6f8fc; border:1px solid #e6e9ef; border-left:4px solid rgba(11,91,211,0.35); border-radius:10px; padding:8px 10px; }
+
+/* Workout: Exercise bank - select row with info button */
+.wo-select-row { display:flex; gap:6px; align-items:center; }
+.wo-select-row select { flex:1; min-width:0; }
+.wo-info-expand {
+  width:100%; margin-top:6px; padding:7px 10px;
+  border-radius:8px; cursor:pointer;
+  border:1.5px solid var(--line, #e6e9ef);
+  background:#fff; color:#6b7a8d;
+  font-size:13px; font-weight:600;
+  display:flex; align-items:center; justify-content:space-between;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-appearance:none; appearance:none;
+  font-family:inherit; line-height:1;
+}
+.wo-info-expand:hover {
+  border-color:rgba(11,91,211,0.3);
+  color:var(--brand, #0b5bd3);
+}
+.wo-info-expand-active {
+  border-color:rgba(11,91,211,0.25);
+  background:rgba(11,91,211,0.04);
+  color:var(--brand, #0b5bd3);
+}
+.wo-info-expand-text {
+  display:flex; align-items:center; gap:6px;
+}
+.wo-info-expand-icon { font-size:15px; }
+.wo-info-expand-chevron {
+  font-size:11px; transition:transform 0.2s ease;
+}
+.wo-info-expand-active .wo-info-expand-chevron {
+  transform:rotate(180deg);
+}
+
+/* Workout: Info panel */
+.wo-info-panel { overflow:hidden; transition: max-height 0.3s ease; }
+.wo-info-panel.wo-hidden { display:none; }
+.wo-info-content {
+  padding:10px 14px 14px;
+  margin:0 0 8px;
+  background:#f6f8fc;
+  border:1px solid #e6e9ef;
+  border-radius:12px;
+}
+.wo-info-desc { font-size:14px; line-height:1.55; color:#1a2333; margin:0 0 10px; }
+.wo-info-tags { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; }
+.wo-info-tag {
+  font-size:11px; font-weight:500;
+  padding:3px 7px; border-radius:6px;
+  background:#e8edf4; color:#556070;
+}
+.wo-info-svg {
+  background:#3d8b37; border-radius:10px; padding:8px;
+  margin-bottom:12px; display:flex; justify-content:center;
+}
+.wo-info-section {
+  font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.04em;
+  color:#556070; margin:10px 0 5px;
+}
+.wo-info-text { font-size:13px; line-height:1.5; margin:0 0 4px; color:#374151; }
+.wo-info-steps {
+  list-style:none; counter-reset:wo-step; padding:0; margin:0 0 4px;
+}
+.wo-info-steps li {
+  counter-increment:wo-step;
+  font-size:13px; padding:3px 0 3px 26px;
+  position:relative; line-height:1.5; color:#374151;
+}
+.wo-info-steps li::before {
+  content:counter(wo-step);
+  position:absolute; left:0; top:3px;
+  width:18px; height:18px; border-radius:50%;
+  background:rgba(11,91,211,0.1); color:var(--brand, #0b5bd3);
+  font-size:11px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+}
+.wo-info-coaching {
+  list-style:none; padding:0; margin:0 0 4px;
+}
+.wo-info-coaching li {
+  font-size:13px; padding:2px 0 2px 18px;
+  position:relative; line-height:1.5; color:#374151;
+}
+.wo-info-coaching li::before {
+  content:'💡'; position:absolute; left:0; font-size:10px; top:3px;
+}
+.wo-info-variation {
+  font-size:13px; color:#556070; font-style:italic;
+  margin:2px 0; line-height:1.5;
+}
+
+/* Workout: Info panel mobile */
+@media (max-width: 600px) {
+  .wo-info-content { padding:8px 10px 12px; }
+  .wo-info-desc { font-size:13px; }
+  .wo-info-expand { font-size:12px; padding:6px 8px; }
+}
 .wo-group-title { font-weight:800; font-size:12px; margin-bottom:4px; color:#1a2333; }
 .wo-group-names { display:flex; flex-wrap:wrap; gap:4px; }
 .wo-group-name { background:#fff; border:1px solid #e6e9ef; border-radius:6px; padding:2px 8px; font-size:12px; white-space:nowrap; }

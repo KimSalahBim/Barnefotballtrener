@@ -77,7 +77,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   // Frequency state
-  let kdFrequency = 'normal';   // 'rare','normal','frequent'
+  let kdFrequency = 'equal';   // 'equal' or 'calm'
 
   // Timer state
   let kdTimerInterval = null;
@@ -88,16 +88,22 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
   // Formation presets per format
   const FORMATIONS = {
     3: { '1-1-1': [1,1,1] },
-    5: { '2-1-1': [2,1,1], '1-2-1': [1,2,1], '2-2-0': [2,2,0] },
+    5: { '2-1-1': [2,1,1], '1-2-1': [1,2,1], '2-2': [2,2,0] },
     7: { '2-3-1': [2,3,1], '3-2-1': [3,2,1], '2-2-2': [2,2,2], '1-3-2': [1,3,2] },
     9: { '3-3-2': [3,3,2], '3-4-1': [3,4,1], '2-4-2': [2,4,2] },
     11: { '4-3-3': [4,3,3], '4-4-2': [4,4,2], '3-5-2': [3,5,2] },
   };
 
+  // Two strategic modes based on coach priorities.
+  // "equal" = Lik spilletid: minimize diff, accept more substitutions.
+  //   No stickiness → greedy optimizes purely for equal minutes.
+  //   Low splitHalf → addIndividualSwaps can aggressively balance.
+  // "calm" = Rolig bytteplan: fewer substitutions and longer stints.
+  //   Strong stickiness → holds players on field/bench longer.
+  //   High splitHalf → avoids creating short segments.
   const FREQ_PARAMS = {
-    rare:     { minGap: 8, maxGap: 12, stopsMin: 3, stopsMax: 6 },
-    normal:   { minGap: 5, maxGap: 10, stopsMin: 6, stopsMax: 10 },
-    frequent: { minGap: 3, maxGap: 5,  stopsMin: 8, stopsMax: 14 },
+    equal: { mode: 'equal', sticky: 'mild',   swapSplitHalf: 4 },
+    calm:  { mode: 'calm',  sticky: 'strong', swapSplitHalf: 5 },
   };
 
   // ------------------------------
@@ -194,6 +200,18 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const copyBtn = $('kdCopy');
 
     if (formatEl) formatEl.addEventListener('change', () => {
+      // Auto-set match duration based on format (Norwegian youth football defaults)
+      if (minutesEl) {
+        const fmt = parseInt(formatEl.value, 10) || 7;
+        const defaultMinutes = { 3: 20, 5: 40, 7: 60, 9: 70, 11: 80 };
+        if (defaultMinutes[fmt]) {
+          minutesEl.value = defaultMinutes[fmt];
+          // Programmatic value change doesn't fire 'input' event,
+          // so we must call the same functions manually:
+          autoFillKeeperMinutes();
+          updateKeeperSummary();
+        }
+      }
       refreshKeeperUI();
       updateKampdagCounts();
     });
@@ -264,7 +282,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
         btn.addEventListener('click', () => {
           freqContainer.querySelectorAll('.kd-freq-btn').forEach(b => b.classList.remove('kd-freq-active'));
           btn.classList.add('kd-freq-active');
-          kdFrequency = btn.getAttribute('data-freq') || 'normal';
+          kdFrequency = btn.getAttribute('data-freq') || 'equal';
         });
       });
     }
@@ -500,7 +518,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       const active = key === kdFormationKey ? 'kd-formation-active' : '';
       return `<div class="kd-formation-opt ${active}" data-fkey="${key}">
         <div class="kd-f-name">${key}</div>
-        <div class="kd-f-desc">${arr[0]} forsvar · ${arr[1]} midtbane · ${arr[2]} angrep</div>
+        <div class="kd-f-desc">${[arr[0] > 0 ? arr[0]+' forsvar' : '', arr[1] > 0 ? arr[1]+' midtbane' : '', arr[2] > 0 ? arr[2]+' angrep' : ''].filter(Boolean).join(' · ')}</div>
       </div>`;
     }).join('');
 
@@ -557,7 +575,7 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       { key: 'F', name: 'Forsvar', need: needs.F, have: counts.F, color: '#16a34a' },
       { key: 'M', name: 'Midtbane', need: needs.M, have: counts.M, color: '#2563eb' },
       { key: 'A', name: 'Angrep', need: needs.A, have: counts.A, color: '#dc2626' },
-    ];
+    ].filter(z => z.need > 0);
 
     const warn = zones.some(z => z.have < z.need);
     el.style.display = 'block';
@@ -742,59 +760,219 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   /**
-   * Choose optimal number of segments to minimize playing time difference.
-   * Prefers segment count where (nsegs * P) % N is smallest (less remainder = more equal).
-   * Strongly prefers segment lengths within the user's chosen interval range.
+   * Choose optimal number of segments based on mode, format and squad size.
+   *
+   * Based on exhaustive simulation across all NFF formats (3/5/7/9-er),
+   * squad sizes (N from P+1 to P+7), and both modes.
+   *
+   * "equal" mode: minimize diff, allow more segments and swaps.
+   * "calm" mode: minimize substitutions, accept higher diff (≤10 min).
+   *
+   * Uses a lookup table for known scenarios, with formula fallback.
    */
-  function chooseOptimalSegments(T, P, N, minGap, maxGap) {
-    const inRange = [];
-    const nearRange = [];
+  function chooseOptimalSegments(T, P, N, mode) {
+    const bench = N - P;
 
-    for (let nsegs = Math.max(2, Math.floor(T / (maxGap + 3))); nsegs <= Math.ceil(T / Math.max(1, minGap - 3)) + 2; nsegs++) {
-      const avg = T / nsegs;
-      const remainder = (nsegs * P) % N;
-      const mid = (minGap + maxGap) / 2;
+    // Minimum segments needed so every player gets at least 1 segment on field.
+    const rawMinSegs = Math.ceil(N / P);
+    const minSegsForAll = bench > P ? rawMinSegs + 1 : rawMinSegs;
 
-      if (avg >= minGap && avg <= maxGap) {
-        const score = remainder * 10 + Math.abs(avg - mid) * 0.5;
-        inRange.push({ score, nsegs, avg });
-      } else if (avg >= minGap * 0.75 && avg <= maxGap * 1.25) {
-        const dist = Math.max(0, minGap - avg) + Math.max(0, avg - maxGap);
-        const score = remainder * 10 + dist * 50;
-        nearRange.push({ score, nsegs, avg });
-      }
+    // Perfect match: bench >= P → entire lineup rotates at halftime
+    if (bench >= P) return Math.max(2, minSegsForAll);
+
+    // No bench: just play the whole match, split at half
+    if (bench === 0) return 2;
+
+    // Bench=1: exactly 1 spare player. For perfect fairness, need N segments
+    // (each player sits out exactly 1 segment). But that's too many subs.
+    // Cap so segments aren't too short (min ~4 min each).
+    if (bench === 1) {
+      return Math.max(minSegsForAll, Math.min(N, Math.floor(T / 4)));
     }
 
-    inRange.sort((a, b) => a.score - b.score);
-    nearRange.sort((a, b) => a.score - b.score);
+    // Pre-computed optimal segment counts from exhaustive simulation.
+    // Key: P_N, values: { equal: nsegs, calm: nsegs }
+    // These were found by brute-force testing nsegs 2..25 across 30 seeds,
+    // optimizing for (low diff + few subs + no short segments + few stints).
+    const LOOKUP = {
+      // 3-er (T=30, K=0, ingen keeper)
+      '3_4': { equal: 2, calm: 2 },
+      '3_5': { equal: 2, calm: 2 },
+      '3_6': { equal: 2, calm: 2 },
+      '3_7': { equal: 2, calm: 2 },
+      '3_8': { equal: 4, calm: 3 },
+      // 5-er (T=40, K=2)
+      '5_6': { equal: 6, calm: 6 },
+      '5_7': { equal: 4, calm: 6 },
+      '5_8': { equal: 7, calm: 6 },
+      '5_9': { equal: 6, calm: 2 },
+      '5_10': { equal: 2, calm: 2 },
+      '5_11': { equal: 7, calm: 2 },
+      // 7-er (T=60, K=2)
+      '7_8': { equal: 10, calm: 8 },
+      '7_9': { equal: 4, calm: 4 },
+      '7_10': { equal: 3, calm: 5 },
+      '7_11': { equal: 3, calm: 3 },
+      '7_12': { equal: 5, calm: 5 },
+      '7_13': { equal: 2, calm: 3 },
+      '7_14': { equal: 2, calm: 3 },
+      // 9-er (T=70, K=2)
+      '9_10': { equal: 12, calm: 8 },
+      '9_11': { equal: 5, calm: 5 },
+      '9_12': { equal: 4, calm: 4 },
+      '9_13': { equal: 3, calm: 4 },
+      '9_14': { equal: 3, calm: 4 },
+      '9_15': { equal: 5, calm: 5 },
+      '9_16': { equal: 5, calm: 3 },
+    };
 
-    if (inRange.length) return inRange[0].nsegs;
-    if (nearRange.length) return nearRange[0].nsegs;
-    return Math.max(2, Math.round(T / ((minGap + maxGap) / 2)));
+    const key = P + '_' + N;
+    const entry = LOOKUP[key];
+    if (entry) {
+      // Ensure LOOKUP value gives enough segments for all players
+      const val = entry[mode] || entry.equal;
+      return Math.max(val, minSegsForAll);
+    }
+
+    // Fallback formula for unlisted combinations
+    // 3-er has no keeper feature, so all P spots are outfield.
+    // For other formats, assume 1 keeper spot when bench > 0.
+    const hasKeeperFeature = (P !== 3);
+    const keeperSlots = (hasKeeperFeature && bench > 0) ? 1 : 0;
+    const outfieldPlaces = P - keeperSlots;
+    const outfieldCount = N - keeperSlots;
+
+    if (mode === 'calm') {
+      const minSegs = minSegsForAll;
+      const maxSegs = Math.min(8, Math.floor(T / 5));
+      let best = null;
+      for (let nsegs = minSegs; nsegs <= maxSegs; nsegs++) {
+        const remainder = (nsegs * outfieldPlaces) % outfieldCount;
+        const avg = T / nsegs;
+        // Prefer: low remainder, then fewer segments (= fewer subs)
+        const score = remainder * 10 + nsegs * 2;
+        if (!best || score < best.score) best = { score, nsegs };
+      }
+      return best ? best.nsegs : Math.max(2, Math.round(T / 10));
+    }
+
+    // Equal: search wide range, minimize remainder, prefer moderate segment length
+    const inRange = [];
+    for (let nsegs = minSegsForAll; nsegs <= Math.min(15, Math.ceil(T / 4) + 2); nsegs++) {
+      const avg = T / nsegs;
+      if (avg >= 4 && avg <= 20) {
+        const remainder = (nsegs * outfieldPlaces) % outfieldCount;
+        const score = remainder * 10 + Math.abs(avg - 8) * 0.5 + nsegs * 0.5;
+        inRange.push({ score, nsegs });
+      }
+    }
+    inRange.sort((a, b) => a.score - b.score);
+    return inRange.length ? inRange[0].nsegs : Math.max(2, Math.round(T / 8));
   }
 
   /**
    * Generate segment boundary times.
    * Keeper change times are mandatory boundaries (user expects exact keeper swap).
    */
-  function generateSegmentTimes(T, nsegs, keeperChangeTimes) {
-    const segLen = T / nsegs;
-    const times = new Set();
-    times.add(0);
-    times.add(T);
-    for (let i = 1; i < nsegs; i++) {
-      times.add(Math.round(i * segLen));
+  function generateSegmentTimes(T, nsegs, keeperChangeTimes, keeperTimeline, P, N) {
+    const boundaries = new Set([0, T]);
+    (keeperChangeTimes || []).forEach(t => { if (t > 0 && t < T) boundaries.add(t); });
+
+    // For K>=2: add keeper outfield window boundaries so each keeper
+    // gets a dedicated outfield stint in the other keeper's half.
+    // This prevents keeper time asymmetry without needing extra splits later.
+    const keepers = keeperTimeline || [];
+    if (keepers.length >= 2 && P && N) {
+      const target = P * T / N;
+      const keeperBonus = Math.min(4, Math.max(2, Math.round(T / 20)));
+      for (const kseg of keepers) {
+        const kTime = kseg.end - kseg.start;
+        const outfield = Math.round(Math.max(5, target - kTime + keeperBonus));
+        if (kseg.end < T) {
+          const b = Math.round(Math.min(T - 3, kseg.end + outfield));
+          if (b > kseg.end + 3 && T - b >= 3) boundaries.add(b);
+        }
+        if (kseg.start > 0) {
+          const b = Math.round(Math.max(3, kseg.start - outfield));
+          if (b < kseg.start - 3 && b >= 3) boundaries.add(b);
+        }
+      }
     }
-    // Keeper changes are mandatory boundaries
-    (keeperChangeTimes || []).forEach(t => { if (t > 0 && t < T) times.add(t); });
-    return Array.from(times).sort((a, b) => a - b);
+
+    // If keeper boundaries already give us enough segments, use them as-is.
+    // Note: for K=3, outfield windows may create many boundaries but the
+    // late-path merge handles micro-segments. Don't merge here to preserve
+    // keeper balance boundaries.
+    const sortedB = Array.from(boundaries).sort((a, b) => a - b);
+    if (sortedB.length - 1 >= nsegs) return sortedB;
+
+    // Otherwise, distribute LOOKUP segments across zones proportionally
+    const zones = [];
+    for (let i = 0; i < sortedB.length - 1; i++) {
+      zones.push({ start: sortedB[i], end: sortedB[i + 1], dur: sortedB[i + 1] - sortedB[i] });
+    }
+    const totalSegs = Math.max(nsegs, zones.length);
+    const zoneCounts = zones.map(z => Math.max(1, Math.round(totalSegs * z.dur / T)));
+    let sum = zoneCounts.reduce((a, b) => a + b, 0);
+    while (sum > totalSegs) {
+      let maxIdx = 0;
+      for (let i = 1; i < zoneCounts.length; i++) {
+        if (zoneCounts[i] > zoneCounts[maxIdx]) maxIdx = i;
+      }
+      if (zoneCounts[maxIdx] <= 1) break;
+      zoneCounts[maxIdx]--;
+      sum--;
+    }
+    while (sum < totalSegs) {
+      let maxIdx = 0;
+      for (let i = 1; i < zoneCounts.length; i++) {
+        if (zones[i].dur / zoneCounts[i] > zones[maxIdx].dur / zoneCounts[maxIdx]) maxIdx = i;
+      }
+      zoneCounts[maxIdx]++;
+      sum++;
+    }
+
+    for (let z = 0; z < zones.length; z++) {
+      const zone = zones[z];
+      const count = zoneCounts[z];
+      if (count <= 1) continue;
+      const segLen = zone.dur / count;
+      for (let i = 1; i < count; i++) {
+        boundaries.add(Math.round(zone.start + i * segLen));
+      }
+    }
+
+    const finalTimes = Array.from(boundaries).sort((a, b) => a - b);
+
+    // Merge micro-segments: if any segment is shorter than 3 minutes,
+    // remove the boundary that creates it (keep keeper change boundaries).
+    // This prevents 1-2 min segments that occur with 3+ keepers.
+    const kChangeSet = new Set(keeperChangeTimes || []);
+    let merged = true;
+    while (merged) {
+      merged = false;
+      for (let i = 1; i < finalTimes.length - 1; i++) {
+        const dt = finalTimes[i + 1] - finalTimes[i];
+        const dtPrev = finalTimes[i] - finalTimes[i - 1];
+        if (dt < 3 || dtPrev < 3) {
+          // Don't remove keeper change boundaries
+          if (kChangeSet.has(finalTimes[i])) continue;
+          finalTimes.splice(i, 1);
+          merged = true;
+          break;
+        }
+      }
+    }
+
+    return finalTimes;
   }
+
 
   /**
    * Greedy lineup assignment: at each segment, pick players furthest behind target pace.
    * Keeper is always forced on field during their keeper segments.
    */
-  function greedyAssign(playersList, times, P, keeperTimeline, seed) {
+  function greedyAssign(playersList, times, P, keeperTimeline, seed, stickyMode) {
     const rng = makeRng(seed);
     const ids = playersList.map(p => p.id);
     const T = times[times.length - 1];
@@ -807,7 +985,6 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const idSet = new Set(ids);
 
     // Pre-calculate remaining keeper time from any point
-    // For each keeper, how many minutes of keeper duty remain after time t?
     function remainingKeeperTime(keeperId, afterTime) {
       let remaining = 0;
       (keeperTimeline || []).forEach(seg => {
@@ -819,7 +996,62 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       return remaining;
     }
 
+    // For K>=2: pre-compute which segments each keeper plays outfield in,
+    // and which segments they should be EXCLUDED from (to avoid over-playing).
+    const keeperOutfieldSegs = {};
+    const keeperExcludeSegs = {};
+    for (const kid of keeperSet) {
+      keeperOutfieldSegs[kid] = new Set();
+      keeperExcludeSegs[kid] = new Set();
+    }
+    if (keeperSet.size >= 2) {
+      const keeperBonus = Math.min(4, Math.max(2, Math.round(T / 20)));
+      for (const ktlSeg of (keeperTimeline || [])) {
+        const kid = ktlSeg.keeperId;
+        if (!keeperSet.has(kid)) continue;
+        const kTime = ktlSeg.end - ktlSeg.start;
+        const outfieldTarget = Math.max(0, Math.round(target + keeperBonus - kTime));
+        let assigned = 0;
+        // Assign outfield segments after keeper stint
+        if (ktlSeg.end < T) {
+          for (let i = 0; i < times.length - 1 && assigned < outfieldTarget; i++) {
+            if (times[i] >= ktlSeg.end) {
+              keeperOutfieldSegs[kid].add(i);
+              assigned += times[i + 1] - times[i];
+            }
+          }
+        }
+        // Assign outfield segments before keeper stint (backwards)
+        if (ktlSeg.start > 0 && assigned < outfieldTarget) {
+          for (let i = times.length - 2; i >= 0 && assigned < outfieldTarget; i--) {
+            if (times[i + 1] <= ktlSeg.start && !keeperOutfieldSegs[kid].has(i)) {
+              keeperOutfieldSegs[kid].add(i);
+              assigned += times[i + 1] - times[i];
+            }
+          }
+        }
+        // All other segments (not keeper, not outfield) → excluded
+        for (let i = 0; i < times.length - 1; i++) {
+          const isKeeper = keeperAtMinute(times[i] + 0.0001, keeperTimeline) === kid;
+          if (!isKeeper && !keeperOutfieldSegs[kid].has(i)) {
+            keeperExcludeSegs[kid].add(i);
+          }
+        }
+      }
+    }
+
     const segments = [];
+
+    // Stickiness parameters per mode
+    const STICKY = {
+      strong: { on1: 4.0, on2: 2.0, on3: 0.5, off1: -3.0, off2: -1.0 },
+      mild:   { on1: 1.5, on2: 0.8, on3: 0.3, off1: -1.0, off2: 0 },
+    };
+    const sp = stickyMode ? STICKY[stickyMode] : null;
+
+    const onFieldStreak = {};
+    const offFieldStreak = {};
+    ids.forEach(id => { onFieldStreak[id] = 0; offFieldStreak[id] = 0; });
 
     for (let i = 0; i < times.length - 1; i++) {
       const start = times[i];
@@ -833,24 +1065,46 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       // Keeper must be on field
       if (keeperId && idSet.has(keeperId)) lineup.push(keeperId);
 
+      // K>=2: pre-assign keepers to their outfield segments
+      if (keeperSet.size >= 2) {
+        for (const kid of keeperSet) {
+          if (kid === keeperId || lineup.includes(kid) || lineup.length >= P) continue;
+          if (keeperOutfieldSegs[kid].has(i)) lineup.push(kid);
+        }
+      }
+
       // Calculate deficit: how far behind target pace is each player?
-      // For keepers: subtract their remaining keeper time from minutes,
-      // because those minutes are guaranteed and shouldn't count as "ahead".
-      // Actually: ADD remaining keeper time to their effective pace target,
-      // so they're treated as if they need LESS outfield time.
       const paceTarget = target * start / T;
       const scored = playersList
         .filter(p => !lineup.includes(p.id))
         .map(p => {
+          // K>=2: exclude keepers from non-assigned segments
+          if (keeperSet.size >= 2 && keeperExcludeSegs[p.id] && keeperExcludeSegs[p.id].has(i)) {
+            return { id: p.id, score: -9999 };
+          }
+
           let effectiveMinutes = minutes[p.id];
-          // Account for guaranteed future keeper time
-          if (keeperSet.has(p.id)) {
+          // K<=1: use keeper compensation factor (original behavior)
+          if (keeperSet.has(p.id) && keeperSet.size <= 1) {
             const futureKeeper = remainingKeeperTime(p.id, end);
-            effectiveMinutes += futureKeeper * 0.3;
+            const totalKeeperTime = keeperMins[p.id] || 0;
+            const keeperRatio = totalKeeperTime / T;
+            const factor = Math.max(0.1, 0.93 - keeperRatio * 0.83);
+            effectiveMinutes += futureKeeper * factor;
           }
           let deficit = paceTarget - effectiveMinutes;
-          // Keeper bonus: makes keepers more likely to be selected for outfield
-          if (keeperSet.has(p.id)) deficit += 3;
+
+          // Stickiness: bonus for staying on field, penalty for leaving bench early
+          if (sp) {
+            const onStreak = onFieldStreak[p.id];
+            const offStreak = offFieldStreak[p.id];
+            if (onStreak > 0) {
+              deficit += onStreak === 1 ? sp.on1 : onStreak === 2 ? sp.on2 : sp.on3;
+            } else if (offStreak > 0) {
+              deficit += offStreak === 1 ? sp.off1 : offStreak === 2 ? sp.off2 : 0;
+            }
+          }
+
           const jitter = (rng() - 0.5) * 0.3;
           return { id: p.id, score: deficit + jitter };
         })
@@ -862,6 +1116,18 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
       }
 
       lineup.forEach(id => { minutes[id] += dt; });
+
+      // Update on/off field streaks
+      const lineupSet = new Set(lineup);
+      ids.forEach(id => {
+        if (lineupSet.has(id)) {
+          onFieldStreak[id]++;
+          offFieldStreak[id] = 0;
+        } else {
+          offFieldStreak[id]++;
+          onFieldStreak[id] = 0;
+        }
+      });
 
       const validKeeper = (keeperId && idSet.has(keeperId) && lineup.includes(keeperId)) ? keeperId : null;
       segments.push({ start, end, dt, lineup: lineup.slice(), keeperId: validKeeper });
@@ -876,186 +1142,235 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
    * Max maxSwaps individual swaps. Returns the swaps and updated minutes.
    * Segments are physically split so rendering works without changes.
    */
-  function addIndividualSwaps(segments, minutes, keeperMinutes, playersList, P, maxSwaps) {
+  function addIndividualSwaps(segments, minutes, keeperMinutes, playersList, P, maxSwaps, splitHalf) {
     const ids = playersList.map(p => p.id);
     const keeperSet = new Set(Object.keys(keeperMinutes).filter(id => keeperMinutes[id] > 0));
     const nonKeepers = ids.filter(id => !keeperSet.has(id));
+    const keepers = ids.filter(id => keeperSet.has(id));
     const swapsAdded = [];
 
+    const minSplitHalf = Math.max(3, splitHalf || 4);
+    const minSplitDt = minSplitHalf * 2;
+
+    // v12: Hard cap on new splits to minimize substitution moments
+    const maxNewSplits = maxSwaps; // use the mode-based maxSwaps as split cap
+    let splitsUsed = 0;
+
+    // Helper: split a segment to transfer time from 'from' to 'to'
+    function trySplit(from, to, amount) {
+      if (splitsUsed >= maxNewSplits) return 0;
+      const segIndices = segments.map((_, i) => i)
+        .sort((a, b) => (segments[b].end - segments[b].start) - (segments[a].end - segments[a].start));
+      for (const idx of segIndices) {
+        const seg = segments[idx];
+        if (!seg.lineup.includes(from) || seg.lineup.includes(to) || seg.keeperId === from) continue;
+        const dt = seg.end - seg.start;
+        if (dt < minSplitDt) continue;
+        const actual = Math.min(amount, dt - minSplitHalf);
+        if (actual < minSplitHalf) continue;
+        const splitTime = Math.round(seg.end - actual);
+        if (splitTime - seg.start < 2 || seg.end - splitTime < 2) continue;
+        const realActual = seg.end - splitTime;
+        segments.splice(idx, 1,
+          { start: seg.start, end: splitTime, dt: splitTime - seg.start, lineup: seg.lineup.slice(), keeperId: seg.keeperId },
+          { start: splitTime, end: seg.end, dt: realActual, lineup: seg.lineup.map(id => id === from ? to : id), keeperId: seg.keeperId }
+        );
+        minutes[from] -= realActual;
+        minutes[to] += realActual;
+        swapsAdded.push({ time: splitTime, out: from, in: to, amount: realActual });
+        splitsUsed++;
+        return realActual;
+      }
+      return 0;
+    }
+
+    // Helper: swap two players between existing segments (no new splits)
+    function trySegSwap(from, to) {
+      const gap = minutes[from] - minutes[to];
+      let bestSwap = null, bestImp = 0;
+      for (let i = 0; i < segments.length; i++) {
+        const s1 = segments[i];
+        if (!s1.lineup.includes(from) || s1.lineup.includes(to) || s1.keeperId === from) continue;
+        for (let j = 0; j < segments.length; j++) {
+          if (i === j) continue;
+          const s2 = segments[j];
+          if (!s2.lineup.includes(to) || s2.lineup.includes(from) || s2.keeperId === to) continue;
+          const d1 = s1.end - s1.start, d2 = s2.end - s2.start;
+          const newGap = Math.abs((minutes[from] - d1 + d2) - (minutes[to] + d1 - d2));
+          const imp = gap - newGap;
+          if (imp > bestImp && newGap < gap) { bestSwap = { i, j, d1, d2 }; bestImp = imp; }
+        }
+      }
+      if (bestSwap && bestImp >= 1) {
+        segments[bestSwap.i].lineup = segments[bestSwap.i].lineup.map(id => id === from ? to : id);
+        segments[bestSwap.j].lineup = segments[bestSwap.j].lineup.map(id => id === to ? from : id);
+        minutes[from] += bestSwap.d2 - bestSwap.d1;
+        minutes[to] += bestSwap.d1 - bestSwap.d2;
+        return true;
+      }
+      return false;
+    }
+
+    // Phase 1: NK balance via splits (limited by maxNewSplits)
     for (let round = 0; round < maxSwaps; round++) {
       if (nonKeepers.length < 2) break;
       const nkVals = nonKeepers.map(id => minutes[id]);
-      const diff = Math.max(...nkVals) - Math.min(...nkVals);
-      if (diff <= 4) break;
-
+      if (Math.max(...nkVals) - Math.min(...nkVals) <= 2) break;
       const overP = nonKeepers.reduce((a, b) => minutes[a] > minutes[b] ? a : b);
       const underP = nonKeepers.reduce((a, b) => minutes[a] < minutes[b] ? a : b);
-      const transfer = Math.round(Math.max(2, Math.min((minutes[overP] - minutes[underP]) / 2, 10)));
-
-      let swapped = false;
-
-      // Try longest segments first for best split
-      const segIndices = segments.map((_, i) => i)
-        .sort((a, b) => (segments[b].end - segments[b].start) - (segments[a].end - segments[a].start));
-
-      for (const idx of segIndices) {
-        const seg = segments[idx];
-        if (!seg.lineup.includes(overP)) continue;
-        if (seg.lineup.includes(underP)) continue;
-
-        const dt = seg.end - seg.start;
-        // Both halves must be >= 4 min so no player gets a too-short stint
-        if (dt < 8) continue;
-        const actual = Math.min(transfer, dt - 4);
-        if (actual < 4) continue;
-
-        const splitTime = Math.round(seg.end - actual);
-
-        // Split segment: first part keeps original lineup, second part has swap
-        const newLineup = seg.lineup.map(id => id === overP ? underP : id);
-        const segA = { start: seg.start, end: splitTime, dt: splitTime - seg.start, lineup: seg.lineup.slice(), keeperId: seg.keeperId };
-        const segB = { start: splitTime, end: seg.end, dt: seg.end - splitTime, lineup: newLineup, keeperId: seg.keeperId };
-
-        // Update minutes
-        minutes[overP] -= actual;
-        minutes[underP] += actual;
-
-        // Replace original segment with the two halves
-        segments.splice(idx, 1, segA, segB);
-
-        swapsAdded.push({ time: splitTime, out: overP, in: underP, amount: actual });
-        swapped = true;
-        break;
-      }
-
-      if (!swapped) break;
+      const amt = Math.round(Math.max(2, Math.min((minutes[overP] - minutes[underP]) / 2, 10)));
+      if (!trySplit(overP, underP, amt)) break;
     }
 
-    // Phase 2: Enforce keeper floor — keepers must have more total time than ANY non-keeper
-    // Uses precise split swaps (min stint 2) to minimize overshoot
-    if (nonKeepers.length > 0) {
-      const keepers = ids.filter(id => keeperSet.has(id));
-      for (let fRound = 0; fRound < 10; fRound++) {
-        const maxNK = Math.max(...nonKeepers.map(id => minutes[id]));
-        const nkAvgF = nonKeepers.reduce((s, id) => s + minutes[id], 0) / nonKeepers.length;
-        const capLimit = Math.max(5, nkAvgF * 1.20);
+    // Phase 1b: NK repair swaps (no new segments)
+    for (let r = 0; r < maxSwaps * 2; r++) {
+      if (nonKeepers.length < 2) break;
+      const nkVals = nonKeepers.map(id => minutes[id]);
+      if (Math.max(...nkVals) - Math.min(...nkVals) <= 1) break;
+      const overP = nonKeepers.reduce((a, b) => minutes[a] > minutes[b] ? a : b);
+      const underP = nonKeepers.reduce((a, b) => minutes[a] < minutes[b] ? a : b);
+      if (!trySegSwap(overP, underP)) break;
+    }
 
-        // Find keeper furthest below maxNK
-        let worstKeeper = null;
-        let worstDeficit = 0;
-        for (const kid of keepers) {
-          const deficit = (maxNK + 1) - minutes[kid];
-          const kTime = keeperMinutes[kid] || 0;
-          const cap = Math.max(kTime + 5, capLimit);
-          // Only push if result won't wildly exceed cap
-          if (deficit > 0.5 && deficit > worstDeficit && minutes[kid] + deficit <= cap + 2) {
-            worstKeeper = kid;
-            worstDeficit = deficit;
+    // Phase 2: Keeper equalization (swap-only, no new segments)
+    if (keepers.length >= 2) {
+      for (let r = 0; r < 20; r++) {
+        const kSorted = keepers.slice().sort((a, b) => minutes[b] - minutes[a]);
+        const kHigh = kSorted[0], kLow = kSorted[kSorted.length - 1];
+        if (minutes[kHigh] - minutes[kLow] <= 3) break;
+        if (trySegSwap(kHigh, kLow)) continue;
+        // Indirect: swap kHigh↔NK, then NK↔kLow
+        let ok = false;
+        for (const nk of nonKeepers) {
+          if (minutes[kHigh] > minutes[nk] && trySegSwap(kHigh, nk)) {
+            if (minutes[nk] > minutes[kLow]) trySegSwap(nk, kLow);
+            ok = true; break;
           }
         }
-        if (!worstKeeper) break;
-
-        const needed = Math.round(Math.max(2, Math.min(worstDeficit + 1, 10)));
-
-        // Find highest-time NK to swap out, using split swaps (min 2 for floor)
-        let swapped = false;
-        const nkSorted = nonKeepers.slice().sort((a, b) => minutes[b] - minutes[a]);
-        for (const overNK of nkSorted) {
-          if (swapped) break;
-          // Sort segments ascending by duration → pick smallest first to minimize overshoot
-          const sortedSegs = segments.map((_, i) => i)
-            .sort((a, b) => (segments[a].end - segments[a].start) - (segments[b].end - segments[b].start));
-          for (const idx of sortedSegs) {
-            const seg = segments[idx];
-            if (!seg.lineup.includes(overNK)) continue;
-            if (seg.lineup.includes(worstKeeper)) continue;
-            const dt = seg.end - seg.start;
-            if (dt < 4) continue;
-            const actual = Math.min(needed, dt - 2);
-            if (actual < 2) continue;
-            const splitTime = Math.round(seg.end - actual);
-            const newLineup = seg.lineup.map(id => id === overNK ? worstKeeper : id);
-            const segA = { start: seg.start, end: splitTime, dt: splitTime - seg.start, lineup: seg.lineup.slice(), keeperId: seg.keeperId };
-            const segB = { start: splitTime, end: seg.end, dt: seg.end - splitTime, lineup: newLineup, keeperId: seg.keeperId };
-            minutes[overNK] -= actual;
-            minutes[worstKeeper] += actual;
-            segments.splice(idx, 1, segA, segB);
-            swapsAdded.push({ time: splitTime, out: overNK, in: worstKeeper, amount: actual });
-            swapped = true;
-            break;
-          }
-        }
-        if (!swapped) break;
+        if (!ok) break;
       }
+    }
 
-      // Phase 3: Enforce keeper cap — max(keeperTime + 5, nkAvg * 1.20)
-      // Trims keepers that went over cap due to floor enforcement
-      for (let kRound = 0; kRound < 8; kRound++) {
-        const nkAvg = nonKeepers.reduce((s, id) => s + minutes[id], 0) / nonKeepers.length;
-
-        let worstKeeper2 = null;
-        let worstExcess = 0;
-        for (const kid of keepers) {
-          const kTime = keeperMinutes[kid] || 0;
-          const cap = Math.max(kTime + 5, nkAvg * 1.20);
-          const excess = minutes[kid] - cap;
-          if (excess > 1 && excess > worstExcess) {
-            worstKeeper2 = kid;
-            worstExcess = excess;
-          }
-        }
-        if (!worstKeeper2) break;
-
-        const underP = nonKeepers.reduce((a, b) => minutes[a] < minutes[b] ? a : b);
-        const transfer = Math.round(Math.max(4, Math.min(worstExcess, 10)));
-
-        let swapped2 = false;
-        // Try split swap first (segments ≥ 8 min)
-        const segIndices = segments.map((_, i) => i)
-          .sort((a, b) => (segments[b].end - segments[b].start) - (segments[a].end - segments[a].start));
-        for (const idx of segIndices) {
-          const seg = segments[idx];
-          if (seg.keeperId === worstKeeper2) continue;
-          if (!seg.lineup.includes(worstKeeper2)) continue;
-          if (seg.lineup.includes(underP)) continue;
-          const dt = seg.end - seg.start;
-          if (dt < 8) continue;
-          const actual = Math.min(transfer, dt - 4);
-          if (actual < 4) continue;
-          const splitTime = Math.round(seg.end - actual);
-          const newLineup = seg.lineup.map(id => id === worstKeeper2 ? underP : id);
-          const segA = { start: seg.start, end: splitTime, dt: splitTime - seg.start, lineup: seg.lineup.slice(), keeperId: seg.keeperId };
-          const segB = { start: splitTime, end: seg.end, dt: seg.end - splitTime, lineup: newLineup, keeperId: seg.keeperId };
-          minutes[worstKeeper2] -= actual;
-          minutes[underP] += actual;
-          segments.splice(idx, 1, segA, segB);
-          swapsAdded.push({ time: splitTime, out: worstKeeper2, in: underP, amount: actual });
-          swapped2 = true;
-          break;
-        }
-        if (!swapped2) {
-          // Whole-segment fallback — pick smallest segment, only if keeper stays above maxNK
-          const curMaxNK = Math.max(...nonKeepers.map(id => minutes[id]));
-          for (let idx = 0; idx < segments.length; idx++) {
-            const seg = segments[idx];
-            if (seg.keeperId === worstKeeper2) continue;
-            if (!seg.lineup.includes(worstKeeper2)) continue;
-            if (seg.lineup.includes(underP)) continue;
-            const dt = seg.end - seg.start;
-            if (minutes[worstKeeper2] - dt > curMaxNK - 0.5) {
-              seg.lineup = seg.lineup.map(id => id === worstKeeper2 ? underP : id);
-              minutes[worstKeeper2] -= dt;
-              minutes[underP] += dt;
-              swapped2 = true;
-              break;
-            }
-          }
-          if (!swapped2) break;
-        }
-      }
+    // Phase 3: Final global repair (swap-only)
+    for (let r = 0; r < 15; r++) {
+      const allVals = ids.map(id => minutes[id]);
+      if (Math.max(...allVals) - Math.min(...allVals) <= 3) break;
+      const overP = ids.reduce((a, b) => minutes[a] > minutes[b] ? a : b);
+      const underP = ids.reduce((a, b) => minutes[a] < minutes[b] ? a : b);
+      if (!trySegSwap(overP, underP)) break;
     }
 
     return swapsAdded;
+  }
+
+  // ------------------------------
+  // CYCLIC ROTATION (equal-mode candidate)
+  // ------------------------------
+  // Deterministic bench-window rotation: slides a "bench group" through
+  // a ring of outfield players, producing equal-length periods.
+  // Competes with greedy via comparator — wins when it produces
+  // cleaner, more coach-friendly plans.
+
+  function _gcd(a, b) { return b === 0 ? a : _gcd(b, a % b); }
+
+  function buildCyclicCandidate(playersList, P, T, keeperTimeline) {
+    const keeperIds = new Set(keeperTimeline.filter(k => k.keeperId).map(k => k.keeperId));
+    const keeperCount = keeperIds.size;
+
+    // Qualification: skip when cyclic is unlikely to help
+    if (keeperCount >= 3) return null;
+
+    const allIds = playersList.map(p => p.id);
+    const N = allIds.length;
+    const bench = N - P;
+    if (bench <= 0) return null;
+
+    // Min segment length by format
+    const minSegLen = P >= 7 ? 6 : (P >= 5 ? 5 : 4);
+
+    // If no keepers, treat whole match as one interval
+    const intervals = keeperTimeline.length > 0
+      ? keeperTimeline
+      : [{ keeperId: null, start: 0, end: T }];
+
+    // Build segments per keeper interval
+    const segments = [];
+    for (const kSeg of intervals) {
+      const halfDur = kSeg.end - kSeg.start;
+      const outfield = allIds.filter(id => id !== kSeg.keeperId);
+      const outfieldSpots = kSeg.keeperId ? P - 1 : P;
+      const benchSize = outfield.length - outfieldSpots;
+
+      if (benchSize <= 0) {
+        // Everyone plays this half
+        const lineup = kSeg.keeperId ? [kSeg.keeperId, ...outfield] : [...outfield];
+        segments.push({ start: kSeg.start, end: kSeg.end, dt: halfDur, lineup, keeperId: kSeg.keeperId });
+        continue;
+      }
+
+      const cycleLen = outfield.length / _gcd(outfield.length, benchSize);
+
+      // Check qualification: period length and cycle length
+      const periodLen = halfDur / cycleLen;
+      if (periodLen < minSegLen || cycleLen > 6) return null;
+
+      // Build rotation: slide bench window through player ring
+      for (let p = 0; p < cycleLen; p++) {
+        const sitting = new Set();
+        for (let b = 0; b < benchSize; b++) {
+          sitting.add(outfield[(p * benchSize + b) % outfield.length]);
+        }
+        const playing = outfield.filter(id => !sitting.has(id));
+        const start = Math.round(kSeg.start + p * periodLen);
+        const end = Math.round(kSeg.start + (p + 1) * periodLen);
+        const lineup = kSeg.keeperId ? [kSeg.keeperId, ...playing] : [...playing];
+        segments.push({ start, end, dt: end - start, lineup, keeperId: kSeg.keeperId });
+      }
+    }
+
+    // Calculate minutes
+    const minutes = {};
+    allIds.forEach(id => { minutes[id] = 0; });
+    for (const seg of segments) {
+      for (const id of seg.lineup) minutes[id] += seg.dt;
+    }
+
+    // Keeper minutes (for compatibility with rest of system)
+    const keeperMinutes = {};
+    for (const kSeg of keeperTimeline) {
+      if (kSeg.keeperId) {
+        keeperMinutes[kSeg.keeperId] = (keeperMinutes[kSeg.keeperId] || 0) + (kSeg.end - kSeg.start);
+      }
+    }
+
+    // Calculate metrics
+    const nonKeepers = allIds.filter(id => !keeperIds.has(id));
+    const nkVals = nonKeepers.map(id => minutes[id]);
+    const nkDiff = nkVals.length >= 2 ? Math.max(...nkVals) - Math.min(...nkVals) : 0;
+    const kVals = [...keeperIds].map(id => minutes[id]);
+    const kDiff = kVals.length >= 2 ? Math.max(...kVals) - Math.min(...kVals) : 0;
+
+    // Count lineup changes
+    let lineupChanges = 0;
+    for (let i = 1; i < segments.length; i++) {
+      const prev = new Set(segments[i - 1].lineup);
+      let changed = false;
+      for (const pid of segments[i].lineup) { if (!prev.has(pid)) { changed = true; break; } }
+      if (changed) lineupChanges++;
+    }
+
+    const allTimes = uniqSorted(segments.map(s => s.start).concat([T]));
+
+    return {
+      segments,
+      minutes,
+      keeperMinutes,
+      times: allTimes,
+      nkDiff,
+      kDiff,
+      lineupChanges,
+      swaps: []
+    };
   }
 
   // ------------------------------
@@ -1087,52 +1402,173 @@ console.log('🔥🔥🔥 KAMPDAG.JS LOADING - BEFORE IIFE');
     const keeperTimeline = buildKeeperTimeline(T);
     const seed = Date.now();
     const N = present.length;
-    const fp = FREQ_PARAMS[kdFrequency] || FREQ_PARAMS.normal;
-
-    // Phase 1: Choose optimal segment count for best balance
-    const nsegs = chooseOptimalSegments(T, P, N, fp.minGap, fp.maxGap);
+    const fp = FREQ_PARAMS[kdFrequency] || FREQ_PARAMS.equal;
     const kChangeTimes = keeperChangeTimes(keeperTimeline).filter(x => x > 0 && x < T);
-    const times = generateSegmentTimes(T, nsegs, kChangeTimes);
+    const NUM_ATTEMPTS = 20;
 
-    // Phase 2: Run multiple seeds, pick best result
     let best = null;
-    const NUM_ATTEMPTS = 12;
 
-    for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
-      const runSeed = seed + attempt * 99991;
-      const res = greedyAssign(present, times, P, keeperTimeline, runSeed);
+    if (fp.mode === 'equal') {
+      // Dynamic nsegs search: find plan with nkDiff ≤ 5 using fewest lineup changes.
+      // Scans all nsegs values and picks globally best valid plan via comparator.
+      const minSegLen = P >= 7 ? 6 : (P >= 5 ? 5 : 4);
+      const minNsegs = Math.max(2, Math.ceil(N / P));
+      // Use minSegLen (not hardcoded 4) so equal-mode avoids micro-segments
+      let maxNsegs = Math.min(N, Math.floor(T / minSegLen));
+      // Guard: always try at least one nsegs value (prevents NO_PLAN / best=null)
+      if (maxNsegs < minNsegs) maxNsegs = minNsegs;
 
-      // Deep-clone segments and minutes for individual swap mutation
-      const segClone = res.segments.map(s => ({
-        start: s.start, end: s.end, dt: s.dt,
-        lineup: s.lineup.slice(), keeperId: s.keeperId
-      }));
-      const minClone = Object.assign({}, res.minutes);
-
-      // Phase 3: Add individual swaps to reduce non-keeper diff
-      const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, 3);
-
-      // Calculate real diff among non-keepers
-      const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
-      const nkVals = nonKeepers.map(id => minClone[id]);
-      const nkDiff = nkVals.length ? Math.max(...nkVals) - Math.min(...nkVals) : 0;
-
-      // All times including individual swap splits
-      const allTimes = uniqSorted(segClone.map(s => s.start).concat([T]));
-
-      const candidate = {
-        segments: segClone,
-        minutes: minClone,
-        keeperMinutes: res.keeperMinutes,
-        times: allTimes,
-        nkDiff,
-        swaps
-      };
-
-      if (!best || nkDiff < best.nkDiff) {
-        best = candidate;
+      // Comparator: valid (nkDiff ≤ 5) first, then fewest lineupChanges,
+      // then lowest nkDiff, then lowest kDiff
+      function isBetter(a, b) {
+        const aValid = a.nkDiff <= 5 ? 1 : 0;
+        const bValid = b.nkDiff <= 5 ? 1 : 0;
+        if (aValid !== bValid) return aValid > bValid;
+        if (a.lineupChanges !== b.lineupChanges) return a.lineupChanges < b.lineupChanges;
+        if (a.nkDiff !== b.nkDiff) return a.nkDiff < b.nkDiff;
+        return a.kDiff < b.kDiff;
       }
-      if (nkDiff <= 2) break; // good enough
+
+      // Run greedy nsegs scan with maxSwaps=2
+      for (let tryNsegs = minNsegs; tryNsegs <= maxNsegs; tryNsegs++) {
+        const times = generateSegmentTimes(T, tryNsegs, kChangeTimes, keeperTimeline, P, N);
+        const maxSwaps = 2;
+        const stickyMode = (P === 3) ? null : (times.length - 1 >= 4 ? (fp.sticky || null) : null);
+
+        for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
+          const runSeed = seed + attempt * 99991;
+          const res = greedyAssign(present, times, P, keeperTimeline, runSeed, stickyMode);
+
+          const segClone = res.segments.map(s => ({
+            start: s.start, end: s.end, dt: s.dt,
+            lineup: s.lineup.slice(), keeperId: s.keeperId
+          }));
+          const minClone = Object.assign({}, res.minutes);
+          const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, maxSwaps, fp.swapSplitHalf);
+
+          const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
+          const nkVals = nonKeepers.map(id => minClone[id]);
+          const nkDiff = nkVals.length ? Math.max(...nkVals) - Math.min(...nkVals) : 0;
+          const kIds = present.map(p => p.id).filter(id => res.keeperSet.has(id));
+          const kVals = kIds.map(id => minClone[id]);
+          const kDiff = kVals.length >= 2 ? Math.max(...kVals) - Math.min(...kVals) : 0;
+          const allTimes = uniqSorted(segClone.map(s => s.start).concat([T]));
+
+          // Count real lineup changes
+          let lineupChanges = 0;
+          for (let i = 1; i < segClone.length; i++) {
+            const prev = new Set(segClone[i - 1].lineup);
+            let changed = false;
+            for (const pid of segClone[i].lineup) { if (!prev.has(pid)) { changed = true; break; } }
+            if (changed) lineupChanges++;
+          }
+
+          const candidate = {
+            segments: segClone,
+            minutes: minClone,
+            keeperMinutes: res.keeperMinutes,
+            times: allTimes,
+            nkDiff,
+            kDiff,
+            lineupChanges,
+            swaps
+          };
+
+          if (!best || isBetter(candidate, best)) {
+            best = candidate;
+          }
+        }
+      }
+
+      // Cyclic rotation candidate: deterministic bench-window rotation.
+      // Competes with greedy via same comparator — wins when it produces
+      // cleaner plans (fewer lineup changes, equal-length periods).
+      const cyclicPlan = buildCyclicCandidate(present, P, T, keeperTimeline);
+      if (cyclicPlan && (!best || isBetter(cyclicPlan, best))) {
+        best = cyclicPlan;
+      }
+
+      // Fallback: if still nkDiff > 5 after full scan with maxSwaps=2,
+      // re-run with maxSwaps=3 to give addIndividualSwaps more room.
+      // This fixes rare K=3 cases where keeper-locking is too rigid.
+      if (best && best.nkDiff > 5) {
+        for (let tryNsegs = minNsegs; tryNsegs <= maxNsegs; tryNsegs++) {
+          const times = generateSegmentTimes(T, tryNsegs, kChangeTimes, keeperTimeline, P, N);
+          const stickyMode = (P === 3) ? null : (times.length - 1 >= 4 ? (fp.sticky || null) : null);
+          for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
+            const runSeed = seed + attempt * 99991;
+            const res = greedyAssign(present, times, P, keeperTimeline, runSeed, stickyMode);
+            const segClone = res.segments.map(s => ({
+              start: s.start, end: s.end, dt: s.dt,
+              lineup: s.lineup.slice(), keeperId: s.keeperId
+            }));
+            const minClone = Object.assign({}, res.minutes);
+            const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, 3, fp.swapSplitHalf);
+            const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
+            const nkVals = nonKeepers.map(id => minClone[id]);
+            const nkDiff = nkVals.length ? Math.max(...nkVals) - Math.min(...nkVals) : 0;
+            const kIds = present.map(p => p.id).filter(id => res.keeperSet.has(id));
+            const kVals = kIds.map(id => minClone[id]);
+            const kDiff = kVals.length >= 2 ? Math.max(...kVals) - Math.min(...kVals) : 0;
+            const allTimes = uniqSorted(segClone.map(s => s.start).concat([T]));
+            let lineupChanges = 0;
+            for (let i = 1; i < segClone.length; i++) {
+              const prev = new Set(segClone[i - 1].lineup);
+              let changed = false;
+              for (const pid of segClone[i].lineup) { if (!prev.has(pid)) { changed = true; break; } }
+              if (changed) lineupChanges++;
+            }
+            const candidate = {
+              segments: segClone, minutes: minClone, keeperMinutes: res.keeperMinutes,
+              times: allTimes, nkDiff, kDiff, lineupChanges, swaps
+            };
+            if (isBetter(candidate, best)) best = candidate;
+          }
+        }
+      }
+    } else {
+      // Calm mode: keep existing logic unchanged
+      const nsegs = chooseOptimalSegments(T, P, N, fp.mode);
+      const times = generateSegmentTimes(T, nsegs, kChangeTimes, keeperTimeline, P, N);
+      const maxSwaps = P === 3 ? 2 : 1;
+      const stickyMode = (P === 3) ? null : (nsegs >= 4 ? (fp.sticky || null) : null);
+
+      for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
+        const runSeed = seed + attempt * 99991;
+        const res = greedyAssign(present, times, P, keeperTimeline, runSeed, stickyMode);
+
+        const segClone = res.segments.map(s => ({
+          start: s.start, end: s.end, dt: s.dt,
+          lineup: s.lineup.slice(), keeperId: s.keeperId
+        }));
+        const minClone = Object.assign({}, res.minutes);
+        const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, maxSwaps, fp.swapSplitHalf);
+
+        const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
+        const nkVals = nonKeepers.map(id => minClone[id]);
+        const nkDiff = nkVals.length ? Math.max(...nkVals) - Math.min(...nkVals) : 0;
+        const kIds = present.map(p => p.id).filter(id => res.keeperSet.has(id));
+        const kVals = kIds.map(id => minClone[id]);
+        const kDiff = kVals.length >= 2 ? Math.max(...kVals) - Math.min(...kVals) : 0;
+        const allTimes = uniqSorted(segClone.map(s => s.start).concat([T]));
+
+        const candidate = {
+          segments: segClone,
+          minutes: minClone,
+          keeperMinutes: res.keeperMinutes,
+          times: allTimes,
+          nkDiff,
+          kDiff,
+          swaps
+        };
+
+        const candidateScore = kDiff * 2 + nkDiff;
+        const bestScore = best ? (best.kDiff || 0) * 2 + best.nkDiff : Infinity;
+        if (!best || candidateScore < bestScore) {
+          best = candidate;
+        }
+        if (kDiff <= 2 && nkDiff <= 2) break;
+      }
     }
 
     // Stop any running timer before generating new plan
