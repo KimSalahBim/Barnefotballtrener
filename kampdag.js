@@ -2383,62 +2383,92 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const lines = [];
     const useFormation = kdFormationOn && kdFormation;
     const format = parseInt($('kdFormat')?.value, 10) || 7;
+    const hasAnyOverride = Object.keys(kdSlotOverrides).length > 0;
 
-    lines.push('Startoppstilling' + (useFormation ? ` \u00b7 ${kdFormationKey}` : ''));
+    // Slot system only works when formation is active (maps players to zone slots).
+    // Without formation, slots don't cover all players, so use segment lineups directly.
+    const useSlots = useFormation && format !== 3;
+    const effMins = useSlots ? getEffectiveMinutes() : best.minutes;
+
+    lines.push('Startoppstilling' + (useFormation ? ` \u00b7 ${kdFormationKey}` : '') + (hasAnyOverride && useSlots ? ' \u00b7 Justert' : ''));
 
     const first = best.segments[0];
-    const startIds = first.lineup.slice();
-    const benchIds = presentPlayers.map(p => p.id).filter(id => !startIds.includes(id));
-
-    if (useFormation && format !== 3) {
-      const zr = assignZones(startIds, first.keeperId, kdFormation);
-      if (zr) {
-        if (first.keeperId) lines.push(` Keeper: ${idToName[first.keeperId] || first.keeperId}`);
-        if (zr.zones.F.length) lines.push(` Forsvar: ${zr.zones.F.map(id => idToName[id] || id).join(', ')}`);
-        if (zr.zones.M.length) lines.push(` Midtbane: ${zr.zones.M.map(id => idToName[id] || id).join(', ')}`);
-        if (zr.zones.A.length) lines.push(` Angrep: ${zr.zones.A.map(id => idToName[id] || id).join(', ')}`);
+    let startIds, benchIds;
+    if (useSlots) {
+      const sm0 = getSlotMap(0);
+      startIds = Object.values(sm0.slots).filter(Boolean);
+      benchIds = presentPlayers.map(p => p.id).filter(id => !startIds.includes(id));
+      const slots = getActiveSlots();
+      if (slots) {
+        const keeperSlot = slots.find(s => s.zone === 'K');
+        const keeperId = keeperSlot ? sm0.slots[keeperSlot.key] : null;
+        if (keeperId) lines.push(` Keeper: ${idToName[keeperId] || keeperId}`);
+        for (const [zone, label] of Object.entries({ F: 'Forsvar', M: 'Midtbane', A: 'Angrep' })) {
+          const ids = slots.filter(s => s.zone === zone).map(s => sm0.slots[s.key]).filter(Boolean);
+          if (ids.length) lines.push(` ${label}: ${ids.map(id => idToName[id] || id).join(', ')}`);
+        }
       }
     } else {
+      startIds = first.lineup.slice();
+      benchIds = presentPlayers.map(p => p.id).filter(id => !startIds.includes(id));
       lines.push(' Start (f\u00f8rste periode)');
       startIds.forEach(id => lines.push(`  - ${idToName[id] || id}`));
     }
     lines.push(` Benk: ${benchIds.map(id => idToName[id] || id).join(', ') || ' - '}`);
 
     lines.push('');
-    lines.push('Beregnet spilletid');
-    const minutesArr = Object.keys(best.minutes).map(id => ({ id, name: idToName[id] || id, min: best.minutes[id] }));
+    lines.push('Beregnet spilletid' + (hasAnyOverride && useSlots ? ' (justert)' : ''));
+    const minutesArr = Object.keys(effMins).map(id => ({ id, name: idToName[id] || id, min: effMins[id] }));
     minutesArr.sort((a, b) => b.min - a.min);
     minutesArr.forEach(m => lines.push(` ${m.name}: ${m.min.toFixed(1)} min`));
 
     lines.push('');
     lines.push('Bytteplan');
-    const events = buildEvents(best.segments);
-    events.forEach((ev, idx) => {
+    for (let idx = 0; idx < best.segments.length; idx++) {
       const seg = best.segments[idx];
       const nextSeg = best.segments[idx + 1];
       const periodEnd = nextSeg ? nextSeg.start : T;
 
-      lines.push(` Minutt ${ev.minute} \u2013 ${periodEnd}`);
-      if (ev.keeperId) lines.push(`  Keeper: ${idToName[ev.keeperId] || ev.keeperId}`);
+      lines.push(` Minutt ${seg.start} \u2013 ${periodEnd}`);
 
-      if (useFormation && format !== 3) {
-        const zr = assignZones(seg.lineup, seg.keeperId, kdFormation);
-        if (zr) {
+      if (useSlots) {
+        const sm = getSlotMap(idx);
+        const curIds = Object.values(sm.slots).filter(Boolean);
+        const prevIds = idx > 0 ? Object.values(getSlotMap(idx - 1).slots).filter(Boolean) : [];
+        const prevSet = new Set(prevIds);
+        const slots = getActiveSlots();
+        if (slots) {
+          const keeperSlot = slots.find(s => s.zone === 'K');
+          const keeperId = keeperSlot ? sm.slots[keeperSlot.key] : null;
+          if (keeperId) lines.push(`  Keeper: ${idToName[keeperId] || keeperId}`);
           const parts = [];
-          if (zr.zones.F.length) parts.push(`F: ${zr.zones.F.map(id => idToName[id] || id).join(', ')}`);
-          if (zr.zones.M.length) parts.push(`M: ${zr.zones.M.map(id => idToName[id] || id).join(', ')}`);
-          if (zr.zones.A.length) parts.push(`A: ${zr.zones.A.map(id => idToName[id] || id).join(', ')}`);
+          for (const [zone, label] of Object.entries({ F: 'F', M: 'M', A: 'A' })) {
+            const ids = slots.filter(s => s.zone === zone).map(s => sm.slots[s.key]).filter(Boolean);
+            if (ids.length) parts.push(`${label}: ${ids.map(id => idToName[id] || id).join(', ')}`);
+          }
           if (parts.length) lines.push(`  Soner: ${parts.join(' | ')}`);
         }
-      }
-
-      if (idx === 0) {
-        lines.push('  Start (ingen bytter)');
+        if (idx === 0) {
+          lines.push('  Start (ingen bytter)');
+        } else {
+          const ins = curIds.filter(id => !prevSet.has(id));
+          const outs = prevIds.filter(id => !new Set(curIds).has(id));
+          ins.forEach(id => lines.push(`  Inn: ${idToName[id] || id}`));
+          outs.forEach(id => lines.push(`  Ut: ${idToName[id] || id}`));
+        }
       } else {
-        ev.ins.forEach(id => lines.push(`  Inn: ${idToName[id] || id}`));
-        ev.outs.forEach(id => lines.push(`  Ut: ${idToName[id] || id}`));
+        if (seg.keeperId) lines.push(`  Keeper: ${idToName[seg.keeperId] || seg.keeperId}`);
+        if (idx === 0) {
+          lines.push('  Start (ingen bytter)');
+        } else {
+          const prev = new Set(best.segments[idx - 1].lineup);
+          const ins = seg.lineup.filter(id => !prev.has(id));
+          const outs = best.segments[idx - 1].lineup.filter(id => !new Set(seg.lineup).has(id));
+          ins.forEach(id => lines.push(`  Inn: ${idToName[id] || id}`));
+          outs.forEach(id => lines.push(`  Ut: ${idToName[id] || id}`));
+        }
       }
-    });
+    }
 
     return lines.join('\n');
   }
