@@ -2493,6 +2493,17 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const present = lastPresent;
     const format = lastP;
     const T = lastT;
+
+    // Dynamic pitch/bubble sizing per format to prevent overlap in 9/11-er
+    const P = format;
+    const startH = P <= 3 ? 160 : P <= 5 ? 190 : P <= 7 ? 210 : P <= 9 ? 225 : 240;
+    const startB = P <= 7 ? 44 : P <= 9 ? 38 : 34;
+    const startBmax = startB - 4;
+    const startBfont = P <= 7 ? 9.5 : P <= 9 ? 8.5 : 8;
+    const bytteH = P <= 3 ? 110 : P <= 5 ? 130 : P <= 7 ? 150 : P <= 9 ? 165 : 180;
+    const bytteB = P <= 7 ? 36 : P <= 9 ? 30 : 26;
+    const bytteBmax = bytteB - 3;
+    const bytteBfont = P <= 7 ? 8.5 : P <= 9 ? 7.5 : 7;
     const idToName = {};
     present.forEach(p => idToName[p.id] = p.name);
     const best = lastBest;
@@ -2527,12 +2538,12 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const dots0 = slots.map(s => {
         const pid = sm0.slots[s.key];
         const nm = pid ? escapeHtml(idToName[pid] || pid) : '?';
-        return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:50px;height:50px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;"><span style="font-size:10px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46px;">${nm}</span></div></div>`;
+        return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:${startB}px;height:${startB}px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;"><span style="font-size:${startBfont}px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${startBmax}px;">${nm}</span></div></div>`;
       }).join('');
       const benchNames0 = sm0.bench.map(pid => escapeHtml(idToName[pid] || pid)).join(' \u00b7 ') || '\u2014';
       startSection = `
         <div class="section-title">Startoppstilling \u00b7 ${formationKey}${hasAnyOverride ? ' \u00b7 Justert' : ''}</div>
-        <div style="position:relative;width:100%;max-width:440px;margin:0 auto;height:250px;background:linear-gradient(180deg,#1a5c1a,#145214);border-radius:12px;overflow:hidden;border:2px solid #2a7a2a;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots0}</div>
+        <div style="position:relative;width:100%;max-width:420px;margin:0 auto;height:${startH}px;background:linear-gradient(180deg,#1a5c1a,#145214);border-radius:12px;overflow:hidden;border:2px solid #2a7a2a;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots0}</div>
         <div class="bench">Benk: ${benchNames0}</div>`;
     }
     if (!startSection) {
@@ -2606,9 +2617,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           const pid = sm.slots[s.key]; const nm = pid ? escapeHtml(idToName[pid]||pid) : '?';
           const isNew = pid && newIds.has(pid);
           const outline = isNew ? 'box-shadow:0 0 0 2px #fbbf24;' : '';
-          return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:52px;height:52px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;${outline}"><span style="font-size:10px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48px;">${nm}</span></div></div>`;
+          return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:${bytteB}px;height:${bytteB}px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;${outline}"><span style="font-size:${bytteBfont}px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${bytteBmax}px;">${nm}</span></div></div>`;
         }).join('');
-        body = `<div style="position:relative;width:100%;height:210px;background:linear-gradient(180deg,#1a5c1a,#145214);overflow:hidden;border-radius:6px;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots}</div>`;
+        body = `<div class="cpitch" style="position:relative;width:100%;height:${bytteH}px;background:linear-gradient(180deg,#1a5c1a,#145214);overflow:hidden;border-radius:6px;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots}</div>`;
         const benchNames = sm.bench.map(pid => escapeHtml(idToName[pid]||pid)).join(', ') || '\u2014';
         body += `<div style="font-size:8px;color:#64748b;padding:2px 10px 5px;">Benk: ${benchNames}</div>`;
       }
@@ -2640,8 +2651,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .logo img{width:40px;height:40px;object-fit:cover}
 .h-title{font-size:13px;font-weight:900}
 .h-sub{opacity:0.9;font-size:10px;margin-top:1px}
-.section-title{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em;color:#60a5fa;margin:10px 0 6px;padding-bottom:4px;border-bottom:2px solid rgba(255,255,255,0.08)}
-.main-card{background:#1a2333;border-radius:14px;padding:10px;margin-top:8px;border:1px solid rgba(255,255,255,0.06)}
+.section-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em;color:#60a5fa;margin:8px 0 4px;padding-bottom:3px;border-bottom:2px solid rgba(255,255,255,0.08)}
+.main-card{background:#1a2333;border-radius:14px;padding:8px;margin-top:6px;border:1px solid rgba(255,255,255,0.06)}
 /* Pitch */
 .pitch{background:linear-gradient(180deg,#1a5c1a,#145214);border:2px solid #2a7a2a;border-radius:12px;padding:12px 8px;position:relative;overflow:hidden}
 .pitch::before{content:'';position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.12)}
@@ -2651,57 +2662,58 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .pp-m{background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
 .pp-a{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3)}
 .pp-k{background:rgba(168,85,247,0.15);color:#c084fc;border:1px solid rgba(168,85,247,0.3)}
-.bench{font-size:11px;color:#64748b;margin-top:8px;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:8px}
+.bench{font-size:10px;color:#64748b;margin-top:4px;padding:4px 8px;background:rgba(255,255,255,0.04);border-radius:6px}
 .bench b{color:#94a3b8}
 .start-list{display:flex;flex-wrap:wrap;gap:4px}
 .chip{font-size:11px;padding:3px 8px;background:rgba(255,255,255,0.08);border-radius:6px}
 /* Timeline */
-.tl-chart{background:rgba(255,255,255,0.03);border-radius:12px;padding:12px}
-.tl-header{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin-bottom:8px}
-.tl-row{display:flex;align-items:center;gap:6px;padding:2px 0}
-.tl-name{width:60px;text-align:right;font-size:11px;font-weight:700;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tl-bar{flex:1;height:14px;background:rgba(255,255,255,0.04);border-radius:3px;display:flex;overflow:hidden}
-.tl-min{width:32px;text-align:right;font-size:10px;font-weight:800;color:#64748b}
-.tl-axis{display:flex;justify-content:space-between;margin:4px 38px 0 66px;font-size:9px;color:#475569}
-.tl-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-left:66px;font-size:10px;color:#64748b}
+.tl-chart{background:rgba(255,255,255,0.03);border-radius:10px;padding:8px}
+.tl-header{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin-bottom:4px}
+.tl-row{display:flex;align-items:center;gap:4px;padding:1px 0}
+.tl-name{width:56px;text-align:right;font-size:10px;font-weight:700;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-bar{flex:1;height:12px;background:rgba(255,255,255,0.04);border-radius:3px;display:flex;overflow:hidden}
+.tl-min{width:30px;text-align:right;font-size:9px;font-weight:800;color:#64748b}
+.tl-axis{display:flex;justify-content:space-between;margin:2px 36px 0 62px;font-size:8px;color:#475569}
+.tl-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;padding-left:62px;font-size:9px;color:#64748b}
 .tl-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:3px;vertical-align:middle}
 /* Time list (non-formation) */
 .time-list{display:flex;flex-direction:column}
 .time-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.04)}
 /* Bytteplan grid */
-.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.card{background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);break-inside:avoid;page-break-inside:avoid}
-.card-head{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.06)}
-.card-title{font-weight:900;font-size:13px;color:#fff}
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.card{background:#1e293b;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);break-inside:avoid;page-break-inside:avoid}
+.card-head{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.card-title{font-weight:900;font-size:12px;color:#fff}
 .card-keeper{background:rgba(168,85,247,0.15);padding:3px 8px;border-radius:999px;font-size:10px;color:#c084fc;font-weight:700}
-.card-body{padding:4px 8px 6px}
-.zl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.card-body{padding:3px 6px 4px}
+.zl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;display:flex;align-items:center;gap:4px;margin-bottom:2px}
 .zd{width:6px;height:6px;border-radius:50%}
-.zp{display:flex;flex-wrap:wrap;gap:4px;padding-left:11px;margin-bottom:6px}
-.zc{font-size:11px;font-weight:600;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,0.08);color:#cbd5e1;border:1px solid rgba(255,255,255,0.06)}
+.zp{display:flex;flex-wrap:wrap;gap:3px;padding-left:10px;margin-bottom:4px}
+.zc{font-size:10px;font-weight:600;padding:1px 5px;border-radius:5px;background:rgba(255,255,255,0.08);color:#cbd5e1;border:1px solid rgba(255,255,255,0.06)}
 .zc-new{background:rgba(34,197,94,0.15);color:#4ade80;border-color:rgba(34,197,94,0.4)}
-.swaps{padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);margin-top:6px}
-.sw{display:flex;align-items:center;gap:4px;padding:0;font-size:9px}
+.swaps{padding-top:4px;border-top:1px solid rgba(255,255,255,0.06);margin-top:4px}
+.sw{display:flex;align-items:center;gap:3px;padding:0;font-size:8.5px}
 .sw-in{color:#4ade80;font-weight:900;width:14px;text-align:center}
 .sw-out{color:#f87171;font-weight:900;width:14px;text-align:center}
 .note{font-size:10px;color:#475569;font-style:italic;margin-top:4px}
-.footer{text-align:center;margin-top:16px;font-size:10px;color:#475569;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06)}
+.footer{text-align:center;margin-top:10px;font-size:9px;color:#475569;padding:6px 0;border-top:1px solid rgba(255,255,255,0.06)}
+@page{margin:6mm 8mm}
 @media print{
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{background:#0f172a}
-  .wrap{max-width:none;padding:6px}
+  .wrap{max-width:none;padding:4px}
   .actions{display:none!important}
   #saveGuide{display:none!important}
-  .card{break-inside:avoid;page-break-inside:avoid;margin-bottom:4px}
+  .card{break-inside:avoid;page-break-inside:avoid;margin-bottom:3px}
   .tl-chart{break-inside:avoid}
   .pitch{break-inside:avoid}
-  .main-card{padding:8px}
-  .plan-grid{grid-template-columns:1fr 1fr!important;gap:6px}
-  .section-title{margin:8px 0 4px;font-size:11px}
-  .header{padding:6px 10px;break-inside:avoid}
-  .logo{width:40px;height:40px}
-  .logo img{width:40px;height:40px}
-  .h-title{font-size:15px}
+  .main-card{padding:6px;break-inside:auto}
+  .plan-grid{grid-template-columns:1fr 1fr!important;gap:4px}
+  .section-title{margin:6px 0 3px;font-size:10px}
+  .header{padding:4px 8px;break-inside:avoid}
+  .logo{width:36px;height:36px}
+  .logo img{width:36px;height:36px}
+  .h-title{font-size:13px}
 }
 @media (max-width:600px){
   .plan-grid{grid-template-columns:1fr}
