@@ -112,7 +112,7 @@
 .kd-pitch-field {
   position: relative;
   width: 100%;
-  aspect-ratio: 68 / 78;
+  aspect-ratio: 68 / 80;
   background: linear-gradient(
     180deg,
     #1b6e1b 0%, #1a6a1a 14%, #1d721d 14.5%,
@@ -359,207 +359,20 @@
 }
 
 @media (min-width: 768px) {
-  .kd-slot-small .kd-pos-bubble { width: 58px; height: 58px; }
-  .kd-slot-small .kd-pos-bubble .kd-p-name { font-size: 11px; }
+  .kd-slot-small .kd-pos-bubble { width: 62px; height: 62px; }
+  .kd-slot-small .kd-pos-bubble .kd-p-name { font-size: 11px; max-width: 56px; }
 
   /* Constrain pitch card size on desktop - prevent oversized cards */
   .kd-pitch-field {
-    max-height: 340px;
+    max-height: 380px;
   }
   .kd-pitch-wrap {
-    max-height: 360px;
+    max-height: 400px;
   }
   .kd-pitch-card {
-    max-width: 480px;
+    max-width: 520px;
   }
   /* Bench bubbles slightly larger on desktop */
   .kd-bench-bubble { width: 44px; height: 44px; }
   .kd-bench-bubble .kd-p-name { font-size: 10px; }
 }
-
-/* ===========================================
-   KAMPDAG - Dark output, timeline, formation
-   (originally in style.css)
-   =========================================== */
-
-/* -- Dark output wrapper -- */
-.kd-dark-output {
-  background: #1a2333;
-  border-radius: 16px;
-  padding: 16px;
-  border: 1px solid rgba(255,255,255,0.06);
-}
-
-.kd-dark-heading {
-  font-size: 14px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #60a5fa;
-  margin: 0 0 10px;
-  padding-bottom: 4px;
-  border-bottom: 2px solid rgba(255,255,255,0.08);
-}
-
-.kd-dark-mode {
-  background: transparent;
-}
-
-/* -- Bytteplan card grid -- */
-.kd-dc-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* -- Timeline chart -- */
-.kd-timeline-chart {
-  background: rgba(255,255,255,0.03);
-  border-radius: 12px;
-  padding: 12px;
-}
-
-.kd-timeline-title {
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #64748b;
-  margin-bottom: 8px;
-}
-
-.kd-tl-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 0;
-}
-
-.kd-tl-name {
-  width: 68px;
-  text-align: right;
-  font-size: 11px;
-  font-weight: 700;
-  color: #94a3b8;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.kd-tl-bar-wrap {
-  flex: 1;
-  height: 14px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 3px;
-  display: flex;
-  overflow: hidden;
-}
-
-.kd-tl-seg {
-  height: 100%;
-  border-radius: 0;
-}
-
-.kd-tl-min {
-  width: 36px;
-  text-align: right;
-  font-size: 10px;
-  font-weight: 800;
-  color: #64748b;
-  flex-shrink: 0;
-}
-
-.kd-tl-axis {
-  display: flex;
-  justify-content: space-between;
-  margin: 4px 42px 0 74px;
-  font-size: 9px;
-  color: #475569;
-}
-
-.kd-tl-legend {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 6px;
-  font-size: 10px;
-  color: #64748b;
-}
-
-.kd-tl-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.kd-tl-legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-/* -- Formation grid (settings panel) -- */
-.kd-formation-opt {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  border: 2px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.03);
-  transition: border-color 0.15s;
-}
-
-.kd-formation-opt:hover { border-color: rgba(255,255,255,0.15); }
-.kd-formation-active { border-color: #3b82f6; background: rgba(59,130,246,0.08); }
-
-.kd-f-name {
-  font-size: 15px;
-  font-weight: 900;
-  color: #fff;
-}
-
-.kd-f-desc {
-  font-size: 10px;
-  color: #94a3b8;
-}
-
-/* -- Position preference list -- */
-.kd-pos-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-
-.kd-pos-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #e2e8f0;
-  flex: 1;
-}
-
-.kd-pos-checks {
-  display: flex;
-  gap: 4px;
-}
-
-.kd-pos-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 800;
-  background: rgba(255,255,255,0.04);
-  color: #475569;
-}
-.kd-pos-f-on { background: rgba(34,197,94,0.15); color: #4ade80; }
-.kd-pos-m-on { background: rgba(59,130,246,0.15); color: #60a5fa; }
-.kd-pos-a-on { background: rgba(239,68,68,0.15); color: #f87171; }

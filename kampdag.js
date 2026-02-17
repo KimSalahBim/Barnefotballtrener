@@ -2134,7 +2134,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         </div>`;
 
       // Build pitch SVG
-      const pitchSVG = `<svg class="kd-pitch-lines" viewBox="0 0 680 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      const pitchSVG = `<svg class="kd-pitch-lines" viewBox="0 0 680 800" preserveAspectRatio="xMidYMid slice" overflow="hidden" xmlns="http://www.w3.org/2000/svg">
         <rect x="20" y="10" width="640" height="780" rx="6" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2.5"/>
         <line x1="20" y1="400" x2="660" y2="400" stroke="rgba(255,255,255,0.15)" stroke-width="2.5"/>
         <circle cx="340" cy="400" r="72" fill="none" stroke="rgba(255,255,255,0.13)" stroke-width="2"/>
@@ -2527,12 +2527,12 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const dots0 = slots.map(s => {
         const pid = sm0.slots[s.key];
         const nm = pid ? escapeHtml(idToName[pid] || pid) : '?';
-        return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:40px;height:40px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;"><span style="font-size:8.5px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38px;">${nm}</span></div></div>`;
+        return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:50px;height:50px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;"><span style="font-size:10px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46px;">${nm}</span></div></div>`;
       }).join('');
       const benchNames0 = sm0.bench.map(pid => escapeHtml(idToName[pid] || pid)).join(' \u00b7 ') || '\u2014';
       startSection = `
         <div class="section-title">Startoppstilling \u00b7 ${formationKey}${hasAnyOverride ? ' \u00b7 Justert' : ''}</div>
-        <div style="position:relative;width:100%;max-width:380px;margin:0 auto;height:150px;background:linear-gradient(180deg,#1a5c1a,#145214);border-radius:12px;overflow:visible;border:2px solid #2a7a2a;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots0}</div>
+        <div style="position:relative;width:100%;max-width:440px;margin:0 auto;height:250px;background:linear-gradient(180deg,#1a5c1a,#145214);border-radius:12px;overflow:hidden;border:2px solid #2a7a2a;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots0}</div>
         <div class="bench">Benk: ${benchNames0}</div>`;
     }
     if (!startSection) {
@@ -2606,9 +2606,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           const pid = sm.slots[s.key]; const nm = pid ? escapeHtml(idToName[pid]||pid) : '?';
           const isNew = pid && newIds.has(pid);
           const outline = isNew ? 'box-shadow:0 0 0 2px #fbbf24;' : '';
-          return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:42px;height:42px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;${outline}"><span style="font-size:9px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40px;">${nm}</span></div></div>`;
+          return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:52px;height:52px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;${outline}"><span style="font-size:10px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48px;">${nm}</span></div></div>`;
         }).join('');
-        body = `<div style="position:relative;width:100%;height:130px;background:linear-gradient(180deg,#1a5c1a,#145214);overflow:visible;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots}</div>`;
+        body = `<div style="position:relative;width:100%;height:210px;background:linear-gradient(180deg,#1a5c1a,#145214);overflow:hidden;border-radius:6px;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots}</div>`;
         const benchNames = sm.bench.map(pid => escapeHtml(idToName[pid]||pid)).join(', ') || '\u2014';
         body += `<div style="font-size:8px;color:#64748b;padding:2px 10px 5px;">Benk: ${benchNames}</div>`;
       }
@@ -2635,7 +2635,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;background:#0f172a;color:#e2e8f0;line-height:1.45}
 .wrap{max-width:900px;margin:0 auto;padding:16px}
-.header{background:linear-gradient(135deg,#166534,#22c55e);color:#fff;border-radius:10px;padding:6px 10px;display:flex;gap:8px;align-items:center;box-shadow:0 3px 8px rgba(22,101,52,0.3)}
+.header{background:linear-gradient(135deg,#0b5bd3,#19b0ff);color:#fff;border-radius:10px;padding:6px 10px;display:flex;gap:8px;align-items:center;box-shadow:0 3px 8px rgba(11,91,211,0.3)}
 .logo{width:40px;height:40px;border-radius:8px;background:#fff;overflow:hidden;flex-shrink:0}
 .logo img{width:40px;height:40px;object-fit:cover}
 .h-title{font-size:13px;font-weight:900}
@@ -2727,7 +2727,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 
   <div class="footer">Laget med Barnefotballtrener.no</div>
   <div class="actions" style="display:flex;gap:10px;margin-top:12px;">
-    <button style="border:0;border-radius:10px;padding:10px 16px;font-weight:800;background:#166534;color:#fff;cursor:pointer;font-size:13px;" onclick="window.print()">Lagre som PDF</button>
+    <button style="border:0;border-radius:10px;padding:10px 16px;font-weight:800;background:#0b5bd3;color:#fff;cursor:pointer;font-size:13px;" onclick="window.print()">Lagre som PDF</button>
   </div>
   <div id="saveGuide" style="margin-top:12px;"></div>
   <script>
