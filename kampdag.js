@@ -3,11 +3,11 @@
 // Kampdag: oppmÃ¸te -> start/benk -> bytteplan med roligere bytter og bedre spilletidsfordeling.
 // Bruker global variabel "window.players" (Array) som settes av core.js.
 
-console.log('ðŸ”¥ðŸ”¥ðŸ”¥ KAMPDAG.JS LOADING - BEFORE IIFE');
+console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
 (function () {
   'use strict';
-  console.log('ðŸ”¥ KAMPDAG.JS - INSIDE IIFE');
+  console.log('KAMPDAG.JS - INSIDE IIFE');
   // ------------------------------
   // Utils
   // ------------------------------
@@ -489,7 +489,7 @@ console.log('ðŸ”¥ðŸ”¥ðŸ”¥ KAMPDAG.JS LOADING - BEFORE IIFE');
           <span class="checkmark"></span>
           <div class="player-details">
             <div class="player-name">${escapeHtml(p.name)}</div>
-            <div class="player-meta">${p.goalie ? 'ðŸ§¤ Keeper' : 'âš½ Utespiller'}</div>
+            <div class="player-meta">${p.goalie ? '\ud83e\udde4 Keeper' : '\u26bd Utespiller'}</div>
           </div>
         </label>
       `;
@@ -596,7 +596,7 @@ console.log('ðŸ”¥ðŸ”¥ðŸ”¥ KAMPDAG.JS LOADING - BEFORE IIFE');
   function makeKeeperOptions(presentPlayers) {
     const header = `<option value="">Velg spiller</option>`;
     const items = presentPlayers.map(p => {
-      const icon = p.goalie ? 'ðŸ§¤' : 'âš½';
+      const icon = p.goalie ? '\ud83e\udde4' : '\u26bd';
       return `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} ${icon}</option>`;
     }).join('');
     return header + items;
@@ -2216,8 +2216,8 @@ console.log('ðŸ”¥ðŸ”¥ðŸ”¥ KAMPDAG.JS LOADING - BEFORE IIFE');
           let swapHtml = '';
           if (newIds.size || outIds.length) {
             swapHtml = '<div class="kd-swap-strip">';
-            newIds.forEach(id => { swapHtml += `<span><span class="kd-sw-in">\u2192</span> ${escapeHtml(idToName[id] || id)}</span>`; });
-            outIds.forEach(id => { swapHtml += `<span><span class="kd-sw-out">\u2190</span> ${escapeHtml(idToName[id] || id)}</span>`; });
+            newIds.forEach(id => { swapHtml += `<span class="kd-sw-item kd-sw-in-item"><span class="kd-sw-in">\u2192</span> <span class="kd-sw-label">inn</span> <span class="kd-sw-name">${escapeHtml(idToName[id] || id)}</span></span>`; });
+            outIds.forEach(id => { swapHtml += `<span class="kd-sw-item kd-sw-out-item"><span class="kd-sw-out">\u2190</span> <span class="kd-sw-label">ut</span> <span class="kd-sw-name">${escapeHtml(idToName[id] || id)}</span></span>`; });
             swapHtml += '</div>';
           }
 

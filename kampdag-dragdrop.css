@@ -291,16 +291,39 @@
 
 /* ── Swap strip ── */
 .kd-swap-strip {
-  padding: 4px 10px;
+  padding: 6px 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 8px;
-  font-size: 10px;
-  border-top: 1px solid rgba(255,255,255,0.03);
+  gap: 3px 6px;
+  font-size: 11px;
+  color: #cbd5e1;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  line-height: 1.4;
 }
 
-.kd-sw-in { color: #4ade80; font-weight: 700; }
-.kd-sw-out { color: #f87171; font-weight: 700; }
+.kd-swap-strip .kd-sw-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.kd-swap-strip .kd-sw-item.kd-sw-in-item {
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.2);
+}
+
+.kd-swap-strip .kd-sw-item.kd-sw-out-item {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.15);
+}
+
+.kd-sw-in { color: #4ade80; font-weight: 800; font-size: 11px; }
+.kd-sw-out { color: #f87171; font-weight: 800; font-size: 11px; }
+.kd-sw-name { font-weight: 700; }
+.kd-sw-label { font-size: 9px; font-weight: 600; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.03em; }
 
 /* ── Drag ghost ── */
 .kd-drag-ghost {
@@ -338,4 +361,18 @@
 @media (min-width: 768px) {
   .kd-slot-small .kd-pos-bubble { width: 58px; height: 58px; }
   .kd-slot-small .kd-pos-bubble .kd-p-name { font-size: 11px; }
+
+  /* Constrain pitch card size on desktop — prevent oversized cards */
+  .kd-pitch-field {
+    max-height: 340px;
+  }
+  .kd-pitch-wrap {
+    max-height: 360px;
+  }
+  .kd-pitch-card {
+    max-width: 480px;
+  }
+  /* Bench bubbles slightly larger on desktop */
+  .kd-bench-bubble { width: 44px; height: 44px; }
+  .kd-bench-bubble .kd-p-name { font-size: 10px; }
 }
