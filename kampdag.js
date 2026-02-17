@@ -2664,7 +2664,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         outIds.forEach(id => { swaps += `<div class="sw"><span class="sw-out">\u2190</span><span style="color:#94a3b8;">${escapeHtml(idToName[id]||id)}</span></div>`; });
         swaps += '</div>';
       }
-      return `<div class="card"><div class="card-head"><span class="card-title">${isFirst ? 'Start ' : ''}${seg.start}\u2013${periodEnd} min${ov ? ' \u270f\ufe0f' : ''}</span></div><div class="card-body">${body}${swaps}</div></div>`;
+      return `${(idx > 0 && idx % 3 === 0) ? '<div class="mob-break"></div>' : ''}<div class="card"><div class="card-head"><span class="card-title">${isFirst ? 'Start ' : ''}${seg.start}\u2013${periodEnd} min${ov ? ' \u270f\ufe0f' : ''}</span></div><div class="card-body">${body}${swaps}</div></div>`;
     }).join('');
     const html = `<!doctype html>
 <html lang="nb">
@@ -2745,6 +2745,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
   .logo{width:36px;height:36px}
   .logo img{width:36px;height:36px}
   .h-title{font-size:13px}
+  .mob-break{display:none}
+  body.mobile .main-card{break-inside:auto;page-break-inside:auto}
+  body.mobile .plan-grid{display:block}
+  body.mobile .plan-grid>.card{width:100%;margin-bottom:10px}
+  body.mobile .mob-break{display:block;height:0;page-break-before:always;break-before:page}
 }
 @media (max-width:600px){
   .plan-grid{grid-template-columns:1fr}
@@ -2778,6 +2783,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     var ua = navigator.userAgent;
     var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
     var isAndroid = /Android/i.test(ua);
+    if (isIOS || isAndroid) document.body.classList.add('mobile');
     var g = document.getElementById('saveGuide');
     if (!g) return;
     var steps = '';
