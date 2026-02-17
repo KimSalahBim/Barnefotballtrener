@@ -1,6 +1,6 @@
 // Â© 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - kampdag.js
-// Kampdag: oppmÃ¸te -> start/benk -> bytteplan med roligere bytter og bedre spilletidsfordeling.
+// Kampdag: oppm\u00f8te -> start/benk -> bytteplan med roligere bytter og bedre spilletidsfordeling.
 // Bruker global variabel "window.players" (Array) som settes av core.js.
 
 console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
@@ -520,7 +520,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const onField = format;
     if (info) {
-      info.textContent = `${kdSelected.size} pÃ¥ oppmÃ¸te â€¢ ${onField} pÃ¥ banen â€¢ ${minutes} min`;
+      info.textContent = `${kdSelected.size} p\u00e5 oppm\u00f8te \u2022 ${onField} p\u00e5 banen \u2022 ${minutes} min`;
     }
   }
 
@@ -561,7 +561,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       return;
     } else {
       if (keeperCard) keeperCard.style.display = '';
-      if ($('kdKeeperHint')) $('kdKeeperHint').textContent = 'Velg hvem som stÃ¥r i mÃ¥l og hvor lenge.';
+      if ($('kdKeeperHint')) $('kdKeeperHint').textContent = 'Velg hvem som st\u00e5r i m\u00e5l og hvor lenge.';
     }
 
     const isManual = !!manualEl?.checked;
@@ -633,7 +633,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const min = clamp(parseInt($(`kdKeeperMin${i}`)?.value, 10) || 0, 0, 999);
       if (pid) {
         chosen++;
-        if (selectedPids.includes(pid)) warnings.push('âš  Samme keeper valgt flere ganger');
+        if (selectedPids.includes(pid)) warnings.push('\u26a0 Samme keeper valgt flere ganger');
         selectedPids.push(pid);
       }
       sum += min;
@@ -650,7 +650,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     // Warn if keepers get no time
     for (let i = 0; i < kc; i++) {
       if (actualAlloc[i] === 0 && (clamp(parseInt($(`kdKeeperMin${i + 1}`)?.value, 10) || 0, 0, 999) > 0)) {
-        warnings.push(`âš  Keeper ${i + 1} fÃ¥r ingen tid (total overstiger ${T} min)`);
+        warnings.push(`\u26a0 Keeper ${i + 1} f\u00e5r ingen tid (total overstiger ${T} min)`);
       }
     }
 
@@ -688,7 +688,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const active = key === kdFormationKey ? 'kd-formation-active' : '';
       return `<div class="kd-formation-opt ${active}" data-fkey="${key}">
         <div class="kd-f-name">${key}</div>
-        <div class="kd-f-desc">${[arr[0] > 0 ? arr[0]+' forsvar' : '', arr[1] > 0 ? arr[1]+' midtbane' : '', arr[2] > 0 ? arr[2]+' angrep' : ''].filter(Boolean).join(' Â· ')}</div>
+        <div class="kd-f-desc">${[arr[0] > 0 ? arr[0]+' forsvar' : '', arr[1] > 0 ? arr[1]+' midtbane' : '', arr[2] > 0 ? arr[2]+' angrep' : ''].filter(Boolean).join(' \u00b7 ')}</div>
       </div>`;
     }).join('');
 
@@ -752,7 +752,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     el.style.background = warn ? 'rgba(245,158,11,0.08)' : 'rgba(34,197,94,0.06)';
     el.style.color = warn ? '#d97706' : '#16a34a';
 
-    el.innerHTML = `<div style="font-weight:800; margin-bottom:6px;">${warn ? 'âš  ' : ''}Sonedekning for ${kdFormationKey}</div>` +
+    el.innerHTML = `<div style="font-weight:800; margin-bottom:6px;">${warn ? '\u26a0 ' : ''}Sonedekning for ${kdFormationKey}</div>` +
       zones.map(z => {
         const pct = Math.min(100, Math.round((z.have / Math.max(1, present.length)) * 100));
         const low = z.have < z.need;
@@ -762,7 +762,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           <div style="flex:1;height:6px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;">
             <div style="height:100%;width:${pct}%;background:${low ? '#d97706' : z.color};border-radius:3px;"></div>
           </div>
-          <span style="width:32px;text-align:right;font-weight:800;${low ? 'color:#d97706;' : ''}">${z.have}${low ? ' âš ' : ''}</span>
+          <span style="width:32px;text-align:right;font-weight:800;${low ? 'color:#d97706;' : ''}">${z.have}${low ? ' \u26a0' : ''}</span>
         </div>`;
       }).join('') +
       (warn ? `<div style="margin-top:6px;font-size:12px;">Noen spillere vil bli plassert utenfor preferanse.</div>` : '');
@@ -1050,29 +1050,35 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
   function handleSlotDragEnd(clientX, clientY) {
     if (!kdDragState) return;
-    const idToName = {};
-    lastPresent.forEach(p => { idToName[p.id] = p.name; });
     if (kdDragState.isDragging) {
       const slots = getActiveSlots();
       const tgt = findSlotDropTarget(clientX, clientY);
       if (tgt && slots) {
-        const tsk = tgt.dataset.slotkey;
-        const ts = slots.find(s => s.key === tsk);
-        if (ts && ts.zone !== 'K' && tsk !== kdDragState.slotKey) {
-          if (kdDragState.isBench) {
-            swapBenchToField(kdDragState.segIdx, kdDragState.playerId, tsk);
-          } else {
-            swapFieldSlots(kdDragState.segIdx, kdDragState.slotKey, tsk);
+        const tsk = tgt.dataset.slotkey; // field slot
+        const tpid = tgt.dataset.pid;    // bench bubble
+        let swapped = false;
+        if (tsk) {
+          // Drop on field slot
+          const ts = slots.find(s => s.key === tsk);
+          if (ts && ts.zone !== 'K' && tsk !== kdDragState.slotKey) {
+            if (kdDragState.isBench) {
+              swapBenchToField(kdDragState.segIdx, kdDragState.playerId, tsk);
+            } else {
+              swapFieldSlots(kdDragState.segIdx, kdDragState.slotKey, tsk);
+            }
+            swapped = true;
           }
+        } else if (tpid && !kdDragState.isBench && kdDragState.slotKey) {
+          // Drop field player on bench bubble: swap them
+          swapBenchToField(kdDragState.segIdx, tpid, kdDragState.slotKey);
+          swapped = true;
+        }
+        if (swapped) {
           try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
           renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
         }
       }
-      if (kdDragState.ghostEl) kdDragState.ghostEl.remove();
-      document.querySelectorAll('.kd-dragging,.kd-drop-target').forEach(el => {
-        el.classList.remove('kd-dragging');
-        el.classList.remove('kd-drop-target');
-      });
+      cleanupDragState();
     }
     kdDragState = null;
   }
@@ -1081,16 +1087,33 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     if (!kdDragState) return null;
     const slots = getActiveSlots();
     if (!slots) return null;
-    for (const el of document.elementsFromPoint(x, y)) {
-      if (el.id === 'kdActiveGhost' || el.closest('#kdActiveGhost')) continue;
-      const slot = el.classList.contains('kd-pos-slot') ? el : el.closest('.kd-pos-slot');
-      if (slot && slot.dataset.seg === String(kdDragState.segIdx)) {
-        const sk = slot.dataset.slotkey;
-        const s = slots.find(s => s.key === sk);
-        if (s && s.zone !== 'K' && sk !== kdDragState.slotKey) return slot;
-      }
+    // Distance-based: find closest slot within threshold
+    // This avoids transform: translate(-50%, -50%) offset issues on mobile
+    let best = null;
+    let bestDist = 60; // max pixel distance to count as hit
+    const allSlotEls = document.querySelectorAll(`.kd-pos-slot[data-seg="${kdDragState.segIdx}"]`);
+    for (const el of allSlotEls) {
+      const sk = el.dataset.slotkey;
+      const s = slots.find(s => s.key === sk);
+      if (!s || s.zone === 'K' || sk === kdDragState.slotKey) continue;
+      const rect = el.getBoundingClientRect();
+      // Center of the visual bubble (accounting for translate -50% -50%)
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dist = Math.hypot(x - cx, y - cy);
+      if (dist < bestDist) { bestDist = dist; best = el; }
     }
-    return null;
+    // Also check bench bubbles
+    const allBench = document.querySelectorAll(`.kd-bench-bubble[data-seg="${kdDragState.segIdx}"]`);
+    for (const el of allBench) {
+      if (el.dataset.pid === kdDragState.playerId) continue;
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dist = Math.hypot(x - cx, y - cy);
+      if (dist < bestDist) { bestDist = dist; best = el; }
+    }
+    return best;
   }
 
   function cleanupDragState() {
@@ -1805,7 +1828,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const metaEl = $('kdMeta');
 
     if (!present.length) {
-      if (lineupEl) lineupEl.innerHTML = `<div class="small-text" style="opacity:0.8;">Velg oppmÃ¸te fÃ¸rst.</div>`;
+      if (lineupEl) lineupEl.innerHTML = `<div class="small-text" style="opacity:0.8;">Velg oppm\u00f8te f\u00f8rst.</div>`;
       if (planEl) planEl.innerHTML = '';
       if (metaEl) metaEl.textContent = '';
       return;
@@ -2361,7 +2384,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const useFormation = kdFormationOn && kdFormation;
     const format = parseInt($('kdFormat')?.value, 10) || 7;
 
-    lines.push('Startoppstilling' + (useFormation ? ` Â· ${kdFormationKey}` : ''));
+    lines.push('Startoppstilling' + (useFormation ? ` \u00b7 ${kdFormationKey}` : ''));
 
     const first = best.segments[0];
     const startIds = first.lineup.slice();
@@ -2376,7 +2399,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         if (zr.zones.A.length) lines.push(` Angrep: ${zr.zones.A.map(id => idToName[id] || id).join(', ')}`);
       }
     } else {
-      lines.push(' Start (fÃ¸rste periode)');
+      lines.push(' Start (f\u00f8rste periode)');
       startIds.forEach(id => lines.push(`  - ${idToName[id] || id}`));
     }
     lines.push(` Benk: ${benchIds.map(id => idToName[id] || id).join(', ') || 'â€“'}`);
@@ -2455,7 +2478,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         setTimeout(() => { metaEl.textContent = prev; }, 1200);
       }
     } catch (e) {
-      alert('Klarte ikke Ã¥ kopiere. Marker teksten manuelt.');
+      alert('Klarte ikke \u00e5 kopiere. Marker teksten manuelt.');
     }
   }
 
@@ -2509,7 +2532,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const benchNames0 = sm0.bench.map(pid => escapeHtml(idToName[pid] || pid)).join(' \u00b7 ') || '\u2014';
       startSection = `
         <div class="section-title">Startoppstilling \u00b7 ${formationKey}${hasAnyOverride ? ' \u00b7 Justert' : ''}</div>
-        <div style="position:relative;width:100%;aspect-ratio:68/55;background:linear-gradient(180deg,#1a5c1a,#145214);border-radius:12px;overflow:visible;border:2px solid #2a7a2a;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots0}</div>
+        <div style="position:relative;width:100%;max-width:400px;margin:0 auto;aspect-ratio:68/55;max-height:280px;background:linear-gradient(180deg,#1a5c1a,#145214);border-radius:12px;overflow:visible;border:2px solid #2a7a2a;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots0}</div>
         <div class="bench">Benk: ${benchNames0}</div>`;
     }
     if (!startSection) {
@@ -2607,7 +2630,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Kampdag â€“ Barnefotballtrener</title>
+<title>Kampdag \u2014 Barnefotballtrener</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;background:#0f172a;color:#e2e8f0;line-height:1.45}
@@ -2684,8 +2707,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
   <div class="header">
     <div class="logo"><img src="${escapeHtml(logoUrl)}" alt=""></div>
     <div>
-      <div class="h-title">Kampdag â€“ ${format}-er fotball${useFormation && formationKey ? ` Â· ${formationKey}` : ''}</div>
-      <div class="h-sub">${escapeHtml(today)} Â· ${T} min Â· ${present.length} spillere${hasAnyOverride ? " \u00b7 Justert oppstilling" : ""}</div>
+      <div class="h-title">Kampdag \u2014 ${format}-er fotball${useFormation && formationKey ? ` \u00b7 ${formationKey}` : ''}</div>
+      <div class="h-sub">${escapeHtml(today)} \u00b7 ${T} min \u00b7 ${present.length} spillere${hasAnyOverride ? " \u00b7 Justert oppstilling" : ""}</div>
     </div>
   </div>
 
@@ -2727,7 +2750,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     const w = window.open('', '_blank');
     if (!w) {
       if (typeof window.showNotification === 'function') {
-        window.showNotification('Popup ble blokkert. Tillat popups for Ã¥ eksportere.', 'error');
+        window.showNotification('Popup ble blokkert. Tillat popups for \u00e5 eksportere.', 'error');
       }
       return;
     }
