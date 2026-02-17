@@ -2532,7 +2532,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const benchNames0 = sm0.bench.map(pid => escapeHtml(idToName[pid] || pid)).join(' \u00b7 ') || '\u2014';
       startSection = `
         <div class="section-title">Startoppstilling \u00b7 ${formationKey}${hasAnyOverride ? ' \u00b7 Justert' : ''}</div>
-        <div style="position:relative;width:100%;max-width:400px;margin:0 auto;aspect-ratio:68/55;max-height:280px;background:linear-gradient(180deg,#1a5c1a,#145214);border-radius:12px;overflow:visible;border:2px solid #2a7a2a;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots0}</div>
+        <div style="position:relative;width:100%;max-width:400px;margin:0 auto;aspect-ratio:68/42;max-height:220px;background:linear-gradient(180deg,#1a5c1a,#145214);border-radius:12px;overflow:visible;border:2px solid #2a7a2a;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots0}</div>
         <div class="bench">Benk: ${benchNames0}</div>`;
     }
     if (!startSection) {
@@ -2606,9 +2606,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           const pid = sm.slots[s.key]; const nm = pid ? escapeHtml(idToName[pid]||pid) : '?';
           const isNew = pid && newIds.has(pid);
           const outline = isNew ? 'box-shadow:0 0 0 2px #fbbf24;' : '';
-          return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:30px;height:30px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;${outline}"><span style="font-size:7.5px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:28px;">${nm}</span></div></div>`;
+          return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:36px;height:36px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;${outline}"><span style="font-size:8px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34px;">${nm}</span></div></div>`;
         }).join('');
-        body = `<div style="position:relative;width:100%;aspect-ratio:68/55;background:linear-gradient(180deg,#1a5c1a,#145214);overflow:visible;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots}</div>`;
+        body = `<div style="position:relative;width:100%;aspect-ratio:68/42;background:linear-gradient(180deg,#1a5c1a,#145214);overflow:visible;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots}</div>`;
         const benchNames = sm.bench.map(pid => escapeHtml(idToName[pid]||pid)).join(', ') || '\u2014';
         body += `<div style="font-size:8px;color:#64748b;padding:2px 10px 5px;">Benk: ${benchNames}</div>`;
       }
@@ -2640,8 +2640,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .logo img{width:80px;height:80px;object-fit:cover}
 .h-title{font-size:18px;font-weight:900}
 .h-sub{opacity:0.9;font-size:12px;margin-top:2px}
-.section-title{font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em;color:#60a5fa;margin:18px 0 10px;padding-bottom:4px;border-bottom:2px solid rgba(255,255,255,0.08)}
-.main-card{background:#1a2333;border-radius:16px;padding:16px;margin-top:12px;border:1px solid rgba(255,255,255,0.06)}
+.section-title{font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em;color:#60a5fa;margin:14px 0 8px;padding-bottom:4px;border-bottom:2px solid rgba(255,255,255,0.08)}
+.main-card{background:#1a2333;border-radius:16px;padding:12px;margin-top:12px;border:1px solid rgba(255,255,255,0.06)}
 /* Pitch */
 .pitch{background:linear-gradient(180deg,#1a5c1a,#145214);border:2px solid #2a7a2a;border-radius:12px;padding:12px 8px;position:relative;overflow:hidden}
 .pitch::before{content:'';position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.12)}
@@ -2669,19 +2669,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .time-list{display:flex;flex-direction:column}
 .time-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.04)}
 /* Bytteplan grid */
-.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .card{background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)}
-.card-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.card-head{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.06)}
 .card-title{font-weight:900;font-size:13px;color:#fff}
 .card-keeper{background:rgba(168,85,247,0.15);padding:3px 8px;border-radius:999px;font-size:10px;color:#c084fc;font-weight:700}
-.card-body{padding:8px 12px 10px}
+.card-body{padding:4px 8px 6px}
 .zl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;display:flex;align-items:center;gap:5px;margin-bottom:3px}
 .zd{width:6px;height:6px;border-radius:50%}
 .zp{display:flex;flex-wrap:wrap;gap:4px;padding-left:11px;margin-bottom:6px}
 .zc{font-size:11px;font-weight:600;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,0.08);color:#cbd5e1;border:1px solid rgba(255,255,255,0.06)}
 .zc-new{background:rgba(34,197,94,0.15);color:#4ade80;border-color:rgba(34,197,94,0.4)}
 .swaps{padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);margin-top:6px}
-.sw{display:flex;align-items:center;gap:6px;padding:1px 0;font-size:11px}
+.sw{display:flex;align-items:center;gap:5px;padding:0;font-size:10px}
 .sw-in{color:#4ade80;font-weight:900;width:14px;text-align:center}
 .sw-out{color:#f87171;font-weight:900;width:14px;text-align:center}
 .note{font-size:10px;color:#475569;font-style:italic;margin-top:4px}
@@ -2689,13 +2689,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 @media print{
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{background:#0f172a}
-  .wrap{max-width:none;padding:8px}
+  .wrap{max-width:none;padding:6px}
   .actions{display:none!important}
   #saveGuide{display:none!important}
-  .card{break-inside:avoid}
+  .card{break-inside:avoid;page-break-inside:avoid}
   .tl-chart{break-inside:avoid}
   .pitch{break-inside:avoid}
-  .main-card{break-inside:avoid}
+  .main-card{break-inside:avoid;padding:10px}
+  .plan-grid{grid-template-columns:1fr 1fr!important;gap:8px}
+  .section-title{margin:12px 0 6px;font-size:12px}
+  .header{padding:10px 12px}
+  .logo{width:60px;height:60px}
+  .logo img{width:60px;height:60px}
+  .h-title{font-size:15px}
 }
 @media (max-width:600px){
   .plan-grid{grid-template-columns:1fr}
