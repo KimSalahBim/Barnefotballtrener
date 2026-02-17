@@ -2734,11 +2734,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
   .wrap{max-width:none;padding:4px}
   .actions{display:none!important}
   #saveGuide{display:none!important}
-  .card{break-inside:avoid;page-break-inside:avoid;margin-bottom:3px}
+  .card{break-inside:avoid;page-break-inside:avoid;margin-bottom:3px;overflow:visible}
   .tl-chart{break-inside:avoid}
   .pitch{break-inside:avoid}
   .main-card{padding:6px;break-inside:auto}
-  .plan-grid{grid-template-columns:1fr 1fr!important;gap:4px}
+  .plan-grid{display:flex;flex-wrap:wrap;gap:4px}
+  .plan-grid>.card{width:calc(50% - 2px);box-sizing:border-box}
   .section-title{margin:6px 0 3px;font-size:10px}
   .header{padding:4px 8px;break-inside:avoid}
   .logo{width:36px;height:36px}
