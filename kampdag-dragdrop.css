@@ -1,9 +1,9 @@
-/* ═══════════════════════════════════════════
-   KAMPDAG DRAG & DROP – Pitch View CSS
+/* ===========================================
+   KAMPDAG DRAG & DROP - Pitch View CSS
    Add to end of style.css
-   ═══════════════════════════════════════════ */
+   =========================================== */
 
-/* ── Pitch card container ── */
+/* -- Pitch card container -- */
 .kd-pitch-card {
   background: var(--card-bg, #1e293b);
   border: 1px solid rgba(255,255,255,0.06);
@@ -50,7 +50,7 @@
   font-weight: 700;
 }
 
-/* ── Action buttons ── */
+/* -- Action buttons -- */
 .kd-copy-btn,
 .kd-reset-btn {
   display: inline-flex;
@@ -102,7 +102,7 @@
   background: rgba(255,255,255,0.15);
 }
 
-/* ── Pitch field ── */
+/* -- Pitch field -- */
 .kd-pitch-wrap {
   position: relative;
   overflow: visible;
@@ -132,7 +132,7 @@
   z-index: 1;
 }
 
-/* ── Position slots ── */
+/* -- Position slots -- */
 .kd-pos-slot {
   position: absolute;
   display: flex;
@@ -152,7 +152,7 @@
   pointer-events: none;
 }
 
-/* ── Bubble sizes by slot count ── */
+/* -- Bubble sizes by slot count -- */
 .kd-slot-small .kd-pos-bubble { width: 52px; height: 52px; }
 .kd-slot-small .kd-pos-bubble .kd-p-name { font-size: 10px; max-width: 48px; }
 .kd-slot-medium .kd-pos-bubble { width: 44px; height: 44px; }
@@ -160,7 +160,7 @@
 .kd-slot-large .kd-pos-bubble { width: 38px; height: 38px; }
 .kd-slot-large .kd-pos-bubble .kd-p-name { font-size: 8px; max-width: 34px; }
 
-/* ── Position bubbles ── */
+/* -- Position bubbles -- */
 .kd-pos-bubble {
   border-radius: 50%;
   display: flex;
@@ -240,7 +240,7 @@
   filter: brightness(1.3);
 }
 
-/* ── Bench area ── */
+/* -- Bench area -- */
 .kd-bench-area {
   padding: 5px 10px;
   background: rgba(0,0,0,0.18);
@@ -289,7 +289,7 @@
   max-width: 36px;
 }
 
-/* ── Swap strip ── */
+/* -- Swap strip -- */
 .kd-swap-strip {
   padding: 6px 10px;
   display: flex;
@@ -325,7 +325,7 @@
 .kd-sw-name { font-weight: 700; }
 .kd-sw-label { font-size: 9px; font-weight: 600; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.03em; }
 
-/* ── Drag ghost ── */
+/* -- Drag ghost -- */
 .kd-drag-ghost {
   position: fixed;
   pointer-events: none;
@@ -350,7 +350,7 @@
   pointer-events: none;
 }
 
-/* ── Responsive ── */
+/* -- Responsive -- */
 @media (max-width: 360px) {
   .kd-slot-small .kd-pos-bubble { width: 46px; height: 46px; }
   .kd-slot-small .kd-pos-bubble .kd-p-name { font-size: 9px; }
@@ -362,7 +362,7 @@
   .kd-slot-small .kd-pos-bubble { width: 58px; height: 58px; }
   .kd-slot-small .kd-pos-bubble .kd-p-name { font-size: 11px; }
 
-  /* Constrain pitch card size on desktop — prevent oversized cards */
+  /* Constrain pitch card size on desktop - prevent oversized cards */
   .kd-pitch-field {
     max-height: 340px;
   }
@@ -376,3 +376,190 @@
   .kd-bench-bubble { width: 44px; height: 44px; }
   .kd-bench-bubble .kd-p-name { font-size: 10px; }
 }
+
+/* ===========================================
+   KAMPDAG - Dark output, timeline, formation
+   (originally in style.css)
+   =========================================== */
+
+/* -- Dark output wrapper -- */
+.kd-dark-output {
+  background: #1a2333;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.kd-dark-heading {
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #60a5fa;
+  margin: 0 0 10px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid rgba(255,255,255,0.08);
+}
+
+.kd-dark-mode {
+  background: transparent;
+}
+
+/* -- Bytteplan card grid -- */
+.kd-dc-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* -- Timeline chart -- */
+.kd-timeline-chart {
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.kd-timeline-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.kd-tl-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.kd-tl-name {
+  width: 68px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.kd-tl-bar-wrap {
+  flex: 1;
+  height: 14px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 3px;
+  display: flex;
+  overflow: hidden;
+}
+
+.kd-tl-seg {
+  height: 100%;
+  border-radius: 0;
+}
+
+.kd-tl-min {
+  width: 36px;
+  text-align: right;
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.kd-tl-axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 42px 0 74px;
+  font-size: 9px;
+  color: #475569;
+}
+
+.kd-tl-legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.kd-tl-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kd-tl-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* -- Formation grid (settings panel) -- */
+.kd-formation-opt {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
+  transition: border-color 0.15s;
+}
+
+.kd-formation-opt:hover { border-color: rgba(255,255,255,0.15); }
+.kd-formation-active { border-color: #3b82f6; background: rgba(59,130,246,0.08); }
+
+.kd-f-name {
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.kd-f-desc {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/* -- Position preference list -- */
+.kd-pos-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.kd-pos-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  flex: 1;
+}
+
+.kd-pos-checks {
+  display: flex;
+  gap: 4px;
+}
+
+.kd-pos-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(255,255,255,0.04);
+  color: #475569;
+}
+.kd-pos-f-on { background: rgba(34,197,94,0.15); color: #4ade80; }
+.kd-pos-m-on { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.kd-pos-a-on { background: rgba(239,68,68,0.15); color: #f87171; }

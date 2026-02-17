@@ -103,148 +103,148 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   // Each slot has: key (unique), label (display), zone (F/M/A/K), x/y (% position)
   const SLOT_LAYOUTS = {
     '1-1-1': [
-      { key:'A1', label:'A', zone:'A', x:50, y:18 },
+      { key:'A1', label:'S', zone:'A', x:50, y:18 },
       { key:'M1', label:'M', zone:'M', x:50, y:50 },
       { key:'F1', label:'F', zone:'F', x:50, y:80 },
     ],
     '2-1-1': [
-      { key:'ST', label:'ST', zone:'A', x:50, y:14 },
-      { key:'CM', label:'CM', zone:'M', x:50, y:40 },
-      { key:'LB', label:'LB', zone:'F', x:28, y:66 },
-      { key:'RB', label:'RB', zone:'F', x:72, y:66 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'ST', label:'S', zone:'A', x:50, y:14 },
+      { key:'CM', label:'SM', zone:'M', x:50, y:40 },
+      { key:'LB', label:'VB', zone:'F', x:28, y:66 },
+      { key:'RB', label:'HB', zone:'F', x:72, y:66 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '1-2-1': [
-      { key:'ST', label:'ST', zone:'A', x:50, y:14 },
-      { key:'LM', label:'LM', zone:'M', x:30, y:40 },
-      { key:'RM', label:'RM', zone:'M', x:70, y:40 },
-      { key:'CB', label:'CB', zone:'F', x:50, y:66 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'ST', label:'S', zone:'A', x:50, y:14 },
+      { key:'LM', label:'VM', zone:'M', x:30, y:40 },
+      { key:'RM', label:'HM', zone:'M', x:70, y:40 },
+      { key:'CB', label:'MB', zone:'F', x:50, y:66 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '2-2': [
-      { key:'LM', label:'LM', zone:'M', x:30, y:28 },
-      { key:'RM', label:'RM', zone:'M', x:70, y:28 },
-      { key:'LB', label:'LB', zone:'F', x:30, y:60 },
-      { key:'RB', label:'RB', zone:'F', x:70, y:60 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'LM', label:'VM', zone:'M', x:30, y:28 },
+      { key:'RM', label:'HM', zone:'M', x:70, y:28 },
+      { key:'LB', label:'VB', zone:'F', x:30, y:60 },
+      { key:'RB', label:'HB', zone:'F', x:70, y:60 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '2-3-1': [
-      { key:'ST', label:'ST', zone:'A', x:50, y:14 },
-      { key:'LM', label:'LM', zone:'M', x:18, y:38 },
-      { key:'CM', label:'CM', zone:'M', x:50, y:42 },
-      { key:'RM', label:'RM', zone:'M', x:82, y:38 },
-      { key:'LB', label:'LB', zone:'F', x:30, y:66 },
-      { key:'RB', label:'RB', zone:'F', x:70, y:66 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'ST', label:'S', zone:'A', x:50, y:14 },
+      { key:'LM', label:'VM', zone:'M', x:18, y:38 },
+      { key:'CM', label:'SM', zone:'M', x:50, y:42 },
+      { key:'RM', label:'HM', zone:'M', x:82, y:38 },
+      { key:'LB', label:'VB', zone:'F', x:30, y:66 },
+      { key:'RB', label:'HB', zone:'F', x:70, y:66 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '3-2-1': [
-      { key:'ST', label:'ST', zone:'A', x:50, y:14 },
-      { key:'LM', label:'LM', zone:'M', x:32, y:38 },
-      { key:'RM', label:'RM', zone:'M', x:68, y:38 },
-      { key:'LB', label:'LB', zone:'F', x:20, y:64 },
-      { key:'CB', label:'CB', zone:'F', x:50, y:68 },
-      { key:'RB', label:'RB', zone:'F', x:80, y:64 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'ST', label:'S', zone:'A', x:50, y:14 },
+      { key:'LM', label:'VM', zone:'M', x:32, y:38 },
+      { key:'RM', label:'HM', zone:'M', x:68, y:38 },
+      { key:'LB', label:'VB', zone:'F', x:20, y:64 },
+      { key:'CB', label:'MB', zone:'F', x:50, y:68 },
+      { key:'RB', label:'HB', zone:'F', x:80, y:64 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '2-2-2': [
-      { key:'LA', label:'LA', zone:'A', x:32, y:16 },
-      { key:'RA', label:'RA', zone:'A', x:68, y:16 },
-      { key:'LM', label:'LM', zone:'M', x:32, y:42 },
-      { key:'RM', label:'RM', zone:'M', x:68, y:42 },
-      { key:'LB', label:'LB', zone:'F', x:32, y:66 },
-      { key:'RB', label:'RB', zone:'F', x:68, y:66 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'LA', label:'VA', zone:'A', x:32, y:16 },
+      { key:'RA', label:'HA', zone:'A', x:68, y:16 },
+      { key:'LM', label:'VM', zone:'M', x:32, y:42 },
+      { key:'RM', label:'HM', zone:'M', x:68, y:42 },
+      { key:'LB', label:'VB', zone:'F', x:32, y:66 },
+      { key:'RB', label:'HB', zone:'F', x:68, y:66 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '1-3-2': [
-      { key:'LA', label:'LA', zone:'A', x:32, y:16 },
-      { key:'RA', label:'RA', zone:'A', x:68, y:16 },
-      { key:'LM', label:'LM', zone:'M', x:20, y:42 },
-      { key:'CM', label:'CM', zone:'M', x:50, y:44 },
-      { key:'RM', label:'RM', zone:'M', x:80, y:42 },
-      { key:'CB', label:'CB', zone:'F', x:50, y:68 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'LA', label:'VA', zone:'A', x:32, y:16 },
+      { key:'RA', label:'HA', zone:'A', x:68, y:16 },
+      { key:'LM', label:'VM', zone:'M', x:20, y:42 },
+      { key:'CM', label:'SM', zone:'M', x:50, y:44 },
+      { key:'RM', label:'HM', zone:'M', x:80, y:42 },
+      { key:'CB', label:'MB', zone:'F', x:50, y:68 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '3-3-2': [
-      { key:'LS', label:'LS', zone:'A', x:32, y:14 },
-      { key:'RS', label:'RS', zone:'A', x:68, y:14 },
-      { key:'LM', label:'LM', zone:'M', x:20, y:38 },
-      { key:'CM', label:'CM', zone:'M', x:50, y:40 },
-      { key:'RM', label:'RM', zone:'M', x:80, y:38 },
-      { key:'LB', label:'LB', zone:'F', x:20, y:64 },
-      { key:'CB', label:'CB', zone:'F', x:50, y:68 },
-      { key:'RB', label:'RB', zone:'F', x:80, y:64 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'LS', label:'VS', zone:'A', x:32, y:14 },
+      { key:'RS', label:'HS', zone:'A', x:68, y:14 },
+      { key:'LM', label:'VM', zone:'M', x:20, y:38 },
+      { key:'CM', label:'SM', zone:'M', x:50, y:40 },
+      { key:'RM', label:'HM', zone:'M', x:80, y:38 },
+      { key:'LB', label:'VB', zone:'F', x:20, y:64 },
+      { key:'CB', label:'MB', zone:'F', x:50, y:68 },
+      { key:'RB', label:'HB', zone:'F', x:80, y:64 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '3-4-1': [
-      { key:'ST', label:'ST', zone:'A', x:50, y:14 },
-      { key:'LM', label:'LM', zone:'M', x:14, y:36 },
-      { key:'LCM', label:'LCM', zone:'M', x:38, y:40 },
-      { key:'RCM', label:'RCM', zone:'M', x:62, y:40 },
-      { key:'RM', label:'RM', zone:'M', x:86, y:36 },
-      { key:'LB', label:'LB', zone:'F', x:20, y:64 },
-      { key:'CB', label:'CB', zone:'F', x:50, y:68 },
-      { key:'RB', label:'RB', zone:'F', x:80, y:64 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'ST', label:'S', zone:'A', x:50, y:14 },
+      { key:'LM', label:'VM', zone:'M', x:14, y:36 },
+      { key:'LCM', label:'VSM', zone:'M', x:38, y:40 },
+      { key:'RCM', label:'HSM', zone:'M', x:62, y:40 },
+      { key:'RM', label:'HM', zone:'M', x:86, y:36 },
+      { key:'LB', label:'VB', zone:'F', x:20, y:64 },
+      { key:'CB', label:'MB', zone:'F', x:50, y:68 },
+      { key:'RB', label:'HB', zone:'F', x:80, y:64 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '2-4-2': [
-      { key:'LS', label:'LS', zone:'A', x:32, y:14 },
-      { key:'RS', label:'RS', zone:'A', x:68, y:14 },
-      { key:'LM', label:'LM', zone:'M', x:14, y:38 },
-      { key:'LCM', label:'LCM', zone:'M', x:38, y:42 },
-      { key:'RCM', label:'RCM', zone:'M', x:62, y:42 },
-      { key:'RM', label:'RM', zone:'M', x:86, y:38 },
-      { key:'LB', label:'LB', zone:'F', x:32, y:66 },
-      { key:'RB', label:'RB', zone:'F', x:68, y:66 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'LS', label:'VS', zone:'A', x:32, y:14 },
+      { key:'RS', label:'HS', zone:'A', x:68, y:14 },
+      { key:'LM', label:'VM', zone:'M', x:14, y:38 },
+      { key:'LCM', label:'VSM', zone:'M', x:38, y:42 },
+      { key:'RCM', label:'HSM', zone:'M', x:62, y:42 },
+      { key:'RM', label:'HM', zone:'M', x:86, y:38 },
+      { key:'LB', label:'VB', zone:'F', x:32, y:66 },
+      { key:'RB', label:'HB', zone:'F', x:68, y:66 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '4-3-3': [
-      { key:'LW', label:'LW', zone:'A', x:16, y:14 },
-      { key:'ST', label:'ST', zone:'A', x:50, y:10 },
-      { key:'RW', label:'RW', zone:'A', x:84, y:14 },
-      { key:'LCM', label:'LCM', zone:'M', x:28, y:40 },
-      { key:'CM', label:'CM', zone:'M', x:50, y:42 },
-      { key:'RCM', label:'RCM', zone:'M', x:72, y:40 },
-      { key:'LB', label:'LB', zone:'F', x:14, y:64 },
-      { key:'LCB', label:'LCB', zone:'F', x:38, y:68 },
-      { key:'RCB', label:'RCB', zone:'F', x:62, y:68 },
-      { key:'RB', label:'RB', zone:'F', x:86, y:64 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'LW', label:'VK', zone:'A', x:16, y:14 },
+      { key:'ST', label:'S', zone:'A', x:50, y:10 },
+      { key:'RW', label:'HK', zone:'A', x:84, y:14 },
+      { key:'LCM', label:'VSM', zone:'M', x:28, y:40 },
+      { key:'CM', label:'SM', zone:'M', x:50, y:42 },
+      { key:'RCM', label:'HSM', zone:'M', x:72, y:40 },
+      { key:'LB', label:'VB', zone:'F', x:14, y:64 },
+      { key:'LCB', label:'VMB', zone:'F', x:38, y:68 },
+      { key:'RCB', label:'HMB', zone:'F', x:62, y:68 },
+      { key:'RB', label:'HB', zone:'F', x:86, y:64 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '4-4-2': [
-      { key:'LS', label:'LS', zone:'A', x:36, y:12 },
-      { key:'RS', label:'RS', zone:'A', x:64, y:12 },
-      { key:'LM', label:'LM', zone:'M', x:14, y:38 },
-      { key:'LCM', label:'LCM', zone:'M', x:38, y:42 },
-      { key:'RCM', label:'RCM', zone:'M', x:62, y:42 },
-      { key:'RM', label:'RM', zone:'M', x:86, y:38 },
-      { key:'LB', label:'LB', zone:'F', x:14, y:64 },
-      { key:'LCB', label:'LCB', zone:'F', x:38, y:68 },
-      { key:'RCB', label:'RCB', zone:'F', x:62, y:68 },
-      { key:'RB', label:'RB', zone:'F', x:86, y:64 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'LS', label:'VS', zone:'A', x:36, y:12 },
+      { key:'RS', label:'HS', zone:'A', x:64, y:12 },
+      { key:'LM', label:'VM', zone:'M', x:14, y:38 },
+      { key:'LCM', label:'VSM', zone:'M', x:38, y:42 },
+      { key:'RCM', label:'HSM', zone:'M', x:62, y:42 },
+      { key:'RM', label:'HM', zone:'M', x:86, y:38 },
+      { key:'LB', label:'VB', zone:'F', x:14, y:64 },
+      { key:'LCB', label:'VMB', zone:'F', x:38, y:68 },
+      { key:'RCB', label:'HMB', zone:'F', x:62, y:68 },
+      { key:'RB', label:'HB', zone:'F', x:86, y:64 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
     '3-5-2': [
-      { key:'LS', label:'LS', zone:'A', x:36, y:12 },
-      { key:'RS', label:'RS', zone:'A', x:64, y:12 },
-      { key:'LWB', label:'LWB', zone:'M', x:12, y:36 },
-      { key:'LCM', label:'LCM', zone:'M', x:32, y:42 },
-      { key:'CM', label:'CM', zone:'M', x:50, y:38 },
-      { key:'RCM', label:'RCM', zone:'M', x:68, y:42 },
-      { key:'RWB', label:'RWB', zone:'M', x:88, y:36 },
-      { key:'LCB', label:'LCB', zone:'F', x:26, y:66 },
-      { key:'CB', label:'CB', zone:'F', x:50, y:70 },
-      { key:'RCB', label:'RCB', zone:'F', x:74, y:66 },
-      { key:'GK', label:'GK', zone:'K', x:50, y:88 },
+      { key:'LS', label:'VS', zone:'A', x:36, y:12 },
+      { key:'RS', label:'HS', zone:'A', x:64, y:12 },
+      { key:'LWB', label:'VBM', zone:'M', x:12, y:36 },
+      { key:'LCM', label:'VSM', zone:'M', x:32, y:42 },
+      { key:'CM', label:'SM', zone:'M', x:50, y:38 },
+      { key:'RCM', label:'HSM', zone:'M', x:68, y:42 },
+      { key:'RWB', label:'HBM', zone:'M', x:88, y:36 },
+      { key:'LCB', label:'VMB', zone:'F', x:26, y:66 },
+      { key:'CB', label:'MB', zone:'F', x:50, y:70 },
+      { key:'RCB', label:'HMB', zone:'F', x:74, y:66 },
+      { key:'GK', label:'K', zone:'K', x:50, y:88 },
     ],
   };
 
   // Two strategic modes based on coach priorities.
   // "equal" = Lik spilletid: minimize diff, accept more substitutions.
-  //   No stickiness â†’ greedy optimizes purely for equal minutes.
-  //   Low splitHalf â†’ addIndividualSwaps can aggressively balance.
+  //   No stickiness -> greedy optimizes purely for equal minutes.
+  //   Low splitHalf -> addIndividualSwaps can aggressively balance.
   // "calm" = Rolig bytteplan: fewer substitutions and longer stints.
-  //   Strong stickiness â†’ holds players on field/bench longer.
-  //   High splitHalf â†’ avoids creating short segments.
+  //   Strong stickiness -> holds players on field/bench longer.
+  //   High splitHalf -> avoids creating short segments.
   const FREQ_PARAMS = {
     equal: { mode: 'equal', sticky: 'mild',   swapSplitHalf: 4 },
     calm:  { mode: 'calm',  sticky: 'strong', swapSplitHalf: 5 },
@@ -259,7 +259,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
   // Reset kampdag when team changes
   window.addEventListener('team:changed', () => {
-    console.log('[Kampdag] team:changed â€” resetting kampdag state');
+    console.log('[Kampdag] team:changed  -  resetting kampdag state');
     try {
       // Stop timer if running
       if (kdTimerInterval || kdTimerStart) stopMatchTimer();
@@ -529,7 +529,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   // ------------------------------
   /**
    * Auto-distribute keeper minutes evenly when count changes.
-   * 70 min / 3 keepers â†’ 24, 23, 23 (largest remainder gets extra).
+   * 70 min / 3 keepers -> 24, 23, 23 (largest remainder gets extra).
    */
   function autoFillKeeperMinutes() {
     const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 0, 0, 4);
@@ -655,9 +655,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     }
 
     const ok = (chosen === kc) && (sum === T);
-    let msg = `Velg keeper(e) â€” Sum: ${sum}/${T} (${ok ? 'OK' : 'SJEKK'})`;
+    let msg = `Velg keeper(e) \u2014 Sum: ${sum}/${T} (${ok ? 'OK' : 'SJEKK'})`;
     if (sum > T && sum !== T) {
-      msg += ` â€” Capped til ${T} min totalt`;
+      msg += ` \u2014 Capped til ${T} min totalt`;
     }
     if (warnings.length) {
       msg += '\n' + warnings.join('\n');
@@ -1207,7 +1207,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
    * squad sizes (N from P+1 to P+7), and both modes.
    *
    * "equal" mode: minimize diff, allow more segments and swaps.
-   * "calm" mode: minimize substitutions, accept higher diff (â‰¤10 min).
+   * "calm" mode: minimize substitutions, accept higher diff (<=10 min).
    *
    * Uses a lookup table for known scenarios, with formula fallback.
    */
@@ -1218,7 +1218,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const rawMinSegs = Math.ceil(N / P);
     const minSegsForAll = bench > P ? rawMinSegs + 1 : rawMinSegs;
 
-    // Perfect match: bench >= P â†’ entire lineup rotates at halftime
+    // Perfect match: bench >= P -> entire lineup rotates at halftime
     if (bench >= P) return Math.max(2, minSegsForAll);
 
     // No bench: just play the whole match, split at half
@@ -1471,7 +1471,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
             }
           }
         }
-        // All other segments (not keeper, not outfield) â†’ excluded
+        // All other segments (not keeper, not outfield) -> excluded
         for (let i = 0; i < times.length - 1; i++) {
           const isKeeper = keeperAtMinute(times[i] + 0.0001, keeperTimeline) === kid;
           if (!isKeeper && !keeperOutfieldSegs[kid].has(i)) {
@@ -1680,7 +1680,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         const kHigh = kSorted[0], kLow = kSorted[kSorted.length - 1];
         if (minutes[kHigh] - minutes[kLow] <= 3) break;
         if (trySegSwap(kHigh, kLow)) continue;
-        // Indirect: swap kHighâ†”NK, then NKâ†”kLow
+        // Indirect: swap kHigh<->NK, then NK<->kLow
         let ok = false;
         for (const nk of nonKeepers) {
           if (minutes[kHigh] > minutes[nk] && trySegSwap(kHigh, nk)) {
@@ -1709,7 +1709,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   // ------------------------------
   // Deterministic bench-window rotation: slides a "bench group" through
   // a ring of outfield players, producing equal-length periods.
-  // Competes with greedy via comparator â€” wins when it produces
+  // Competes with greedy via comparator  -  wins when it produces
   // cleaner, more coach-friendly plans.
 
   function _gcd(a, b) { return b === 0 ? a : _gcd(b, a % b); }
@@ -1850,7 +1850,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     let best = null;
 
     if (fp.mode === 'equal') {
-      // Dynamic nsegs search: find plan with nkDiff â‰¤ 5 using fewest lineup changes.
+      // Dynamic nsegs search: find plan with nkDiff <= 5 using fewest lineup changes.
       // Scans all nsegs values and picks globally best valid plan via comparator.
       const minSegLen = P >= 7 ? 6 : (P >= 5 ? 5 : 4);
       const minNsegs = Math.max(2, Math.ceil(N / P));
@@ -1859,7 +1859,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       // Guard: always try at least one nsegs value (prevents NO_PLAN / best=null)
       if (maxNsegs < minNsegs) maxNsegs = minNsegs;
 
-      // Comparator: valid (nkDiff â‰¤ 5) first, then fewest lineupChanges,
+      // Comparator: valid (nkDiff <= 5) first, then fewest lineupChanges,
       // then lowest nkDiff, then lowest kDiff
       function isBetter(a, b) {
         const aValid = a.nkDiff <= 5 ? 1 : 0;
@@ -1922,7 +1922,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       }
 
       // Cyclic rotation candidate: deterministic bench-window rotation.
-      // Competes with greedy via same comparator â€” wins when it produces
+      // Competes with greedy via same comparator  -  wins when it produces
       // cleaner plans (fewer lineup changes, equal-length periods).
       const cyclicPlan = buildCyclicCandidate(present, P, T, keeperTimeline);
       if (cyclicPlan && (!best || isBetter(cyclicPlan, best))) {
@@ -2041,7 +2041,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const realDiff = mins.length ? Math.max(...mins) - Math.min(...mins) : 0;
       const nkDiffStr = best.nkDiff !== undefined ? best.nkDiff.toFixed(1) : realDiff.toFixed(1);
       const swapNote = best.swaps && best.swaps.length ? ` (${best.swaps.length} ind. bytte${best.swaps.length > 1 ? 'r' : ''})` : '';
-      metaEl.textContent = `Bytter ved: ${best.times.join(' / ')} (min) â€” Maks avvik: ${nkDiffStr} min${swapNote}`;
+      metaEl.textContent = `Bytter ved: ${best.times.join(' / ')} (min) \u2014 Maks avvik: ${nkDiffStr} min${swapNote}`;
     }
 
     // Show start match button
@@ -2084,7 +2084,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       if (hasBenchSwap) break;
     }
 
-    // ── BUILD PITCH-CARD HTML (formation mode) ──
+    // -- BUILD PITCH-CARD HTML (formation mode) --
     if (useFormation && format !== 3 && slots) {
       // Timeline chart
       const zoneColors = { F: '#4ade80', M: '#60a5fa', A: '#f87171', K: '#c084fc', X: '#fbbf24' };
@@ -2147,7 +2147,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
       const bubbleCls = { F: 'kd-bb-f', M: 'kd-bb-m', A: 'kd-bb-a', K: 'kd-bb-k' };
 
-      // First segment → startoppstilling in kdLineup
+      // First segment \u2192 startoppstilling in kdLineup
       if (lineupEl) {
         const sm0 = getSlotMap(0);
         const ov0 = hasSlotOverrides(0);
@@ -2182,9 +2182,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
                   ${ov0 ? '<span class="kd-override-badge">\u270f\ufe0f Tilpasset</span>' : ''}
                 </div>
                 <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                  ${ov0 && best.segments.length > 1 ? `<button class="kd-copy-btn" data-action="kdcopy" data-seg="0">\u2192 Kopier</button>` : ''}
+                  ${ov0 && best.segments.length > 1 ? `<button class="kd-copy-btn" data-action="kdcopy" data-seg="0">Kopier til alle</button>` : ''}
                   ${ov0 ? `<button class="kd-reset-btn" data-action="kdreset" data-seg="0">\u21ba</button>` : ''}
-                  ${kn0 ? `<span class="kd-period-keeper">\ud83e\udde4 ${kn0}</span>` : ''}
+                  
                 </div>
               </div>
               <div class="kd-pitch-wrap ${slotSizeCls}">
@@ -2201,7 +2201,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         lineupEl.classList.remove('results-container');
       }
 
-      // Remaining segments → bytteplan in kdPlan
+      // Remaining segments \u2192 bytteplan in kdPlan
       if (planEl) {
         let cardsHtml = '';
         for (let idx = 1; idx < best.segments.length; idx++) {
@@ -2250,9 +2250,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
                 ${ov ? '<span class="kd-override-badge">\u270f\ufe0f Tilpasset</span>' : ''}
               </div>
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                ${ov && !isLast ? `<button class="kd-copy-btn" data-action="kdcopy" data-seg="${idx}">\u2192 Kopier</button>` : ''}
+                ${ov && !isLast ? `<button class="kd-copy-btn" data-action="kdcopy" data-seg="${idx}">Kopier til alle</button>` : ''}
                 ${ov ? `<button class="kd-reset-btn" data-action="kdreset" data-seg="${idx}">\u21ba</button>` : ''}
-                ${kn ? `<span class="kd-period-keeper">\ud83e\udde4 ${kn}</span>` : ''}
+                
               </div>
             </div>
             <div class="kd-pitch-wrap ${slotSizeCls}">
@@ -2283,7 +2283,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       });
 
     } else {
-      // ── FALLBACK: original flat list (no formation) ──
+      // -- FALLBACK: original flat list (no formation) --
       const minutesHtml = minutesArr.map(m => `
         <div class="group-player">
           <span class="player-name">${escapeHtml(m.name)}:</span>
@@ -2402,7 +2402,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       lines.push(' Start (f\u00f8rste periode)');
       startIds.forEach(id => lines.push(`  - ${idToName[id] || id}`));
     }
-    lines.push(` Benk: ${benchIds.map(id => idToName[id] || id).join(', ') || 'â€“'}`);
+    lines.push(` Benk: ${benchIds.map(id => idToName[id] || id).join(', ') || ' - '}`);
 
     lines.push('');
     lines.push('Beregnet spilletid');
@@ -2418,7 +2418,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const nextSeg = best.segments[idx + 1];
       const periodEnd = nextSeg ? nextSeg.start : T;
 
-      lines.push(` Minutt ${ev.minute} â€“ ${periodEnd}`);
+      lines.push(` Minutt ${ev.minute} \u2013 ${periodEnd}`);
       if (ev.keeperId) lines.push(`  Keeper: ${idToName[ev.keeperId] || ev.keeperId}`);
 
       if (useFormation && format !== 3) {
@@ -2451,7 +2451,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           const metaEl = $('kdMeta');
           if (metaEl) {
             const prev = metaEl.textContent;
-            metaEl.textContent = 'Plan kopiert âœ…';
+            metaEl.textContent = 'Plan kopiert \u2705';
             setTimeout(() => { metaEl.textContent = prev; }, 1200);
           }
         })
@@ -2474,7 +2474,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const metaEl = $('kdMeta');
       if (metaEl) {
         const prev = metaEl.textContent;
-        metaEl.textContent = 'Plan kopiert âœ…';
+        metaEl.textContent = 'Plan kopiert \u2705';
         setTimeout(() => { metaEl.textContent = prev; }, 1200);
       }
     } catch (e) {
@@ -2527,12 +2527,12 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const dots0 = slots.map(s => {
         const pid = sm0.slots[s.key];
         const nm = pid ? escapeHtml(idToName[pid] || pid) : '?';
-        return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:34px;height:34px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;"><span style="font-size:8px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:30px;">${nm}</span></div></div>`;
+        return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:40px;height:40px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;"><span style="font-size:8.5px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38px;">${nm}</span></div></div>`;
       }).join('');
       const benchNames0 = sm0.bench.map(pid => escapeHtml(idToName[pid] || pid)).join(' \u00b7 ') || '\u2014';
       startSection = `
         <div class="section-title">Startoppstilling \u00b7 ${formationKey}${hasAnyOverride ? ' \u00b7 Justert' : ''}</div>
-        <div style="position:relative;width:100%;max-width:400px;margin:0 auto;aspect-ratio:68/42;max-height:220px;background:linear-gradient(180deg,#1a5c1a,#145214);border-radius:12px;overflow:visible;border:2px solid #2a7a2a;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots0}</div>
+        <div style="position:relative;width:100%;max-width:380px;margin:0 auto;height:150px;background:linear-gradient(180deg,#1a5c1a,#145214);border-radius:12px;overflow:visible;border:2px solid #2a7a2a;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots0}</div>
         <div class="bench">Benk: ${benchNames0}</div>`;
     }
     if (!startSection) {
@@ -2606,9 +2606,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           const pid = sm.slots[s.key]; const nm = pid ? escapeHtml(idToName[pid]||pid) : '?';
           const isNew = pid && newIds.has(pid);
           const outline = isNew ? 'box-shadow:0 0 0 2px #fbbf24;' : '';
-          return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:36px;height:36px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;${outline}"><span style="font-size:8px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34px;">${nm}</span></div></div>`;
+          return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:42px;height:42px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;${outline}"><span style="font-size:9px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40px;">${nm}</span></div></div>`;
         }).join('');
-        body = `<div style="position:relative;width:100%;aspect-ratio:68/42;background:linear-gradient(180deg,#1a5c1a,#145214);overflow:visible;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots}</div>`;
+        body = `<div style="position:relative;width:100%;height:130px;background:linear-gradient(180deg,#1a5c1a,#145214);overflow:visible;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots}</div>`;
         const benchNames = sm.bench.map(pid => escapeHtml(idToName[pid]||pid)).join(', ') || '\u2014';
         body += `<div style="font-size:8px;color:#64748b;padding:2px 10px 5px;">Benk: ${benchNames}</div>`;
       }
@@ -2623,7 +2623,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         outIds.forEach(id => { swaps += `<div class="sw"><span class="sw-out">\u2190</span><span style="color:#94a3b8;">${escapeHtml(idToName[id]||id)}</span></div>`; });
         swaps += '</div>';
       }
-      return `<div class="card"><div class="card-head"><span class="card-title">${isFirst ? 'Start ' : ''}${seg.start}\u2013${periodEnd} min${ov ? ' \u270f\ufe0f' : ''}</span>${keeperName ? `<span class="card-keeper">\ud83e\udde4 ${keeperName}</span>` : ''}</div><div class="card-body">${body}${swaps}</div></div>`;
+      return `<div class="card"><div class="card-head"><span class="card-title">${isFirst ? 'Start ' : ''}${seg.start}\u2013${periodEnd} min${ov ? ' \u270f\ufe0f' : ''}</span></div><div class="card-body">${body}${swaps}</div></div>`;
     }).join('');
     const html = `<!doctype html>
 <html lang="nb">
@@ -2635,13 +2635,13 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;background:#0f172a;color:#e2e8f0;line-height:1.45}
 .wrap{max-width:900px;margin:0 auto;padding:16px}
-.header{background:linear-gradient(135deg,#0b5bd3,#19b0ff);color:#fff;border-radius:16px;padding:14px 16px;display:flex;gap:14px;align-items:center;box-shadow:0 6px 18px rgba(11,91,211,0.3)}
-.logo{width:80px;height:80px;border-radius:12px;background:#fff;overflow:hidden;flex-shrink:0}
-.logo img{width:80px;height:80px;object-fit:cover}
-.h-title{font-size:18px;font-weight:900}
-.h-sub{opacity:0.9;font-size:12px;margin-top:2px}
-.section-title{font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em;color:#60a5fa;margin:14px 0 8px;padding-bottom:4px;border-bottom:2px solid rgba(255,255,255,0.08)}
-.main-card{background:#1a2333;border-radius:16px;padding:12px;margin-top:12px;border:1px solid rgba(255,255,255,0.06)}
+.header{background:linear-gradient(135deg,#166534,#22c55e);color:#fff;border-radius:10px;padding:6px 10px;display:flex;gap:8px;align-items:center;box-shadow:0 3px 8px rgba(22,101,52,0.3)}
+.logo{width:40px;height:40px;border-radius:8px;background:#fff;overflow:hidden;flex-shrink:0}
+.logo img{width:40px;height:40px;object-fit:cover}
+.h-title{font-size:13px;font-weight:900}
+.h-sub{opacity:0.9;font-size:10px;margin-top:1px}
+.section-title{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em;color:#60a5fa;margin:10px 0 6px;padding-bottom:4px;border-bottom:2px solid rgba(255,255,255,0.08)}
+.main-card{background:#1a2333;border-radius:14px;padding:10px;margin-top:8px;border:1px solid rgba(255,255,255,0.06)}
 /* Pitch */
 .pitch{background:linear-gradient(180deg,#1a5c1a,#145214);border:2px solid #2a7a2a;border-radius:12px;padding:12px 8px;position:relative;overflow:hidden}
 .pitch::before{content:'';position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.12)}
@@ -2670,7 +2670,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .time-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.04)}
 /* Bytteplan grid */
 .plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.card{background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)}
+.card{background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);break-inside:avoid;page-break-inside:avoid}
 .card-head{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.06)}
 .card-title{font-weight:900;font-size:13px;color:#fff}
 .card-keeper{background:rgba(168,85,247,0.15);padding:3px 8px;border-radius:999px;font-size:10px;color:#c084fc;font-weight:700}
@@ -2681,7 +2681,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .zc{font-size:11px;font-weight:600;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,0.08);color:#cbd5e1;border:1px solid rgba(255,255,255,0.06)}
 .zc-new{background:rgba(34,197,94,0.15);color:#4ade80;border-color:rgba(34,197,94,0.4)}
 .swaps{padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);margin-top:6px}
-.sw{display:flex;align-items:center;gap:5px;padding:0;font-size:10px}
+.sw{display:flex;align-items:center;gap:4px;padding:0;font-size:9px}
 .sw-in{color:#4ade80;font-weight:900;width:14px;text-align:center}
 .sw-out{color:#f87171;font-weight:900;width:14px;text-align:center}
 .note{font-size:10px;color:#475569;font-style:italic;margin-top:4px}
@@ -2692,15 +2692,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
   .wrap{max-width:none;padding:6px}
   .actions{display:none!important}
   #saveGuide{display:none!important}
-  .card{break-inside:avoid;page-break-inside:avoid}
+  .card{break-inside:avoid;page-break-inside:avoid;margin-bottom:4px}
   .tl-chart{break-inside:avoid}
   .pitch{break-inside:avoid}
-  .main-card{break-inside:avoid;padding:10px}
-  .plan-grid{grid-template-columns:1fr 1fr!important;gap:8px}
-  .section-title{margin:12px 0 6px;font-size:12px}
-  .header{padding:10px 12px}
-  .logo{width:60px;height:60px}
-  .logo img{width:60px;height:60px}
+  .main-card{padding:8px}
+  .plan-grid{grid-template-columns:1fr 1fr!important;gap:6px}
+  .section-title{margin:8px 0 4px;font-size:11px}
+  .header{padding:6px 10px;break-inside:avoid}
+  .logo{width:40px;height:40px}
+  .logo img{width:40px;height:40px}
   .h-title{font-size:15px}
 }
 @media (max-width:600px){
@@ -2727,7 +2727,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 
   <div class="footer">Laget med Barnefotballtrener.no</div>
   <div class="actions" style="display:flex;gap:10px;margin-top:12px;">
-    <button style="border:0;border-radius:10px;padding:10px 16px;font-weight:800;background:#0b5bd3;color:#fff;cursor:pointer;font-size:13px;" onclick="window.print()">Lagre som PDF</button>
+    <button style="border:0;border-radius:10px;padding:10px 16px;font-weight:800;background:#166534;color:#fff;cursor:pointer;font-size:13px;" onclick="window.print()">Lagre som PDF</button>
   </div>
   <div id="saveGuide" style="margin-top:12px;"></div>
   <script>
@@ -2739,7 +2739,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     if (!g) return;
     var steps = '';
     if (isIOS) {
-      steps = '<div style="color:#94a3b8;font-size:11px;margin-top:8px;">Trykk <b>Lagre som PDF</b>, deretter <b>Del-ikon â†‘</b> og <b>Arkiver i Filer</b>.</div>';
+      steps = '<div style="color:#94a3b8;font-size:11px;margin-top:8px;">Trykk <b>Lagre som PDF</b>, deretter <b>Del-ikon \u2191</b> og <b>Arkiver i Filer</b>.</div>';
     } else if (isAndroid) {
       steps = '<div style="color:#94a3b8;font-size:11px;margin-top:8px;">Trykk <b>Lagre som PDF</b>, velg <b>Lagre som PDF</b> som skriver, trykk <b>Last ned</b>.</div>';
     } else {
@@ -2872,9 +2872,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
         if (inNames.length || outNames.length) {
           subsEl.style.display = '';
           subsEl.innerHTML =
-            (inNames.length ? `<span style="color:#16a34a;font-weight:700;">â†‘ ${inNames.map(n => escapeHtml(n)).join(', ')}</span>` : '') +
+            (inNames.length ? `<span style="color:#16a34a;font-weight:700;">\u2191 ${inNames.map(n => escapeHtml(n)).join(', ')}</span>` : '') +
             (inNames.length && outNames.length ? ' &nbsp; ' : '') +
-            (outNames.length ? `<span style="color:#dc2626;font-weight:700;">â†“ ${outNames.map(n => escapeHtml(n)).join(', ')}</span>` : '');
+            (outNames.length ? `<span style="color:#dc2626;font-weight:700;">\u2193 ${outNames.map(n => escapeHtml(n)).join(', ')}</span>` : '');
         } else {
           subsEl.style.display = 'none';
         }
