@@ -5,6 +5,7 @@
 // - aktivt abonnement (month/year)
 // - livstid kjøpt (one-time payment via Stripe Checkout)
 // - aktiv trial (Supabase user_access)
+// - aktiv klubblisens (Supabase clubs + club_members)
 // Krever env:
 // - STRIPE_SECRET_KEY
 // - SUPABASE_URL
@@ -68,7 +69,7 @@ async function findOrCreateCustomer(email, userId) {
   if (metaMatch) return metaMatch;
 
   // 2) Prefer a customer that already has a relevant subscription (active/trialing/past_due)
-  // (avoid picking a “random” duplicate that only has canceled/incomplete history)
+  // (avoid picking a "random" duplicate that only has canceled/incomplete history)
   for (const c of candidates.slice(0, 3)) {
     try {
       const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 10 });
@@ -274,6 +275,60 @@ async function checkTrialStatus(userId) {
   }
 }
 
+
+// ============================================================
+// KLUBB-TILGANG (v3)
+// Sjekker om brukeren er medlem av en aktiv klubb.
+// Returnerer alltid info (for dobbeltabonnement-deteksjon),
+// men access kun hvis klubben gir tilgang.
+// ============================================================
+async function getClubStatus(userId) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('club_members')
+      .select(`
+        joined_at,
+        clubs ( id, name, active, paid_until, plan_type )
+      `)
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data || !data.clubs) {
+      return { access: null, info: null };
+    }
+
+    const club = data.clubs;
+    const now = new Date();
+    const expired = club.paid_until ? (new Date(club.paid_until) < now) : false;
+
+    const info = {
+      club_id: club.id,
+      club_name: club.name,
+      plan_type: club.plan_type,
+      active: !!club.active,
+      expired,
+      paid_until: club.paid_until || null
+    };
+
+    if (!club.active) return { access: null, info };
+    if (expired) return { access: null, info };
+
+    return {
+      access: {
+        club_id: club.id,
+        club_name: club.name,
+        plan_type: club.plan_type
+      },
+      info
+    };
+  } catch (err) {
+    console.error('[subscription-status] ⚠️ getClubStatus error:', err?.message || err);
+    return { access: null, info: null };
+  }
+}
+
+
 export default async function handler(req, res) {
   // SECURITY: Set no-cache headers for personalized data (prevents caching of auth-dependent responses)
   res.setHeader('Cache-Control', 'no-store, private, must-revalidate');
@@ -339,6 +394,12 @@ export default async function handler(req, res) {
       });
     }
 
+    // ============================================================
+    // Hent klubbstatus ALLTID (uavhengig av Stripe-resultat).
+    // Brukes for: (a) klubb-fallback, (b) dobbeltabonnement-varsel.
+    // ============================================================
+    const { access: clubAccess, info: clubInfo } = await getClubStatus(user.id);
+
     const customer = await findOrCreateCustomer(email, user.id);
 
     // Ensure deterministic binding for future lookups.
@@ -359,7 +420,7 @@ export default async function handler(req, res) {
     // 1) Stripe subscription
     const sub = await checkStripeSubscription(customer.id);
     if (sub.active) {
-      return res.status(200).json({
+      const response = {
         active: true,
         trial: sub.trial,
         lifetime: false,
@@ -372,13 +433,21 @@ export default async function handler(req, res) {
         trial_ends_at: null,
         canStartTrial: false,
         reason: 'active_subscription',
-      });
+      };
+
+      // Dobbeltabonnement-deteksjon: brukeren betaler Stripe OG har klubbtilgang
+      if (clubAccess) {
+        response.has_club_access = true;
+        response.club_name = clubAccess.club_name;
+      }
+
+      return res.status(200).json(response);
     }
 
     // 2) Lifetime
     const lt = await checkLifetimePurchase(customer.id);
     if (lt.lifetime) {
-      return res.status(200).json({
+      const response = {
         active: true,
         trial: false,
         lifetime: true,
@@ -392,13 +461,21 @@ export default async function handler(req, res) {
         canStartTrial: false,
         purchased_at: lt.purchased_at || null,
         reason: 'lifetime_purchase',
-      });
+      };
+
+      // Dobbeltabonnement-deteksjon (livstid + klubb)
+      if (clubAccess) {
+        response.has_club_access = true;
+        response.club_name = clubAccess.club_name;
+      }
+
+      return res.status(200).json(response);
     }
 
     // 3) Trial (Supabase)
     const tr = await checkTrialStatus(user.id);
     if (tr.trial) {
-      return res.status(200).json({
+      const response = {
         active: true,
         trial: true,
         lifetime: false,
@@ -411,10 +488,60 @@ export default async function handler(req, res) {
         trial_ends_at: tr.trial_ends_at,
         canStartTrial: false,
         reason: 'trial_active',
+      };
+
+      // Informer om ventende klubbtilgang (trial utløper → klubb tar over)
+      if (clubAccess) {
+        response.has_club_access = true;
+        response.club_name = clubAccess.club_name;
+      }
+
+      return res.status(200).json(response);
+    }
+
+    // 4) Klubblisens (ny)
+    if (clubAccess) {
+      console.log('[subscription-status] ✅ Club access:', clubAccess.club_name);
+      return res.status(200).json({
+        active: true,
+        trial: false,
+        lifetime: clubAccess.plan_type === 'lifetime',
+        plan: 'club_' + clubAccess.plan_type,
+        club_name: clubAccess.club_name,
+        subscription_id: null,
+        status: 'club',
+        current_period_end: null,
+        cancel_at_period_end: false,
+        cancel_at: null,
+        trial_ends_at: null,
+        canStartTrial: false,
+        reason: 'club_license',
       });
     }
 
-    // 4) Ingen tilgang
+    // 5) Utløpt/inaktiv klubb (bedre UX enn generisk "no access")
+    if (clubInfo && (!clubInfo.active || clubInfo.expired)) {
+      const expiredReason = clubInfo.expired ? 'club_expired' : 'club_inactive';
+      console.log('[subscription-status] ⚠️ Club membership but no access:', expiredReason, clubInfo.club_name);
+      return res.status(200).json({
+        active: false,
+        trial: false,
+        lifetime: false,
+        plan: null,
+        club_name: clubInfo.club_name,
+        club_paid_until: clubInfo.paid_until,
+        subscription_id: null,
+        status: null,
+        current_period_end: null,
+        cancel_at_period_end: false,
+        cancel_at: null,
+        trial_ends_at: (tr.trial_used && tr.trial_ends_at) ? tr.trial_ends_at : null,
+        canStartTrial: !!tr.canStartTrial,
+        reason: expiredReason,
+      });
+    }
+
+    // 6) Ingen tilgang
     const noAccessReason = tr.trial_expired
       ? 'trial_expired'
       : (tr.canStartTrial ? 'trial_available' : 'no_access');
