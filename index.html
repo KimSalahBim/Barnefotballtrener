@@ -177,6 +177,11 @@
               <div class="price-amount">799 kr</div>
             </div>
           </div>
+          <p class="landing-muted" style="margin-top:12px;">
+          <i class="fas fa-people-group" style="color:#90caf9;"></i>
+          <strong>Klubb?</strong> Vi tilbyr samlelisenser med rabatt.
+          <a href="mailto:support@barnefotballtrener.no?subject=Klubblisens" style="color:#90caf9; text-decoration:underline;">Ta kontakt</a>
+</p>
           <p class="landing-muted">Betaling håndteres av Stripe. Du kan administrere og avslutte abonnement i appen.</p>
         </section>
 
@@ -519,14 +524,14 @@
           </div>
           <div class="form-group">
             <label>Antall trenere *</label>
-            <input type="number" name="quantity" min="10" required>
+            <input type="number" name="quantity" min="3" required>
           </div>
           <div class="form-group">
             <label>Ønsket plan *</label>
             <select name="planType" required>
               <option value="">Velg...</option>
-              <option value="yearly">Årlig (133 kr/person/år)</option>
-              <option value="lifetime">Livstid (401 kr/person)</option>
+              <option value="yearly">Årlig lisens</option>
+              <option value="lifetime">Engangskjøp</option>
             </select>
           </div>
           <div class="form-group">
@@ -1137,6 +1142,7 @@
 <script src="auth.js"></script>
 <script src="error-logger.js"></script>
 <script src="subscription.js"></script>
+<script src="club.js"></script>
 <script src="auth-ui.js"></script>
 <script src="pricing.js"></script>
 <script src="grouping.js"></script>
