@@ -565,8 +565,18 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       if (panel) panel.style.display = 'none';
       return;
     } else {
-      // Hide the manual toggle card; keeper is always required for 5/7/9/11-er
-      if (keeperCard) keeperCard.style.display = 'none';
+      // Show the card, hide just the toggle (checkbox + its label if safe)
+      if (keeperCard) keeperCard.style.display = '';
+      if (manualEl) {
+        manualEl.style.display = 'none';
+        // Hide the label wrapping the toggle, but ONLY if it doesn't also contain the keeper panel
+        const lbl = manualEl.closest('label');
+        if (lbl && panel && !lbl.contains(panel)) {
+          lbl.style.display = 'none';
+        } else if (lbl && !panel) {
+          lbl.style.display = 'none';
+        }
+      }
       if ($('kdKeeperHint')) $('kdKeeperHint').textContent = 'Velg hvem som st\u00e5r i m\u00e5l og hvor lenge.';
     }
 
