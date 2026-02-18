@@ -1,0 +1,633 @@
+/* ============================================================
+   BARNEFOTBALLTRENER - Landing Page Visual Redesign
+   Fil: landing-visual.css
+   
+   Legg til i <head> etter auth-styles.css:
+   <link rel="stylesheet" href="landing-visual.css">
+   ============================================================ */
+
+/* -------------------------------------------
+   Override: Make password-box full-width for landing
+   (uses compound selector to beat style.css #passwordProtection .password-box)
+   ------------------------------------------- */
+
+/* -------------------------------------------
+   HERO
+   ------------------------------------------- */
+.lp-hero {
+  text-align: center;
+  padding: 36px 28px 24px;
+  background: linear-gradient(165deg,
+    rgba(46,139,87,0.06) 0%,
+    rgba(243,154,31,0.04) 50%,
+    transparent 100%
+  );
+  border-radius: 22px 22px 0 0;
+}
+
+.lp-hero-inner {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+#passwordProtection .lp-hero .login-logo {
+  width: 90px;
+  height: 90px;
+  margin-bottom: 12px;
+}
+
+.lp-hero h1 {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin: 0 0 8px;
+  color: var(--bf-ink, #0f172a);
+}
+
+#passwordProtection .lp-hero .landing-tagline {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--bf-muted, #64748b);
+  margin: 0 0 22px;
+  opacity: 1;
+}
+
+/* Trust pills row */
+.lp-trust-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.lp-trust-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bf-muted, #64748b);
+  letter-spacing: 0.01em;
+}
+
+.lp-trust-pill i {
+  color: var(--bf-green, #2e8b57);
+  font-size: 11px;
+}
+
+/* -------------------------------------------
+   PHONE MOCKUPS
+   ------------------------------------------- */
+.lp-phones-section {
+  padding: 0 16px 16px;
+  overflow: hidden;
+}
+
+.lp-phones {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 0;
+  flex-wrap: wrap;
+}
+
+.lp-phone {
+  width: 160px;
+  flex-shrink: 0;
+  background: #1a1a2e;
+  border-radius: 18px;
+  padding: 5px 4px 4px;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.2);
+  animation: lpPhoneIn 0.5s ease both;
+}
+
+.lp-phone:nth-child(1) { animation-delay: 0.05s; }
+.lp-phone:nth-child(2) { animation-delay: 0.15s; }
+.lp-phone:nth-child(3) { animation-delay: 0.25s; }
+
+@keyframes lpPhoneIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.lp-phone-notch {
+  width: 50px;
+  height: 4px;
+  background: #333;
+  border-radius: 3px;
+  margin: 1px auto 4px;
+}
+
+.lp-screen {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+@media (max-width: 520px) {
+  .lp-phone { width: 148px; }
+  .lp-phones { gap: 8px; }
+}
+
+@media (max-width: 380px) {
+  .lp-phone { width: 135px; }
+}
+
+.lp-phones-caption {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(100,116,139,0.7);
+  margin: 10px 0 0;
+  letter-spacing: 0.03em;
+}
+
+/* -------------------------------------------
+   SCREEN STYLES: Scale wrapper
+   Uses REAL app CSS classes (kd-*, results-card, etc.)
+   scaled down to fit phone mockup.
+   
+   When you change kampdag.css or style.css,
+   these mockups update automatically.
+   ------------------------------------------- */
+
+/* Scale wrapper: renders app HTML at 340px then shrinks to fit phone */
+.lp-screen-scaled {
+  overflow: hidden;
+  background: #0f172a; /* match kd-timeline-chart bg */
+  position: relative;
+  /* Aspect ratio makes it look like a real phone screen (9:16 portrait) */
+  /* Inner width 152px × 16/9 = 270px (close to real phone proportions) */
+  aspect-ratio: 9 / 16;
+}
+
+.lp-screen-scaled.lp-screen-light {
+  background: #fff;
+}
+
+.lp-scale-wrap {
+  width: 340px;
+  transform-origin: top left;
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Desktop: phone is 160px, padding eats 8px → 152px inner → scale 0.447 */
+  transform: scale(0.447);
+}
+
+/* Mobile: phone is 148px, padding eats 8px → 140px inner → scale 0.412 */
+@media (max-width: 520px) {
+  .lp-scale-wrap {
+    transform: scale(0.412);
+  }
+}
+
+/* Neutralise kd-timeline-chart margin/shadow inside phone (already has frame) */
+.lp-phone .kd-timeline-chart {
+  margin-bottom: 0;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* Neutralise kd-dark-output border-radius/shadow inside phone */
+.lp-phone .kd-dark-output {
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
+}
+
+/* Neutralise kd-pitch-card margin inside phone */
+.lp-phone .kd-pitch-card {
+  margin-bottom: 0;
+}
+
+/* Desktop fallback for results-card (original only in @media max-width:768px) */
+.lp-phone .results-card {
+  background: var(--gray-50, #f8f9fa);
+  border: 1px solid var(--gray-200, #e2e8f0);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.lp-phone .results-card h3 {
+  font-size: 14px !important;
+  margin: 0 0 4px 0 !important;
+}
+.lp-phone .results-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px;
+}
+.lp-phone .result-item {
+  font-size: 12px;
+  padding: 3px 6px;
+  background: white;
+  border: 1px solid var(--gray-200, #e2e8f0);
+  border-radius: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -------------------------------------------
+   SECTIONS (shared)
+   ------------------------------------------- */
+.lp-section {
+  padding: 28px 24px;
+  text-align: left;  /* Override password-box text-align: center */
+}
+
+.lp-section + .lp-section {
+  border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+.lp-section-title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  text-align: center;
+  color: var(--bf-ink, #0f172a);
+}
+
+.lp-section-sub {
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--bf-muted, #64748b);
+  margin: 0 0 20px;
+  line-height: 1.45;
+}
+
+/* -------------------------------------------
+   FEATURES GRID
+   ------------------------------------------- */
+.lp-features {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lp-feat {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.lp-feat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.lp-feat-icon.green  { background: #ecfdf5; color: #2e8b57; }
+.lp-feat-icon.blue   { background: #eff6ff; color: #2563eb; }
+.lp-feat-icon.orange { background: #fff7ed; color: #f39a1f; }
+.lp-feat-icon.purple { background: #f5f3ff; color: #7c3aed; }
+.lp-feat-icon.rose   { background: #fff1f2; color: #e11d48; }
+.lp-feat-icon.teal   { background: #f0fdfa; color: #0d9488; }
+
+.lp-feat strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 3px;
+  color: var(--bf-ink, #0f172a);
+}
+
+.lp-feat p {
+  font-size: 13px;
+  color: var(--bf-muted, #64748b);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* -------------------------------------------
+   SCREENSHOT PLACEHOLDER
+   ------------------------------------------- */
+.lp-screenshots {
+  text-align: center;
+}
+
+.lp-screenshot-device {
+  max-width: 260px;
+  margin: 0 auto;
+  background: #1a1a2e;
+  border-radius: 26px;
+  padding: 8px 6px 8px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+}
+
+.lp-screenshot-notch {
+  width: 60px;
+  height: 5px;
+  background: #333;
+  border-radius: 3px;
+  margin: 0 auto 6px;
+}
+
+.lp-screenshot-inner {
+  background: #fff;
+  border-radius: 18px;
+  overflow: hidden;
+  aspect-ratio: 9/17;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-screenshot-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lp-screenshot-placeholder {
+  padding: 24px;
+  text-align: center;
+}
+.lp-screenshot-placeholder i {
+  font-size: 32px;
+  color: #ddd;
+  margin-bottom: 10px;
+  display: block;
+}
+.lp-screenshot-placeholder p {
+  font-size: 12px;
+  color: #bbb;
+  font-weight: 600;
+  margin: 0;
+}
+.lp-screenshot-placeholder .hint {
+  font-size: 10px;
+  color: #ccc;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* -------------------------------------------
+   HOW IT WORKS
+   ------------------------------------------- */
+.lp-how {
+  background: linear-gradient(165deg,
+    rgba(46,139,87,0.04) 0%,
+    rgba(243,154,31,0.03) 100%
+  );
+  border-radius: 16px;
+  margin: 0 -4px;
+  padding: 28px 28px;
+}
+
+.lp-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.lp-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 0;
+  position: relative;
+}
+
+.lp-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 48px;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #2e8b57, rgba(46,139,87,0.1));
+}
+
+.lp-step-num {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #2e8b57;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 900;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(46,139,87,0.25);
+}
+
+.lp-step strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 3px;
+  color: var(--bf-ink, #0f172a);
+}
+
+.lp-step p {
+  font-size: 13px;
+  color: var(--bf-muted, #64748b);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* -------------------------------------------
+   PRICING (inline)
+   ------------------------------------------- */
+.lp-price-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.lp-price-card {
+  background: #f8faf9;
+  border: 1px solid rgba(15,23,42,0.08);
+  border-radius: 14px;
+  padding: 16px 10px;
+  text-align: center;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.lp-price-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.lp-pc-popular {
+  background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+  border-color: rgba(46,139,87,0.22);
+  box-shadow: 0 6px 18px rgba(46,139,87,0.1);
+  transform: scale(1.03);
+}
+.lp-pc-popular:hover {
+  transform: scale(1.03) translateY(-1px);
+}
+
+.lp-pc-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.lp-pc-popular .lp-pc-label { color: #2e8b57; }
+
+.lp-pc-amount {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+
+.lp-pc-unit {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.lp-popular-badge {
+  display: inline-block;
+  background: #2e8b57;
+  color: #fff;
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 5px;
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 380px) {
+  .lp-price-cards { grid-template-columns: 1fr; gap: 6px; }
+  .lp-pc-popular { transform: none; }
+}
+
+/* -------------------------------------------
+   KLUBBAVTALE
+   ------------------------------------------- */
+.lp-club-card {
+  background: linear-gradient(135deg, #f0f7f3 0%, #fefaf4 100%);
+  border: 1px solid rgba(46,139,87,0.15);
+  border-radius: 16px;
+  padding: 22px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.lp-club-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #2e8b57;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(46,139,87,0.2);
+}
+
+.lp-club-content h3 {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0 0 6px;
+  color: #0f172a;
+}
+
+.lp-club-content p {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.45;
+  margin: 0 0 12px;
+}
+
+.lp-club-how {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  font-style: italic;
+}
+
+.lp-club-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: #2e8b57;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 150ms ease;
+  box-shadow: 0 4px 12px rgba(46,139,87,0.2);
+}
+
+.lp-club-btn:hover {
+  background: #247048;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(46,139,87,0.3);
+}
+
+.lp-club-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 420px) {
+  .lp-club-card { flex-direction: column; }
+}
+
+/* -------------------------------------------
+   FIX: password-box override (beat style.css ID rule)
+   ------------------------------------------- */
+#passwordProtection .password-box.landing-page-box {
+  max-width: 640px;
+  padding: 0 0 30px;
+  text-align: center;
+}
+
+/* -------------------------------------------
+   SEO CHIPS (orphaned from original, adding styles)
+   ------------------------------------------- */
+#passwordProtection .landing-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+#passwordProtection .landing-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  background: rgba(11, 91, 211, 0.04);
+  border: 1px solid rgba(11, 91, 211, 0.1);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+#passwordProtection .landing-trust-note {
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+  margin-bottom: 10px;
+  line-height: 1.45;
+}
