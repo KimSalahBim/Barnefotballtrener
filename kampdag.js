@@ -67,7 +67,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   const KD_DRAG_THRESHOLD = 8;
 
   // Formation state
-  let kdFormationOn = false;
+  let kdFormationOn = true;
   let kdFormation = null;       // e.g. [2,3,1]
   let kdFormationKey = '';      // e.g. '2-3-1'
 
@@ -457,18 +457,24 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       });
     }
 
-    // Formation toggle
+    // Formation always on: hide toggle, show panel, init grid
     const formToggle = $('kdFormationToggle');
-    if (formToggle) formToggle.addEventListener('change', () => {
-      kdFormationOn = formToggle.checked;
-      const panel = $('kdFormationPanel');
-      if (panel) panel.style.display = kdFormationOn ? 'block' : 'none';
-      if (kdFormationOn) renderFormationGrid();
-    });
+    if (formToggle) {
+      formToggle.checked = true;
+      const toggleCard = formToggle.closest('.settings-card');
+      if (toggleCard) toggleCard.style.display = 'none';
+    }
+    const initFmt = parseInt(formatEl?.value, 10) || 7;
+    const formPanel = $('kdFormationPanel');
+    if (formPanel) formPanel.style.display = (initFmt !== 3) ? 'block' : 'none';
+    if (initFmt !== 3) renderFormationGrid();
 
-    // Formation changes when format changes
+    // Formation changes when format changes (hide for 3-er)
     if (formatEl) formatEl.addEventListener('change', () => {
-      if (kdFormationOn) renderFormationGrid();
+      const fmt = parseInt(formatEl.value, 10) || 7;
+      const fp = $('kdFormationPanel');
+      if (fp) fp.style.display = (fmt !== 3) ? 'block' : 'none';
+      if (fmt !== 3) renderFormationGrid();
     });
   }
 
@@ -557,15 +563,22 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     if (format === 3) {
       if (keeperCard) keeperCard.style.display = 'none';
       if (panel) panel.style.display = 'none';
-      if (manualEl) manualEl.checked = false;
       return;
     } else {
-      if (keeperCard) keeperCard.style.display = '';
+      // Hide the manual toggle card; keeper is always required for 5/7/9/11-er
+      if (keeperCard) keeperCard.style.display = 'none';
       if ($('kdKeeperHint')) $('kdKeeperHint').textContent = 'Velg hvem som st\u00e5r i m\u00e5l og hvor lenge.';
     }
 
-    const isManual = !!manualEl?.checked;
-    if (panel) panel.style.display = isManual ? 'block' : 'none';
+    // Always show keeper panel for non-3-er formats
+    if (panel) panel.style.display = 'block';
+
+    // Enforce minimum 1 keeper
+    const kcEl = $('kdKeeperCount');
+    if (kcEl && parseInt(kcEl.value, 10) < 1) {
+      kcEl.value = '1';
+      autoFillKeeperMinutes();
+    }
 
     const present = getPresentPlayers();
     const opts = makeKeeperOptions(present);
@@ -584,7 +597,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       }
     }
 
-    const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 0, 0, 4);
+    const kc = clamp(parseInt(kcEl?.value, 10) || 1, 1, 4);
     for (let i = 1; i <= 4; i++) {
       const row = document.querySelector(`.kd-keeper-row[data-row="${i}"]`);
       if (row) row.style.display = (i <= kc) ? 'flex' : 'none';
@@ -614,13 +627,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       return;
     }
 
-    const manual = !!$('kdManualKeeper')?.checked;
-    if (!manual) {
-      summary.textContent = 'Manuell keeper er av. (Appen planlegger uten keeper-krav.)';
-      return;
-    }
-
-    const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 0, 0, 4);
+    const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 1, 1, 4);
     let sum = 0;
     let chosen = 0;
     const warnings = [];
@@ -1137,12 +1144,10 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
   function buildKeeperTimeline(T) {
     const format = parseInt($('kdFormat')?.value, 10) || 7;
-    const manual = !!$('kdManualKeeper')?.checked;
 
-    if (format === 3 || !manual) return [];
+    if (format === 3) return [];
 
-    const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 0, 0, 4);
-    if (kc <= 0) return [];
+    const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 1, 1, 4);
 
     const timeline = [];
     let t = 0;
