@@ -79,6 +79,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="auth-styles.css">
+  <link rel="stylesheet" href="landing-visual.css">
   <link rel="stylesheet" href="pricing.css">
   <link rel="stylesheet" href="kampdag.css">
   <link rel="stylesheet" href="kampdag-dragdrop.css">
@@ -92,15 +93,18 @@
 <body>
   <!-- LOGIN SCREEN (oppdatert med Google) -->
   <div id="passwordProtection" class="password-protection">
-    <div class="password-box">
-      <div class="password-header">
-  <img class="login-logo" src="apple-touch-icon.png" alt="Barnefotballtrener logo">
-  <h1>Barnefotballtrener</h1>
-  <p class="landing-tagline">En hjelpende hånd i en hektisk barnefotballhverdag.</p>
-</div>
+<div class="password-box landing-page-box">
 
-      <!-- Mini-landing (pre-login / SEO) -->
-<!-- Google Sign In Button -->
+  <!-- ========================
+       HERO SECTION
+  ========================= -->
+  <div class="lp-hero">
+    <div class="lp-hero-inner">
+      <img class="login-logo" src="apple-touch-icon.png" alt="Barnefotballtrener logo">
+      <h1>Barnefotballtrener</h1>
+      <p class="landing-tagline">En hjelpende hånd i en hektisk barnefotballhverdag. Kampdag, bytteplan og treningsøkt rett på mobilen.</p>
+
+      <!-- Google Sign In (JS-ID bevart) -->
       <button id="googleSignInBtn" class="btn-google" type="button">
         <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -109,146 +113,422 @@
           <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
           <path fill="none" d="M0 0h48v48H0z"/>
         </svg>
-        <span>Fortsett med Google</span>
+        <span>Prøv gratis i 7 dager</span>
       </button>
 
-      <!-- Secondary CTA (stays on login page, no new logic) -->
+      <!-- Se priser (JS-ID bevart) -->
       <button type="button" class="btn-secondary btn-secondary-link" id="publicSeePricingBtn" aria-label="Se priser" onclick="try{if(window.authService&&typeof window.authService.showPricingPage==='function'){window.authService.showPricingPage();}else{location.hash='landingPricing';}}catch(e){location.hash='landingPricing';}">
         <i class="fas fa-tags" aria-hidden="true"></i>
         Se priser
       </button>
-      
-      <div class="landing-kps" aria-label="Kort om hva du får">
-        <p>Legg enkelt til spillere – angi nivå om du ønsker.</p>
-        <p>Kampdag-funksjon som automatisk sikrer lik spilletid og en presis bytteplan.</p>
-        <p>Lag differensierte grupper til øvelser på trening.</p>
-        <p>Få hjelp til å sette sammen jevne lag i trening og kamp.</p>
-        <p>Lag treningsøkta raskt og effektivt – velg øvelser, del inn i grupper og eksporter til PDF.</p>
-        <p>Konkurranse-funksjon som lar deg legge til spillere og antall konkurranser – tabell oppdateres fortløpende.</p>
-        <p>Liga-funksjon hvis man spiller «turnering» på trening – legg inn resultater og få tabell oppdatert fortløpende.</p>
-      </div>
-<noscript>
+
+      <noscript>
         <a href="#landingPricing" class="btn-secondary btn-secondary-link" role="button" aria-label="Se priser">
-          <i class="fas fa-tags" aria-hidden="true"></i>
-          Se priser
+          <i class="fas fa-tags" aria-hidden="true"></i> Se priser
         </a>
       </noscript>
 
-            <div id="magicLinkSection" class="magic-link-section" aria-label="Testinnlogging">
-<!-- Divider -->
-      <div class="divider" style="margin: 14px 0; text-align:center; opacity:.75;">
-        <span style="background: #fff; padding: 0 10px;">eller</span>
+      <div class="lp-trust-row">
+        <span class="lp-trust-pill"><i class="fas fa-check-circle"></i> Gratis i 7 dager</span>
+        <span class="lp-trust-pill"><i class="fas fa-check-circle"></i> Ingen kortinfo</span>
+        <span class="lp-trust-pill"><i class="fas fa-check-circle"></i> Mobilvennlig</span>
       </div>
+    </div>
+  </div>
 
-      <!-- Magic link -->
-      <input
-        id="magicLinkEmail"
-        type="email"
-        inputmode="email"
-        autocomplete="email"
-        placeholder="E-post (Hotmail, iCloud, osv.)"
-        class="login-input"
-      />
+  <!-- ========================
+       PHONE MOCKUPS (3 screens)
+  ========================= -->
+  <div class="lp-phones-section">
+    <div class="lp-phones">
 
-      <button id="magicLinkBtn" class="login-btn" type="button">
-        Send innloggingslenke
-      </button>
-
-      <p id="magicLinkHint" class="small-text" style="margin-top:10px; opacity:.8; text-align:center;">
-        Magic link er kun tilgjengelig i testmiljø (staging/localhost). I produksjon brukes Google-innlogging.
-      </p>
-      </div>
-
-      <!-- Public landing content (static HTML for SEO; hidden after login) -->
-      <div id="publicLanding" class="public-landing">
-<section id="landingPricing" class="landing-section" aria-label="Priser">
-          <h2>Priser</h2>
-          <div class="landing-prices" role="list">
-            <div class="landing-price" role="listitem">
-              <div class="price-title">Måned</div>
-              <div class="price-amount">49 kr</div>
-            </div>
-            <div class="landing-price" role="listitem">
-              <div class="price-title">År</div>
-              <div class="price-amount">299 kr</div>
-            </div>
-            <div class="landing-price" role="listitem">
-              <div class="price-title">Livstid</div>
-              <div class="price-amount">799 kr</div>
+      <!-- Phone 1: Lineup (bruker EKTE kd-pitch-* klasser fra kampdag-dragdrop.css) -->
+      <div class="lp-phone">
+        <div class="lp-phone-notch"></div>
+        <div class="lp-screen lp-screen-scaled">
+          <div class="lp-scale-wrap">
+            <!-- Ekte kd-pitch-card HTML - matcher kampdag.js renderKampdagOutput() -->
+            <div class="kd-dark-output" style="padding:12px 10px;">
+              <h3 class="kd-dark-heading" style="font-size:13px;margin:0 0 8px;">Startoppstilling · 3-2-1</h3>
+              <div class="kd-pitch-card">
+                <div class="kd-pitch-card-header">
+                  <div class="kd-pitch-card-title">Minutt 0 – 20</div>
+                  <div class="kd-period-keeper">🧤 Lucas</div>
+                </div>
+                <div class="kd-pitch-wrap kd-slot-small">
+                  <div class="kd-pitch-field">
+                    <svg class="kd-pitch-lines" viewBox="0 0 680 800" preserveAspectRatio="xMidYMid slice" overflow="hidden" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="20" y="10" width="640" height="780" rx="6" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2.5"/>
+                      <line x1="20" y1="400" x2="660" y2="400" stroke="rgba(255,255,255,0.15)" stroke-width="2.5"/>
+                      <circle cx="340" cy="400" r="72" fill="none" stroke="rgba(255,255,255,0.13)" stroke-width="2"/>
+                      <circle cx="340" cy="400" r="4" fill="rgba(255,255,255,0.15)"/>
+                      <rect x="170" y="10" width="340" height="110" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+                      <rect x="240" y="10" width="200" height="44" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                      <rect x="170" y="680" width="340" height="110" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+                      <rect x="240" y="746" width="200" height="44" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                    </svg>
+                    <!-- 3-2-1: Exact x/y % from SLOT_LAYOUTS['3-2-1'] in kampdag.js -->
+                    <div class="kd-pos-slot" style="left:50%;top:14%;"><span class="kd-pos-label">S</span><div class="kd-pos-bubble kd-bb-a"><span class="kd-p-name">Oliver</span><span class="kd-p-hint">S</span></div></div>
+                    <div class="kd-pos-slot" style="left:32%;top:38%;"><span class="kd-pos-label">VM</span><div class="kd-pos-bubble kd-bb-m"><span class="kd-p-name">Emma</span><span class="kd-p-hint">VM</span></div></div>
+                    <div class="kd-pos-slot" style="left:68%;top:38%;"><span class="kd-pos-label">HM</span><div class="kd-pos-bubble kd-bb-m"><span class="kd-p-name">Noah</span><span class="kd-p-hint">HM</span></div></div>
+                    <div class="kd-pos-slot" style="left:20%;top:64%;"><span class="kd-pos-label">VB</span><div class="kd-pos-bubble kd-bb-f"><span class="kd-p-name">Sofie</span><span class="kd-p-hint">VB</span></div></div>
+                    <div class="kd-pos-slot" style="left:50%;top:68%;"><span class="kd-pos-label">MB</span><div class="kd-pos-bubble kd-bb-f"><span class="kd-p-name">Liam</span><span class="kd-p-hint">MB</span></div></div>
+                    <div class="kd-pos-slot" style="left:80%;top:64%;"><span class="kd-pos-label">HB</span><div class="kd-pos-bubble kd-bb-f"><span class="kd-p-name">Ingrid</span><span class="kd-p-hint">HB</span></div></div>
+                    <div class="kd-pos-slot" style="left:50%;top:88%;"><span class="kd-pos-label">K</span><div class="kd-pos-bubble kd-bb-k"><span class="kd-p-name">Lucas</span><span class="kd-p-hint">🧤</span></div></div>
+                  </div>
+                </div>
+                <div class="kd-bench-area"><span class="kd-bench-label">Benk:</span><div class="kd-bench-bubble"><span class="kd-p-name">Ella</span></div></div>
+              </div>
             </div>
           </div>
-          <p class="landing-muted" style="margin-top:12px;">
-          <i class="fas fa-people-group" style="color:#90caf9;"></i>
-          <strong>Klubb?</strong> Vi tilbyr samlelisenser med rabatt.
-          <a href="mailto:support@barnefotballtrener.no?subject=Klubblisens" style="color:#90caf9; text-decoration:underline;">Ta kontakt</a>
-</p>
-          <p class="landing-muted">Betaling håndteres av Stripe. Du kan administrere og avslutte abonnement i appen.</p>
-        </section>
-
-        <section class="landing-section" aria-label="Spørsmål og svar">
-          <h2>Spørsmål og svar</h2>
-
-          <details class="landing-faq">
-            <summary>Kan jeg avslutte når som helst?</summary>
-            <p>Ja. Du kan avslutte selv i appen. Du beholder tilgang ut perioden du har betalt for.</p>
-          </details>
-
-          <details class="landing-faq">
-            <summary>Fungerer dette på iPhone og Android?</summary>
-            <p>Ja. Appen er laget for mobil nettleser og kan brukes som PWA.</p>
-          </details>
-
-          <details class="landing-faq">
-            <summary>Hvordan får jeg hjelp?</summary>
-            <p>Send e-post til <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.</p>
-          </details>
-
-          <details class="landing-faq">
-            <summary>Hva med personvern og data om barn?</summary>
-            <p>Barnefotballtrener er laget for voksne trenere. Spillerdata lagres kryptert i skyen og synkroniseres mellom enhetene dine. Vi anbefaler at du kun bruker fornavn for barns personvern. Appen samler ikke inn sporingscookies eller annonsedata.</p>
-            <p>Les mer i <a href="/privacy.html">personvernerklæringen</a>.</p>
-          </details>
-        </section>
-
-        <section class="landing-trust" aria-label="Trygghet">
-        <p class="landing-trust-note">Trygt for klubber: betaling via Stripe, og abonnent kan avslutte selv. Ingen annonser eller sporingspiksler.</p>
-
-          <div class="trust-item"><i class="fas fa-credit-card" aria-hidden="true"></i><span>Betaling via Stripe</span></div>
-          <div class="trust-item"><i class="fas fa-sliders" aria-hidden="true"></i><span>Administrer i appen</span></div>
-          <div class="trust-item"><i class="fas fa-flag" aria-hidden="true"></i><span>Norsk</span></div>
-        </section>
-
-        
-        <!-- Nøkkelfunksjoner (tags) -->
-        <div class="landing-chips" aria-label="Nøkkelfunksjoner">
-          <span class="landing-chip">Spilletid-generator</span>
-          <span class="landing-chip">Bytteplan</span>
-          <span class="landing-chip">Treningsgrupper</span>
-          <span class="landing-chip">Jevne lag</span>
-          <span class="landing-chip">Konkurranser</span>
-          <span class="landing-chip">Liga</span>
-          <span class="landing-chip">Treningsøkt-bygger</span>
-                  <span class="landing-chip">Spilletid barnefotball</span>
-          <span class="landing-chip">Lik spilletid fotball</span>
-</div>
-
-<nav class="landing-footer-links" aria-label="Lenker">
-          <a href="/privacy.html">Personvern</a>
-          <span class="dot" aria-hidden="true">•</span>
-          <a href="/terms.html">Vilkår</a>
-          <span class="dot" aria-hidden="true">•</span>
-          <a href="mailto:support@barnefotballtrener.no">Kontakt</a>
-        </nav>
+        </div>
       </div>
 
-      <!-- Legal text -->
-      <p class="small-text" style="margin-top: 20px; font-size: 0.8em; opacity: 0.7; text-align: center; line-height: 1.4;">
-        Ved å logge inn godtar du våre 
-        <a href="/terms.html" style="color: #0b5bd3; text-decoration: underline;">vilkår</a> og 
-        <a href="/privacy.html" style="color: #0b5bd3; text-decoration: underline;">personvernerklæring</a>
-      </p>
+      <!-- Phone 2: Bytteplan (bruker EKTE kd-* klasser fra kampdag.css) -->
+      <div class="lp-phone">
+        <div class="lp-phone-notch"></div>
+        <div class="lp-screen lp-screen-scaled">
+          <div class="lp-scale-wrap">
+            <!-- Ekte kd-timeline-chart HTML - matcher kampdag.js renderKampdagOutput() -->
+            <div class="kd-timeline-chart">
+              <div class="kd-timeline-title">2 X 20 MIN · 7-ER · 3-2-1 · 8 SPILLERE</div>
+              <div class="kd-tl-row">
+                <div class="kd-tl-name">Oliver</div>
+                <div class="kd-tl-bar-wrap"><div class="kd-tl-seg" style="width:25%;background:#4ade80;"></div><div class="kd-tl-seg" style="width:25%;background:#60a5fa;"></div><div class="kd-tl-seg" style="width:25%;background:#f87171;"></div><div class="kd-tl-seg" style="width:12.5%;background:transparent;"></div><div class="kd-tl-seg" style="width:12.5%;background:#4ade80;"></div></div>
+                <div class="kd-tl-min">35.0</div>
+              </div>
+              <div class="kd-tl-row">
+                <div class="kd-tl-name">Emma</div>
+                <div class="kd-tl-bar-wrap"><div class="kd-tl-seg" style="width:25%;background:#60a5fa;"></div><div class="kd-tl-seg" style="width:25%;background:#f87171;"></div><div class="kd-tl-seg" style="width:25%;background:#4ade80;"></div><div class="kd-tl-seg" style="width:12.5%;background:transparent;"></div><div class="kd-tl-seg" style="width:12.5%;background:#60a5fa;"></div></div>
+                <div class="kd-tl-min">35.0</div>
+              </div>
+              <div class="kd-tl-row">
+                <div class="kd-tl-name">Noah</div>
+                <div class="kd-tl-bar-wrap"><div class="kd-tl-seg" style="width:25%;background:#f87171;"></div><div class="kd-tl-seg" style="width:25%;background:#4ade80;"></div><div class="kd-tl-seg" style="width:12.5%;background:transparent;"></div><div class="kd-tl-seg" style="width:12.5%;background:#60a5fa;"></div><div class="kd-tl-seg" style="width:25%;background:#60a5fa;"></div></div>
+                <div class="kd-tl-min">35.0</div>
+              </div>
+              <div class="kd-tl-row">
+                <div class="kd-tl-name">Sofie</div>
+                <div class="kd-tl-bar-wrap"><div class="kd-tl-seg" style="width:25%;background:#c084fc;"></div><div class="kd-tl-seg" style="width:25%;background:#4ade80;"></div><div class="kd-tl-seg" style="width:25%;background:#60a5fa;"></div><div class="kd-tl-seg" style="width:12.5%;background:transparent;"></div><div class="kd-tl-seg" style="width:12.5%;background:#4ade80;"></div></div>
+                <div class="kd-tl-min">35.0</div>
+              </div>
+              <div class="kd-tl-row">
+                <div class="kd-tl-name">Liam</div>
+                <div class="kd-tl-bar-wrap"><div class="kd-tl-seg" style="width:12.5%;background:transparent;"></div><div class="kd-tl-seg" style="width:12.5%;background:#4ade80;"></div><div class="kd-tl-seg" style="width:25%;background:#4ade80;"></div><div class="kd-tl-seg" style="width:25%;background:#f87171;"></div><div class="kd-tl-seg" style="width:25%;background:#c084fc;"></div></div>
+                <div class="kd-tl-min">35.0</div>
+              </div>
+              <div class="kd-tl-row">
+                <div class="kd-tl-name">Ingrid</div>
+                <div class="kd-tl-bar-wrap"><div class="kd-tl-seg" style="width:25%;background:#4ade80;"></div><div class="kd-tl-seg" style="width:12.5%;background:transparent;"></div><div class="kd-tl-seg" style="width:12.5%;background:#c084fc;"></div><div class="kd-tl-seg" style="width:25%;background:#c084fc;"></div><div class="kd-tl-seg" style="width:25%;background:#60a5fa;"></div></div>
+                <div class="kd-tl-min">35.0</div>
+              </div>
+              <div class="kd-tl-row">
+                <div class="kd-tl-name">Ella</div>
+                <div class="kd-tl-bar-wrap"><div class="kd-tl-seg" style="width:25%;background:#60a5fa;"></div><div class="kd-tl-seg" style="width:25%;background:#4ade80;"></div><div class="kd-tl-seg" style="width:25%;background:#4ade80;"></div><div class="kd-tl-seg" style="width:12.5%;background:transparent;"></div><div class="kd-tl-seg" style="width:12.5%;background:#f87171;"></div></div>
+                <div class="kd-tl-min">35.0</div>
+              </div>
+              <div class="kd-tl-row">
+                <div class="kd-tl-name">Lucas</div>
+                <div class="kd-tl-bar-wrap"><div class="kd-tl-seg" style="width:25%;background:#4ade80;"></div><div class="kd-tl-seg" style="width:25%;background:#60a5fa;"></div><div class="kd-tl-seg" style="width:12.5%;background:transparent;"></div><div class="kd-tl-seg" style="width:12.5%;background:#f87171;"></div><div class="kd-tl-seg" style="width:25%;background:#f87171;"></div></div>
+                <div class="kd-tl-min">35.0</div>
+              </div>
+              <div class="kd-tl-axis"><span>0</span><span>10</span><span>20</span><span>30</span><span>40</span></div>
+              <div class="kd-tl-legend">
+                <div class="kd-tl-legend-item"><div class="kd-tl-legend-dot" style="background:#4ade80;"></div> Forsvar</div>
+                <div class="kd-tl-legend-item"><div class="kd-tl-legend-dot" style="background:#60a5fa;"></div> Midtbane</div>
+                <div class="kd-tl-legend-item"><div class="kd-tl-legend-dot" style="background:#f87171;"></div> Angrep</div>
+                <div class="kd-tl-legend-item"><div class="kd-tl-legend-dot" style="background:#c084fc;"></div> Keeper</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phone 3: Grupper (bruker EKTE results-card klasser fra style.css) -->
+      <div class="lp-phone">
+        <div class="lp-phone-notch"></div>
+        <div class="lp-screen lp-screen-scaled lp-screen-light">
+          <div class="lp-scale-wrap">
+            <div style="padding:10px 12px;">
+              <!-- Mimics the actual section header from core.js -->
+              <div style="font-size:15px;font-weight:900;margin-bottom:8px;color:#0f172a;">Treningsgrupper</div>
+              <!-- Toggle bar mimicking app's actual btn-secondary style -->
+              <div style="display:flex;gap:6px;margin-bottom:10px;">
+                <div style="flex:1;text-align:center;padding:7px 4px;border-radius:8px;font-size:11px;font-weight:700;background:#0b5bd3;color:#fff;">Differensiert</div>
+                <div style="flex:1;text-align:center;padding:7px 4px;border-radius:8px;font-size:11px;font-weight:700;background:#f1f5f9;color:#64748b;">Jevne grupper</div>
+              </div>
+              <div style="font-size:11px;color:#64748b;margin-bottom:8px;">9 spillere → 3 grupper</div>
+
+              <!-- Ekte results-card HTML - matcher core.js renderGroupingResults() -->
+              <div class="results-card">
+                <h3>Gruppe 1 <span class="small-text" style="opacity:0.8;">(3 spillere)</span></h3>
+                <div class="results-list">
+                  <div class="result-item">Oliver</div>
+                  <div class="result-item">Emma</div>
+                  <div class="result-item">Noah</div>
+                </div>
+              </div>
+              <div class="results-card">
+                <h3>Gruppe 2 <span class="small-text" style="opacity:0.8;">(3 spillere)</span></h3>
+                <div class="results-list">
+                  <div class="result-item">Sofie</div>
+                  <div class="result-item">Liam</div>
+                  <div class="result-item">Ingrid</div>
+                </div>
+              </div>
+              <div class="results-card">
+                <h3>Gruppe 3 <span class="small-text" style="opacity:0.8;">(3 spillere)</span></h3>
+                <div class="results-list">
+                  <div class="result-item">Ella</div>
+                  <div class="result-item">Lucas</div>
+                  <div class="result-item">Nora</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
     </div>
+    <p class="lp-phones-caption">Startoppstilling · Bytteplan · Treningsgrupper</p>
+  </div>
+
+  <!-- ========================
+       FEATURES GRID
+  ========================= -->
+  <div class="lp-section">
+    <h2 class="lp-section-title">Alt du trenger. Ingen Excel.</h2>
+    <p class="lp-section-sub">Bygget for norske barnefotballtrenere som vil bruke tiden på barna, ikke på admin.</p>
+
+    <div class="lp-features">
+      <div class="lp-feat">
+        <div class="lp-feat-icon green"><i class="fas fa-futbol"></i></div>
+        <div>
+          <strong>Kampdag med bytteplan</strong>
+          <p>Algoritme som automatisk sikrer lik spilletid for alle. Keeper-rotasjon inkludert. Klar bytteplan på mobilen.</p>
+        </div>
+      </div>
+
+      <div class="lp-feat">
+        <div class="lp-feat-icon blue"><i class="fas fa-dumbbell"></i></div>
+        <div>
+          <strong>Treningsøkt-bygger</strong>
+          <p>Bygg økta øvelse for øvelse. Del inn i grupper, sett tider og eksporter til PDF.</p>
+        </div>
+      </div>
+
+      <div class="lp-feat">
+        <div class="lp-feat-icon orange"><i class="fas fa-object-group"></i></div>
+        <div>
+          <strong>Differensierte grupper</strong>
+          <p>Del spillerne inn i treningsgrupper basert på nivå. Bruk dem i øvelser og lagoppsett.</p>
+        </div>
+      </div>
+
+      <div class="lp-feat">
+        <div class="lp-feat-icon purple"><i class="fas fa-trophy"></i></div>
+        <div>
+          <strong>Konkurranser &amp; liga</strong>
+          <p>Kjør intern turnering eller konkurranse på trening. Tabell oppdateres automatisk.</p>
+        </div>
+      </div>
+
+      <div class="lp-feat">
+        <div class="lp-feat-icon rose"><i class="fas fa-chess-board"></i></div>
+        <div>
+          <strong>Formasjon &amp; jevne lag</strong>
+          <p>Visualiser posisjoner og sett opp jevne lag. Drag-and-drop på banen.</p>
+        </div>
+      </div>
+
+      <div class="lp-feat">
+        <div class="lp-feat-icon teal"><i class="fas fa-chart-line"></i></div>
+        <div>
+          <strong>Sesongstatistikk</strong>
+          <p>Hold oversikt over kamper, spilletid og utvikling gjennom sesongen.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================
+       DEMO-VIDEO
+  ========================= -->
+  <div class="lp-section lp-screenshots">
+    <h2 class="lp-section-title">Se appen i aksjon</h2>
+    <p class="lp-section-sub">Kampdag-planleggeren genererer rettferdig spilletid og bytteplan på sekunder.</p>
+
+    <div class="lp-screenshot-device">
+      <div class="lp-screenshot-notch"></div>
+      <div class="lp-screenshot-inner">
+        <video autoplay loop muted playsinline poster="demo-poster.jpg" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">
+          <source src="demo-recording.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================
+       HOW IT WORKS
+  ========================= -->
+  <div class="lp-section lp-how">
+    <h2 class="lp-section-title">Kom i gang på 2 minutter</h2>
+
+    <div class="lp-steps">
+      <div class="lp-step">
+        <div class="lp-step-num">1</div>
+        <div>
+          <strong>Logg inn med Google</strong>
+          <p>Ingen nedlasting. Åpne nettleseren, logg inn og du er klar.</p>
+        </div>
+      </div>
+      <div class="lp-step">
+        <div class="lp-step-num">2</div>
+        <div>
+          <strong>Legg til spillerne</strong>
+          <p>Skriv inn navn og (valgfritt) nivå. Du trenger ikke mer.</p>
+        </div>
+      </div>
+      <div class="lp-step">
+        <div class="lp-step-num">3</div>
+        <div>
+          <strong>Planlegg kamp eller trening</strong>
+          <p>Velg format, merk hvem som er tilstede, og appen gjør resten.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================
+       PRICING (inline, SEO)
+  ========================= -->
+  <div id="publicLanding" class="public-landing">
+    <section id="landingPricing" class="landing-section lp-section" aria-label="Priser">
+      <h2 class="lp-section-title">Enkel prising</h2>
+      <p class="lp-section-sub">Prøv gratis i 7 dager. Ingen kortinfo nødvendig.</p>
+
+      <div class="lp-price-cards">
+        <div class="lp-price-card">
+          <div class="lp-pc-label">Måned</div>
+          <div class="lp-pc-amount">49 kr</div>
+          <div class="lp-pc-unit">/mnd</div>
+        </div>
+        <div class="lp-price-card lp-pc-popular">
+          <div class="lp-pc-label">År</div>
+          <div class="lp-pc-amount">299 kr</div>
+          <div class="lp-pc-unit">/år</div>
+          <div class="lp-popular-badge">Mest populær</div>
+        </div>
+        <div class="lp-price-card">
+          <div class="lp-pc-label">Livstid</div>
+          <div class="lp-pc-amount">799 kr</div>
+          <div class="lp-pc-unit">én gang</div>
+        </div>
+      </div>
+
+      <p class="landing-muted" style="text-align:center;">Betaling håndteres av Stripe. Avslutt når som helst.</p>
+    </section>
+
+    <!-- ========================
+         KLUBBAVTALE
+    ========================= -->
+    <section class="landing-section lp-section lp-club" aria-label="Klubbavtale">
+      <div class="lp-club-card">
+        <div class="lp-club-icon"><i class="fas fa-building"></i></div>
+        <div class="lp-club-content">
+          <h3>Klubbavtale</h3>
+          <p>Er du daglig leder eller ansvarlig for flere lag? Vi tilbyr klubbavtaler med volumrabatt, tilpasset klubbens størrelse.</p>
+          <p class="lp-club-how">Enkel aktivering: Klubben får en kode. Trenerne logger inn med Google og skriver inn koden. Ferdig.</p>
+          <button type="button" class="lp-club-btn" onclick="try{showClubContactForm();}catch(e){window.location='mailto:support@barnefotballtrener.no?subject=Klubbavtale';}">
+            <i class="fas fa-envelope"></i> Ta kontakt for klubbavtale
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================
+         FAQ
+    ========================= -->
+    <section class="landing-section lp-section" aria-label="Spørsmål og svar">
+      <h2 class="lp-section-title">Spørsmål og svar</h2>
+
+      <details class="landing-faq">
+        <summary>Kan jeg avslutte når som helst?</summary>
+        <p>Ja. Du kan avslutte selv i appen. Du beholder tilgang ut perioden du har betalt for.</p>
+      </details>
+
+      <details class="landing-faq">
+        <summary>Fungerer dette på iPhone og Android?</summary>
+        <p>Ja. Appen er laget for mobil nettleser og kan brukes som PWA (legg til på hjem-skjerm).</p>
+      </details>
+
+      <details class="landing-faq">
+        <summary>Hva med personvern og data om barn?</summary>
+        <p>Barnefotballtrener er laget for voksne trenere. Spillerdata lagres kryptert i skyen. Vi anbefaler at du kun bruker fornavn. Appen samler ikke inn sporingscookies eller annonsedata.</p>
+        <p>Les mer i <a href="/privacy.html">personvernerklæringen</a>.</p>
+      </details>
+
+      <details class="landing-faq">
+        <summary>Hvordan får jeg hjelp?</summary>
+        <p>Send e-post til <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.</p>
+      </details>
+
+      <details class="landing-faq">
+        <summary>Kan hele klubben bruke appen?</summary>
+        <p>Ja. Med klubbavtale kan alle trenere i klubben logge inn med egen Google-konto og en felles klubbkode. Daglig leder tar kontakt for pris.</p>
+      </details>
+    </section>
+
+    <!-- Trust signals -->
+    <section class="landing-trust" aria-label="Trygghet">
+      <p class="landing-trust-note">Trygt for klubber: betaling via Stripe, og abonnent kan avslutte selv. Ingen annonser eller sporingspiksler.</p>
+      <div class="trust-item"><i class="fas fa-credit-card" aria-hidden="true"></i><span>Betaling via Stripe</span></div>
+      <div class="trust-item"><i class="fas fa-sliders" aria-hidden="true"></i><span>Administrer i appen</span></div>
+      <div class="trust-item"><i class="fas fa-flag" aria-hidden="true"></i><span>Norsk</span></div>
+    </section>
+
+    <!-- SEO chips -->
+    <div class="landing-chips" aria-label="Nøkkelfunksjoner">
+      <span class="landing-chip">Spilletid-generator</span>
+      <span class="landing-chip">Bytteplan</span>
+      <span class="landing-chip">Treningsgrupper</span>
+      <span class="landing-chip">Jevne lag</span>
+      <span class="landing-chip">Konkurranser</span>
+      <span class="landing-chip">Liga</span>
+      <span class="landing-chip">Treningsøkt-bygger</span>
+      <span class="landing-chip">Spilletid barnefotball</span>
+      <span class="landing-chip">Lik spilletid fotball</span>
+    </div>
+
+    <nav class="landing-footer-links" aria-label="Lenker">
+      <a href="/privacy.html">Personvern</a>
+      <span class="dot" aria-hidden="true">•</span>
+      <a href="/terms.html">Vilkår</a>
+      <span class="dot" aria-hidden="true">•</span>
+      <a href="mailto:support@barnefotballtrener.no">Kontakt</a>
+    </nav>
+  </div>
+
+  <!-- Magic link (hidden in prod, shown on debug hosts) -->
+  <div id="magicLinkSection" class="magic-link-section" aria-label="Testinnlogging">
+    <div class="divider" style="margin: 14px 0; text-align:center; opacity:.75;">
+      <span style="background: #fff; padding: 0 10px;">eller</span>
+    </div>
+    <input id="magicLinkEmail" type="email" inputmode="email" autocomplete="email" placeholder="E-post (Hotmail, iCloud, osv.)" class="login-input" />
+    <button id="magicLinkBtn" class="login-btn" type="button">Send innloggingslenke</button>
+    <p id="magicLinkHint" class="small-text" style="margin-top:10px; opacity:.8; text-align:center;">
+      Magic link er kun tilgjengelig i testmiljø (staging/localhost). I produksjon brukes Google-innlogging.
+    </p>
+  </div>
+
+  <!-- Legal -->
+  <p class="small-text" style="margin-top: 20px; font-size: 0.8em; opacity: 0.7; text-align: center; line-height: 1.4;">
+    Ved å logge inn godtar du våre 
+    <a href="/terms.html" style="color: #0b5bd3; text-decoration: underline;">vilkår</a> og 
+    <a href="/privacy.html" style="color: #0b5bd3; text-decoration: underline;">personvernerklæring</a>
+  </p>
+
+</div>
   </div>
 
 <!-- PRICING PAGE -->
@@ -1142,7 +1422,6 @@
 <script src="auth.js"></script>
 <script src="error-logger.js"></script>
 <script src="subscription.js"></script>
-<script src="club.js"></script>
 <script src="auth-ui.js"></script>
 <script src="pricing.js"></script>
 <script src="grouping.js"></script>
