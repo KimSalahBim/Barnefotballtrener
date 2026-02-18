@@ -164,7 +164,7 @@
         </div>
         <div style="display:flex; gap:8px; align-items:stretch;">
           <input
-            id="clubCodeInput" type="text" placeholder="F.eks. STEINKJER2026"
+            id="clubCodeInput" type="text" placeholder="SKRIV INN KODE"
             autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="50"
             style="
               flex:1; padding:12px 16px; border:2px solid #e0e0e0; border-radius:12px;
