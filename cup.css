@@ -1444,18 +1444,27 @@
   border-radius: 10px;
   padding: 8px;
   background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
+  overflow: hidden;
 }
 .cup-pitch-preview svg { width: 100%; height: auto; display: block; }
+.cup-pitch-preview-info {
+  font-size: 11px;
+  color: var(--cup-gray-500, #6b7280);
+  text-align: center;
+  margin-top: 5px;
+  font-weight: 500;
+}
 .cup-pitch-preview-label {
-  font-size: 6px;
+  font-size: 5.5px;
   font-weight: 700;
   fill: var(--cup-gray-700, #374151);
 }
 .cup-pitch-preview-name {
-  font-size: 4px;
+  font-size: 3.5px;
   fill: var(--cup-gray-500, #6b7280);
 }
-/* ── Klassematch-analyse (Fix C) ── */
+
+/* ── Klassematch-analyse ── */
 .cup-fit-bar {
   display: flex;
   align-items: baseline;
@@ -1468,65 +1477,25 @@
   border: 1px solid transparent;
   line-height: 1.4;
 }
-.cup-fit-good {
-  background: rgba(16,185,129,0.08);
-  border-color: rgba(16,185,129,0.25);
-  color: #065f46;
-}
-.cup-fit-ok {
-  background: rgba(37,99,235,0.06);
-  border-color: rgba(37,99,235,0.15);
-  color: #1e40af;
-}
-.cup-fit-suggest {
-  background: rgba(245,158,11,0.08);
-  border-color: rgba(245,158,11,0.3);
-  color: #92400e;
-}
-.cup-fit-warn {
-  background: rgba(245,158,11,0.08);
-  border-color: rgba(245,158,11,0.3);
-  color: #92400e;
-}
-.cup-fit-bad {
-  background: rgba(239,68,68,0.07);
-  border-color: rgba(239,68,68,0.25);
-  color: #991b1b;
-}
-.cup-fit-icon {
-  font-size: 13px;
-  flex-shrink: 0;
-}
-.cup-fit-main {
-  font-weight: 600;
-}
-.cup-fit-sub {
-  color: inherit;
-  opacity: 0.75;
-  font-weight: 400;
-}
-.cup-fit-sub::before {
-  content: '·';
-  margin-right: 6px;
-  opacity: 0.5;
-}
+.cup-fit-good  { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.25); color: #065f46; }
+.cup-fit-ok    { background: rgba(37,99,235,0.06);  border-color: rgba(37,99,235,0.15);  color: #1e40af; }
+.cup-fit-suggest { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3); color: #92400e; }
+.cup-fit-warn  { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3);  color: #92400e; }
+.cup-fit-bad   { background: rgba(239,68,68,0.07);  border-color: rgba(239,68,68,0.25);  color: #991b1b; }
+.cup-fit-icon  { font-size: 13px; flex-shrink: 0; }
+.cup-fit-main  { font-weight: 600; }
+.cup-fit-sub   { color: inherit; opacity: 0.8; font-weight: 400; }
+.cup-fit-sub::before { content: '·'; margin-right: 6px; opacity: 0.5; }
 .cup-fit-apply-btn {
   display: inline-block;
   background: rgba(0,0,0,0.08);
-  border: none;
-  border-radius: 5px;
-  padding: 2px 8px;
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  color: inherit;
-  transition: background 0.15s;
-  margin-left: 2px;
+  border: none; border-radius: 5px;
+  padding: 2px 8px; font-size: 11.5px; font-weight: 600;
+  cursor: pointer; color: inherit;
+  transition: background 0.15s; margin-left: 4px;
   vertical-align: middle;
 }
-.cup-fit-apply-btn:hover {
-  background: rgba(0,0,0,0.14);
-}
+.cup-fit-apply-btn:hover { background: rgba(0,0,0,0.15); }
 
 .cup-pitch-sublist {
   margin-top: 8px;

@@ -180,36 +180,122 @@
 
   var FORMAT_HIERARCHY = ['3v3', '5v5', '7v7', '9v9', '11v11'];
 
-  // Katalog over tillatte oppdelinger per fysisk banestørrelse
+  // Katalog over oppdelinger per fysisk banestørrelse.
+  // Hvert entry har:
+  //   subs          - array av virtuelle bane-formater (brukes av expandPitches + scheduler)
+  //   parallelCount - antall simultane kamper
+  //   coveragePct   - (sum sub-areal / fysisk areal) × 100
+  //   strips        - romlig layout: [{fmt, count}] fra topp til bunn
+  //                   count=1 stripe av sub-baner side om side
+  //                   count=N betyr N baner i rad (horisontalt)
+  //   group         - valgfri grupperingsoverskrift for UI
+  //
+  // Matematisk validert mot NFF-mål (med 2m sikkerhetssone mellom baner).
+  // 3×7v7 på 11v11: rotert (50m×30m) stablet = 50m×94m ≤ 64×100m ✓
+  // 6×5v5 på 11v11: 3+3 grid = 62m×64m ≤ 64×100m ✓
+  // 2×7v7+3×5v5: 62m×50m + 62m×32m = 62m×82m ≤ 64×100m ✓
   var PITCH_DIVISIONS = {
     '11v11': [
-      { label: 'Hel bane (11v11)',          subs: ['11v11'] },
-      { label: '2× 7v7',                    subs: ['7v7', '7v7'] },
-      { label: '2× 5v5',                    subs: ['5v5', '5v5'] },
-      { label: '3× 5v5',                    subs: ['5v5', '5v5', '5v5'] },
-      { label: '1× 7v7 + 1× 5v5',           subs: ['7v7', '5v5'] },
-      { label: '4× 3v3',                    subs: ['3v3', '3v3', '3v3', '3v3'] },
-      { label: '2× 5v5 + 2× 3v3',           subs: ['5v5', '5v5', '3v3', '3v3'] },
-      { label: '1× 7v7 + 2× 3v3',           subs: ['7v7', '3v3', '3v3'] },
-      { label: '1× 9v9 + 1× 5v5',           subs: ['9v9', '5v5'] },
+      // ── Hel bane ──────────────────────────────────────────────
+      { label: 'Hel bane (11v11)',
+        subs: ['11v11'], parallelCount: 1, coveragePct: 100,
+        strips: [{ fmt: '11v11', count: 1 }], group: 'Hel bane' },
+
+      // ── 2 parallelle ──────────────────────────────────────────
+      { label: '2× 7v7',
+        subs: ['7v7','7v7'], parallelCount: 2, coveragePct: 47,
+        strips: [{ fmt: '7v7', count: 2 }], group: '2 parallelle' },
+
+      // ── 3 parallelle ──────────────────────────────────────────
+      { label: '3× 7v7',
+        subs: ['7v7','7v7','7v7'], parallelCount: 3, coveragePct: 70,
+        strips: [{ fmt: '7v7', count: 3, rotated: true }], group: '3 parallelle' },
+      { label: '3× 5v5',
+        subs: ['5v5','5v5','5v5'], parallelCount: 3, coveragePct: 28,
+        strips: [{ fmt: '5v5', count: 3 }], group: '3 parallelle' },
+      { label: '1× 9v9 + 2× 5v5',
+        subs: ['9v9','5v5','5v5'], parallelCount: 3, coveragePct: 62,
+        strips: [{ fmt: '9v9', count: 1 }, { fmt: '5v5', count: 2 }], group: '3 parallelle' },
+
+      // ── 4 parallelle ──────────────────────────────────────────
+      { label: '4× 5v5',
+        subs: ['5v5','5v5','5v5','5v5'], parallelCount: 4, coveragePct: 38,
+        strips: [{ fmt: '5v5', count: 2 }, { fmt: '5v5', count: 2 }], group: '4 parallelle' },
+      { label: '2× 7v7 + 2× 5v5',
+        subs: ['7v7','7v7','5v5','5v5'], parallelCount: 4, coveragePct: 66,
+        strips: [{ fmt: '7v7', count: 2 }, { fmt: '5v5', count: 2 }], group: '4 parallelle' },
+      { label: '3× 5v5 + 3× 3v3',
+        subs: ['5v5','5v5','5v5','3v3','3v3','3v3'], parallelCount: 6, coveragePct: 46,
+        strips: [{ fmt: '5v5', count: 3 }, { fmt: '3v3', count: 3 }], group: '6 parallelle' },
+      { label: '1× 9v9 + 3× 5v5',
+        subs: ['9v9','5v5','5v5','5v5'], parallelCount: 4, coveragePct: 72,
+        strips: [{ fmt: '9v9', count: 1 }, { fmt: '5v5', count: 3 }], group: '4 parallelle' },
+      { label: '2× 7v7 + 3× 3v3',
+        subs: ['7v7','7v7','3v3','3v3','3v3'], parallelCount: 5, coveragePct: 64,
+        strips: [{ fmt: '7v7', count: 2 }, { fmt: '3v3', count: 3 }], group: '5 parallelle' },
+
+      // ── 5 parallelle ──────────────────────────────────────────
+      { label: '2× 7v7 + 3× 5v5',
+        subs: ['7v7','7v7','5v5','5v5','5v5'], parallelCount: 5, coveragePct: 75,
+        strips: [{ fmt: '7v7', count: 2 }, { fmt: '5v5', count: 3 }], group: '5 parallelle' },
+      { label: '5× 5v5',
+        subs: ['5v5','5v5','5v5','5v5','5v5'], parallelCount: 5, coveragePct: 47,
+        strips: [{ fmt: '5v5', count: 3 }, { fmt: '5v5', count: 2 }], group: '5 parallelle' },
+
+      // ── 6 parallelle ──────────────────────────────────────────
+      { label: '6× 5v5',
+        subs: ['5v5','5v5','5v5','5v5','5v5','5v5'], parallelCount: 6, coveragePct: 56,
+        strips: [{ fmt: '5v5', count: 3 }, { fmt: '5v5', count: 3 }], group: '6 parallelle' },
+      { label: '4× 3v3',
+        subs: ['3v3','3v3','3v3','3v3'], parallelCount: 4, coveragePct: 23,
+        strips: [{ fmt: '3v3', count: 2 }, { fmt: '3v3', count: 2 }], group: '4 parallelle' },
+      { label: '8× 3v3',
+        subs: ['3v3','3v3','3v3','3v3','3v3','3v3','3v3','3v3'], parallelCount: 8, coveragePct: 47,
+        strips: [{ fmt: '3v3', count: 4 }, { fmt: '3v3', count: 4 }], group: '8 parallelle' },
     ],
     '9v9': [
-      { label: 'Hel bane (9v9)',            subs: ['9v9'] },
-      { label: '2× 5v5',                    subs: ['5v5', '5v5'] },
-      { label: '1× 5v5 + 2× 3v3',           subs: ['5v5', '3v3', '3v3'] },
-      { label: '4× 3v3',                    subs: ['3v3', '3v3', '3v3', '3v3'] },
+      { label: 'Hel bane (9v9)',
+        subs: ['9v9'], parallelCount: 1, coveragePct: 100,
+        strips: [{ fmt: '9v9', count: 1 }], group: 'Hel bane' },
+      { label: '2× 5v5',
+        subs: ['5v5','5v5'], parallelCount: 2, coveragePct: 43,
+        strips: [{ fmt: '5v5', count: 2 }], group: '2 parallelle' },
+      { label: '4× 5v5',
+        subs: ['5v5','5v5','5v5','5v5'], parallelCount: 4, coveragePct: 86,
+        strips: [{ fmt: '5v5', count: 2 }, { fmt: '5v5', count: 2 }], group: '4 parallelle' },
+      { label: '2× 3v3',
+        subs: ['3v3','3v3'], parallelCount: 2, coveragePct: 27,
+        strips: [{ fmt: '3v3', count: 2 }], group: '2 parallelle' },
+      { label: '4× 3v3',
+        subs: ['3v3','3v3','3v3','3v3'], parallelCount: 4, coveragePct: 54,
+        strips: [{ fmt: '3v3', count: 2 }, { fmt: '3v3', count: 2 }], group: '4 parallelle' },
     ],
     '7v7': [
-      { label: 'Hel bane (7v7)',            subs: ['7v7'] },
-      { label: '2× 5v5',                    subs: ['5v5', '5v5'] },
-      { label: '2× 3v3',                    subs: ['3v3', '3v3'] },
+      { label: 'Hel bane (7v7)',
+        subs: ['7v7'], parallelCount: 1, coveragePct: 100,
+        strips: [{ fmt: '7v7', count: 1 }], group: 'Hel bane' },
+      { label: '2× 5v5',
+        subs: ['5v5','5v5'], parallelCount: 2, coveragePct: 80,
+        strips: [{ fmt: '5v5', count: 2, rotated: true }], group: '2 parallelle' },
+      { label: '2× 3v3',
+        subs: ['3v3','3v3'], parallelCount: 2, coveragePct: 50,
+        strips: [{ fmt: '3v3', count: 2 }], group: '2 parallelle' },
+      { label: '3× 3v3',
+        subs: ['3v3','3v3','3v3'], parallelCount: 3, coveragePct: 75,
+        strips: [{ fmt: '3v3', count: 3, rotated: true }], group: '3 parallelle' },
     ],
     '5v5': [
-      { label: 'Hel bane (5v5)',            subs: ['5v5'] },
-      { label: '2× 3v3',                    subs: ['3v3', '3v3'] },
+      { label: 'Hel bane (5v5)',
+        subs: ['5v5'], parallelCount: 1, coveragePct: 100,
+        strips: [{ fmt: '5v5', count: 1 }], group: 'Hel bane' },
+      { label: '2× 3v3',
+        subs: ['3v3','3v3'], parallelCount: 2, coveragePct: 75,
+        strips: [{ fmt: '3v3', count: 2 }], group: '2 parallelle' },
     ],
     '3v3': [
-      { label: 'Hel bane (3v3)',            subs: ['3v3'] },
+      { label: 'Hel bane (3v3)',
+        subs: ['3v3'], parallelCount: 1, coveragePct: 100,
+        strips: [{ fmt: '3v3', count: 1 }], group: 'Hel bane' },
     ],
   };
 
@@ -420,10 +506,6 @@
       if (!cls.allowedDayIds) cls.allowedDayIds = null;
       if (cls.maxMatchesPerTeamPerDay === undefined) cls.maxMatchesPerTeamPerDay = null;
       if (cls.usePooling === undefined) cls.usePooling = false;
-      // Bane-pinning: sett pinnedPitchId: null på eksisterende kamper
-      for (var mig = 0; mig < (cls.matches || []).length; mig++) {
-        if (cls.matches[mig].pinnedPitchId === undefined) cls.matches[mig].pinnedPitchId = null;
-      }
     }
 
     // Cup defaults
@@ -1171,7 +1253,6 @@
         start: null,
         end: null,
         locked: false,
-        pinnedPitchId: null,
         score: { home: null, away: null },
       });
     }
@@ -1352,74 +1433,6 @@
           giveUp: [],
           penalty: 0,
         });
-      }
-
-      // -----------------------------------------------------------------------
-      // PRE-PASS: Plasser pinnede kamper på sin valgte bane FØR greedy-loopen.
-      // Pinnede kamper fjernes fra pending og legges rett i occupied.
-      // Hvis pinnet bane ikke finnes eller er full, går kampen tilbake til pending.
-      // -----------------------------------------------------------------------
-      var pinWarnings = [];
-      for (var pci = 0; pci < classStates.length; pci++) {
-        var pst = classStates[pci];
-        var newPending = [];
-        for (var pmi = 0; pmi < pst.pending.length; pmi++) {
-          var pendM = pst.pending[pmi];
-          // Slå opp pinnedPitchId i det originale match-objektet
-          var origM = null;
-          for (var omx = 0; omx < (pst.cls.matches || []).length; omx++) {
-            if (pst.cls.matches[omx].id === pendM.id) { origM = pst.cls.matches[omx]; break; }
-          }
-          if (!origM || !origM.pinnedPitchId) { newPending.push(pendM); continue; }
-
-          var pinnedId = origM.pinnedPitchId;
-          // Finn slots som tilhører den pinnede banen
-          var pSlots = [];
-          for (var pss = 0; pss < pst.slots.length; pss++) {
-            if (pst.slots[pss].pitchId === pinnedId) pSlots.push(pst.slots[pss]);
-          }
-          if (pSlots.length === 0) {
-            // Pinnet bane-ID finnes ikke blant klassekompatible slots → fall through
-            pinWarnings.push('Pinnet bane finnes ikke/feil format for kamp i ' + pst.cls.name + '. Plasseres fritt.');
-            newPending.push(pendM);
-            continue;
-          }
-
-          // Prøv slots på pinnet bane i rekkefølge – respekter hard constraints
-          var found = null;
-          for (var psi2 = 0; psi2 < pSlots.length; psi2++) {
-            var sl = pSlots[psi2];
-            if (pitchBusy(occupied, sl.pitchId, sl.dayIndex, sl.start, sl.end)) continue;
-            if (teamBusy(occupied, pendM.homeId, sl.dayIndex, sl.start, sl.end)) continue;
-            if (teamBusy(occupied, pendM.awayId, sl.dayIndex, sl.start, sl.end)) continue;
-            if (!teamRestOk(occupied, pendM.homeId, sl.dayIndex, sl.start, sl.end, pst.minRest)) continue;
-            if (!teamRestOk(occupied, pendM.awayId, sl.dayIndex, sl.start, sl.end, pst.minRest)) continue;
-            found = sl;
-            break;
-          }
-
-          if (found) {
-            var pinnedPlaced = {
-              id: pendM.id, classId: pendM.classId, round: pendM.round,
-              homeId: pendM.homeId, awayId: pendM.awayId,
-              pitchId: found.pitchId, dayIndex: found.dayIndex,
-              start: found.start, end: found.end,
-              locked: false,
-              pinnedPitchId: pinnedId,
-              score: pendM.score || { home: null, away: null },
-            };
-            var kpin = pst.cls.id + '|' + pinnedPlaced.id;
-            if (!occKey[kpin]) {
-              occKey[kpin] = true;
-              occupied.push(pinnedPlaced);
-            }
-            // Ikke tilbake til pending – allerede plassert
-          } else {
-            pinWarnings.push('Ingen ledig slot på pinnet bane for kamp i ' + pst.cls.name + '. Plasseres fritt.');
-            newPending.push(pendM);
-          }
-        }
-        pst.pending = newPending;
       }
 
       var totalPenalty = 0;
@@ -1609,7 +1622,7 @@
       var score = totalPenalty + totalUnplaced * 50000 + fairnessPenalty * 2;
       if (score < bestScore) {
         bestScore = score;
-        best = { classResults: classResults, totalPenalty: totalPenalty, totalUnplaced: totalUnplaced, seed: seed, attempt: attempt, pinWarnings: pinWarnings };
+        best = { classResults: classResults, totalPenalty: totalPenalty, totalUnplaced: totalUnplaced, seed: seed, attempt: attempt };
       }
 
       if (totalUnplaced === 0 && totalPenalty === 0 && fairnessPenalty < 10) break;
@@ -1844,7 +1857,6 @@
           start: null,
           end: null,
           locked: false,
-          pinnedPitchId: null,
           score: { home: null, away: null },
         });
       }

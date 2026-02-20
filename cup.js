@@ -89,102 +89,53 @@ function pitchFormatWeight(fmt) {
 }
 
 // ============================================================
-// Klassematch-analyse for banedeling (Fix C)
+// Klassematch-analyse for banedeling
 // ============================================================
+const FORMAT_AREA = { '3v3': 375, '5v5': 600, '7v7': 1500, '9v9': 2790, '11v11': 6400 };
 
-// NFF-baserte areal i m² (middelverdi fra regelverk)
-const FORMAT_AREA = { '3v3': 375, '5v5': 600, '7v7': 1500, '9v9': 2750, '11v11': 7000 };
-
-/**
- * For en gitt oppdeling (subs-array), beregn:
- *  - utilPct:       arealprosent (sum sub-areal / fysisk areal)
- *  - matchCount:    antall klasser som kan spille på minst én delbane
- *  - matchNames:    navnene på de matchende klassene
- *  - parallelCount: antall klasser som kan kjøre SIMULTANT (begrenset av antall sub-baner per format)
- *
- * "Kompatibel" følger isFormatCompatible-logikken: classFormat <= subFormat
- */
 function calcDivisionFit(subs, physicalFormat, classes) {
-  // Arealprosent
   const physArea = FORMAT_AREA[physicalFormat] || 7000;
   const subArea  = subs.reduce((s, f) => s + (FORMAT_AREA[f] || 0), 0);
   const utilPct  = Math.round((subArea / physArea) * 100);
-
-  // Format-hierarki-index (lavere = mindre bane)
   const hier = (window.CupScheduler && window.CupScheduler.FORMAT_HIERARCHY)
-    ? window.CupScheduler.FORMAT_HIERARCHY
-    : ['3v3','5v5','7v7','9v9','11v11'];
+    ? window.CupScheduler.FORMAT_HIERARCHY : ['3v3','5v5','7v7','9v9','11v11'];
   function fmtIdx(f) { const i = hier.indexOf(f); return i >= 0 ? i : -1; }
 
-  // Tell tilgjengelige sub-baner per format-tier
-  const subSlots = {};  // format -> count of compatible sub-pitches
-  for (const s of subs) {
-    const si = fmtIdx(s);
-    if (si < 0) continue;
-    // En sub kan brukes av klasser med behov <= sub-format
-    for (let ni = 0; ni <= si; ni++) {
-      const f = hier[ni];
-      subSlots[f] = (subSlots[f] || 0) + 1;
-    }
-  }
+  const matchingClasses = (classes || []).filter(cls => {
+    const ci = fmtIdx(cls.playFormat);
+    return ci >= 0 && subs.some(s => fmtIdx(s) >= ci);
+  });
 
-  // For hver klasse: kan den matche minst én sub?
-  const matchingClasses = [];
-  for (const cls of (classes || [])) {
-    const pf = cls.playFormat;
-    if (!pf) continue;
-    const ci = fmtIdx(pf);
-    if (ci < 0) continue;
-    // Compatible if any sub has format >= class format
-    const hasCompatSub = subs.some(s => fmtIdx(s) >= ci);
-    if (hasCompatSub) matchingClasses.push(cls);
-  }
-
-  // Parallell-kapasitet: simuler greedy-tildeling av klasser til delbane-slots
-  // (én klasse per slot per runde — ikke eksakt, men godt nok for UX-hint)
+  // Greedy parallell-tildeling (best fit decreasing)
   const slotsRemaining = {};
-  for (const s of subs) { slotsRemaining[s] = (slotsRemaining[s] || 0) + 1; }
+  for (const s of subs) slotsRemaining[s] = (slotsRemaining[s] || 0) + 1;
   let parallelCount = 0;
-  // Sorter klasser etter størst format-behov først (viktigst å plassere)
   const sorted = matchingClasses.slice().sort((a, b) => fmtIdx(b.playFormat) - fmtIdx(a.playFormat));
   for (const cls of sorted) {
     const ci = fmtIdx(cls.playFormat);
-    // Finn minste kompatible sub (best fit)
-    let bestSub = null;
-    let bestSize = 999;
+    let bestSub = null, bestSize = 999;
     for (const s of Object.keys(slotsRemaining)) {
       if (slotsRemaining[s] <= 0) continue;
       const si = fmtIdx(s);
       if (si >= ci && si < bestSize) { bestSize = si; bestSub = s; }
     }
-    if (bestSub) {
-      slotsRemaining[bestSub]--;
-      parallelCount++;
-    }
+    if (bestSub) { slotsRemaining[bestSub]--; parallelCount++; }
   }
 
   return {
-    utilPct,
-    matchCount: matchingClasses.length,
+    utilPct, matchCount: matchingClasses.length,
     matchNames: matchingClasses.map(c => c.name),
-    parallelCount,
-    totalClasses: (classes || []).length,
+    parallelCount, totalClasses: (classes || []).length,
   };
 }
 
-/**
- * Finn beste oppdeling for en fysisk bane gitt registererte klasser.
- * Returnerer catalog-indeks for beste fit, eller -1 hvis hel bane er best.
- */
 function findBestDivisionIdx(physicalFormat, classes, catalog) {
   if (!classes || classes.length === 0) return -1;
-  let bestIdx = -1;
-  let bestScore = -1;
+  let bestIdx = -1, bestScore = -1;
   for (let i = 0; i < catalog.length; i++) {
     const subs = catalog[i].subs;
-    if (subs.length === 1 && subs[0] === physicalFormat) continue; // skip hel bane
+    if (subs.length === 1 && subs[0] === physicalFormat) continue;
     const fit = calcDivisionFit(subs, physicalFormat, classes);
-    // Score: parallel capacity er primærmål, util er tiebreaker
     const score = fit.parallelCount * 1000 + fit.utilPct;
     if (score > bestScore) { bestScore = score; bestIdx = i; }
   }
@@ -228,87 +179,113 @@ function buildPitchPreviewSvg(p) {
   const subFormats = getCurrentSubFormats(p);
   const n = subFormats.length;
 
-  // Don't show preview for whole pitch (no division)
   if (n <= 1) return '';
 
-  const names = [];
-  if (Array.isArray(p.subPitches) && p.subPitches.length > 0) {
-    for (let i = 0; i < p.subPitches.length; i++) {
-      names.push(p.subPitches[i].name || autoSubPitchName(p.name, i));
-    }
-  } else {
-    names.push(p.name || 'Bane');
+  // NFF-dimensjoner (bredde × lengde, meter)
+  const FMT_DIMS = { '3v3':[15,25], '5v5':[20,30], '7v7':[30,50], '9v9':[45,62], '11v11':[64,100] };
+  const COLORS   = ['#4ade80','#60a5fa','#f59e0b','#f472b6','#a78bfa','#34d399','#fb923c','#e879f9'];
+  const GAP_M    = 2; // meter mellom baner (NFF-margin)
+
+  // Finn catalog-entry for å få strips-layout
+  const catalog = CS && CS.PITCH_DIVISIONS && CS.PITCH_DIVISIONS[pf] ? CS.PITCH_DIVISIONS[pf] : [];
+  let entry = null;
+  for (const e of catalog) {
+    if (e.subs && e.subs.length === subFormats.length &&
+        e.subs.every((f, i) => f === subFormats[i])) { entry = e; break; }
   }
 
-  // Color palette for sub-pitches
-  const colors = ['#4ade80', '#60a5fa', '#f59e0b', '#f472b6', '#a78bfa', '#34d399'];
+  // Bygg romlig layout fra strips
+  const strips = entry && entry.strips ? entry.strips : null;
+  const physW = FMT_DIMS[pf] ? FMT_DIMS[pf][0] : 64;
+  const physL = FMT_DIMS[pf] ? FMT_DIMS[pf][1] : 100;
 
-  function svgRect(x, y, w, h, label, format, name, colorIdx) {
-    const color = colors[colorIdx % colors.length];
-    const shortName = name.length > 14 ? name.slice(0, 14) + '\u2026' : name;
+  // SVG canvas: 240×160 inkl. padding 6px
+  const PAD = 6, CVW = 252, CVH = 168;
+  const scaleX = (CVW - 2*PAD) / physW;
+  const scaleY = (CVH - 2*PAD) / physL;
+
+  const names = (Array.isArray(p.subPitches) && p.subPitches.length > 0)
+    ? p.subPitches.map((sp, i) => sp.name || autoSubPitchName(p.name, i))
+    : Array.from({ length: n }, (_, i) => autoSubPitchName(p.name, i));
+
+  let subIdx = 0;
+  const rects = [];
+
+  if (strips) {
+    // Strips-basert layout: beregn y-posisjon for hvert strip
+    let cursorM = 0;
+    for (const strip of strips) {
+      const [sw, sl] = FMT_DIMS[strip.fmt] || [20, 30];
+      const rotated  = !!strip.rotated;
+      const bW = rotated ? sl : sw;   // meter per bane horisontalt
+      const bL = rotated ? sw : sl;   // meter per bane vertikalt
+      const cnt = strip.count;
+
+      for (let ci = 0; ci < cnt; ci++) {
+        const mx = ci * (bW + GAP_M);
+        const my = cursorM;
+        rects.push({
+          x: PAD + mx * scaleX,
+          y: PAD + my * scaleY,
+          w: bW * scaleX,
+          h: bL * scaleY,
+          fmt: strip.fmt,
+          name: names[subIdx] || '',
+          colorIdx: subIdx,
+        });
+        subIdx++;
+      }
+      cursorM += bL + GAP_M;
+    }
+  } else {
+    // Fallback: enkel grid
+    const cols = Math.ceil(Math.sqrt(n));
+    const [bW, bL] = FMT_DIMS[subFormats[0]] || [20, 30];
+    for (let i = 0; i < n; i++) {
+      const c = i % cols, r = Math.floor(i / cols);
+      rects.push({
+        x: PAD + c * (bW + GAP_M) * scaleX,
+        y: PAD + r * (bL + GAP_M) * scaleY,
+        w: bW * scaleX,
+        h: bL * scaleY,
+        fmt: subFormats[i] || pf,
+        name: names[i] || '',
+        colorIdx: i,
+      });
+    }
+  }
+
+  function svgRect(r) {
+    const color = COLORS[r.colorIdx % COLORS.length];
+    const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    const shortName = r.name.length > 14 ? r.name.slice(0, 13) + '…' : r.name;
+    const showFmt = r.h > 18;
+    const showName = r.h > 30 && r.w > 30;
     return `<g>
-      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="3" ry="3" fill="${color}" fill-opacity="0.25" stroke="${color}" stroke-width="1"/>
-      <text x="${(x + w/2).toFixed(1)}" y="${(y + h/2 - 2).toFixed(1)}" text-anchor="middle" class="cup-pitch-preview-label">${esc(format)}</text>
-      <text x="${(x + w/2).toFixed(1)}" y="${(y + h/2 + 6).toFixed(1)}" text-anchor="middle" class="cup-pitch-preview-name">${esc(shortName)}</text>
+      <rect x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" width="${r.w.toFixed(1)}" height="${r.h.toFixed(1)}" rx="2" ry="2"
+        fill="${color}" fill-opacity="0.28" stroke="${color}" stroke-width="1.2"/>
+      ${showFmt  ? `<text x="${cx.toFixed(1)}" y="${(cy + (showName ? -4 : 2)).toFixed(1)}" text-anchor="middle" class="cup-pitch-preview-label">${esc(r.fmt)}</text>` : ''}
+      ${showName ? `<text x="${cx.toFixed(1)}" y="${(cy + 7).toFixed(1)}" text-anchor="middle" class="cup-pitch-preview-name">${esc(shortName)}</text>` : ''}
     </g>`;
   }
 
-  function layout() {
-    const gap = 1.5;
-    if (n === 2) {
-      const w1 = pitchFormatWeight(subFormats[0]);
-      const w2 = pitchFormatWeight(subFormats[1]);
-      const left = (w1 / (w1 + w2)) * (100 - gap);
-      return [{ x: 0, y: 0, w: left, h: 60 }, { x: left + gap, y: 0, w: 100 - left - gap, h: 60 }];
-    }
+  const parts = rects.map(svgRect).join('');
 
-    if (n === 3) {
-      if (subFormats[0] === subFormats[1] && subFormats[1] === subFormats[2]) {
-        const cw = (100 - 2*gap) / 3;
-        return [{ x: 0, y: 0, w: cw, h: 60 }, { x: cw+gap, y: 0, w: cw, h: 60 }, { x: 2*(cw+gap), y: 0, w: cw, h: 60 }];
-      }
-      const weights = subFormats.map(pitchFormatWeight);
-      const maxW = Math.max(...weights);
-      const maxIdx = weights.indexOf(maxW);
-      const smallIdx = [0, 1, 2].filter(i => i !== maxIdx);
-      const bigWidth = (maxW / (maxW + weights[smallIdx[0]] + weights[smallIdx[1]])) * (100 - gap);
-      const coords = new Array(3);
-      coords[maxIdx] = { x: 0, y: 0, w: bigWidth, h: 60 };
-      coords[smallIdx[0]] = { x: bigWidth + gap, y: 0, w: 100 - bigWidth - gap, h: (60-gap)/2 };
-      coords[smallIdx[1]] = { x: bigWidth + gap, y: (60+gap)/2, w: 100 - bigWidth - gap, h: (60-gap)/2 };
-      return coords;
-    }
+  // Utnytt-tekst
+  const utilPct = entry ? entry.coveragePct : null;
+  const parallelCount = entry ? entry.parallelCount : n;
+  const infoText = utilPct != null
+    ? `${parallelCount} baner simultant · ${utilPct}% av ${pf}-banen`
+    : `${parallelCount} delbaner`;
 
-    if (n === 4 && subFormats[0] === subFormats[1] && subFormats[2] === subFormats[3] && subFormats[0] !== subFormats[2]) {
-      const topW = pitchFormatWeight(subFormats[0]) * 2;
-      const botW = pitchFormatWeight(subFormats[2]) * 2;
-      const topH = (topW / (topW + botW)) * (60 - gap);
-      const hw = (100 - gap) / 2;
-      return [
-        { x: 0, y: 0, w: hw, h: topH }, { x: hw+gap, y: 0, w: hw, h: topH },
-        { x: 0, y: topH+gap, w: hw, h: 60-topH-gap }, { x: hw+gap, y: topH+gap, w: hw, h: 60-topH-gap }
-      ];
-    }
-
-    // Default grid
-    const cols = Math.ceil(Math.sqrt(n));
-    const rows = Math.ceil(n / cols);
-    const cW = (100 - (cols-1)*gap) / cols;
-    const cH = (60 - (rows-1)*gap) / rows;
-    return Array.from({ length: n }, (_, i) => ({
-      x: (i % cols) * (cW + gap), y: Math.floor(i / cols) * (cH + gap), w: cW, h: cH
-    }));
-  }
-
-  const boxes = layout();
-  const parts = boxes.map((b, i) =>
-    svgRect(b.x, b.y, b.w, b.h, String.fromCharCode(65 + i), subFormats[i] || pf, names[i] || autoSubPitchName(p.name, i), i)
-  ).join('');
-
-  return `<div class="cup-pitch-preview"><svg viewBox="0 0 100 60" role="img" aria-label="Banedeling">
-    <rect x="0" y="0" width="100" height="60" rx="4" ry="4" fill="#166534" fill-opacity="0.08"/>
-    ${parts}
-  </svg></div>`;
+  return `<div class="cup-pitch-preview">
+    <svg viewBox="0 0 ${CVW} ${CVH}" role="img" aria-label="Banedeling" style="width:100%;max-width:${CVW}px;height:auto;display:block;">
+      <!-- Fysisk bane bakgrunn -->
+      <rect x="${PAD}" y="${PAD}" width="${((CVW-2*PAD)).toFixed(1)}" height="${((CVH-2*PAD)).toFixed(1)}" rx="4" fill="#166534" fill-opacity="0.08" stroke="#166534" stroke-width="0.8" stroke-opacity="0.2"/>
+      ${parts}
+    </svg>
+    <div class="cup-pitch-preview-info">${esc(infoText)}</div>
+  </div>`;
 }
 
 /**
@@ -650,7 +627,6 @@ function syncPoolsWithTeams(cls) {
   function renderPitches(cup) {
     const container = $('cupPitches');
     if (!container) return;
-
     const classes = cup.classes || [];
 
     container.innerHTML = (cup.pitches || []).map((p, pi) => {
@@ -663,32 +639,43 @@ function syncPoolsWithTeams(cls) {
         if (arraysEqual(catalog[di].subs, currentSubs)) { selectedIdx = di; break; }
       }
 
-      // Beregn fit for alle opsjoner og finn beste
-      const fits = catalog.map(d => calcDivisionFit(d.subs, pf, classes));
+      // Finn anbefalt oppdeling basert på klasser
       const bestCatalogIdx = findBestDivisionIdx(pf, classes, catalog);
 
-      // Dropdown-opsjoner med klassematch-suffix
-      let divisionOptions = catalog.map((d, idx) => {
-        const fit = fits[idx];
-        let suffix = '';
-        if (classes.length > 0) {
-          if (fit.parallelCount > 0) {
-            suffix = ` · ${fit.parallelCount} klasse${fit.parallelCount !== 1 ? 'r' : ''} parallelt`;
-          } else if (fit.matchCount > 0) {
-            suffix = ` · ${fit.matchCount} klasse${fit.matchCount !== 1 ? 'r' : ''} passer`;
-          } else {
-            suffix = ' · Ingen klasser trenger dette';
-          }
-        }
+      // Gruppert dropdown med optgroups
+      const groups = {};
+      catalog.forEach((d, idx) => {
+        const grp = d.group || 'Andre';
+        if (!groups[grp]) groups[grp] = [];
         const isBest = (idx === bestCatalogIdx && classes.length > 0);
-        return `<option value="${idx}" ${idx === selectedIdx ? 'selected' : ''}>${isBest ? '★ ' : ''}${esc(d.label)}${suffix}</option>`;
-      }).join('');
+        const parallel = d.parallelCount > 1 ? ` (${d.parallelCount}×)` : '';
+        const coverLbl = d.coveragePct < 100 && d.coveragePct > 0 ? ` · ${d.coveragePct}%` : '';
+        groups[grp].push(`<option value="${idx}" ${idx === selectedIdx ? 'selected' : ''}>${isBest ? '★ ' : ''}${esc(d.label)}${parallel}${coverLbl}</option>`);
+      });
 
+      const groupOrder = ['Hel bane', '2 parallelle', '3 parallelle', '4 parallelle', '5 parallelle', '6 parallelle', '8 parallelle', 'Andre'];
+      let divisionOptions = '';
       if (selectedIdx < 0) {
-        divisionOptions = `<option value="custom" selected>Egendefinert (${esc(divisionToHumanText(currentSubs))})</option>` + divisionOptions;
+        divisionOptions = `<option value="custom" selected>Egendefinert (${esc(divisionToHumanText(currentSubs))})</option>`;
+      }
+      for (const grp of groupOrder) {
+        if (!groups[grp] || groups[grp].length === 0) continue;
+        // Hel bane trenger ikke optgroup
+        if (grp === 'Hel bane') {
+          divisionOptions += groups[grp].join('');
+        } else {
+          divisionOptions += `<optgroup label="${esc(grp)}">${groups[grp].join('')}</optgroup>`;
+        }
+      }
+      // Eventuelle grupper som ikke er i groupOrder
+      for (const grp of Object.keys(groups)) {
+        if (!groupOrder.includes(grp)) {
+          divisionOptions += `<optgroup label="${esc(grp)}">${groups[grp].join('')}</optgroup>`;
+        }
       }
 
-      // Fit-analyse for valgt oppdeling
+      // Klassematch-analyse for valgt oppdeling
+      const fits = catalog.map(d => calcDivisionFit(d.subs, pf, classes));
       const currentFit = calcDivisionFit(currentSubs, pf, classes);
       const isWholePitch = (currentSubs.length === 1 && currentSubs[0] === pf);
       let fitBarHtml = '';
@@ -702,69 +689,48 @@ function syncPoolsWithTeams(cls) {
         let icon = '●';
         let mainMsg = '';
         let subMsg = '';
+        let applyBtn = '';
+
+        if ((barClass === 'cup-fit-suggest' || barClass === 'cup-fit-bad') && bestCatalogIdx >= 0) {
+          applyBtn = ` <button class="cup-fit-apply-btn" data-action="applyBestDivision" data-pitch="${pi}" data-division="${bestCatalogIdx}">Bruk anbefalt</button>`;
+        }
 
         if (isWholePitch) {
-          // Hel bane — vis om deling hadde hjulpet
           if (bestEntry && bestFit && bestFit.parallelCount >= 2) {
-            barClass = 'cup-fit-suggest';
-            icon = '💡';
+            barClass = 'cup-fit-suggest'; icon = '💡';
             mainMsg = `Deling kan gi <strong>${bestFit.parallelCount} klasser parallelt</strong>`;
             subMsg = `Anbefalt: ${esc(bestEntry.label)}`;
-          } else if (bestEntry && bestFit && bestFit.parallelCount === 1) {
-            barClass = 'cup-fit-ok';
-            icon = '✓';
-            mainMsg = 'Hel bane passer med dine klasser';
-            subMsg = `${Math.round((FORMAT_AREA[pf]||0)/1)?.toLocaleString()} m²`;
+            applyBtn = ` <button class="cup-fit-apply-btn" data-action="applyBestDivision" data-pitch="${pi}" data-division="${bestCatalogIdx}">Bruk anbefalt</button>`;
           } else {
-            barClass = 'cup-fit-ok';
-            icon = '✓';
-            mainMsg = 'Hel bane';
-            subMsg = '';
+            barClass = 'cup-fit-ok'; icon = '✓';
+            mainMsg = 'Hel bane passer med dine klasser';
           }
         } else {
-          // Delt bane
-          const utilColor = currentFit.utilPct < 25 ? 'cup-fit-warn' : currentFit.utilPct < 50 ? 'cup-fit-ok' : 'cup-fit-good';
+          const currentEntry = selectedIdx >= 0 ? catalog[selectedIdx] : null;
+          const parallelNow = currentEntry ? currentEntry.parallelCount : currentFit.parallelCount;
+          const coverNow = currentEntry ? currentEntry.coveragePct : null;
 
-          if (currentFit.parallelCount === 0 && currentFit.matchCount === 0) {
-            barClass = 'cup-fit-bad';
-            icon = '⚠';
+          if (currentFit.matchCount === 0) {
+            barClass = 'cup-fit-bad'; icon = '⚠';
             mainMsg = 'Ingen av dine klasser trenger dette formatet';
-            subMsg = bestEntry ? `Vurder heller: ${esc(bestEntry.label)}` : 'Legg til klasser som passer';
-          } else if (!isBestSelected && bestEntry && bestFit && bestFit.parallelCount > currentFit.parallelCount) {
-            barClass = 'cup-fit-suggest';
-            icon = '💡';
-            mainMsg = `<strong>${esc(bestEntry.label)}</strong> passer bedre`;
-            subMsg = `${bestFit.parallelCount} klasse${bestFit.parallelCount !== 1 ? 'r' : ''} parallelt vs. ${currentFit.parallelCount} nå · Arealprosent: ${currentFit.utilPct}%`;
-          } else if (currentFit.parallelCount >= 2) {
-            barClass = 'cup-fit-good';
-            icon = '✓';
-            mainMsg = `${currentFit.parallelCount} klasser kan kjøre parallelt`;
+            subMsg = bestEntry ? `Vurder heller: ${esc(bestEntry.label)}` : '';
+            if (bestCatalogIdx >= 0) applyBtn = ` <button class="cup-fit-apply-btn" data-action="applyBestDivision" data-pitch="${pi}" data-division="${bestCatalogIdx}">Bruk anbefalt</button>`;
+          } else if (!isBestSelected && bestFit && bestFit.parallelCount > parallelNow) {
+            barClass = 'cup-fit-suggest'; icon = '💡';
+            mainMsg = `<strong>${esc(bestEntry.label)}</strong> gir bedre utnyttelse`;
+            subMsg = `${bestFit.parallelCount} parallelle vs. ${parallelNow} nå`;
+            applyBtn = ` <button class="cup-fit-apply-btn" data-action="applyBestDivision" data-pitch="${pi}" data-division="${bestCatalogIdx}">Bruk anbefalt</button>`;
+          } else if (parallelNow >= 2) {
+            barClass = 'cup-fit-good'; icon = '✓';
+            mainMsg = `${parallelNow} simultane baner`;
+            if (coverNow != null) subMsg = `${coverNow}% av ${pf}-banen utnyttes`;
             if (currentFit.matchNames.length > 0 && currentFit.matchNames.length <= 4) {
-              subMsg = currentFit.matchNames.join(', ');
-            }
-            subMsg += (subMsg ? ' · ' : '') + `Arealprosent: ${currentFit.utilPct}%`;
-          } else if (currentFit.parallelCount === 1) {
-            barClass = currentFit.utilPct < 30 ? 'cup-fit-warn' : 'cup-fit-ok';
-            icon = currentFit.utilPct < 30 ? '⚠' : '✓';
-            mainMsg = currentFit.utilPct < 30
-              ? `Kun ${currentFit.utilPct}% av banen utnyttes`
-              : `Én klasse om gangen — ${currentFit.utilPct}% areal`;
-            if (!isBestSelected && bestEntry && bestFit && bestFit.parallelCount > 1) {
-              subMsg = `Anbefalt for parallell drift: ${esc(bestEntry.label)}`;
-              barClass = 'cup-fit-suggest';
-              icon = '💡';
+              subMsg += (subMsg ? ' · ' : '') + currentFit.matchNames.join(', ');
             }
           } else {
-            barClass = 'cup-fit-warn';
-            icon = '⚠';
-            mainMsg = `${currentFit.utilPct}% av banen utnyttes`;
-            subMsg = bestEntry ? `Vurder: ${esc(bestEntry.label)}` : '';
-          }
-
-          // Tillegg: om vi har forslag-knapp for quick-apply
-          if ((barClass === 'cup-fit-suggest' || barClass === 'cup-fit-bad') && bestCatalogIdx >= 0) {
-            const bestSubs = catalog[bestCatalogIdx].subs;
-            subMsg += ` <button class="cup-fit-apply-btn" data-action="applyBestDivision" data-pitch="${pi}" data-division="${bestCatalogIdx}">Bruk anbefalt</button>`;
+            barClass = 'cup-fit-ok'; icon = '✓';
+            mainMsg = `1 bane`;
+            if (coverNow != null) subMsg = `${coverNow}% av ${pf}-banen utnyttes`;
           }
         }
 
@@ -772,7 +738,7 @@ function syncPoolsWithTeams(cls) {
           <div class="cup-fit-bar ${barClass}">
             <span class="cup-fit-icon">${icon}</span>
             <span class="cup-fit-main">${mainMsg}</span>
-            ${subMsg ? `<span class="cup-fit-sub">${subMsg}</span>` : ''}
+            ${subMsg || applyBtn ? `<span class="cup-fit-sub">${subMsg}${applyBtn}</span>` : ''}
           </div>`;
       }
 
@@ -1347,7 +1313,6 @@ function syncPoolsWithTeams(cls) {
           const removed = cup.pitches[idx];
           const removedIds = getEffectivePitchIdsForPhysicalPitch(removed);
           cup.pitches.splice(idx, 1);
-          // Nullstill kamper som peker på fjernede (virtuelle) pitchIds
           if (removedIds.length > 0) {
             const idSet = new Set(removedIds);
             for (const cls of cup.classes) {
