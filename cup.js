@@ -88,6 +88,109 @@ function pitchFormatWeight(fmt) {
   return idx >= 0 ? (idx + 1) : 1;
 }
 
+// ============================================================
+// Klassematch-analyse for banedeling (Fix C)
+// ============================================================
+
+// NFF-baserte areal i m² (middelverdi fra regelverk)
+const FORMAT_AREA = { '3v3': 375, '5v5': 600, '7v7': 1500, '9v9': 2750, '11v11': 7000 };
+
+/**
+ * For en gitt oppdeling (subs-array), beregn:
+ *  - utilPct:       arealprosent (sum sub-areal / fysisk areal)
+ *  - matchCount:    antall klasser som kan spille på minst én delbane
+ *  - matchNames:    navnene på de matchende klassene
+ *  - parallelCount: antall klasser som kan kjøre SIMULTANT (begrenset av antall sub-baner per format)
+ *
+ * "Kompatibel" følger isFormatCompatible-logikken: classFormat <= subFormat
+ */
+function calcDivisionFit(subs, physicalFormat, classes) {
+  // Arealprosent
+  const physArea = FORMAT_AREA[physicalFormat] || 7000;
+  const subArea  = subs.reduce((s, f) => s + (FORMAT_AREA[f] || 0), 0);
+  const utilPct  = Math.round((subArea / physArea) * 100);
+
+  // Format-hierarki-index (lavere = mindre bane)
+  const hier = (window.CupScheduler && window.CupScheduler.FORMAT_HIERARCHY)
+    ? window.CupScheduler.FORMAT_HIERARCHY
+    : ['3v3','5v5','7v7','9v9','11v11'];
+  function fmtIdx(f) { const i = hier.indexOf(f); return i >= 0 ? i : -1; }
+
+  // Tell tilgjengelige sub-baner per format-tier
+  const subSlots = {};  // format -> count of compatible sub-pitches
+  for (const s of subs) {
+    const si = fmtIdx(s);
+    if (si < 0) continue;
+    // En sub kan brukes av klasser med behov <= sub-format
+    for (let ni = 0; ni <= si; ni++) {
+      const f = hier[ni];
+      subSlots[f] = (subSlots[f] || 0) + 1;
+    }
+  }
+
+  // For hver klasse: kan den matche minst én sub?
+  const matchingClasses = [];
+  for (const cls of (classes || [])) {
+    const pf = cls.playFormat;
+    if (!pf) continue;
+    const ci = fmtIdx(pf);
+    if (ci < 0) continue;
+    // Compatible if any sub has format >= class format
+    const hasCompatSub = subs.some(s => fmtIdx(s) >= ci);
+    if (hasCompatSub) matchingClasses.push(cls);
+  }
+
+  // Parallell-kapasitet: simuler greedy-tildeling av klasser til delbane-slots
+  // (én klasse per slot per runde — ikke eksakt, men godt nok for UX-hint)
+  const slotsRemaining = {};
+  for (const s of subs) { slotsRemaining[s] = (slotsRemaining[s] || 0) + 1; }
+  let parallelCount = 0;
+  // Sorter klasser etter størst format-behov først (viktigst å plassere)
+  const sorted = matchingClasses.slice().sort((a, b) => fmtIdx(b.playFormat) - fmtIdx(a.playFormat));
+  for (const cls of sorted) {
+    const ci = fmtIdx(cls.playFormat);
+    // Finn minste kompatible sub (best fit)
+    let bestSub = null;
+    let bestSize = 999;
+    for (const s of Object.keys(slotsRemaining)) {
+      if (slotsRemaining[s] <= 0) continue;
+      const si = fmtIdx(s);
+      if (si >= ci && si < bestSize) { bestSize = si; bestSub = s; }
+    }
+    if (bestSub) {
+      slotsRemaining[bestSub]--;
+      parallelCount++;
+    }
+  }
+
+  return {
+    utilPct,
+    matchCount: matchingClasses.length,
+    matchNames: matchingClasses.map(c => c.name),
+    parallelCount,
+    totalClasses: (classes || []).length,
+  };
+}
+
+/**
+ * Finn beste oppdeling for en fysisk bane gitt registererte klasser.
+ * Returnerer catalog-indeks for beste fit, eller -1 hvis hel bane er best.
+ */
+function findBestDivisionIdx(physicalFormat, classes, catalog) {
+  if (!classes || classes.length === 0) return -1;
+  let bestIdx = -1;
+  let bestScore = -1;
+  for (let i = 0; i < catalog.length; i++) {
+    const subs = catalog[i].subs;
+    if (subs.length === 1 && subs[0] === physicalFormat) continue; // skip hel bane
+    const fit = calcDivisionFit(subs, physicalFormat, classes);
+    // Score: parallel capacity er primærmål, util er tiebreaker
+    const score = fit.parallelCount * 1000 + fit.utilPct;
+    if (score > bestScore) { bestScore = score; bestIdx = i; }
+  }
+  return bestIdx;
+}
+
 function applyDivisionToPitch(p, subsFormats) {
   const pf = getPitchPhysicalFormat(p);
   const CS = window.CupScheduler;
@@ -548,6 +651,8 @@ function syncPoolsWithTeams(cls) {
     const container = $('cupPitches');
     if (!container) return;
 
+    const classes = cup.classes || [];
+
     container.innerHTML = (cup.pitches || []).map((p, pi) => {
       const pf = getPitchPhysicalFormat(p);
       const catalog = getPitchDivisionCatalog(pf);
@@ -558,11 +663,117 @@ function syncPoolsWithTeams(cls) {
         if (arraysEqual(catalog[di].subs, currentSubs)) { selectedIdx = di; break; }
       }
 
-      let divisionOptions = catalog.map((d, idx) =>
-        `<option value="${idx}" ${idx === selectedIdx ? 'selected' : ''}>${esc(d.label)}</option>`
-      ).join('');
+      // Beregn fit for alle opsjoner og finn beste
+      const fits = catalog.map(d => calcDivisionFit(d.subs, pf, classes));
+      const bestCatalogIdx = findBestDivisionIdx(pf, classes, catalog);
+
+      // Dropdown-opsjoner med klassematch-suffix
+      let divisionOptions = catalog.map((d, idx) => {
+        const fit = fits[idx];
+        let suffix = '';
+        if (classes.length > 0) {
+          if (fit.parallelCount > 0) {
+            suffix = ` · ${fit.parallelCount} klasse${fit.parallelCount !== 1 ? 'r' : ''} parallelt`;
+          } else if (fit.matchCount > 0) {
+            suffix = ` · ${fit.matchCount} klasse${fit.matchCount !== 1 ? 'r' : ''} passer`;
+          } else {
+            suffix = ' · Ingen klasser trenger dette';
+          }
+        }
+        const isBest = (idx === bestCatalogIdx && classes.length > 0);
+        return `<option value="${idx}" ${idx === selectedIdx ? 'selected' : ''}>${isBest ? '★ ' : ''}${esc(d.label)}${suffix}</option>`;
+      }).join('');
+
       if (selectedIdx < 0) {
         divisionOptions = `<option value="custom" selected>Egendefinert (${esc(divisionToHumanText(currentSubs))})</option>` + divisionOptions;
+      }
+
+      // Fit-analyse for valgt oppdeling
+      const currentFit = calcDivisionFit(currentSubs, pf, classes);
+      const isWholePitch = (currentSubs.length === 1 && currentSubs[0] === pf);
+      let fitBarHtml = '';
+
+      if (classes.length > 0) {
+        const isBestSelected = (selectedIdx === bestCatalogIdx);
+        const bestEntry = bestCatalogIdx >= 0 ? catalog[bestCatalogIdx] : null;
+        const bestFit = bestCatalogIdx >= 0 ? fits[bestCatalogIdx] : null;
+
+        let barClass = 'cup-fit-ok';
+        let icon = '●';
+        let mainMsg = '';
+        let subMsg = '';
+
+        if (isWholePitch) {
+          // Hel bane — vis om deling hadde hjulpet
+          if (bestEntry && bestFit && bestFit.parallelCount >= 2) {
+            barClass = 'cup-fit-suggest';
+            icon = '💡';
+            mainMsg = `Deling kan gi <strong>${bestFit.parallelCount} klasser parallelt</strong>`;
+            subMsg = `Anbefalt: ${esc(bestEntry.label)}`;
+          } else if (bestEntry && bestFit && bestFit.parallelCount === 1) {
+            barClass = 'cup-fit-ok';
+            icon = '✓';
+            mainMsg = 'Hel bane passer med dine klasser';
+            subMsg = `${Math.round((FORMAT_AREA[pf]||0)/1)?.toLocaleString()} m²`;
+          } else {
+            barClass = 'cup-fit-ok';
+            icon = '✓';
+            mainMsg = 'Hel bane';
+            subMsg = '';
+          }
+        } else {
+          // Delt bane
+          const utilColor = currentFit.utilPct < 25 ? 'cup-fit-warn' : currentFit.utilPct < 50 ? 'cup-fit-ok' : 'cup-fit-good';
+
+          if (currentFit.parallelCount === 0 && currentFit.matchCount === 0) {
+            barClass = 'cup-fit-bad';
+            icon = '⚠';
+            mainMsg = 'Ingen av dine klasser trenger dette formatet';
+            subMsg = bestEntry ? `Vurder heller: ${esc(bestEntry.label)}` : 'Legg til klasser som passer';
+          } else if (!isBestSelected && bestEntry && bestFit && bestFit.parallelCount > currentFit.parallelCount) {
+            barClass = 'cup-fit-suggest';
+            icon = '💡';
+            mainMsg = `<strong>${esc(bestEntry.label)}</strong> passer bedre`;
+            subMsg = `${bestFit.parallelCount} klasse${bestFit.parallelCount !== 1 ? 'r' : ''} parallelt vs. ${currentFit.parallelCount} nå · Arealprosent: ${currentFit.utilPct}%`;
+          } else if (currentFit.parallelCount >= 2) {
+            barClass = 'cup-fit-good';
+            icon = '✓';
+            mainMsg = `${currentFit.parallelCount} klasser kan kjøre parallelt`;
+            if (currentFit.matchNames.length > 0 && currentFit.matchNames.length <= 4) {
+              subMsg = currentFit.matchNames.join(', ');
+            }
+            subMsg += (subMsg ? ' · ' : '') + `Arealprosent: ${currentFit.utilPct}%`;
+          } else if (currentFit.parallelCount === 1) {
+            barClass = currentFit.utilPct < 30 ? 'cup-fit-warn' : 'cup-fit-ok';
+            icon = currentFit.utilPct < 30 ? '⚠' : '✓';
+            mainMsg = currentFit.utilPct < 30
+              ? `Kun ${currentFit.utilPct}% av banen utnyttes`
+              : `Én klasse om gangen — ${currentFit.utilPct}% areal`;
+            if (!isBestSelected && bestEntry && bestFit && bestFit.parallelCount > 1) {
+              subMsg = `Anbefalt for parallell drift: ${esc(bestEntry.label)}`;
+              barClass = 'cup-fit-suggest';
+              icon = '💡';
+            }
+          } else {
+            barClass = 'cup-fit-warn';
+            icon = '⚠';
+            mainMsg = `${currentFit.utilPct}% av banen utnyttes`;
+            subMsg = bestEntry ? `Vurder: ${esc(bestEntry.label)}` : '';
+          }
+
+          // Tillegg: om vi har forslag-knapp for quick-apply
+          if ((barClass === 'cup-fit-suggest' || barClass === 'cup-fit-bad') && bestCatalogIdx >= 0) {
+            const bestSubs = catalog[bestCatalogIdx].subs;
+            subMsg += ` <button class="cup-fit-apply-btn" data-action="applyBestDivision" data-pitch="${pi}" data-division="${bestCatalogIdx}">Bruk anbefalt</button>`;
+          }
+        }
+
+        fitBarHtml = `
+          <div class="cup-fit-bar ${barClass}">
+            <span class="cup-fit-icon">${icon}</span>
+            <span class="cup-fit-main">${mainMsg}</span>
+            ${subMsg ? `<span class="cup-fit-sub">${subMsg}</span>` : ''}
+          </div>`;
       }
 
       // Subpitch list
@@ -599,6 +810,7 @@ function syncPoolsWithTeams(cls) {
             </select>
           </div>
         </div>
+        ${fitBarHtml}
         ${buildPitchPreviewSvg(p)}
         <div class="cup-input-label" style="margin-top:10px;">Delbaner</div>
         ${subListHtml}
@@ -898,7 +1110,6 @@ function syncPoolsWithTeams(cls) {
     const away = cls?.teams.find(t => t.id === entry.awayId);
     const match = cls?.matches.find(m => m.id === entry.matchId);
     const locked = match?.locked || false;
-    const pinned = !!(match?.pinnedPitchId);
     const pm = pitchMap || buildPitchMap(cup);
     const pitch = pm[entry.pitchId] || null;
     const pool = (match?.poolId && cls?.pools) ? cls.pools.find(p => p.id === match.poolId) : null;
@@ -909,16 +1120,13 @@ function syncPoolsWithTeams(cls) {
     const matchNum = match?.matchNumber ? `<span class="cup-match-num">${match.matchNumber}</span>` : '';
 
     return `
-      <div class="cup-match-card ${locked ? 'is-locked' : ''} ${pinned ? 'is-pinned' : ''}" data-match-id="${entry.matchId}" data-class-id="${entry._classId}" style="border-left:3px solid ${color};">
+      <div class="cup-match-card ${locked ? 'is-locked' : ''}" data-match-id="${entry.matchId}" data-class-id="${entry._classId}" style="border-left:3px solid ${color};">
         ${matchNum}<span class="cup-match-time">${entry.startTime}</span>
         <span class="cup-match-teams">
           ${esc(home?.name || '?')}<span class="cup-match-vs"> vs </span>${esc(away?.name || '?')}
         </span>
         <span class="cup-match-class">${colorDot}${poolBadge}${esc(cls?.name || '')}</span>
-        <span class="cup-match-pitch-name ${pinned ? 'is-pinned-pitch' : ''}">${esc(pitch?.name || '')}</span>
-        <button class="cup-match-pin ${pinned ? 'is-pinned' : ''}" data-action="pinMatch" data-match-id="${entry.matchId}" data-class-id="${entry._classId}" title="${pinned ? 'Endre/fjern bane-pinning' : 'Pin kamp til bane'}">
-          <i class="fas fa-thumbtack"></i>
-        </button>
+        <span style="font-size:11px;color:var(--cup-gray-400);">${esc(pitch?.name || '')}</span>
         <button class="cup-match-lock ${locked ? 'is-locked' : ''}" data-action="toggleLock" data-match-id="${entry.matchId}" data-class-id="${entry._classId}" title="${locked ? 'Lås opp' : 'Lås kamp'}">
           <i class="fas fa-${locked ? 'lock' : 'lock-open'}"></i>
         </button>
@@ -1154,6 +1362,28 @@ function syncPoolsWithTeams(cls) {
           saveCup(cup); renderSetup(cup);
         }
       }
+      else if (action === 'applyBestDivision') {
+        const pi = Number(btn.dataset.pitch);
+        const divisionIdx = Number(btn.dataset.division);
+        const p = cup.pitches[pi];
+        if (!p) return;
+        const pf = getPitchPhysicalFormat(p);
+        const catalog = getPitchDivisionCatalog(pf);
+        const def = catalog[divisionIdx];
+        if (!def || !def.subs) return;
+        if (hasExistingSchedule(cup)) {
+          if (!confirm('Endring av banedeling nullstiller kampplasseringer. Fortsette?')) return;
+          for (const cls of cup.classes) {
+            for (const m of (cls.matches || [])) {
+              m.pitchId = null; m.start = null; m.end = null; m.dayIndex = null; m.locked = false;
+            }
+          }
+          markScheduleStale(cup, 'Banedeling endret');
+        }
+        applyDivisionToPitch(p, def.subs);
+        saveCup(cup); renderSetup(cup);
+        toast(`Byttet til: ${def.label}`, 'success');
+      }
       else if (action === 'addClass') {
         const nff = CS.getNffDefaults(10);
         const genderPrefix = 'G';
@@ -1278,34 +1508,6 @@ function syncPoolsWithTeams(cls) {
           match.locked = !match.locked;
           saveCup(cup);
           renderSchedule(cup);
-        }
-      }
-      else if (action === 'pinMatch') {
-        const matchId = btn.dataset.matchId;
-        const classId = btn.dataset.classId;
-        openPinModal(cup, matchId, classId);
-      }
-      else if (action === 'closePinModal') {
-        closePinModal();
-      }
-      else if (action === 'savePinModal') {
-        const matchId = btn.dataset.matchId;
-        const classId = btn.dataset.classId;
-        const cls = cup.classes.find(c => c.id === classId);
-        const match = cls?.matches.find(m => m.id === matchId);
-        if (match) {
-          const selected = document.querySelector('#cupPinModal input[name="cupPinnedPitch"]:checked');
-          const newPinnedId = selected ? (selected.value || null) : null;
-          const hadPin = !!match.pinnedPitchId;
-          match.pinnedPitchId = newPinnedId;
-          closePinModal();
-          saveCup(cup);
-          renderSchedule(cup);
-          if (newPinnedId) {
-            toast('Kamp pinnet til bane. Kjør "Optimaliser" for å flytte den dit.', 'info');
-          } else if (hadPin) {
-            toast('Bane-pinning fjernet.', 'success');
-          }
         }
       }
     });
@@ -1755,87 +1957,6 @@ main.addEventListener('change', e => handleCupField(e.target));
   }
 
   // ============================================================
-  // Bane-pinning modal
-  // ============================================================
-  function openPinModal(cup, matchId, classId) {
-    const cls = cup.classes.find(c => c.id === classId);
-    const match = cls?.matches.find(m => m.id === matchId);
-    if (!cls || !match) return;
-
-    const effectivePitches = getEffectivePitches(cup);
-    const currentPinned = match.pinnedPitchId || null;
-    const home = cls.teams.find(t => t.id === match.homeId);
-    const away = cls.teams.find(t => t.id === match.awayId);
-
-    let pitchOptions = `
-      <label class="cup-pin-option ${!currentPinned ? 'is-selected' : ''}">
-        <input type="radio" name="cupPinnedPitch" value="">
-        <span class="cup-pin-option-name">Ingen — scheduler velger fritt</span>
-      </label>`;
-
-    for (const p of effectivePitches) {
-      const compat = CS && typeof CS.isFormatCompatible === 'function'
-        ? CS.isFormatCompatible(p, cls.playFormat)
-        : true;
-      const sel = (currentPinned === p.id) ? 'is-selected' : '';
-      pitchOptions += `
-        <label class="cup-pin-option ${sel} ${!compat ? 'is-incompatible' : ''}" ${!compat ? 'title="Feil format for denne klassen"' : ''}>
-          <input type="radio" name="cupPinnedPitch" value="${esc(p.id)}" ${currentPinned === p.id ? 'checked' : ''} ${!compat ? 'disabled' : ''}>
-          <span class="cup-pin-option-name">${esc(p.name)}</span>
-          <span class="cup-pin-format-badge">${esc(p.maxFormat || '')}</span>
-          ${!compat ? '<span class="cup-pin-compat-warn">Feil format</span>' : ''}
-        </label>`;
-    }
-
-    const html = `
-      <div class="cup-modal-overlay" id="cupPinModal">
-        <div class="cup-modal cup-pin-modal">
-          <div class="cup-modal-header">
-            <span class="cup-modal-title"><i class="fas fa-thumbtack" style="margin-right:6px;"></i>Knytt kamp til bane</span>
-            <button class="cup-modal-close" data-action="closePinModal" aria-label="Lukk">×</button>
-          </div>
-          <div class="cup-modal-body">
-            <div class="cup-pin-match-info">
-              <div><span class="cup-pin-info-label">Kamp:</span> ${esc(home?.name || '?')} vs ${esc(away?.name || '?')}</div>
-              <div><span class="cup-pin-info-label">Klasse:</span> ${esc(cls.name)} · ${esc(cls.playFormat || '')}</div>
-            </div>
-            <div class="cup-pin-options-list">${pitchOptions}</div>
-          </div>
-          <div class="cup-modal-footer">
-            <button class="cup-btn cup-btn-ghost" data-action="closePinModal">Avbryt</button>
-            <button class="cup-btn cup-btn-primary" data-action="savePinModal" data-match-id="${matchId}" data-class-id="${classId}">Lagre</button>
-          </div>
-        </div>
-      </div>`;
-
-    document.body.insertAdjacentHTML('beforeend', html);
-
-    // Oppdater valgt stil ved klikk
-    const overlay = document.getElementById('cupPinModal');
-    overlay.querySelectorAll('input[name="cupPinnedPitch"]').forEach(radio => {
-      radio.addEventListener('change', () => {
-        overlay.querySelectorAll('.cup-pin-option').forEach(l => l.classList.remove('is-selected'));
-        radio.closest('.cup-pin-option')?.classList.add('is-selected');
-      });
-    });
-
-    // Lukk ved klikk utenfor modal
-    overlay.addEventListener('click', function(e) {
-      if (e.target === overlay) closePinModal();
-    });
-
-    // Sett riktig radio checked
-    const radioToCheck = !currentPinned
-      ? overlay.querySelector('input[value=""]')
-      : overlay.querySelector(`input[value="${currentPinned}"]`);
-    if (radioToCheck) radioToCheck.checked = true;
-  }
-
-  function closePinModal() {
-    document.getElementById('cupPinModal')?.remove();
-  }
-
-  // ============================================================
   // Generate schedule
   // ============================================================
   function generateSchedule(newSeed) {
@@ -1910,11 +2031,6 @@ main.addEventListener('change', e => handleCupField(e.target));
       toast(`${totalUnplaced} kamp(er) kunne ikke plasseres. Sjekk baner/tider.`, 'warning');
     } else {
       toast('Kampprogram generert!', 'success');
-    }
-    // Vis eventuelle pinning-advarsler
-    const pinWarns = result?.pinWarnings || [];
-    if (pinWarns.length > 0) {
-      setTimeout(() => toast(`📌 Pinning: ${pinWarns[0]}${pinWarns.length > 1 ? ' (+' + (pinWarns.length - 1) + ' til)' : ''}`, 'warning'), 800);
     }
   }
 
@@ -1996,10 +2112,6 @@ main.addEventListener('change', e => handleCupField(e.target));
       toast(`${totalUnplaced} kamp(er) kunne ikke plasseres. Sjekk baner/tider.`, 'warning');
     } else {
       toast('Kampprogram optimalisert!', 'success');
-    }
-    const pinWarns2 = result?.pinWarnings || [];
-    if (pinWarns2.length > 0) {
-      setTimeout(() => toast(`📌 Pinning: ${pinWarns2[0]}${pinWarns2.length > 1 ? ' (+' + (pinWarns2.length - 1) + ' til)' : ''}`, 'warning'), 800);
     }
   }
 
