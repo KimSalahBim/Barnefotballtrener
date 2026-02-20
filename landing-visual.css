@@ -148,18 +148,12 @@
    SCREEN STYLES: Scale wrapper
    Uses REAL app CSS classes (kd-*, results-card, etc.)
    scaled down to fit phone mockup.
-   
-   When you change kampdag.css or style.css,
-   these mockups update automatically.
    ------------------------------------------- */
 
-/* Scale wrapper: renders app HTML at 340px then shrinks to fit phone */
 .lp-screen-scaled {
   overflow: hidden;
-  background: #0f172a; /* match kd-timeline-chart bg */
+  background: #0f172a;
   position: relative;
-  /* Aspect ratio makes it look like a real phone screen (9:16 portrait) */
-  /* Inner width 152px × 16/9 = 270px (close to real phone proportions) */
   aspect-ratio: 9 / 16;
 }
 
@@ -173,18 +167,15 @@
   position: absolute;
   top: 0;
   left: 0;
-  /* Desktop: phone is 160px, padding eats 8px → 152px inner → scale 0.447 */
   transform: scale(0.447);
 }
 
-/* Mobile: phone is 148px, padding eats 8px → 140px inner → scale 0.412 */
 @media (max-width: 520px) {
   .lp-scale-wrap {
     transform: scale(0.412);
   }
 }
 
-/* Neutralise kd-timeline-chart margin/shadow inside phone (already has frame) */
 .lp-phone .kd-timeline-chart {
   margin-bottom: 0;
   border: none;
@@ -192,19 +183,16 @@
   border-radius: 0;
 }
 
-/* Neutralise kd-dark-output border-radius/shadow inside phone */
 .lp-phone .kd-dark-output {
   border-radius: 0;
   box-shadow: none;
   margin-bottom: 0;
 }
 
-/* Neutralise kd-pitch-card margin inside phone */
 .lp-phone .kd-pitch-card {
   margin-bottom: 0;
 }
 
-/* Desktop fallback for results-card (original only in @media max-width:768px) */
 .lp-phone .results-card {
   background: var(--gray-50, #f8f9fa);
   border: 1px solid var(--gray-200, #e2e8f0);
@@ -237,7 +225,7 @@
    ------------------------------------------- */
 .lp-section {
   padding: 28px 24px;
-  text-align: left;  /* Override password-box text-align: center */
+  text-align: left;
 }
 
 .lp-section + .lp-section {

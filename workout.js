@@ -53,9 +53,9 @@
     // ── DRIKKEPAUSE (alltid øverst, ingen info) ──
     { key: 'drink', label: 'Drikkepause', defaultMin: 2, category: 'special' },
 
-    // ═══════════════════════════
-    // 🏃 OPPVARMING
-    // ═══════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ðŸƒ OPPVARMING
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: 'tag', label: 'Lek / Sisten', defaultMin: 8, category: 'oppvarming',
       ages: ['6-7','8-9','10-12'], players: '6-20',
@@ -148,9 +148,9 @@
       ]}
     },
 
-    // ═══════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // ⚽ TEKNIKK
-    // ═══════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: 'driving', label: 'Føring av ball', defaultMin: 10, category: 'teknikk',
       ages: ['6-7','8-9','10-12'], players: '4-16',
@@ -361,9 +361,9 @@
       ]}
     },
 
-    // ═══════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // 🎯 AVSLUTNING
-    // ═══════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: 'shot', label: 'Skudd på mål', defaultMin: 12, category: 'avslutning',
       ages: ['6-7','8-9','10-12'], players: '4-14',
@@ -425,9 +425,9 @@
       ]}
     },
 
-    // ═══════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // ⚔️ SPILL MED MOTSTAND
-    // ═══════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: '1v1', label: '1 mot 1', defaultMin: 10, category: 'spill_m_motstand',
       ages: ['6-7','8-9','10-12'], players: '4-16',
@@ -523,9 +523,9 @@
       ]}
     },
 
-    // ═══════════════════════════════
-    // 🏟️ SMÅLAGSSPILL
-    // ═══════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ðŸŸ️ SMÅLAGSSPILL
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: 'ssg', label: 'Smålagsspill', defaultMin: 18, category: 'smalagsspill',
       ages: ['6-7','8-9','10-12'], players: '6-16',
@@ -649,9 +649,9 @@
       ]}
     },
 
-    // ═══════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // 🧤 KEEPER
-    // ═══════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: 'keeper', label: 'Keepertrening', defaultMin: 12, category: 'keeper',
       ages: ['8-9','10-12'], players: '1-4',
@@ -724,11 +724,11 @@
 
   // Category definitions for optgroup rendering
   const EXERCISE_CATEGORIES = [
-    { id: 'oppvarming', label: '🏃 Oppvarming' },
+    { id: 'oppvarming', label: 'ðŸƒ Oppvarming' },
     { id: 'teknikk', label: '⚽ Teknikk' },
     { id: 'avslutning', label: '🎯 Avslutning' },
     { id: 'spill_m_motstand', label: '⚔️ Spill med motstand' },
-    { id: 'smalagsspill', label: '🏟️ Smålagsspill' },
+    { id: 'smalagsspill', label: 'ðŸŸ️ Smålagsspill' },
     { id: 'keeper', label: '🧤 Keeper' },
   ];
 
@@ -1279,7 +1279,7 @@
         <div class="wo-block-header">
           <div class="wo-block-title">Del ${idx + 1}${isParallel ? ' • Parallelt' : ''}</div>
           <div class="wo-block-actions">
-            <button class="btn-small" type="button" id="wo_${b.id}_up" title="Flytt opp">↑</button>
+            <button class="btn-small" type="button" id="wo_${b.id}_up" title="Flytt opp">â†‘</button>
             <button class="btn-small" type="button" id="wo_${b.id}_down" title="Flytt ned">↓</button>
             ${isParallel ? '' : `<button class="btn-small" type="button" id="wo_${b.id}_addParallel" title="Legg til parallell øvelse">Øvelser parallelt</button>`}
             <button class="btn-small btn-danger" type="button" id="wo_${b.id}_del" title="Slett">Slett</button>
@@ -1336,8 +1336,8 @@
     const meta = EX_BY_KEY.get(exerciseKey);
     if (!meta || !meta.description || !meta.steps) return '';
     const tags = [];
-    if (meta.ages) meta.ages.forEach(a => tags.push('📍 ' + a + ' år'));
-    if (meta.players) tags.push('👥 ' + meta.players);
+    if (meta.ages) meta.ages.forEach(a => tags.push('ðŸ“ ' + a + ' år'));
+    if (meta.players) tags.push('ðŸ‘¥ ' + meta.players);
     if (meta.equipment) tags.push('⚙️ ' + meta.equipment);
     let html = '<div class="wo-info-content">';
     html += '<p class="wo-info-desc">' + escapeHtml(meta.description) + '</p>';
@@ -2523,7 +2523,7 @@ function serializeWorkoutFromState() {
           '<div class="guide-title">Slik lagrer du som PDF på iPhone/iPad</div>' +
           '<div class="guide-steps">' +
           '<div class="guide-step"><span class="step-num">1</span> Trykk på <b>Lagre som PDF</b>-knappen over</div>' +
-          '<div class="guide-step"><span class="step-num">2</span> Trykk på <b>Del-ikonet</b> <span class="step-icon">↑</span> øverst i Valg-dialogen</div>' +
+          '<div class="guide-step"><span class="step-num">2</span> Trykk på <b>Del-ikonet</b> <span class="step-icon">â†‘</span> øverst i Valg-dialogen</div>' +
           '<div class="guide-step"><span class="step-num">3</span> Velg <b>Arkiver i Filer</b> for å lagre PDF-en</div>' +
           '</div>';
       } else if (isAndroid) {
@@ -2772,7 +2772,7 @@ function serializeWorkoutFromState() {
         if (currentPrefix !== initialPrefix) {
           // Auth resolved with real uid — re-render with correct keys
           clearInterval(timer);
-          console.log('[workout.js] auth resolved, rehydrating storage from', initialPrefix, '→', currentPrefix);
+          console.log('[workout.js] auth resolved, rehydrating storage from', initialPrefix, 'â†’', currentPrefix);
           renderTemplates();
           renderWorkouts();
           restoreDraftIfAny();
@@ -2792,9 +2792,9 @@ function serializeWorkoutFromState() {
     if (!window._bftCloud) return;
     try {
       var rows = await window._bftCloud.loadAll();
-      if (rows === null) return; // Supabase feil → ikke gjør noe
+      if (rows === null) return; // Supabase feil â†’ ikke gjør noe
       if (rows.length === 0) {
-        // Cloud tom → bootstrap: push lokal data opp
+        // Cloud tom â†’ bootstrap: push lokal data opp
         var tRaw = safeGet(STORE_KEY());
         if (tRaw && tRaw !== '{}' && tRaw !== '[]') window._bftCloud.save('workout_templates_v1', tRaw);
         var sRaw = safeGet(WORKOUTS_KEY());

@@ -124,7 +124,7 @@
           // Hvis vi mangler bruker, gå til login (ikke åpne app)
           window.authService?.showLoginScreen?.();
         } catch (err) {
-          console.error('❌ Post-checkout verify failed:', err);
+          console.error('âŒ Post-checkout verify failed:', err);
           try { window.authService?.showPricingPage?.(); } catch (_) {}
         }
       }, 250);
@@ -141,11 +141,11 @@
   // -------------------------------
   async function handlePlanSelection(planType, priceId) {
     try {
-      log('🔍 Handling plan selection:', planType);
+      log('ðŸ” Handling plan selection:', planType);
 
       const user = await getCurrentUser();
       if (!user) {
-        log('❌ No user found');
+        log('âŒ No user found');
         showNotification('Du må være logget inn først', 'error');
         try {
           window.authService?.showLoginScreen?.();
@@ -180,7 +180,7 @@
 
       // Lifetime plans skip trial entirely — go straight to checkout
       if (trialEnabled && canStartTrial && planType !== 'lifetime' && typeof svc.startTrial === 'function') {
-        log('🎁 Starting trial...');
+        log('ðŸŽ Starting trial...');
         const result = await svc.startTrial(user.id, planType);
 
         if (result && result.success) {
@@ -207,21 +207,21 @@
       // Ellers: gå til betaling
       await startCheckout(planType, priceId, user);
     } catch (error) {
-      console.error('❌ Error handling plan selection:', error);
+      console.error('âŒ Error handling plan selection:', error);
       showNotification('En feil oppstod. Prøv igjen senere.', 'error');
     }
   }
 
   async function startCheckout(planType, priceId, user) {
     try {
-      log('💳 Starting checkout for:', planType, priceId);
+      log('ðŸ’³ Starting checkout for:', planType, priceId);
       showNotification('Videresender til betaling...', 'info');
 
       // ✅ Foretrukket: server-side Checkout Session (sikrer riktig kunde/metadata, og unngår
       // klient-cache/Stripe.js edge-cases).
       const token = await getAccessTokenWithRetry();
       if (!token) {
-        console.error('❌ Failed to get access token after retries');
+        console.error('âŒ Failed to get access token after retries');
         throw new Error('Invalid session - kunne ikke hente tilgangstoken');
       }
 
@@ -249,7 +249,7 @@
         const data = await safeJson(r);
         
         if (!r.ok) {
-          console.error('❌ API returned error:', {
+          console.error('âŒ API returned error:', {
             status: r.status,
             statusText: r.statusText,
             error: data?.error,
@@ -262,7 +262,7 @@
         log('✅ API response OK:', data);
 
         if (!data?.url) {
-          console.error('❌ API response missing url:', data);
+          console.error('âŒ API response missing url:', data);
           throw new Error('Mangler checkout-url fra server');
         }
 
@@ -277,7 +277,7 @@
         throw fetchError;
       }
     } catch (error) {
-      console.error('❌ Checkout error:', {
+      console.error('âŒ Checkout error:', {
         message: error.message,
         stack: error.stack,
         planType: planType,
@@ -296,7 +296,7 @@
   }
 
   async function getAccessTokenWithRetry(retries = 5) {
-    console.log('💳 Getting access token for checkout...');
+    console.log('ðŸ’³ Getting access token for checkout...');
     
     for (let i = 0; i < retries; i++) {
       try {
@@ -342,7 +342,7 @@
           }
         }
       } catch (e) {
-        console.warn(`❌ Token attempt ${i+1}/${retries} failed:`, e.message);
+        console.warn(`âŒ Token attempt ${i+1}/${retries} failed:`, e.message);
       }
 
       // Økende backoff: 250ms, 500ms, 750ms, 1000ms, 1250ms
@@ -351,7 +351,7 @@
       await new Promise((r) => setTimeout(r, delay));
     }
     
-    console.error(`❌ Failed to get token after ${retries} attempts`);
+    console.error(`âŒ Failed to get token after ${retries} attempts`);
     return null;
   }
 
@@ -538,7 +538,7 @@
           }
         }
       } catch (err) {
-        console.error('❌ Back button error:', err);
+        console.error('âŒ Back button error:', err);
         // Fallback: gå til login
         if (window.authService && typeof window.authService.showLoginScreen === 'function') {
           window.authService.showLoginScreen();
@@ -743,7 +743,7 @@ function ensurePricingSupportAndContact() {
         <li><strong>Kansellering:</strong> Du kan kansellere når som helst i <em>Innstillinger</em> (tannhjul). Du har fortsatt tilgang ut perioden du allerede har betalt for.</li>
         <li><strong>Innlogging:</strong> Bruk samme Google-konto på alle enheter.</li>
         <li><strong>Bytter du konto på samme mobil/PC?</strong> Logg ut først.</li>
-        <li><strong>Hvis noe “henger”:</strong> Oppdater siden, eller prøv privat fane.</li>
+        <li><strong>Hvis noe “hengerâ€:</strong> Oppdater siden, eller prøv privat fane.</li>
         <li><strong>Spørsmål:</strong> Bruk kontaktinformasjonen under.</li>
       </ul>
     `;
@@ -829,7 +829,7 @@ function ensurePricingSupportAndContact() {
   // Boot
   // -------------------------------
 function boot() {
-  log('💳 Pricing.js loaded');
+  log('ðŸ’³ Pricing.js loaded');
   bindPlanButtons();
   bindBackButton();
   setupContactModals();
