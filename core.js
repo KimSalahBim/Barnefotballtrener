@@ -598,7 +598,7 @@
       html += '<div class="team-dropdown-add" id="teamDropdownAdd">' +
         '<i class="fas fa-plus"></i>' +
         '<span>Opprett nytt lag</span>' +
-        '<span style="margin-left:auto;font-size:12px;color:var(--gray-400)">' + state.teams.length + ' av ' + MAX_TEAMS + '</span>' +
+        '<span style="margin-left:auto;font-size:12px;color:var(--text-400)">' + state.teams.length + ' av ' + MAX_TEAMS + '</span>' +
         '</div>';
     }
 
@@ -1537,185 +1537,206 @@
   // UI wiring
   // ------------------------------
   function setupTabs() {
+    // Nordic Pitch Steg 2: Bunnmeny + "Mer" popup
     // Robust mobil-håndtering for iOS/Safari
     // Mål: ingen "tomt felt" øverst i Liga eller andre faner
 
-    document.querySelectorAll('.app-nav .nav-btn').forEach(btn => {
+    function toggleMerPopup() {
+      const popup = document.getElementById('merPopup');
+      if (!popup) return;
+      popup.style.display = (popup.style.display === 'none' || !popup.style.display) ? 'block' : 'none';
+    }
+
+    function closeMerPopup() {
+      const popup = document.getElementById('merPopup');
+      if (!popup) return;
+      popup.style.display = 'none';
+    }
+
+    function switchTab(tabId) {
+      if (!tabId) return;
+
+      // STEG 0: Sidetittel
+      const titleMap = {
+        players: 'Spillere',
+        grouping: 'Gruppeinndeling',
+        kampdag: 'Kampdag',
+        competitions: 'Konkurranse',
+        liga: 'Liga',
+        workout: 'Treningsøkt'
+      };
+      const titleEl = document.getElementById('pageTitleText');
+      if (titleEl && titleMap[tabId]) titleEl.textContent = titleMap[tabId];
+
+      // STEG 1: Fjern active fra alle nav-knapper (bunnmeny + mer-items)
+      document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.mer-item').forEach(b => b.classList.remove('active'));
+
+      // STEG 2: Skjul alle tabs
+      document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.remove('active');
+        c.style.display = 'none';
+        c.style.visibility = 'hidden';
+        c.style.position = 'absolute';
+        c.style.left = '-99999px';
+      });
+
+      // STEG 3: Aktiver riktig nav-knapp
+      const navBtn = document.querySelector(`.bottom-nav-btn[data-tab="${tabId}"]`);
+      if (navBtn) {
+        navBtn.classList.add('active');
+      } else {
+        // Tab er under "Mer" – aktiver Mer-knappen + riktig mer-item
+        const merBtn = document.getElementById('merBtn');
+        if (merBtn) merBtn.classList.add('active');
+        const merItem = document.querySelector(`.mer-item[data-tab="${tabId}"]`);
+        if (merItem) merItem.classList.add('active');
+      }
+
+      // STEG 4: Vis valgt tab
+      const content = document.getElementById(tabId);
+      if (content) {
+        content.classList.add('active');
+        content.style.display = 'block';
+        content.style.visibility = 'visible';
+        content.style.position = 'relative';
+        content.style.left = 'auto';
+      }
+
+      // Keep selections fresh (som i original nav-kode)
+      if (typeof renderSelections === 'function') renderSelections();
+      if (typeof publishPlayers === 'function') publishPlayers();
+
+      // STEG 5: Lukk Mer-popup
+      closeMerPopup();
+
+      // STEG 6: Scroll til topp + blur (iOS/Safari fix)
+      try { if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur(); } catch (_) {}
+
+      const scroller = document.scrollingElement || document.documentElement;
+      try {
+        scroller.scrollTop = 0;
+        scroller.scrollLeft = 0;
+      } catch (_) {}
+
+      try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); } catch (_) {
+        try { window.scrollTo(0, 0); } catch (_) {}
+      }
+
+      // Debug logging (kun på debug-hosts)
+      if (window.__BF_IS_DEBUG_HOST && tabId === 'liga') {
+        console.log('[LIGA DEBUG] Bytte til Liga-fanen');
+        console.log('[LIGA DEBUG] window.scrollY:', window.scrollY);
+        console.log('[LIGA DEBUG] document.scrollingElement.scrollTop:', scroller.scrollTop);
+
+        const allTabs = document.querySelectorAll('.tab-content');
+        const activeTabs = document.querySelectorAll('.tab-content.active');
+        console.log('[LIGA DEBUG] Totalt tabs:', allTabs.length);
+        console.log('[LIGA DEBUG] Active tabs:', activeTabs.length);
+        activeTabs.forEach((t, i) => {
+          console.log(`[LIGA DEBUG] Active tab ${i}:`, t.id, t.className);
+        });
+
+        setTimeout(() => {
+          const ligaEl = document.getElementById('liga');
+          if (ligaEl) {
+            const rect = ligaEl.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(ligaEl);
+
+            console.log('[LIGA DEBUG] Liga element:', {
+              exists: true,
+              hasActiveClass: ligaEl.classList.contains('active'),
+              display: computedStyle.display,
+              visibility: computedStyle.visibility,
+              opacity: computedStyle.opacity,
+              height: computedStyle.height,
+              paddingTop: computedStyle.paddingTop,
+              marginTop: computedStyle.marginTop
+            });
+
+            console.log('[LIGA DEBUG] Liga bounding rect:', {
+              top: rect.top,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+              bottom: rect.bottom,
+              right: rect.right
+            });
+
+            const firstChild = ligaEl.firstElementChild;
+            if (firstChild) {
+              const childRect = firstChild.getBoundingClientRect();
+              const childStyle = window.getComputedStyle(firstChild);
+              console.log('[LIGA DEBUG] Første child:', {
+                tagName: firstChild.tagName,
+                className: firstChild.className,
+                display: childStyle.display,
+                visibility: childStyle.visibility,
+                height: childStyle.height,
+                top: childRect.top
+              });
+            }
+
+            console.log('[LIGA DEBUG] Antall children:', ligaEl.children.length);
+
+            const allTabsNow = document.querySelectorAll('.tab-content');
+            console.log('[LIGA DEBUG] Sjekker alle tabs...');
+            allTabsNow.forEach((tabEl, idx) => {
+              const tRect = tabEl.getBoundingClientRect();
+              const tStyle = window.getComputedStyle(tabEl);
+              console.log(`[LIGA DEBUG] Tab ${idx} "${tabEl.id}":`, {
+                height: tRect.height,
+                top: tRect.top,
+                display: tStyle.display,
+                position: tStyle.position,
+                hasActive: tabEl.classList.contains('active')
+              });
+              if (tabEl.id !== 'liga' && tRect.height > 0) {
+                console.log(`[LIGA DEBUG] ⚠️ TAB "${tabEl.id}" tar plass (${tRect.height}px) og er over Liga!`);
+              }
+            });
+
+            const main = ligaEl.parentElement;
+            if (main) {
+              const mainRect = main.getBoundingClientRect();
+              const mainStyle = window.getComputedStyle(main);
+              console.log('[LIGA DEBUG] Parent container (<main>):', {
+                tagName: main.tagName,
+                top: mainRect.top,
+                paddingTop: mainStyle.paddingTop,
+                marginTop: mainStyle.marginTop
+              });
+            }
+          }
+        }, 50);
+      }
+    }
+
+    // Bunnmeny click handlers
+    document.querySelectorAll('.bottom-nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab');
         if (!tab) return;
-
-        // STEG 1: Fjern active fra ALLE nav-knapper
-        document.querySelectorAll('.app-nav .nav-btn').forEach(b => b.classList.remove('active'));
-        
-        // STEG 2: Fjern active fra ALLE tabs OG eksplisitt skjul dem
-        document.querySelectorAll('.tab-content').forEach(c => {
-          c.classList.remove('active');
-          // Eksplisitt skjul (backup til CSS)
-          c.style.display = 'none';
-          c.style.visibility = 'hidden';
-          c.style.position = 'absolute';
-          c.style.left = '-99999px';
-        });
-
-        // STEG 3: Aktiver kun den valgte tab-knappen
-        btn.classList.add('active');
-        
-        // STEG 4: Aktiver og vis kun den valgte tab
-        const content = document.getElementById(tab);
-
-        if (content) {
-          content.classList.add('active');
-          // Eksplisitt vis (backup til CSS)
-          content.style.display = 'block';
-          content.style.visibility = 'visible';
-          content.style.position = 'relative';
-          content.style.left = 'auto';
-
-          // Mobilfix (iOS/Safari): blur fokus + tving til topp
-          // Gjør dette SYNC (ikke async) for å unngå race conditions
-          try {
-            if (document.activeElement && typeof document.activeElement.blur === 'function') {
-              document.activeElement.blur();
-            }
-          } catch (_) {}
-
-          // Scroll til toppen UMIDDELBART - viktig for iOS
-          const scroller = document.scrollingElement || document.documentElement;
-          try { 
-            scroller.scrollTop = 0; 
-            scroller.scrollLeft = 0;
-          } catch (_) {}
-          
-          try { 
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); 
-          } catch (_) {
-            // Fallback for eldre Safari
-            try { window.scrollTo(0, 0); } catch (_) {}
-          }
-
-          // Debug logging (kun på debug-hosts)
-          if (window.__BF_IS_DEBUG_HOST && tab === 'liga') {
-            console.log('[LIGA DEBUG] Bytte til Liga-fanen');
-            console.log('[LIGA DEBUG] window.scrollY:', window.scrollY);
-            console.log('[LIGA DEBUG] document.scrollingElement.scrollTop:', scroller.scrollTop);
-            
-            // Sjekk hvilke tabs som er active
-            const allTabs = document.querySelectorAll('.tab-content');
-            const activeTabs = document.querySelectorAll('.tab-content.active');
-            console.log('[LIGA DEBUG] Totalt tabs:', allTabs.length);
-            console.log('[LIGA DEBUG] Active tabs:', activeTabs.length);
-            activeTabs.forEach((t, i) => {
-              console.log(`[LIGA DEBUG] Active tab ${i}:`, t.id, t.className);
-            });
-            
-            // Sjekk om Liga-innholdet faktisk er synlig
-            setTimeout(() => {
-              const ligaEl = document.getElementById('liga');
-              if (ligaEl) {
-                const rect = ligaEl.getBoundingClientRect();
-                const computedStyle = window.getComputedStyle(ligaEl);
-                
-                console.log('[LIGA DEBUG] Liga element:', {
-                  exists: true,
-                  hasActiveClass: ligaEl.classList.contains('active'),
-                  display: computedStyle.display,
-                  visibility: computedStyle.visibility,
-                  opacity: computedStyle.opacity,
-                  height: computedStyle.height,
-                  paddingTop: computedStyle.paddingTop,
-                  marginTop: computedStyle.marginTop
-                });
-                
-                console.log('[LIGA DEBUG] Liga bounding rect:', {
-                  top: rect.top,
-                  left: rect.left,
-                  width: rect.width,
-                  height: rect.height,
-                  bottom: rect.bottom,
-                  right: rect.right
-                });
-                
-                // Sjekk første child
-                const firstChild = ligaEl.firstElementChild;
-                if (firstChild) {
-                  const childRect = firstChild.getBoundingClientRect();
-                  const childStyle = window.getComputedStyle(firstChild);
-                  console.log('[LIGA DEBUG] Første child:', {
-                    tagName: firstChild.tagName,
-                    className: firstChild.className,
-                    display: childStyle.display,
-                    visibility: childStyle.visibility,
-                    height: childStyle.height,
-                    top: childRect.top
-                  });
-                }
-                
-                // Tell antall children
-                console.log('[LIGA DEBUG] Antall children:', ligaEl.children.length);
-                
-                // VIKTIG: Sjekk om det er andre tab-content over Liga
-                const allTabsNow = document.querySelectorAll('.tab-content');
-                console.log('[LIGA DEBUG] Sjekker alle tabs...');
-                allTabsNow.forEach((tabEl, idx) => {
-                  const tRect = tabEl.getBoundingClientRect();
-                  const tStyle = window.getComputedStyle(tabEl);
-                  console.log(`[LIGA DEBUG] Tab ${idx} "${tabEl.id}":`, {
-                    height: tRect.height,
-                    top: tRect.top,
-                    display: tStyle.display,
-                    position: tStyle.position,
-                    hasActive: tabEl.classList.contains('active')
-                  });
-                  if (tabEl.id !== 'liga' && tRect.height > 0) {
-                    console.log(`[LIGA DEBUG] ⚠️ TAB "${tabEl.id}" tar plass (${tRect.height}px) og er over Liga!`);
-                  }
-                });
-                
-                // Sjekk også parent-containeren til Liga
-                const main = ligaEl.parentElement;
-                if (main) {
-                  const mainRect = main.getBoundingClientRect();
-                  const mainStyle = window.getComputedStyle(main);
-                  console.log('[LIGA DEBUG] Parent container (<main>):', {
-                    tagName: main.tagName,
-                    top: mainRect.top,
-                    paddingTop: mainStyle.paddingTop,
-                    marginTop: mainStyle.marginTop
-                  });
-                }
-                
-                // Sjekk siblings (andre elementer på samme nivå som Liga)
-                const siblings = Array.from(main?.children || []);
-                console.log('[LIGA DEBUG] Søsken til Liga (elementer før Liga):', siblings.length);
-                siblings.forEach((sib, idx) => {
-                  if (sib === ligaEl) {
-                    console.log(`[LIGA DEBUG] → Liga er child #${idx}`);
-                    return;
-                  }
-                  const sibRect = sib.getBoundingClientRect();
-                  if (sibRect.height > 0) {
-                    console.log(`[LIGA DEBUG] → Søsken #${idx}:`, {
-                      tagName: sib.tagName,
-                      id: sib.id,
-                      className: sib.className,
-                      height: sibRect.height,
-                      top: sibRect.top
-                    });
-                  }
-                });
-              } else {
-                console.log('[LIGA DEBUG] FEIL: Liga element ikke funnet!');
-              }
-            }, 100);
-          }
+        if (tab === '_mer') {
+          toggleMerPopup();
+        } else {
+          switchTab(tab);
         }
-
-        // keep selections fresh
-        renderSelections();
-        publishPlayers();
       });
     });
+
+    // Mer-popup handlers
+    document.getElementById('merOverlay')?.addEventListener('click', closeMerPopup);
+
+    document.querySelectorAll('.mer-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const t = item.getAttribute('data-tab');
+        if (t) switchTab(t);
+      });
+    });
+
+    // Expose for other modules if needed
+    window.__BF_switchTab = switchTab;
   }
 
   function setupSkillToggle() {
@@ -2150,7 +2171,7 @@
           const row = document.createElement('div');
           row.className = 'liga-match-row';
           row.innerHTML = `
-            <div class="liga-match-card" style="display:flex; align-items:stretch; justify-content:space-between; gap:8px; padding:8px 10px; border:1px solid rgba(0,0,0,0.06); border-radius:10px; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+            <div class="liga-match-card" style="display:flex; align-items:stretch; justify-content:space-between; gap:8px; padding:8px 10px; border:1px solid rgba(0,0,0,0.06); border-radius:10px; background:var(--bg-card); box-shadow:0 1px 4px rgba(0,0,0,0.03);">
               <div class="liga-side home" style="flex:1; min-width:0;">
                 <div style="font-size:10px; font-weight:700; opacity:.5; margin-bottom:2px;">Hjemme</div>
                 <div class="liga-team-name" style="font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px;">${escapeHtml(m.home)}</div>
@@ -2353,6 +2374,10 @@
       return;
     }
     window.appInitialized = true;
+
+    // Vis bunnmeny (skjult i HTML for å unngå flash på login-skjerm)
+    var _bn = document.getElementById('bottomNav');
+    if (_bn) _bn.style.display = 'flex';
 
     // Asynkron: last lag og deretter data
     (async function() {

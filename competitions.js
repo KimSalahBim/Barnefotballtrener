@@ -1,5 +1,5 @@
-// © 2026 Barnefotballtrener.no. All rights reserved.
-/* Barnefotballtrener – Konkurranser (Mesternes mester)
+// Â© 2026 Barnefotballtrener.no. All rights reserved.
+/* Barnefotballtrener â€“ Konkurranser (Mesternes mester)
    - Vanilla JS
    - No regressions: isolert logikk + namespacede klasser (.comp-*)
    - Lagring per bruker: samme prefix-logikk som core.js
@@ -9,7 +9,7 @@
   'use strict';
 
   // -------------------------
-  // Små helpers
+  // SmÃ¥ helpers
   // -------------------------
   const $ = (id) => document.getElementById(id);
   const qs = (sel, root = document) => root.querySelector(sel);
@@ -45,7 +45,7 @@
   }
 
   // -------------------------
-  // Lagring (samme mønster som core.js)
+  // Lagring (samme mÃ¸nster som core.js)
   // -------------------------
   const _mem = new Map();
 
@@ -131,8 +131,8 @@
     const list = Array.isArray(window.players) ? window.players : null;
 
     if (list && list.length) {
-      console.log('[Competitions] ✅ Fant', list.length, 'spillere i window.players');
-      // Viktig: ikke bruk/vis ferdighetsnivå i UI
+      console.log('[Competitions] âœ… Fant', list.length, 'spillere i window.players');
+      // Viktig: ikke bruk/vis ferdighetsnivÃ¥ i UI
       return list.map((p) => ({
         id: p.id,
         name: p.name,
@@ -141,14 +141,14 @@
     }
 
     // Fallback: les direkte fra storage (samme key som core.js bruker)
-    console.log('[Competitions] ⚠️ window.players tom, prøver localStorage...');
+    console.log('[Competitions] âš ï¸ window.players tom, prÃ¸ver localStorage...');
     try {
       const raw = safeGet(k('players'));
       console.log('[Competitions] localStorage:', raw ? 'fant data' : 'tom');
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       
-      // Støtt både gammelt format {players: [...]} og nytt format [...]
+      // StÃ¸tt bÃ¥de gammelt format {players: [...]} og nytt format [...]
       let arr = [];
       if (parsed && typeof parsed === 'object' && Array.isArray(parsed.players)) {
         arr = parsed.players;
@@ -156,14 +156,14 @@
         arr = parsed;
       }
       
-      console.log('[Competitions] ✅ Fant', arr.length, 'spillere i localStorage');
+      console.log('[Competitions] âœ… Fant', arr.length, 'spillere i localStorage');
       return arr.map((p) => ({
         id: p.id,
         name: p.name,
         active: p.active !== false
       }));
     } catch (e) {
-      console.error('[Competitions] ❌ Feil ved lesing fra storage:', e);
+      console.error('[Competitions] âŒ Feil ved lesing fra storage:', e);
       return [];
     }
   }
@@ -252,7 +252,7 @@
 
     const corruptBanner = storeRes.corrupt
       ? `<div class="comp-banner comp-banner--warn">
-           <div><strong>Obs:</strong> Konkurranse-data i lagring ser ødelagt ut.</div>
+           <div><strong>Obs:</strong> Konkurranse-data i lagring ser Ã¸delagt ut.</div>
            <button class="btn-secondary comp-btn" data-comp-action="resetStore">Nullstill konkurranser</button>
          </div>`
       : '';
@@ -275,8 +275,8 @@
     return `
       <div class="comp-card comp-empty">
         <h3>Ingen spillere funnet</h3>
-        <p>For å bruke <strong>Konkurranser</strong> må du først legge inn spillere.</p>
-        <button class="btn-primary comp-btn" data-comp-action="goPlayers">Gå til Spillere</button>
+        <p>For Ã¥ bruke <strong>Konkurranser</strong> mÃ¥ du fÃ¸rst legge inn spillere.</p>
+        <button class="btn-primary comp-btn" data-comp-action="goPlayers">GÃ¥ til Spillere</button>
       </div>
     `;
   }
@@ -289,7 +289,7 @@
     return `
       <div class="comp-topnav">
         <button class="comp-pill ${setupActive}" data-comp-view="setup">Opprett</button>
-        <button class="comp-pill ${runActive}" data-comp-view="running" ${active ? '' : 'disabled'}>Pågår</button>
+        <button class="comp-pill ${runActive}" data-comp-view="running" ${active ? '' : 'disabled'}>PÃ¥gÃ¥r</button>
         <button class="comp-pill ${histActive}" data-comp-view="history">Historikk</button>
       </div>
 
@@ -308,11 +308,11 @@
     const store = storeRes.data;
     const draftComp = store.competitions.find(c => c.status === 'draft');
     const resumeHtml = draftComp ? `
-      <div class="comp-card" style="border-left:4px solid #f59e0b; margin-bottom:12px;">
+      <div class="comp-card" style="border-left:4px solid var(--warning); margin-bottom:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <div>
-            <div style="font-weight:800;">⏸️ Pågående konkurranse</div>
-            <div class="comp-muted">${escapeHtml(draftComp.title || 'Uten navn')} · ${(draftComp.exercises || []).length} øvelse(r) · ${(draftComp.participantIds || []).length} deltaker(e)</div>
+            <div style="font-weight:800;">â¸ï¸ PÃ¥gÃ¥ende konkurranse</div>
+            <div class="comp-muted">${escapeHtml(draftComp.title || 'Uten navn')} Â· ${(draftComp.exercises || []).length} Ã¸velse(r) Â· ${(draftComp.participantIds || []).length} deltaker(e)</div>
           </div>
           <button class="btn-primary comp-btn" data-comp-action="resumeDraft" data-comp-draft-id="${escapeHtml(draftComp.id)}">
             <i class="fas fa-play"></i> Fortsett konkurranse
@@ -336,7 +336,7 @@
       <div class="comp-card">
         <h3>Opprett ny konkurranse</h3>
         <p class="comp-help">
-          <strong>Mesternes mester</strong>: Velg deltakere, legg inn øvelser og registrer plasseringer.
+          <strong>Mesternes mester</strong>: Velg deltakere, legg inn Ã¸velser og registrer plasseringer.
           Poengsummer oppdateres automatisk.
         </p>
 
@@ -353,9 +353,9 @@
           </div>
 
           <div class="comp-panel">
-            <h4>2) Øvelser</h4>
+            <h4>2) Ã˜velser</h4>
             <div class="comp-row">
-              <label class="comp-label">Antall øvelser</label>
+              <label class="comp-label">Antall Ã¸velser</label>
               <input id="compExerciseCount" class="comp-input" type="number" inputmode="numeric" min="1" max="50" value="5">
               <button class="btn-secondary comp-btn" data-comp-action="generateExercises">Lag felter</button>
             </div>
@@ -363,7 +363,7 @@
             <div id="compExerciseNames" class="comp-exercises"></div>
 
             <div class="comp-actions">
-              <button class="btn-secondary comp-btn" data-comp-action="addExercise">+ Legg til øvelse</button>
+              <button class="btn-secondary comp-btn" data-comp-action="addExercise">+ Legg til Ã¸velse</button>
               <button class="btn-secondary comp-btn" data-comp-action="removeExercise">Fjern siste</button>
             </div>
           </div>
@@ -375,7 +375,7 @@
   <span>
     <strong>Plasseringspoeng</strong><br>
     <span class="comp-muted">
-      Eksempel: Ved <strong>5 deltakere</strong> får vinneren <strong>5 poeng</strong>, nr. 2 får <strong>4</strong>, nr. 3 får <strong>3</strong> – helt ned til sisteplass.
+      Eksempel: Ved <strong>5 deltakere</strong> fÃ¥r vinneren <strong>5 poeng</strong>, nr. 2 fÃ¥r <strong>4</strong>, nr. 3 fÃ¥r <strong>3</strong> â€“ helt ned til sisteplass.
     </span>
   </span>
 </label>
@@ -383,16 +383,16 @@
 <label class="comp-radio">
   <input type="radio" name="compScoring" value="321">
   <span>
-    <strong>3–2–1</strong><br>
+    <strong>3â€“2â€“1</strong><br>
     <span class="comp-muted">
-      Vinneren får <strong>3 poeng</strong>, nr. 2 får <strong>2</strong>, nr. 3 får <strong>1</strong>. Resten får <strong>0</strong>.
+      Vinneren fÃ¥r <strong>3 poeng</strong>, nr. 2 fÃ¥r <strong>2</strong>, nr. 3 fÃ¥r <strong>1</strong>. Resten fÃ¥r <strong>0</strong>.
     </span>
   </span>
 </label>
     
 
             <div class="comp-row">
-              <label class="comp-label">Navn på konkurransen (valgfritt)</label>
+              <label class="comp-label">Navn pÃ¥ konkurransen (valgfritt)</label>
               <input id="compTitle" class="comp-input" type="text" placeholder="F.eks. Januar-testen">
             </div>
 
@@ -401,7 +401,7 @@
             </button>
 
             <p class="comp-muted">
-              Tips: Du kan ha “uendelig” mange øvelser – bare legg til øvelser før du starter.
+              Tips: Du kan ha â€œuendeligâ€ mange Ã¸velser â€“ bare legg til Ã¸velser fÃ¸r du starter.
             </p>
           </div>
         </div>
@@ -424,7 +424,7 @@
     const exTabs = exercises
       .map((ex, idx) => {
         const active = idx === activeIndex ? 'is-active' : '';
-        return `<button class="comp-ex-tab ${active}" data-comp-ex="${idx}">${escapeHtml(ex.name || `Øvelse ${idx + 1}`)}</button>`;
+        return `<button class="comp-ex-tab ${active}" data-comp-ex="${idx}">${escapeHtml(ex.name || `Ã˜velse ${idx + 1}`)}</button>`;
       })
       .join('');
 
@@ -449,7 +449,7 @@
         <div class="comp-place-row">
           <div class="comp-place">${place}.</div>
           <select class="comp-select" data-comp-place="${i}">
-            <option value="">Velg spiller…</option>
+            <option value="">Velg spillerâ€¦</option>
             ${options}
           </select>
           <div class="comp-pts">${pts}p</div>
@@ -463,12 +463,12 @@
           <div>
             <h3>${escapeHtml(competition.title || 'Konkurranse')}</h3>
             <div class="comp-meta">
-              ${escapeHtml(new Date(competition.createdAt).toLocaleString('nb-NO'))} •
-              ${competition.scoring === 'rank' ? 'Plasseringspoeng' : '3–2–1'}
+              ${escapeHtml(new Date(competition.createdAt).toLocaleString('nb-NO'))} â€¢
+              ${competition.scoring === 'rank' ? 'Plasseringspoeng' : '3â€“2â€“1'}
             </div>
           </div>
           <div class="comp-actions">
-            <button class="btn-secondary comp-btn" data-comp-action="finishCompetition">Fullfør</button>
+            <button class="btn-secondary comp-btn" data-comp-action="finishCompetition">FullfÃ¸r</button>
             <button class="btn-secondary comp-btn" data-comp-action="exitToHistory">Historikk</button>
           </div>
         </div>
@@ -479,13 +479,13 @@
 
         <div class="comp-grid comp-grid--running">
           <div class="comp-panel">
-            <h4>${escapeHtml(ex?.name || 'Øvelse')}</h4>
-            <p class="comp-muted">Velg hvem som fikk hvilken plassering. Hver spiller kan velges én gang per øvelse.</p>
+            <h4>${escapeHtml(ex?.name || 'Ã˜velse')}</h4>
+            <p class="comp-muted">Velg hvem som fikk hvilken plassering. Hver spiller kan velges Ã©n gang per Ã¸velse.</p>
             <div class="comp-places" data-comp-ex-active="${activeIndex}">
               ${rows.join('')}
             </div>
             <div class="comp-actions">
-              <button class="btn-secondary comp-btn" data-comp-action="clearExercise">Tøm øvelse</button>
+              <button class="btn-secondary comp-btn" data-comp-action="clearExercise">TÃ¸m Ã¸velse</button>
               <button class="btn-secondary comp-btn" data-comp-action="copyPrevExercise" ${activeIndex === 0 ? 'disabled' : ''}>
                 Kopi fra forrige
               </button>
@@ -506,7 +506,7 @@
             <div class="comp-actions">
               <button class="btn-primary comp-btn" data-comp-action="saveCompetition">Lagre</button>
             </div>
-            <p class="comp-muted">Lagrer automatisk når du endrer plasseringer – “Lagre” er ekstra trygghet.</p>
+            <p class="comp-muted">Lagrer automatisk nÃ¥r du endrer plasseringer â€“ â€œLagreâ€ er ekstra trygghet.</p>
           </div>
         </div>
       </div>
@@ -544,17 +544,17 @@
 
         <div class="comp-history-filters">
           <div class="comp-seg">
-            <button class="comp-seg-btn ${ui.historyMode === 'month' ? 'is-active' : ''}" data-comp-action="setHistoryMode" data-comp-value="month">Måned</button>
-            <button class="comp-seg-btn ${ui.historyMode === 'year' ? 'is-active' : ''}" data-comp-action="setHistoryMode" data-comp-value="year">År</button>
+            <button class="comp-seg-btn ${ui.historyMode === 'month' ? 'is-active' : ''}" data-comp-action="setHistoryMode" data-comp-value="month">MÃ¥ned</button>
+            <button class="comp-seg-btn ${ui.historyMode === 'year' ? 'is-active' : ''}" data-comp-action="setHistoryMode" data-comp-value="year">Ã…r</button>
           </div>
 
           <div class="comp-row">
-            <label class="comp-label">År</label>
+            <label class="comp-label">Ã…r</label>
             <select id="compHistYear" class="comp-select">
               ${yearOptions.map((y) => `<option value="${y}" ${y === ui.historyYear ? 'selected' : ''}>${y}</option>`).join('')}
             </select>
 
-            <label class="comp-label ${ui.historyMode === 'year' ? 'is-hidden' : ''}">Måned</label>
+            <label class="comp-label ${ui.historyMode === 'year' ? 'is-hidden' : ''}">MÃ¥ned</label>
             <select id="compHistMonth" class="comp-select ${ui.historyMode === 'year' ? 'is-hidden' : ''}">
               ${Array.from({ length: 12 }).map((_, i) => {
                 const m = i + 1;
@@ -587,7 +587,7 @@
                 ${filtered.map((c) => `
                   <button class="comp-history-item" data-comp-action="openDetail" data-comp-id="${escapeHtml(c.id)}">
                     <div class="comp-history-title">${escapeHtml(c.title || 'Konkurranse')}</div>
-                    <div class="comp-history-meta">${escapeHtml(new Date(c.createdAt).toLocaleString('nb-NO'))} • ${c.scoring === 'rank' ? 'Plasseringspoeng' : '3–2–1'}</div>
+                    <div class="comp-history-meta">${escapeHtml(new Date(c.createdAt).toLocaleString('nb-NO'))} â€¢ ${c.scoring === 'rank' ? 'Plasseringspoeng' : '3â€“2â€“1'}</div>
                   </button>
                 `).join('')}
               </div>
@@ -625,7 +625,7 @@
       return `
         <div class="comp-detail-ex">
           <div class="comp-detail-exhead">
-            <h4>${escapeHtml(ex.name || `Øvelse ${exIdx + 1}`)}</h4>
+            <h4>${escapeHtml(ex.name || `Ã˜velse ${exIdx + 1}`)}</h4>
           </div>
           ${rows}
         </div>
@@ -637,7 +637,7 @@
         <div class="comp-history-head">
           <div>
             <h3>${escapeHtml(comp.title || 'Konkurranse')}</h3>
-            <div class="comp-meta">${escapeHtml(new Date(comp.createdAt).toLocaleString('nb-NO'))} • ${comp.scoring === 'rank' ? 'Plasseringspoeng' : '3–2–1'}</div>
+            <div class="comp-meta">${escapeHtml(new Date(comp.createdAt).toLocaleString('nb-NO'))} â€¢ ${comp.scoring === 'rank' ? 'Plasseringspoeng' : '3â€“2â€“1'}</div>
           </div>
           <div class="comp-actions">
             <button class="btn-secondary comp-btn" data-comp-action="backToHistory">Tilbake</button>
@@ -659,7 +659,7 @@
           </div>
 
           <div class="comp-panel">
-            <h4>Øvelser</h4>
+            <h4>Ã˜velser</h4>
             <div class="comp-detail-exlist">
               ${exList}
             </div>
@@ -763,7 +763,7 @@
           .map((inp) => String(inp.value || '').trim())
           .filter((v) => v.length > 0);
 
-        if (exNames.length < 1) return showToast('Legg inn minst 1 øvelse', 'error');
+        if (exNames.length < 1) return showToast('Legg inn minst 1 Ã¸velse', 'error');
 
         const scoring = (qs('input[name="compScoring"]:checked', root)?.value || 'rank') === '321' ? '321' : 'rank';
         const title = String(qs('#compTitle', root)?.value || '').trim();
@@ -945,8 +945,8 @@
       container.insertAdjacentHTML(
         'beforeend',
         `<div class="comp-row">
-           <label class="comp-label">Øvelse ${i + 1}</label>
-           <input class="comp-input comp-ex-name" type="text" placeholder="F.eks. Dribleløype" value="${escapeHtml(val)}">
+           <label class="comp-label">Ã˜velse ${i + 1}</label>
+           <input class="comp-input comp-ex-name" type="text" placeholder="F.eks. DriblelÃ¸ype" value="${escapeHtml(val)}">
          </div>`
       );
     }
@@ -960,7 +960,7 @@
     console.log(`[Konkurranser] ${type || 'info'}: ${msg}`);
   }
 
-  // Hooks: render når tab åpnes, og når spillere endres
+  // Hooks: render nÃ¥r tab Ã¥pnes, og nÃ¥r spillere endres
   
   // Migrate data from anon key to real user key (fixes early-evaluation bug)
   function migrateAnonData() {
@@ -968,7 +968,7 @@
       const prefix = getUserKeyPrefix();
       if (prefix.startsWith('bft:anon:')) return; // Still anon, nothing to migrate
       
-      // Støtt både legacy anon-key og ny team-aware anon-key
+      // StÃ¸tt bÃ¥de legacy anon-key og ny team-aware anon-key
       var anonKeys = ['bft:anon:competitions', 'bft:anon:default:competitions'];
       var anonKey = null;
       var anonRaw = null;
@@ -982,12 +982,12 @@
       const realRaw = safeGet(realKey);
       
       if (!realRaw) {
-        // No data under real key yet — move anon data there
+        // No data under real key yet â€” move anon data there
         safeSet(realKey, anonRaw);
         safeRemove(anonKey);
         console.log('[Competitions] Migrated data from anon key to', realKey);
       } else {
-        // Both exist — merge competitions arrays
+        // Both exist â€” merge competitions arrays
         try {
           const anonData = JSON.parse(anonRaw);
           const realData = JSON.parse(realRaw);
@@ -1028,7 +1028,7 @@
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.nav-btn[data-tab="competitions"]');
     if (btn) {
-      console.log('[Competitions] Tab klikket - renderer nå');
+      console.log('[Competitions] Tab klikket - renderer nÃ¥');
       if (ui.view === 'detail') ui.view = 'history';
       render();
     }
@@ -1064,14 +1064,14 @@
       const currentPrefix = getUserKeyPrefix();
       if (currentPrefix !== initialPrefix) {
         clearInterval(timer);
-        console.log('[Competitions] auth resolved, rehydrating storage from', initialPrefix, '→', currentPrefix);
+        console.log('[Competitions] auth resolved, rehydrating storage from', initialPrefix, 'â†’', currentPrefix);
         migrateAnonData();
         render();
 
         // Last cloud-data for konkurranser
         loadCompetitionsCloudData();
       } else if (attempts >= 40) {
-        // 40 × 150ms = 6s — give up
+        // 40 Ã— 150ms = 6s â€” give up
         clearInterval(timer);
       }
     }, 150);
@@ -1081,9 +1081,9 @@
     if (!window._bftCloud) return;
     try {
       var rows = await window._bftCloud.loadAll();
-      if (rows === null) return; // Supabase feil → ikke gjør noe
+      if (rows === null) return; // Supabase feil â†’ ikke gjÃ¸r noe
       if (rows.length === 0) {
-        // Cloud tom → bootstrap: push lokal data opp
+        // Cloud tom â†’ bootstrap: push lokal data opp
         var cRaw = safeGet(STORAGE_KEY());
         if (cRaw && cRaw !== '[]') window._bftCloud.save('competitions', cRaw);
         return;

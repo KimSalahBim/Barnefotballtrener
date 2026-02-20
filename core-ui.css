@@ -9,16 +9,16 @@
   justify-content:space-between;
   gap:12px;
   padding:14px;
-  background:#fff;
-  border:1px solid var(--gray-200);
+  background:var(--bg-card);
+  border:1px solid var(--border);
   border-radius:14px;
   box-shadow:0 2px 10px rgba(0,0,0,.04);
   margin-bottom:10px;
 }
 
 #mainApp .player-info{ flex:1; min-width:0; }
-#mainApp .player-name{ font-weight:800; color:var(--gray-900); }
-#mainApp .player-meta{ font-size:12px; color:var(--gray-600); margin-top:2px; }
+#mainApp .player-name{ font-weight:800; color:var(--text-900); }
+#mainApp .player-meta{ font-size:12px; color:var(--text-600); margin-top:2px; }
 
 #mainApp .player-tags{
   display:flex;
@@ -33,24 +33,24 @@
   border-radius:999px;
   font-size:12px;
   font-weight:700;
-  background:var(--gray-100);
-  border:1px solid var(--gray-200);
-  color:var(--gray-800);
+  background:var(--bg);
+  border:1px solid var(--border);
+  color:var(--text-800);
 }
 
 /* Results cards (core.js) */
 #mainApp .results-card{
-  border:1px solid var(--gray-200);
+  border:1px solid var(--border);
   border-radius:15px;
   overflow:hidden;
-  background:#fff;
+  background:var(--bg-card);
   margin-top:12px;
 }
 #mainApp .results-card h3{
   margin:0;
   padding:14px 16px;
-  background:var(--gray-50);
-  border-bottom:1px solid var(--gray-200);
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
 }
 #mainApp .results-list{
   padding:12px 16px;
@@ -60,38 +60,38 @@
 }
 #mainApp .result-item{
   padding:10px 12px;
-  border:1px solid var(--gray-200);
+  border:1px solid var(--border);
   border-radius:12px;
-  background:var(--gray-50);
+  background:var(--bg);
   font-weight:700;
 }
 
 /* Liga match cards (core.js) */
 #mainApp .liga-match-card{
-  border:1px solid var(--gray-200);
+  border:1px solid var(--border);
   border-radius:14px;
-  background:#fff;
+  background:var(--bg-card);
   padding:12px 14px;
   margin-bottom:10px;
 }
-#mainApp .liga-team-name{ font-weight:800; color:var(--gray-900); }
-#mainApp .liga-score{ font-weight:900; color:var(--gray-900); }
+#mainApp .liga-team-name{ font-weight:800; color:var(--text-900); }
+#mainApp .liga-score{ font-weight:900; color:var(--text-900); }
 
 /* Kampdag groups (kampdag.js) */
 #mainApp .group-card{
-  border:1px solid var(--gray-200);
+  border:1px solid var(--border);
   border-radius:16px;
-  background:#fff;
+  background:var(--bg-card);
   padding:14px;
   margin-bottom:12px;
 }
 #mainApp .group-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-#mainApp .group-name{ font-weight:900; color:var(--gray-900); }
+#mainApp .group-name{ font-weight:900; color:var(--text-900); }
 
 /* Competitions view (competitions.js) */
 #mainApp .comp-view{
-  border:1px solid var(--gray-200);
+  border:1px solid var(--border);
   border-radius:16px;
-  background:#fff;
+  background:var(--bg-card);
   padding:14px;
 }

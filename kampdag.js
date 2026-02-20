@@ -1,4 +1,4 @@
-// Â© 2026 Barnefotballtrener.no. All rights reserved.
+// Ã‚Â© 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - kampdag.js
 // Kampdag: oppm\u00f8te -> start/benk -> bytteplan med roligere bytter og bedre spilletidsfordeling.
 // Bruker global variabel "window.players" (Array) som settes av core.js.
@@ -766,8 +766,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const warn = zones.some(z => z.have < z.need);
     el.style.display = 'block';
-    el.style.background = warn ? 'rgba(245,158,11,0.08)' : 'rgba(34,197,94,0.06)';
-    el.style.color = warn ? '#d97706' : '#16a34a';
+    el.style.background = warn ? 'var(--warning-dim)' : 'var(--success-dim)';
+    el.style.color = warn ? 'var(--warning)' : 'var(--success)';
 
     el.innerHTML = `<div style="font-weight:800; margin-bottom:6px;">${warn ? '\u26a0 ' : ''}Sonedekning for ${kdFormationKey}</div>` +
       zones.map(z => {
@@ -777,9 +777,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           <span style="width:8px;height:8px;border-radius:50%;background:${z.color};flex-shrink:0;"></span>
           <span style="width:72px;">${z.name} (${z.need})</span>
           <div style="flex:1;height:6px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:${low ? '#d97706' : z.color};border-radius:3px;"></div>
+            <div style="height:100%;width:${pct}%;background:${low ? 'var(--warning)' : z.color};border-radius:3px;"></div>
           </div>
-          <span style="width:32px;text-align:right;font-weight:800;${low ? 'color:#d97706;' : ''}">${z.have}${low ? ' \u26a0' : ''}</span>
+          <span style="width:32px;text-align:right;font-weight:800;${low ? 'color:var(--warning);' : ''}">${z.have}${low ? ' \u26a0' : ''}</span>
         </div>`;
       }).join('') +
       (warn ? `<div style="margin-top:6px;font-size:12px;">Noen spillere vil bli plassert utenfor preferanse.</div>` : '');
@@ -2347,7 +2347,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
             <div class="group-card" style="margin-bottom:12px;">
               <div class="group-header" style="display:flex;justify-content:space-between;align-items:center;">
                 <div class="group-name">Minutt ${ev.minute}</div>
-                ${keeperName ? `<div style="background:var(--gray-100);padding:6px 10px;border-radius:999px;font-size:12px;opacity:0.85;">Keeper: ${escapeHtml(keeperName)}</div>` : ''}
+                ${keeperName ? `<div style="background:var(--bg);padding:6px 10px;border-radius:999px;font-size:12px;opacity:0.85;">Keeper: ${escapeHtml(keeperName)}</div>` : ''}
               </div>
               <div class="group-players" style="gap:6px;">${empty}${ins}${outs}</div>
             </div>`;

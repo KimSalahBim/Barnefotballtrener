@@ -105,8 +105,10 @@
 }
 
 .comp-btn {
-  border-radius: 12px !important;
-  padding: 10px 14px !important;
+  border-radius: var(--radius-md) !important;
+  padding: 13px 20px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
 }
 
 /* Inputs */
@@ -134,11 +136,13 @@
 .comp-select {
   width: 100%;
   min-height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--comp-border);
-  padding: 10px 12px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
   font-size: 15px;
-  background: #fff;
+  color: var(--text-800);
+  background: var(--bg-card);
+  font-family: 'Outfit', sans-serif;
 }
 
 .comp-exercises {
@@ -191,8 +195,13 @@
 .comp-start {
   width: 100%;
   margin-top: 12px;
-  background: linear-gradient(135deg, var(--comp-green), var(--comp-accent)) !important;
+  background: var(--primary) !important;
+  color: #fff !important;
   border: none !important;
+  border-radius: var(--radius-md) !important;
+  padding: 13px 20px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
 }
 
 /* Running */
@@ -306,25 +315,28 @@
 .comp-seg {
   display: flex;
   gap: 6px;
-  padding: 6px;
-  border: 1px solid var(--comp-border);
-  border-radius: 999px;
-  background: rgba(255,255,255,0.65);
+  padding: 0;
+  border: none;
+  background: transparent;
   width: fit-content;
   margin-bottom: 10px;
 }
 
 .comp-seg-btn {
   border: none;
-  background: transparent;
-  padding: 10px 14px;
-  border-radius: 999px;
-  font-weight: 900;
+  background: var(--bg);
+  color: var(--text-600);
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .comp-seg-btn.is-active {
-  background: linear-gradient(135deg, var(--comp-green), var(--comp-yellow));
+  background: var(--primary);
+  color: #fff;
 }
 
 .comp-history-list {
@@ -496,4 +508,11 @@
     gap: 4px !important;
     margin-top: 6px !important;
   }
+}
+
+.comp-input:focus,
+.comp-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-dim);
 }
