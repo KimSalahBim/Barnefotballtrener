@@ -898,6 +898,7 @@ function syncPoolsWithTeams(cls) {
     const away = cls?.teams.find(t => t.id === entry.awayId);
     const match = cls?.matches.find(m => m.id === entry.matchId);
     const locked = match?.locked || false;
+    const pinned = !!(match?.pinnedPitchId);
     const pm = pitchMap || buildPitchMap(cup);
     const pitch = pm[entry.pitchId] || null;
     const pool = (match?.poolId && cls?.pools) ? cls.pools.find(p => p.id === match.poolId) : null;
@@ -908,13 +909,16 @@ function syncPoolsWithTeams(cls) {
     const matchNum = match?.matchNumber ? `<span class="cup-match-num">${match.matchNumber}</span>` : '';
 
     return `
-      <div class="cup-match-card ${locked ? 'is-locked' : ''}" data-match-id="${entry.matchId}" data-class-id="${entry._classId}" style="border-left:3px solid ${color};">
+      <div class="cup-match-card ${locked ? 'is-locked' : ''} ${pinned ? 'is-pinned' : ''}" data-match-id="${entry.matchId}" data-class-id="${entry._classId}" style="border-left:3px solid ${color};">
         ${matchNum}<span class="cup-match-time">${entry.startTime}</span>
         <span class="cup-match-teams">
           ${esc(home?.name || '?')}<span class="cup-match-vs"> vs </span>${esc(away?.name || '?')}
         </span>
         <span class="cup-match-class">${colorDot}${poolBadge}${esc(cls?.name || '')}</span>
-        <span style="font-size:11px;color:var(--cup-gray-400);">${esc(pitch?.name || '')}</span>
+        <span class="cup-match-pitch-name ${pinned ? 'is-pinned-pitch' : ''}">${esc(pitch?.name || '')}</span>
+        <button class="cup-match-pin ${pinned ? 'is-pinned' : ''}" data-action="pinMatch" data-match-id="${entry.matchId}" data-class-id="${entry._classId}" title="${pinned ? 'Endre/fjern bane-pinning' : 'Pin kamp til bane'}">
+          <i class="fas fa-thumbtack"></i>
+        </button>
         <button class="cup-match-lock ${locked ? 'is-locked' : ''}" data-action="toggleLock" data-match-id="${entry.matchId}" data-class-id="${entry._classId}" title="${locked ? 'Lås opp' : 'Lås kamp'}">
           <i class="fas fa-${locked ? 'lock' : 'lock-open'}"></i>
         </button>
@@ -1274,6 +1278,34 @@ function syncPoolsWithTeams(cls) {
           match.locked = !match.locked;
           saveCup(cup);
           renderSchedule(cup);
+        }
+      }
+      else if (action === 'pinMatch') {
+        const matchId = btn.dataset.matchId;
+        const classId = btn.dataset.classId;
+        openPinModal(cup, matchId, classId);
+      }
+      else if (action === 'closePinModal') {
+        closePinModal();
+      }
+      else if (action === 'savePinModal') {
+        const matchId = btn.dataset.matchId;
+        const classId = btn.dataset.classId;
+        const cls = cup.classes.find(c => c.id === classId);
+        const match = cls?.matches.find(m => m.id === matchId);
+        if (match) {
+          const selected = document.querySelector('#cupPinModal input[name="cupPinnedPitch"]:checked');
+          const newPinnedId = selected ? (selected.value || null) : null;
+          const hadPin = !!match.pinnedPitchId;
+          match.pinnedPitchId = newPinnedId;
+          closePinModal();
+          saveCup(cup);
+          renderSchedule(cup);
+          if (newPinnedId) {
+            toast('Kamp pinnet til bane. Kjør "Optimaliser" for å flytte den dit.', 'info');
+          } else if (hadPin) {
+            toast('Bane-pinning fjernet.', 'success');
+          }
         }
       }
     });
@@ -1723,6 +1755,87 @@ main.addEventListener('change', e => handleCupField(e.target));
   }
 
   // ============================================================
+  // Bane-pinning modal
+  // ============================================================
+  function openPinModal(cup, matchId, classId) {
+    const cls = cup.classes.find(c => c.id === classId);
+    const match = cls?.matches.find(m => m.id === matchId);
+    if (!cls || !match) return;
+
+    const effectivePitches = getEffectivePitches(cup);
+    const currentPinned = match.pinnedPitchId || null;
+    const home = cls.teams.find(t => t.id === match.homeId);
+    const away = cls.teams.find(t => t.id === match.awayId);
+
+    let pitchOptions = `
+      <label class="cup-pin-option ${!currentPinned ? 'is-selected' : ''}">
+        <input type="radio" name="cupPinnedPitch" value="">
+        <span class="cup-pin-option-name">Ingen — scheduler velger fritt</span>
+      </label>`;
+
+    for (const p of effectivePitches) {
+      const compat = CS && typeof CS.isFormatCompatible === 'function'
+        ? CS.isFormatCompatible(p, cls.playFormat)
+        : true;
+      const sel = (currentPinned === p.id) ? 'is-selected' : '';
+      pitchOptions += `
+        <label class="cup-pin-option ${sel} ${!compat ? 'is-incompatible' : ''}" ${!compat ? 'title="Feil format for denne klassen"' : ''}>
+          <input type="radio" name="cupPinnedPitch" value="${esc(p.id)}" ${currentPinned === p.id ? 'checked' : ''} ${!compat ? 'disabled' : ''}>
+          <span class="cup-pin-option-name">${esc(p.name)}</span>
+          <span class="cup-pin-format-badge">${esc(p.maxFormat || '')}</span>
+          ${!compat ? '<span class="cup-pin-compat-warn">Feil format</span>' : ''}
+        </label>`;
+    }
+
+    const html = `
+      <div class="cup-modal-overlay" id="cupPinModal">
+        <div class="cup-modal cup-pin-modal">
+          <div class="cup-modal-header">
+            <span class="cup-modal-title"><i class="fas fa-thumbtack" style="margin-right:6px;"></i>Knytt kamp til bane</span>
+            <button class="cup-modal-close" data-action="closePinModal" aria-label="Lukk">×</button>
+          </div>
+          <div class="cup-modal-body">
+            <div class="cup-pin-match-info">
+              <div><span class="cup-pin-info-label">Kamp:</span> ${esc(home?.name || '?')} vs ${esc(away?.name || '?')}</div>
+              <div><span class="cup-pin-info-label">Klasse:</span> ${esc(cls.name)} · ${esc(cls.playFormat || '')}</div>
+            </div>
+            <div class="cup-pin-options-list">${pitchOptions}</div>
+          </div>
+          <div class="cup-modal-footer">
+            <button class="cup-btn cup-btn-ghost" data-action="closePinModal">Avbryt</button>
+            <button class="cup-btn cup-btn-primary" data-action="savePinModal" data-match-id="${matchId}" data-class-id="${classId}">Lagre</button>
+          </div>
+        </div>
+      </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    // Oppdater valgt stil ved klikk
+    const overlay = document.getElementById('cupPinModal');
+    overlay.querySelectorAll('input[name="cupPinnedPitch"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        overlay.querySelectorAll('.cup-pin-option').forEach(l => l.classList.remove('is-selected'));
+        radio.closest('.cup-pin-option')?.classList.add('is-selected');
+      });
+    });
+
+    // Lukk ved klikk utenfor modal
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) closePinModal();
+    });
+
+    // Sett riktig radio checked
+    const radioToCheck = !currentPinned
+      ? overlay.querySelector('input[value=""]')
+      : overlay.querySelector(`input[value="${currentPinned}"]`);
+    if (radioToCheck) radioToCheck.checked = true;
+  }
+
+  function closePinModal() {
+    document.getElementById('cupPinModal')?.remove();
+  }
+
+  // ============================================================
   // Generate schedule
   // ============================================================
   function generateSchedule(newSeed) {
@@ -1797,6 +1910,11 @@ main.addEventListener('change', e => handleCupField(e.target));
       toast(`${totalUnplaced} kamp(er) kunne ikke plasseres. Sjekk baner/tider.`, 'warning');
     } else {
       toast('Kampprogram generert!', 'success');
+    }
+    // Vis eventuelle pinning-advarsler
+    const pinWarns = result?.pinWarnings || [];
+    if (pinWarns.length > 0) {
+      setTimeout(() => toast(`📌 Pinning: ${pinWarns[0]}${pinWarns.length > 1 ? ' (+' + (pinWarns.length - 1) + ' til)' : ''}`, 'warning'), 800);
     }
   }
 
@@ -1878,6 +1996,10 @@ main.addEventListener('change', e => handleCupField(e.target));
       toast(`${totalUnplaced} kamp(er) kunne ikke plasseres. Sjekk baner/tider.`, 'warning');
     } else {
       toast('Kampprogram optimalisert!', 'success');
+    }
+    const pinWarns2 = result?.pinWarnings || [];
+    if (pinWarns2.length > 0) {
+      setTimeout(() => toast(`📌 Pinning: ${pinWarns2[0]}${pinWarns2.length > 1 ? ' (+' + (pinWarns2.length - 1) + ' til)' : ''}`, 'warning'), 800);
     }
   }
 

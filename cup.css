@@ -1016,6 +1016,172 @@
   color: var(--cup-primary, #2563eb);
 }
 
+/* ── Bane-pinning ── */
+.cup-match-pin {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--cup-gray-300, #d1d5db);
+  font-size: 11px;
+  border-radius: 4px;
+  transition: color 0.15s;
+  transform: rotate(45deg);
+}
+.cup-match-pin:hover {
+  color: #f59e0b;
+}
+.cup-match-pin.is-pinned {
+  color: #f59e0b;
+  transform: rotate(0deg);
+}
+.cup-match-card.is-pinned {
+  background: rgba(245,158,11,0.04);
+}
+.cup-match-pitch-name {
+  font-size: 11px;
+  color: var(--cup-gray-400, #9ca3af);
+}
+.cup-match-pitch-name.is-pinned-pitch {
+  font-weight: 700;
+  color: #b45309;
+}
+
+/* ── Pin modal ── */
+.cup-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.cup-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  max-width: 420px;
+  width: 100%;
+  overflow: hidden;
+}
+.cup-pin-modal {
+  max-width: 400px;
+}
+.cup-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--cup-gray-100, #f3f4f6);
+}
+.cup-modal-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--cup-gray-800, #1f2937);
+}
+.cup-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: var(--cup-gray-400, #9ca3af);
+  line-height: 1;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.cup-modal-close:hover { color: var(--cup-gray-700, #374151); }
+.cup-modal-body {
+  padding: 16px 20px;
+}
+.cup-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--cup-gray-100, #f3f4f6);
+  background: var(--cup-gray-50, #f9fafb);
+}
+.cup-pin-match-info {
+  background: var(--cup-gray-50, #f9fafb);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--cup-gray-700, #374151);
+  line-height: 1.7;
+}
+.cup-pin-info-label {
+  font-weight: 600;
+  color: var(--cup-gray-500, #6b7280);
+  margin-right: 4px;
+}
+.cup-pin-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.cup-pin-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1.5px solid var(--cup-gray-200, #e5e7eb);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 13px;
+}
+.cup-pin-option:hover:not(.is-incompatible) {
+  border-color: #f59e0b;
+  background: rgba(245,158,11,0.04);
+}
+.cup-pin-option.is-selected {
+  border-color: #f59e0b;
+  background: rgba(245,158,11,0.08);
+}
+.cup-pin-option.is-incompatible {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.cup-pin-option input[type="radio"] {
+  accent-color: #f59e0b;
+  flex-shrink: 0;
+}
+.cup-pin-option-name {
+  flex: 1;
+  font-weight: 500;
+}
+.cup-pin-format-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--cup-gray-500, #6b7280);
+  background: var(--cup-gray-100, #f3f4f6);
+  border-radius: 4px;
+  padding: 2px 5px;
+  text-transform: uppercase;
+}
+.cup-pin-compat-warn {
+  font-size: 10px;
+  color: #dc2626;
+  font-weight: 600;
+}
+.cup-btn-ghost {
+  background: none;
+  border: 1px solid var(--cup-gray-200, #e5e7eb);
+  color: var(--cup-gray-600, #4b5563);
+  padding: 7px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cup-btn-ghost:hover { background: var(--cup-gray-100, #f3f4f6); }
+
 /* =========================================
    SCHEDULE GRID (by pitch / by time)
    ========================================= */

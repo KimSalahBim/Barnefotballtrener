@@ -420,6 +420,10 @@
       if (!cls.allowedDayIds) cls.allowedDayIds = null;
       if (cls.maxMatchesPerTeamPerDay === undefined) cls.maxMatchesPerTeamPerDay = null;
       if (cls.usePooling === undefined) cls.usePooling = false;
+      // Bane-pinning: sett pinnedPitchId: null på eksisterende kamper
+      for (var mig = 0; mig < (cls.matches || []).length; mig++) {
+        if (cls.matches[mig].pinnedPitchId === undefined) cls.matches[mig].pinnedPitchId = null;
+      }
     }
 
     // Cup defaults
@@ -1167,6 +1171,7 @@
         start: null,
         end: null,
         locked: false,
+        pinnedPitchId: null,
         score: { home: null, away: null },
       });
     }
@@ -1347,6 +1352,74 @@
           giveUp: [],
           penalty: 0,
         });
+      }
+
+      // -----------------------------------------------------------------------
+      // PRE-PASS: Plasser pinnede kamper på sin valgte bane FØR greedy-loopen.
+      // Pinnede kamper fjernes fra pending og legges rett i occupied.
+      // Hvis pinnet bane ikke finnes eller er full, går kampen tilbake til pending.
+      // -----------------------------------------------------------------------
+      var pinWarnings = [];
+      for (var pci = 0; pci < classStates.length; pci++) {
+        var pst = classStates[pci];
+        var newPending = [];
+        for (var pmi = 0; pmi < pst.pending.length; pmi++) {
+          var pendM = pst.pending[pmi];
+          // Slå opp pinnedPitchId i det originale match-objektet
+          var origM = null;
+          for (var omx = 0; omx < (pst.cls.matches || []).length; omx++) {
+            if (pst.cls.matches[omx].id === pendM.id) { origM = pst.cls.matches[omx]; break; }
+          }
+          if (!origM || !origM.pinnedPitchId) { newPending.push(pendM); continue; }
+
+          var pinnedId = origM.pinnedPitchId;
+          // Finn slots som tilhører den pinnede banen
+          var pSlots = [];
+          for (var pss = 0; pss < pst.slots.length; pss++) {
+            if (pst.slots[pss].pitchId === pinnedId) pSlots.push(pst.slots[pss]);
+          }
+          if (pSlots.length === 0) {
+            // Pinnet bane-ID finnes ikke blant klassekompatible slots → fall through
+            pinWarnings.push('Pinnet bane finnes ikke/feil format for kamp i ' + pst.cls.name + '. Plasseres fritt.');
+            newPending.push(pendM);
+            continue;
+          }
+
+          // Prøv slots på pinnet bane i rekkefølge – respekter hard constraints
+          var found = null;
+          for (var psi2 = 0; psi2 < pSlots.length; psi2++) {
+            var sl = pSlots[psi2];
+            if (pitchBusy(occupied, sl.pitchId, sl.dayIndex, sl.start, sl.end)) continue;
+            if (teamBusy(occupied, pendM.homeId, sl.dayIndex, sl.start, sl.end)) continue;
+            if (teamBusy(occupied, pendM.awayId, sl.dayIndex, sl.start, sl.end)) continue;
+            if (!teamRestOk(occupied, pendM.homeId, sl.dayIndex, sl.start, sl.end, pst.minRest)) continue;
+            if (!teamRestOk(occupied, pendM.awayId, sl.dayIndex, sl.start, sl.end, pst.minRest)) continue;
+            found = sl;
+            break;
+          }
+
+          if (found) {
+            var pinnedPlaced = {
+              id: pendM.id, classId: pendM.classId, round: pendM.round,
+              homeId: pendM.homeId, awayId: pendM.awayId,
+              pitchId: found.pitchId, dayIndex: found.dayIndex,
+              start: found.start, end: found.end,
+              locked: false,
+              pinnedPitchId: pinnedId,
+              score: pendM.score || { home: null, away: null },
+            };
+            var kpin = pst.cls.id + '|' + pinnedPlaced.id;
+            if (!occKey[kpin]) {
+              occKey[kpin] = true;
+              occupied.push(pinnedPlaced);
+            }
+            // Ikke tilbake til pending – allerede plassert
+          } else {
+            pinWarnings.push('Ingen ledig slot på pinnet bane for kamp i ' + pst.cls.name + '. Plasseres fritt.');
+            newPending.push(pendM);
+          }
+        }
+        pst.pending = newPending;
       }
 
       var totalPenalty = 0;
@@ -1536,7 +1609,7 @@
       var score = totalPenalty + totalUnplaced * 50000 + fairnessPenalty * 2;
       if (score < bestScore) {
         bestScore = score;
-        best = { classResults: classResults, totalPenalty: totalPenalty, totalUnplaced: totalUnplaced, seed: seed, attempt: attempt };
+        best = { classResults: classResults, totalPenalty: totalPenalty, totalUnplaced: totalUnplaced, seed: seed, attempt: attempt, pinWarnings: pinWarnings };
       }
 
       if (totalUnplaced === 0 && totalPenalty === 0 && fairnessPenalty < 10) break;
@@ -1771,6 +1844,7 @@
           start: null,
           end: null,
           locked: false,
+          pinnedPitchId: null,
           score: { home: null, away: null },
         });
       }
