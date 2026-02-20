@@ -670,38 +670,66 @@
 }
 
 /* -------------------------------------------
+   PHONE MOCKUP: overrides for pitch inside landing
+   ------------------------------------------- */
+.lp-scale-wrap .kd-pos-bubble,
+.lp-scale-wrap .kd-bench-bubble {
+  cursor: default !important;
+  touch-action: auto !important;
+}
+
+.lp-scale-wrap .kd-pitch-card-header {
+  padding: 4px 8px;
+}
+
+.lp-scale-wrap .kd-pitch-card-title {
+  font-size: 11px;
+}
+
+.lp-scale-wrap .kd-bench-bubble {
+  width: 32px;
+  height: 32px;
+}
+
+.lp-scale-wrap .kd-bench-bubble .kd-p-name {
+  font-size: 8px;
+  max-width: 28px;
+}
+
+/* -------------------------------------------
    DESKTOP RESPONSIVE: Full-width landing
    ------------------------------------------- */
 @media (min-width: 768px) {
   #passwordProtection .password-box.landing-page-box {
-    max-width: 900px !important;
+    max-width: calc(100vw - 80px) !important;
     padding: 0 0 40px;
+    border-radius: 28px;
   }
 
   .lp-hero {
-    padding: 52px 40px 36px;
+    padding: 52px 48px 36px;
   }
 
   .lp-hero h1 {
-    font-size: 40px;
+    font-size: 42px;
   }
 
   #passwordProtection .lp-hero .landing-tagline {
     font-size: 18px;
-    max-width: 520px;
+    max-width: 560px;
     margin: 0 auto 28px;
   }
 
   .lp-phones {
-    gap: 16px;
+    gap: 20px;
   }
 
   .lp-phone {
-    width: 200px;
+    width: 210px;
   }
 
   .lp-scale-wrap {
-    transform: scale(0.565);
+    transform: scale(0.595);
   }
 
   .lp-section {
@@ -714,7 +742,7 @@
 
   .lp-section-sub {
     font-size: 16px;
-    max-width: 520px;
+    max-width: 560px;
     margin: 0 auto 28px;
   }
 
@@ -722,6 +750,8 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+    max-width: 700px;
+    margin: 0 auto;
   }
 
   .lp-demo-device {
@@ -738,44 +768,59 @@
   }
 
   .lp-price-cards {
-    max-width: 480px;
+    display: flex;
+    max-width: 640px;
     margin: 0 auto 14px;
-    gap: 12px;
+    gap: 16px;
+  }
+
+  .lp-price-card {
+    flex: 1;
   }
 
   .lp-club-card {
-    max-width: 560px;
+    max-width: 640px;
     margin: 0 auto;
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1200px) {
   #passwordProtection .password-box.landing-page-box {
-    max-width: 1080px !important;
+    max-width: calc(100vw - 120px) !important;
   }
 
   .lp-hero h1 {
-    font-size: 48px;
+    font-size: 52px;
+  }
+
+  #passwordProtection .lp-hero .landing-tagline {
+    font-size: 20px;
+    max-width: 640px;
   }
 
   .lp-phone {
-    width: 220px;
+    width: 240px;
   }
 
   .lp-scale-wrap {
-    transform: scale(0.624);
+    transform: scale(0.68);
   }
 
   .lp-features {
     grid-template-columns: 1fr 1fr 1fr;
     gap: 24px;
+    max-width: 960px;
   }
 
   .lp-price-cards {
-    max-width: 540px;
+    max-width: 720px;
   }
 
   .lp-demo-device {
     max-width: 400px;
+  }
+
+  .lp-club-card {
+    max-width: 720px;
   }
 }

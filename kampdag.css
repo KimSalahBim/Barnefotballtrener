@@ -159,6 +159,12 @@
   color:#fff !important;
   border-color:transparent !important;
 }
+.kd-freq-active .small-text{
+  color:rgba(255,255,255,0.85) !important;
+}
+.kd-freq-btn .small-text{
+  color:var(--text-600);
+}
 
 /* Formation grid */
 .kd-formation-opt{

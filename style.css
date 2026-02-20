@@ -785,6 +785,15 @@ body {
     border-radius: 6px;
 }
 
+/* Desktop: force 4-column grid (above 640px) */
+@media (min-width: 641px) {
+  .player-selection {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+}
+
 .selection-header {
     display: flex;
     justify-content: space-between;
