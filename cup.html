@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Cup-planlegger – Barnefotballtrener</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon32.png">
+  <link rel="apple-touch-icon" href="appletouchicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="cup.css">
+
+  <style>
+    /* Minimal page chrome — rest is in cup.css */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f6fa;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+    .cup-page-header {
+      background: #0b5bd3;
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .cup-page-header a {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cup-page-header a:hover { color: #fff; }
+    .cup-page-title {
+      font-size: 18px;
+      font-weight: 700;
+      flex: 1;
+    }
+    .cup-page-beta {
+      font-size: 11px;
+      background: rgba(255,255,255,0.2);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Page header -->
+  <header class="cup-page-header">
+    <a href="/" title="Tilbake til appen"><i class="fas fa-arrow-left"></i></a>
+    <span class="cup-page-title"><i class="fas fa-trophy"></i> Cup-planlegger</span>
+    <span class="cup-page-beta">BETA</span>
+  </header>
+
+  <!-- Main cup container -->
+  <div class="cup-main" style="max-width: 900px; margin: 0 auto; padding: 16px;">
+
+    <!-- Step navigation -->
+    <nav class="cup-steps" style="display:flex; gap:4px; margin-bottom:16px;">
+      <button class="cup-step is-active" data-step="setup" type="button">
+        <i class="fas fa-cog"></i> Oppsett
+      </button>
+      <button class="cup-step" data-step="schedule" type="button">
+        <i class="fas fa-calendar-alt"></i> Kampprogram
+      </button>
+      <button class="cup-step" data-step="results" type="button">
+        <i class="fas fa-list-ol"></i> Resultater
+      </button>
+    </nav>
+
+    <!-- ========== STEP 1: Setup ========== -->
+    <section id="cupSetup" class="cup-section is-active">
+
+      <!-- Cup info -->
+      <div class="cup-card" style="margin-bottom: 16px;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="cup-field">
+            <label class="cup-label" for="cupName">Cupnavn</label>
+            <input class="cup-input" type="text" id="cupName" placeholder="F.eks. Steinkjer Cup 2026">
+          </div>
+          <div class="cup-field">
+            <label class="cup-label" for="cupVenue">Sted</label>
+            <input class="cup-input" type="text" id="cupVenue" placeholder="F.eks. Guldbergaunet">
+          </div>
+        </div>
+      </div>
+
+      <!-- Days -->
+      <div class="cup-card" style="margin-bottom: 16px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <h2 class="cup-card-title"><i class="fas fa-calendar-day"></i> Dager</h2>
+          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupAddDay"><i class="fas fa-plus"></i> Legg til dag</button>
+        </div>
+        <div id="cupDays"></div>
+      </div>
+
+      <!-- Pitches -->
+      <div class="cup-card" style="margin-bottom: 16px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <h2 class="cup-card-title"><i class="fas fa-map-marker-alt"></i> Baner</h2>
+          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupAddPitch"><i class="fas fa-plus"></i> Legg til bane</button>
+        </div>
+        <div id="cupPitches"></div>
+      </div>
+
+      <!-- Classes -->
+      <div class="cup-card" style="margin-bottom: 16px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <h2 class="cup-card-title"><i class="fas fa-futbol"></i> Klasser</h2>
+          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupAddClass"><i class="fas fa-plus"></i> Legg til klasse</button>
+        </div>
+        <div id="cupClasses"></div>
+      </div>
+
+      <!-- Feasibility check -->
+      <div class="cup-card" style="margin-bottom: 16px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <button class="cup-btn cup-btn-secondary" id="cupCheckBtn" type="button">
+            <i class="fas fa-calculator"></i> Sjekk gjennomførbarhet
+          </button>
+        </div>
+        <div id="cupFeasibility"></div>
+      </div>
+
+      <!-- Generate -->
+      <div style="text-align:center; padding: 10px 0;">
+        <button class="cup-btn cup-btn-primary cup-btn-lg" id="cupGenerateBtn" type="button">
+          <i class="fas fa-play"></i> Generer kampprogram
+        </button>
+      </div>
+
+      <!-- Danger zone -->
+      <div style="text-align:center; padding: 16px 0; border-top: 1px solid rgba(0,0,0,0.06); margin-top: 16px;">
+        <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupDeleteBtn" type="button" style="color: #dc2626; font-size: 12px;">
+          <i class="fas fa-trash-alt"></i> Slett denne cupen
+        </button>
+      </div>
+    </section>
+
+    <!-- ========== STEP 2: Schedule ========== -->
+    <section id="cupSchedule" class="cup-section">
+
+      <!-- Warnings -->
+      <div id="cupWarnings"></div>
+
+      <!-- View toggle + actions -->
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+        <div style="display:flex; gap:4px; align-items:center;">
+          <button class="cup-view-btn is-active" data-view="pitch" type="button"><i class="fas fa-map-marker-alt"></i> Per bane</button>
+          <button class="cup-view-btn" data-view="team" type="button"><i class="fas fa-users"></i> Per lag</button>
+          <button class="cup-view-btn" data-view="time" type="button"><i class="fas fa-clock"></i> Tidslinje</button>
+          <select id="cupClassFilter" class="cup-input cup-input-sm cup-select" style="margin-left:8px; min-width:120px;" title="Filtrer etter klasse">
+            <option value="">Alle klasser</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:4px;">
+          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupOptimizeBtn" type="button" title="Optimaliser plassering">
+            <i class="fas fa-magic"></i> Optimaliser
+          </button>
+          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupRegenerateBtn" type="button" title="Generer nytt kampprogram (ny seed)">
+            <i class="fas fa-sync-alt"></i> Ny trekning
+          </button>
+          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupExportCsvBtn" type="button" title="Last ned CSV">
+            <i class="fas fa-file-csv"></i> CSV
+          </button>
+          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupPrintBtn" type="button" title="Skriv ut">
+            <i class="fas fa-print"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid -->
+      <div id="cupGrid"></div>
+    </section>
+
+    <!-- ========== STEP 3: Results ========== -->
+    <section id="cupResults" class="cup-section">
+      <div style="margin-bottom:12px;">
+        <label class="cup-label" for="cupResultClass">Velg klasse</label>
+        <select class="cup-input" id="cupResultClass" style="max-width:300px;"></select>
+      </div>
+
+      <div id="cupMatchResults"></div>
+      <div id="cupStandings"></div>
+    </section>
+
+  </div><!-- /.cup-main -->
+
+  <!-- Toast -->
+  <div id="cupToast" class="cup-toast"></div>
+
+  <!-- Scripts -->
+  <script src="cup-scheduler.js"></script>
+  <script src="cup.js"></script>
+</body>
+</html>
