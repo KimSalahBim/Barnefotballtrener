@@ -749,6 +749,40 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.05);
     max-height: 400px;
     overflow-y: auto;
+    /* Desktop: grid layout */
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+/* Desktop compact player cards in selection grid */
+.player-selection .player-checkbox {
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 10px;
+    gap: 6px;
+    align-items: center;
+}
+
+.player-selection .player-name {
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.player-selection .player-meta {
+    font-size: 11px;
+    opacity: 0.85;
+    line-height: 1.1;
+}
+
+.player-selection .checkmark {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border-radius: 6px;
 }
 
 .selection-header {
@@ -3221,19 +3255,19 @@ html, body {
   cursor: pointer;
   padding: 6px 12px;
   min-width: 56px;
-  color: var(--text-400);
+  color: var(--text-500, #64748b);
   font-family: 'Outfit', sans-serif;
   transition: color 0.15s;
 }
 
 .bottom-nav-btn i {
   font-size: 18px;
-  opacity: 0.6;
+  opacity: 0.75;
 }
 
 .bottom-nav-btn span {
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .bottom-nav-btn.active {

@@ -585,7 +585,7 @@
    FIX: password-box override (beat style.css ID rule)
    ------------------------------------------- */
 #passwordProtection .password-box.landing-page-box {
-  max-width: 640px;
+  max-width: 640px !important;
   padding: 0 0 30px;
   text-align: center;
 }
@@ -674,7 +674,7 @@
    ------------------------------------------- */
 @media (min-width: 768px) {
   #passwordProtection .password-box.landing-page-box {
-    max-width: 900px;
+    max-width: 900px !important;
     padding: 0 0 40px;
   }
 
@@ -751,7 +751,7 @@
 
 @media (min-width: 1024px) {
   #passwordProtection .password-box.landing-page-box {
-    max-width: 1080px;
+    max-width: 1080px !important;
   }
 
   .lp-hero h1 {
