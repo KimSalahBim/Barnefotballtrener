@@ -1410,8 +1410,102 @@
   font-weight: 500;
 }
 
+/* ── Banedeling ── */
+.cup-pitch-card {
+  border: 1px solid var(--cup-gray-200, #e5e7eb);
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px 0;
+  background: var(--cup-gray-50, #f9fafb);
+}
+.cup-pitch-card-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.cup-pitch-card-header .cup-input { flex: 1; }
+.cup-pitch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+@media (max-width: 520px) {
+  .cup-pitch-grid { grid-template-columns: 1fr; }
+}
+.cup-input-label {
+  font-size: 12px;
+  color: var(--cup-gray-500, #6b7280);
+  margin: 0 0 4px 2px;
+}
+.cup-pitch-preview {
+  margin-top: 10px;
+  border: 1px solid var(--cup-gray-200, #e5e7eb);
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+}
+.cup-pitch-preview svg { width: 100%; height: auto; display: block; }
+.cup-pitch-preview-rect {
+  fill: var(--cup-gray-50, #f9fafb);
+  stroke: var(--cup-gray-300, #d1d5db);
+  stroke-width: 0.6;
+}
+.cup-pitch-preview-text {
+  font-size: 5px;
+  fill: var(--cup-gray-600, #4b5563);
+}
+.cup-pitch-sublist {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cup-sub-pitch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cup-sub-pitch-letter {
+  width: 20px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--cup-gray-500, #6b7280);
+}
+.cup-sub-pitch-row .cup-input { flex: 1; }
+.cup-sub-pitch-badge {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: var(--cup-gray-100, #f3f4f6);
+  border: 1px solid var(--cup-gray-200, #e5e7eb);
+  white-space: nowrap;
+  color: var(--cup-gray-600, #4b5563);
+}
+.cup-pitch-meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--cup-gray-400, #9ca3af);
+}
+
+/* ── Cup selector bar ── */
+.cup-selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.cup-selector-select {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+}
+
 @media print {
   .cup-page-header,
+  .cup-selector-bar,
   .cup-steps,
   .cup-btn,
   .cup-view-btn,

@@ -180,6 +180,39 @@
 
   var FORMAT_HIERARCHY = ['3v3', '5v5', '7v7', '9v9', '11v11'];
 
+  // Katalog over tillatte oppdelinger per fysisk banestørrelse
+  var PITCH_DIVISIONS = {
+    '11v11': [
+      { label: 'Hel bane (11v11)',          subs: ['11v11'] },
+      { label: '2× 7v7',                    subs: ['7v7', '7v7'] },
+      { label: '2× 5v5',                    subs: ['5v5', '5v5'] },
+      { label: '3× 5v5',                    subs: ['5v5', '5v5', '5v5'] },
+      { label: '1× 7v7 + 1× 5v5',           subs: ['7v7', '5v5'] },
+      { label: '4× 3v3',                    subs: ['3v3', '3v3', '3v3', '3v3'] },
+      { label: '2× 5v5 + 2× 3v3',           subs: ['5v5', '5v5', '3v3', '3v3'] },
+      { label: '1× 7v7 + 2× 3v3',           subs: ['7v7', '3v3', '3v3'] },
+      { label: '1× 9v9 + 1× 5v5',           subs: ['9v9', '5v5'] },
+    ],
+    '9v9': [
+      { label: 'Hel bane (9v9)',            subs: ['9v9'] },
+      { label: '2× 5v5',                    subs: ['5v5', '5v5'] },
+      { label: '1× 5v5 + 2× 3v3',           subs: ['5v5', '3v3', '3v3'] },
+      { label: '4× 3v3',                    subs: ['3v3', '3v3', '3v3', '3v3'] },
+    ],
+    '7v7': [
+      { label: 'Hel bane (7v7)',            subs: ['7v7'] },
+      { label: '2× 5v5',                    subs: ['5v5', '5v5'] },
+      { label: '2× 3v3',                    subs: ['3v3', '3v3'] },
+    ],
+    '5v5': [
+      { label: 'Hel bane (5v5)',            subs: ['5v5'] },
+      { label: '2× 3v3',                    subs: ['3v3', '3v3'] },
+    ],
+    '3v3': [
+      { label: 'Hel bane (3v3)',            subs: ['3v3'] },
+    ],
+  };
+
   function formatIndex(fmt) {
     var i = FORMAT_HIERARCHY.indexOf(fmt);
     return i >= 0 ? i : -1;
@@ -199,8 +232,8 @@
   }
 
   /**
-   * Ekspander fysiske baner til virtuelle baner basert pÃ¥ splits/activeMode.
-   * Brukes for bane-deling (NivÃ¥ 1: statisk konfigurasjon per cup).
+   * Ekspander fysiske baner til virtuelle baner basert på splits/activeMode.
+   * Brukes for bane-deling (statisk konfigurasjon per cup).
    *
    * Eksempel: En 11v11-bane med activeMode='7v7' og splits=[{format:'7v7',count:2}]
    * genererer 2 virtuelle baner: "Bane 1 A" (7v7) og "Bane 1 B" (7v7).
@@ -209,41 +242,68 @@
    */
   function expandPitches(physicalPitches) {
     var result = [];
-    for (var i = 0; i < (physicalPitches || []).length; i++) {
-      var p = physicalPitches[i];
-      if (!p.splits || !p.activeMode) {
-        // Legacy eller enkel bane: bruk maxFormat eller default til 11v11
-        result.push({
-          id: p.id,
-          name: p.name,
-          maxFormat: p.maxFormat || '11v11',
-        });
-        continue;
-      }
-      var mode = null;
-      for (var si = 0; si < p.splits.length; si++) {
-        if (p.splits[si].format === p.activeMode) { mode = p.splits[si]; break; }
-      }
-      if (!mode || mode.count <= 1) {
-        result.push({
-          id: p.id,
-          name: p.name,
-          maxFormat: mode ? mode.format : (p.maxFormat || p.physicalFormat || '11v11'),
-          parentPitchId: p.id,
-        });
-      } else {
-        for (var vi = 0; vi < mode.count; vi++) {
+    var list = physicalPitches || [];
+
+    function autoName(base, idx) {
+      return String(base || 'Bane') + ' ' + String.fromCharCode(65 + idx);
+    }
+
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i] || {};
+      var physicalFormat = p.physicalFormat || p.maxFormat || '11v11';
+      var subs = Array.isArray(p.subPitches) ? p.subPitches : null;
+
+      // Ny modell: subPitches
+      if (subs && subs.length > 0) {
+        for (var si = 0; si < subs.length; si++) {
+          var sub = subs[si] || {};
           result.push({
-            id: p.id + '_' + (vi + 1),
-            name: p.name + ' ' + String.fromCharCode(65 + vi),
-            maxFormat: mode.format,
-            parentPitchId: p.id,
+            id: sub.id || (p.id ? (p.id + '_' + (si + 1)) : ('pitch_' + i + '_' + (si + 1))),
+            name: sub.name || autoName(p.name, si),
+            maxFormat: sub.format || physicalFormat,
+            parentPitchId: p.id || null,
           });
         }
+        continue;
       }
+
+      // Legacy modell: splits/activeMode (fallback hvis migrering ikke er kjørt)
+      if (p.splits && p.activeMode) {
+        var mode = null;
+        for (var li = 0; li < p.splits.length; li++) {
+          if (p.splits[li].format === p.activeMode) { mode = p.splits[li]; break; }
+        }
+        if (mode && mode.count && mode.count > 1) {
+          for (var vi = 0; vi < mode.count; vi++) {
+            result.push({
+              id: (p.id ? (p.id + '_' + (vi + 1)) : ('pitch_' + i + '_' + (vi + 1))),
+              name: String(p.name || 'Bane') + ' ' + String.fromCharCode(65 + vi),
+              maxFormat: mode.format,
+              parentPitchId: p.id || null,
+            });
+          }
+        } else if (mode) {
+          result.push({
+            id: p.id,
+            name: p.name,
+            maxFormat: mode.format,
+          });
+        } else {
+          result.push({ id: p.id, name: p.name, maxFormat: physicalFormat });
+        }
+        continue;
+      }
+
+      // Ingen oppdeling: returner som hel bane
+      result.push({
+        id: p.id,
+        name: p.name,
+        maxFormat: physicalFormat,
+      });
     }
     return result;
   }
+
 
   /**
    * Bygg tidsslots filtrert for en spesifikk klasse.
@@ -294,14 +354,66 @@
    */
   function migrateCupData(cup) {
     if (!cup) return cup;
+
     // Dager: legg til id hvis mangler
     for (var di = 0; di < (cup.days || []).length; di++) {
       if (!cup.days[di].id) cup.days[di].id = cupUuid();
     }
-    // Baner: legg til maxFormat hvis mangler
+
+    // Baner: migrer til ny modell (physicalFormat + subPitches)
     for (var pi = 0; pi < (cup.pitches || []).length; pi++) {
-      if (!cup.pitches[pi].maxFormat) cup.pitches[pi].maxFormat = '11v11';
+      var p = cup.pitches[pi] || {};
+      if (!p.id) p.id = cupUuid();
+      if (!p.name) p.name = 'Bane ' + (pi + 1);
+
+      // Bakoverkompat: fysisk format arver fra maxFormat
+      if (!p.physicalFormat) {
+        p.physicalFormat = p.maxFormat || '11v11';
+      }
+      // Hold maxFormat synkronisert for eldre UI-logikk
+      if (!p.maxFormat) p.maxFormat = p.physicalFormat;
+
+      if (!Array.isArray(p.subPitches)) {
+        p.subPitches = [];
+      }
+
+      // Konverter legacy splits/activeMode -> subPitches (stabile IDs)
+      if (p.splits && p.activeMode && (!p.subPitches || p.subPitches.length === 0)) {
+        var mode = null;
+        for (var si = 0; si < (p.splits || []).length; si++) {
+          if (p.splits[si].format === p.activeMode) { mode = p.splits[si]; break; }
+        }
+        if (mode && mode.count && mode.count > 1) {
+          p.subPitches = [];
+          for (var vi = 0; vi < mode.count; vi++) {
+            p.subPitches.push({
+              id: p.id + '_' + (vi + 1),
+              name: String(p.name) + ' ' + String.fromCharCode(65 + vi),
+              format: mode.format,
+            });
+          }
+        } else if (mode) {
+          // count<=1: behold pitch-id for bakoverkompat
+          p.subPitches = [{ id: p.id, name: p.name, format: mode.format }];
+        }
+
+        // Rydd opp for å unngå dobbel-modell
+        try { delete p.splits; } catch (e) {}
+        try { delete p.activeMode; } catch (e2) {}
+      }
+
+      // Sikre subPitch-form
+      for (var spi = 0; spi < (p.subPitches || []).length; spi++) {
+        var sp = p.subPitches[spi] || {};
+        if (!sp.id) sp.id = p.id + '_' + (spi + 1);
+        if (!sp.name) sp.name = String(p.name) + ' ' + String.fromCharCode(65 + spi);
+        if (!sp.format) sp.format = p.physicalFormat;
+        p.subPitches[spi] = sp;
+      }
+
+      cup.pitches[pi] = p;
     }
+
     // Klasser: legg til nye felter hvis mangler
     for (var ci = 0; ci < (cup.classes || []).length; ci++) {
       var cls = cup.classes[ci];
@@ -309,11 +421,13 @@
       if (cls.maxMatchesPerTeamPerDay === undefined) cls.maxMatchesPerTeamPerDay = null;
       if (cls.usePooling === undefined) cls.usePooling = false;
     }
+
     // Cup defaults
     if (!cup.defaults) cup.defaults = {};
     if (cup.defaults.maxMatchesPerTeamPerDay === undefined) cup.defaults.maxMatchesPerTeamPerDay = 3;
     return cup;
   }
+
 
   /**
    * Bygg tidsslots for alle baner og dager.
@@ -1740,6 +1854,7 @@
 
     // Format og bane-kompatibilitet
     FORMAT_HIERARCHY: FORMAT_HIERARCHY,
+    PITCH_DIVISIONS: PITCH_DIVISIONS,
     isFormatCompatible: isFormatCompatible,
     expandPitches: expandPitches,
     migrateCupData: migrateCupData,

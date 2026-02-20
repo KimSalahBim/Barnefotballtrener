@@ -41,6 +41,161 @@ function buildPitchMap(cup) {
   return map;
 }
 
+// ============================================================
+// Banedeling helpers
+// ============================================================
+function getPitchPhysicalFormat(p) {
+  return (p && (p.physicalFormat || p.maxFormat)) ? (p.physicalFormat || p.maxFormat) : '11v11';
+}
+
+function getPitchDivisionCatalog(physicalFormat) {
+  const CS = window.CupScheduler;
+  const cat = CS && CS.PITCH_DIVISIONS && CS.PITCH_DIVISIONS[physicalFormat];
+  return (cat && cat.length) ? cat : [{ label: 'Hel bane (' + physicalFormat + ')', subs: [physicalFormat] }];
+}
+
+function getCurrentSubFormats(p) {
+  const pf = getPitchPhysicalFormat(p);
+  if (p && Array.isArray(p.subPitches) && p.subPitches.length > 0) {
+    return p.subPitches.map(sp => sp.format || pf);
+  }
+  return [pf];
+}
+
+function arraysEqual(a, b) {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+function divisionToHumanText(subFormats) {
+  if (!subFormats || subFormats.length === 0) return '';
+  const counts = Object.create(null);
+  for (const f of subFormats) counts[f] = (counts[f] || 0) + 1;
+  const order = ['11v11', '9v9', '7v7', '5v5', '3v3'];
+  return order.filter(f => counts[f]).map(f => counts[f] + '\u00d7' + f).join(' + ');
+}
+
+function autoSubPitchName(baseName, idx) {
+  return String(baseName || 'Bane') + ' ' + String.fromCharCode(65 + idx);
+}
+
+function pitchFormatWeight(fmt) {
+  const hier = window.CupScheduler?.FORMAT_HIERARCHY;
+  if (!hier) return 1;
+  const idx = hier.indexOf(fmt);
+  return idx >= 0 ? (idx + 1) : 1;
+}
+
+function applyDivisionToPitch(p, subsFormats) {
+  const pf = getPitchPhysicalFormat(p);
+  const CS = window.CupScheduler;
+  const prev = (p && Array.isArray(p.subPitches)) ? p.subPitches : [];
+
+  // Hel bane = tom subPitches
+  if (subsFormats.length === 1 && subsFormats[0] === pf) {
+    p.subPitches = [];
+    return;
+  }
+
+  const next = [];
+  for (let i = 0; i < subsFormats.length; i++) {
+    const fmt = subsFormats[i];
+    const prevSp = prev[i];
+    const keep = prevSp && prevSp.format === fmt;
+    next.push({
+      id: (keep && prevSp.id) ? prevSp.id : (CS ? CS.uuid() : (p.id + '_' + (i + 1))),
+      name: (keep && prevSp.name) ? prevSp.name : autoSubPitchName(p.name, i),
+      format: fmt,
+    });
+  }
+  p.subPitches = next;
+}
+
+function getEffectivePitchIdsForPhysicalPitch(p) {
+  if (p && Array.isArray(p.subPitches) && p.subPitches.length > 0) {
+    return p.subPitches.map(sp => sp.id).filter(Boolean);
+  }
+  return [p && p.id].filter(Boolean);
+}
+
+function buildPitchPreviewSvg(p) {
+  const pf = getPitchPhysicalFormat(p);
+  const subFormats = getCurrentSubFormats(p);
+  const n = subFormats.length;
+
+  const names = [];
+  if (Array.isArray(p.subPitches) && p.subPitches.length > 0) {
+    for (let i = 0; i < p.subPitches.length; i++) {
+      names.push(p.subPitches[i].name || autoSubPitchName(p.name, i));
+    }
+  } else {
+    names.push(p.name || 'Bane');
+  }
+
+  function svgRect(x, y, w, h, label, format, name) {
+    const shortName = name.length > 18 ? name.slice(0, 18) + '\u2026' : name;
+    return `<g>
+      <rect class="cup-pitch-preview-rect" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2" ry="2"/>
+      <text class="cup-pitch-preview-text" x="${(x+3).toFixed(1)}" y="${(y+8).toFixed(1)}">${esc(label)} (${esc(format)})</text>
+      <text class="cup-pitch-preview-text" x="${(x+3).toFixed(1)}" y="${(y+15).toFixed(1)}">${esc(shortName)}</text>
+    </g>`;
+  }
+
+  function layout() {
+    if (n === 1) return [{ x: 0, y: 0, w: 100, h: 60 }];
+
+    if (n === 2) {
+      const w1 = pitchFormatWeight(subFormats[0]);
+      const w2 = pitchFormatWeight(subFormats[1]);
+      const left = (w1 / (w1 + w2)) * 100;
+      return [{ x: 0, y: 0, w: left, h: 60 }, { x: left, y: 0, w: 100 - left, h: 60 }];
+    }
+
+    if (n === 3) {
+      if (subFormats[0] === subFormats[1] && subFormats[1] === subFormats[2]) {
+        return [{ x: 0, y: 0, w: 33.3, h: 60 }, { x: 33.3, y: 0, w: 33.3, h: 60 }, { x: 66.6, y: 0, w: 33.4, h: 60 }];
+      }
+      const weights = subFormats.map(pitchFormatWeight);
+      const maxW = Math.max(...weights);
+      const maxIdx = weights.indexOf(maxW);
+      const smallIdx = [0, 1, 2].filter(i => i !== maxIdx);
+      const bigWidth = (maxW / (maxW + weights[smallIdx[0]] + weights[smallIdx[1]])) * 100;
+      const coords = new Array(3);
+      coords[maxIdx] = { x: 0, y: 0, w: bigWidth, h: 60 };
+      coords[smallIdx[0]] = { x: bigWidth, y: 0, w: 100 - bigWidth, h: 30 };
+      coords[smallIdx[1]] = { x: bigWidth, y: 30, w: 100 - bigWidth, h: 30 };
+      return coords;
+    }
+
+    if (n === 4 && subFormats[0] === subFormats[1] && subFormats[2] === subFormats[3] && subFormats[0] !== subFormats[2]) {
+      const topW = pitchFormatWeight(subFormats[0]) * 2;
+      const botW = pitchFormatWeight(subFormats[2]) * 2;
+      const topH = (topW / (topW + botW)) * 60;
+      return [
+        { x: 0, y: 0, w: 50, h: topH }, { x: 50, y: 0, w: 50, h: topH },
+        { x: 0, y: topH, w: 50, h: 60 - topH }, { x: 50, y: topH, w: 50, h: 60 - topH }
+      ];
+    }
+
+    // Default grid
+    const cols = Math.ceil(Math.sqrt(n));
+    const rows = Math.ceil(n / cols);
+    const cW = 100 / cols, cH = 60 / rows;
+    return Array.from({ length: n }, (_, i) => ({
+      x: (i % cols) * cW, y: Math.floor(i / cols) * cH, w: cW, h: cH
+    }));
+  }
+
+  const boxes = layout();
+  const parts = boxes.map((b, i) =>
+    svgRect(b.x, b.y, b.w, b.h, String.fromCharCode(65 + i), subFormats[i] || pf, names[i] || autoSubPitchName(p.name, i))
+  ).join('');
+
+  return `<div class="cup-pitch-preview"><svg viewBox="0 0 100 60" role="img" aria-label="Banedeling">${parts}</svg></div>`;
+}
+
 /**
  * Stable pool sync: removes stale teamIds, assigns unassigned teams
  * to the smallest pool. Preserves existing distribution.
@@ -154,7 +309,7 @@ function syncPoolsWithTeams(cls) {
         venue: '',
         rulesMode: 'nff',
         days: [{ id: CS.uuid(), date: todayStr(), startTime: '09:00', endTime: '16:00', breaks: [] }],
-        pitches: [{ id: CS.uuid(), name: 'Bane 1', maxFormat: '11v11' }],
+        pitches: [{ id: CS.uuid(), name: 'Bane 1', physicalFormat: '11v11', maxFormat: '11v11', subPitches: [] }],
         classes: [],
       };
       state.currentCupId = cup.id;
@@ -380,19 +535,63 @@ function syncPoolsWithTeams(cls) {
   function renderPitches(cup) {
     const container = $('cupPitches');
     if (!container) return;
-    container.innerHTML = cup.pitches.map((p, pi) => `
-      <div class="cup-input-row">
-        <input class="cup-input cup-input-sm" type="text" value="${esc(p.name)}" data-pitch="${pi}" data-field="pitchName" placeholder="Banenavn">
-        <select class="cup-input cup-input-sm cup-select" data-pitch="${pi}" data-field="pitchMaxFormat" title="Maks spillform denne banen kan brukes til">
-          <option value="3v3" ${p.maxFormat==='3v3'?'selected':''}>3v3</option>
-          <option value="5v5" ${p.maxFormat==='5v5'?'selected':''}>5v5</option>
-          <option value="7v7" ${p.maxFormat==='7v7'?'selected':''}>7v7</option>
-          <option value="9v9" ${p.maxFormat==='9v9'?'selected':''}>9v9</option>
-          <option value="11v11" ${p.maxFormat==='11v11'?'selected':''}>11v11</option>
-        </select>
-        ${cup.pitches.length > 1 ? `<button class="cup-item-remove" data-action="removePitch" data-idx="${pi}"><i class="fas fa-times"></i></button>` : ''}
-      </div>
-    `).join('');
+
+    container.innerHTML = (cup.pitches || []).map((p, pi) => {
+      const pf = getPitchPhysicalFormat(p);
+      const catalog = getPitchDivisionCatalog(pf);
+      const currentSubs = getCurrentSubFormats(p);
+
+      let selectedIdx = -1;
+      for (let di = 0; di < catalog.length; di++) {
+        if (arraysEqual(catalog[di].subs, currentSubs)) { selectedIdx = di; break; }
+      }
+
+      let divisionOptions = catalog.map((d, idx) =>
+        `<option value="${idx}" ${idx === selectedIdx ? 'selected' : ''}>${esc(d.label)}</option>`
+      ).join('');
+      if (selectedIdx < 0) {
+        divisionOptions = `<option value="custom" selected>Egendefinert (${esc(divisionToHumanText(currentSubs))})</option>` + divisionOptions;
+      }
+
+      // Subpitch list
+      let subListHtml = '';
+      if (Array.isArray(p.subPitches) && p.subPitches.length > 0) {
+        subListHtml = '<div class="cup-pitch-sublist">' + p.subPitches.map((sp, si) => {
+          const letter = String.fromCharCode(65 + si);
+          return `<div class="cup-sub-pitch-row">
+            <div class="cup-sub-pitch-letter">${letter}</div>
+            <input class="cup-input cup-input-sm" type="text" value="${esc(sp.name)}" data-field="subPitchName" data-pitch="${pi}" data-sub="${si}" placeholder="Delbane ${letter}">
+            <span class="cup-sub-pitch-badge">${esc(sp.format || pf)}</span>
+          </div>`;
+        }).join('') + '</div>';
+      } else {
+        subListHtml = `<div class="cup-pitch-meta">Hel bane (${esc(pf)})</div>`;
+      }
+
+      return `<div class="cup-pitch-card">
+        <div class="cup-pitch-card-header">
+          <input class="cup-input" type="text" value="${esc(p.name)}" data-pitch="${pi}" data-field="pitchName" placeholder="Banenavn">
+          ${(cup.pitches || []).length > 1 ? `<button class="cup-item-remove" data-action="removePitch" data-idx="${pi}" title="Fjern bane"><i class="fas fa-times"></i></button>` : ''}
+        </div>
+        <div class="cup-pitch-grid">
+          <div>
+            <div class="cup-input-label">Fysisk størrelse</div>
+            <select class="cup-input cup-select" data-pitch="${pi}" data-field="pitchPhysicalFormat">
+              ${['3v3','5v5','7v7','9v9','11v11'].map(f => `<option value="${f}" ${pf === f ? 'selected' : ''}>${f}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <div class="cup-input-label">Oppdeling</div>
+            <select class="cup-input cup-select" data-pitch="${pi}" data-field="pitchDivision">
+              ${divisionOptions}
+            </select>
+          </div>
+        </div>
+        ${buildPitchPreviewSvg(p)}
+        <div class="cup-input-label" style="margin-top:10px;">Delbaner</div>
+        ${subListHtml}
+      </div>`;
+    }).join('');
   }
 
   // --- Classes ---
@@ -909,19 +1108,27 @@ function syncPoolsWithTeams(cls) {
         saveCup(cup); renderSetup(cup);
       }
       else if (action === 'addPitch') {
-        cup.pitches.push({ id: CS.uuid(), name: `Bane ${cup.pitches.length + 1}`, maxFormat: '11v11' });
+        cup.pitches.push({
+          id: CS.uuid(),
+          name: `Bane ${cup.pitches.length + 1}`,
+          physicalFormat: '11v11',
+          maxFormat: '11v11',
+          subPitches: [],
+        });
         saveCup(cup); renderSetup(cup);
       }
       else if (action === 'removePitch') {
         const idx = Number(btn.dataset.idx);
         if (cup.pitches.length > 1) {
-          const removedPitchId = cup.pitches[idx]?.id;
+          const removed = cup.pitches[idx];
+          const removedIds = getEffectivePitchIdsForPhysicalPitch(removed);
           cup.pitches.splice(idx, 1);
-          // Unplace matches assigned to deleted pitch
-          if (removedPitchId) {
+          // Nullstill kamper som peker på fjernede (virtuelle) pitchIds
+          if (removedIds.length > 0) {
+            const idSet = new Set(removedIds);
             for (const cls of cup.classes) {
               for (const m of (cls.matches || [])) {
-                if (m.pitchId === removedPitchId) {
+                if (m.pitchId && idSet.has(m.pitchId)) {
                   m.pitchId = null; m.start = null; m.end = null; m.dayIndex = null; m.locked = false;
                 }
               }
@@ -1091,11 +1298,58 @@ function handleCupField(inp) {
   // Pitch
   else if (field === 'pitchName') {
     const pi = Number(inp.dataset.pitch);
-    if (cup.pitches[pi]) { cup.pitches[pi].name = inp.value; saveCup(cup); }
+    if (cup.pitches[pi]) { cup.pitches[pi].name = inp.value; saveCup(cup); renderCupSelector(); }
   }
-  else if (field === 'pitchMaxFormat') {
+  else if (field === 'subPitchName') {
     const pi = Number(inp.dataset.pitch);
-    if (cup.pitches[pi]) { cup.pitches[pi].maxFormat = inp.value; saveCup(cup); }
+    const si = Number(inp.dataset.sub);
+    const p = cup.pitches[pi];
+    if (p && Array.isArray(p.subPitches) && p.subPitches[si]) {
+      p.subPitches[si].name = inp.value;
+      saveCup(cup);
+    }
+  }
+  else if (field === 'pitchPhysicalFormat') {
+    const pi = Number(inp.dataset.pitch);
+    const p = cup.pitches[pi];
+    if (!p) return;
+    if (hasExistingSchedule(cup)) {
+      if (!confirm('Endring av banestørrelse nullstiller kampplasseringer. Fortsette?')) {
+        inp.value = getPitchPhysicalFormat(p); return;
+      }
+      for (const cls of cup.classes) {
+        for (const m of (cls.matches || [])) {
+          m.pitchId = null; m.start = null; m.end = null; m.dayIndex = null; m.locked = false;
+        }
+      }
+      markScheduleStale(cup, 'Banestørrelse endret');
+    }
+    p.physicalFormat = inp.value;
+    p.maxFormat = inp.value;
+    p.subPitches = [];
+    saveCup(cup); renderSetup(cup);
+  }
+  else if (field === 'pitchDivision') {
+    const pi = Number(inp.dataset.pitch);
+    const p = cup.pitches[pi];
+    if (!p || inp.value === 'custom') return;
+    const pf = getPitchPhysicalFormat(p);
+    const catalog = getPitchDivisionCatalog(pf);
+    const def = catalog[Number(inp.value)];
+    if (!def || !def.subs) return;
+    if (hasExistingSchedule(cup)) {
+      if (!confirm('Endring av banedeling nullstiller kampplasseringer. Fortsette?')) {
+        renderPitches(cup); return;
+      }
+      for (const cls of cup.classes) {
+        for (const m of (cls.matches || [])) {
+          m.pitchId = null; m.start = null; m.end = null; m.dayIndex = null; m.locked = false;
+        }
+      }
+      markScheduleStale(cup, 'Banedeling endret');
+    }
+    applyDivisionToPitch(p, def.subs);
+    saveCup(cup); renderSetup(cup);
   }
   // Class fields
   else if (field === 'className') {
@@ -1307,7 +1561,7 @@ main.addEventListener('change', e => handleCupField(e.target));
     // Cup name/venue
     const nameInput = $('cupName');
     const venueInput = $('cupVenue');
-    if (nameInput) nameInput.addEventListener('input', () => { const cup = getCurrentCup(); if (cup) { cup.title = nameInput.value; saveCup(cup); } });
+    if (nameInput) nameInput.addEventListener('input', () => { const cup = getCurrentCup(); if (cup) { cup.title = nameInput.value; saveCup(cup); renderCupSelector(); } });
     if (venueInput) venueInput.addEventListener('input', () => { const cup = getCurrentCup(); if (cup) { cup.venue = venueInput.value; saveCup(cup); } });
 
     // Add buttons
@@ -1319,7 +1573,7 @@ main.addEventListener('change', e => handleCupField(e.target));
     });
     $('cupAddPitch')?.addEventListener('click', () => {
       const cup = getCurrentCup(); if (!cup) return;
-      cup.pitches.push({ id: CS.uuid(), name: `Bane ${cup.pitches.length + 1}`, maxFormat: '11v11' });
+      cup.pitches.push({ id: CS.uuid(), name: `Bane ${cup.pitches.length + 1}`, physicalFormat: '11v11', maxFormat: '11v11', subPitches: [] });
       if (hasExistingSchedule(cup)) markScheduleStale(cup, 'Bane lagt til');
       saveCup(cup); renderSetup(cup);
     });
@@ -1700,6 +1954,7 @@ main.addEventListener('change', e => handleCupField(e.target));
     state.activeStep = 'setup';
 
     const newCup = ensureCup();
+    renderCupSelector();
     renderSteps();
     renderSetup(newCup);
     toast('Cup slettet', 'success');
@@ -1708,13 +1963,64 @@ main.addEventListener('change', e => handleCupField(e.target));
   // ============================================================
   // Init
   // ============================================================
+  function renderCupSelector() {
+    const sel = $('cupSelector');
+    if (!sel) return;
+    const store = loadStore();
+    sel.innerHTML = store.cups.map(c => {
+      const label = c.title || 'Uten navn';
+      return `<option value="${c.id}" ${c.id === state.currentCupId ? 'selected' : ''}>${esc(label)}</option>`;
+    }).join('');
+  }
+
+  function createNewCup() {
+    const cup = {
+      id: CS.uuid(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      title: '',
+      venue: '',
+      rulesMode: 'nff',
+      days: [{ id: CS.uuid(), date: todayStr(), startTime: '09:00', endTime: '16:00', breaks: [] }],
+      pitches: [{ id: CS.uuid(), name: 'Bane 1', physicalFormat: '11v11', maxFormat: '11v11', subPitches: [] }],
+      classes: [],
+    };
+    state.currentCupId = cup.id;
+    state.scheduleData = null;
+    state.activeStep = 'setup';
+    saveCup(cup);
+    renderCupSelector();
+    renderSteps();
+    renderSetup(cup);
+    toast('Ny cup opprettet', 'success');
+  }
+
+  function switchCup(cupId) {
+    state.currentCupId = cupId;
+    state.scheduleData = null;
+    state.activeStep = 'setup';
+    const cup = getCurrentCup();
+    if (cup) {
+      restoreScheduleStateFromCup(cup);
+      renderSteps();
+      renderSetup(cup);
+      if (state.activeStep === 'schedule') renderSchedule(cup);
+      else if (state.activeStep === 'results') renderResults(cup);
+    }
+  }
+
   function init() {
     const cup = ensureCup();
     restoreScheduleStateFromCup(cup);
+    renderCupSelector();
     setupStepNav();
     setupEvents();
     renderSteps();
     renderSetup(cup);
+
+    // Cup selector events
+    $('cupSelector')?.addEventListener('change', (e) => switchCup(e.target.value));
+    $('cupNewBtn')?.addEventListener('click', () => createNewCup());
 
     // Render the active step (may be schedule if restored)
     if (state.activeStep === 'schedule') {
