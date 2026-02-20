@@ -125,6 +125,9 @@ function buildPitchPreviewSvg(p) {
   const subFormats = getCurrentSubFormats(p);
   const n = subFormats.length;
 
+  // Don't show preview for whole pitch (no division)
+  if (n <= 1) return '';
+
   const names = [];
   if (Array.isArray(p.subPitches) && p.subPitches.length > 0) {
     for (let i = 0; i < p.subPitches.length; i++) {
@@ -134,66 +137,75 @@ function buildPitchPreviewSvg(p) {
     names.push(p.name || 'Bane');
   }
 
-  function svgRect(x, y, w, h, label, format, name) {
-    const shortName = name.length > 18 ? name.slice(0, 18) + '\u2026' : name;
+  // Color palette for sub-pitches
+  const colors = ['#4ade80', '#60a5fa', '#f59e0b', '#f472b6', '#a78bfa', '#34d399'];
+
+  function svgRect(x, y, w, h, label, format, name, colorIdx) {
+    const color = colors[colorIdx % colors.length];
+    const shortName = name.length > 14 ? name.slice(0, 14) + '\u2026' : name;
     return `<g>
-      <rect class="cup-pitch-preview-rect" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2" ry="2"/>
-      <text class="cup-pitch-preview-text" x="${(x+3).toFixed(1)}" y="${(y+8).toFixed(1)}">${esc(label)} (${esc(format)})</text>
-      <text class="cup-pitch-preview-text" x="${(x+3).toFixed(1)}" y="${(y+15).toFixed(1)}">${esc(shortName)}</text>
+      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="3" ry="3" fill="${color}" fill-opacity="0.25" stroke="${color}" stroke-width="1"/>
+      <text x="${(x + w/2).toFixed(1)}" y="${(y + h/2 - 2).toFixed(1)}" text-anchor="middle" class="cup-pitch-preview-label">${esc(format)}</text>
+      <text x="${(x + w/2).toFixed(1)}" y="${(y + h/2 + 6).toFixed(1)}" text-anchor="middle" class="cup-pitch-preview-name">${esc(shortName)}</text>
     </g>`;
   }
 
   function layout() {
-    if (n === 1) return [{ x: 0, y: 0, w: 100, h: 60 }];
-
+    const gap = 1.5;
     if (n === 2) {
       const w1 = pitchFormatWeight(subFormats[0]);
       const w2 = pitchFormatWeight(subFormats[1]);
-      const left = (w1 / (w1 + w2)) * 100;
-      return [{ x: 0, y: 0, w: left, h: 60 }, { x: left, y: 0, w: 100 - left, h: 60 }];
+      const left = (w1 / (w1 + w2)) * (100 - gap);
+      return [{ x: 0, y: 0, w: left, h: 60 }, { x: left + gap, y: 0, w: 100 - left - gap, h: 60 }];
     }
 
     if (n === 3) {
       if (subFormats[0] === subFormats[1] && subFormats[1] === subFormats[2]) {
-        return [{ x: 0, y: 0, w: 33.3, h: 60 }, { x: 33.3, y: 0, w: 33.3, h: 60 }, { x: 66.6, y: 0, w: 33.4, h: 60 }];
+        const cw = (100 - 2*gap) / 3;
+        return [{ x: 0, y: 0, w: cw, h: 60 }, { x: cw+gap, y: 0, w: cw, h: 60 }, { x: 2*(cw+gap), y: 0, w: cw, h: 60 }];
       }
       const weights = subFormats.map(pitchFormatWeight);
       const maxW = Math.max(...weights);
       const maxIdx = weights.indexOf(maxW);
       const smallIdx = [0, 1, 2].filter(i => i !== maxIdx);
-      const bigWidth = (maxW / (maxW + weights[smallIdx[0]] + weights[smallIdx[1]])) * 100;
+      const bigWidth = (maxW / (maxW + weights[smallIdx[0]] + weights[smallIdx[1]])) * (100 - gap);
       const coords = new Array(3);
       coords[maxIdx] = { x: 0, y: 0, w: bigWidth, h: 60 };
-      coords[smallIdx[0]] = { x: bigWidth, y: 0, w: 100 - bigWidth, h: 30 };
-      coords[smallIdx[1]] = { x: bigWidth, y: 30, w: 100 - bigWidth, h: 30 };
+      coords[smallIdx[0]] = { x: bigWidth + gap, y: 0, w: 100 - bigWidth - gap, h: (60-gap)/2 };
+      coords[smallIdx[1]] = { x: bigWidth + gap, y: (60+gap)/2, w: 100 - bigWidth - gap, h: (60-gap)/2 };
       return coords;
     }
 
     if (n === 4 && subFormats[0] === subFormats[1] && subFormats[2] === subFormats[3] && subFormats[0] !== subFormats[2]) {
       const topW = pitchFormatWeight(subFormats[0]) * 2;
       const botW = pitchFormatWeight(subFormats[2]) * 2;
-      const topH = (topW / (topW + botW)) * 60;
+      const topH = (topW / (topW + botW)) * (60 - gap);
+      const hw = (100 - gap) / 2;
       return [
-        { x: 0, y: 0, w: 50, h: topH }, { x: 50, y: 0, w: 50, h: topH },
-        { x: 0, y: topH, w: 50, h: 60 - topH }, { x: 50, y: topH, w: 50, h: 60 - topH }
+        { x: 0, y: 0, w: hw, h: topH }, { x: hw+gap, y: 0, w: hw, h: topH },
+        { x: 0, y: topH+gap, w: hw, h: 60-topH-gap }, { x: hw+gap, y: topH+gap, w: hw, h: 60-topH-gap }
       ];
     }
 
     // Default grid
     const cols = Math.ceil(Math.sqrt(n));
     const rows = Math.ceil(n / cols);
-    const cW = 100 / cols, cH = 60 / rows;
+    const cW = (100 - (cols-1)*gap) / cols;
+    const cH = (60 - (rows-1)*gap) / rows;
     return Array.from({ length: n }, (_, i) => ({
-      x: (i % cols) * cW, y: Math.floor(i / cols) * cH, w: cW, h: cH
+      x: (i % cols) * (cW + gap), y: Math.floor(i / cols) * (cH + gap), w: cW, h: cH
     }));
   }
 
   const boxes = layout();
   const parts = boxes.map((b, i) =>
-    svgRect(b.x, b.y, b.w, b.h, String.fromCharCode(65 + i), subFormats[i] || pf, names[i] || autoSubPitchName(p.name, i))
+    svgRect(b.x, b.y, b.w, b.h, String.fromCharCode(65 + i), subFormats[i] || pf, names[i] || autoSubPitchName(p.name, i), i)
   ).join('');
 
-  return `<div class="cup-pitch-preview"><svg viewBox="0 0 100 60" role="img" aria-label="Banedeling">${parts}</svg></div>`;
+  return `<div class="cup-pitch-preview"><svg viewBox="0 0 100 60" role="img" aria-label="Banedeling">
+    <rect x="0" y="0" width="100" height="60" rx="4" ry="4" fill="#166534" fill-opacity="0.08"/>
+    ${parts}
+  </svg></div>`;
 }
 
 /**
@@ -1140,8 +1152,12 @@ function syncPoolsWithTeams(cls) {
       }
       else if (action === 'addClass') {
         const nff = CS.getNffDefaults(10);
+        const genderPrefix = 'G';
+        const age = 10;
+        const existingCount = cup.classes.filter(c => c.gender === genderPrefix && c.age === age).length;
+        const suffix = existingCount > 0 ? ` (${existingCount + 1})` : '';
         cup.classes.push({
-          id: CS.uuid(), name: '', gender: 'G', age: 10,
+          id: CS.uuid(), name: `${genderPrefix}${age}${suffix}`, gender: genderPrefix, age: age,
           playFormat: nff.playFormat, matchMinutes: nff.matchMinutes,
           bufferMinutes: 5, minRestMinutes: 25,
           allowedDayIds: null,
@@ -1358,18 +1374,31 @@ function handleCupField(inp) {
   }
   else if (field === 'classGender') {
     const ci = Number(inp.dataset.class);
-    if (cup.classes[ci]) { cup.classes[ci].gender = inp.value; saveCup(cup); }
+    const cls = cup.classes[ci];
+    if (cls) {
+      const oldPrefix = cls.gender || 'G';
+      cls.gender = inp.value;
+      // Auto-update name if it looks auto-generated
+      if (!cls.name || /^[GJ]\d+/.test(cls.name)) {
+        cls.name = `${cls.gender}${cls.age || 10}`;
+      }
+      saveCup(cup); renderClasses(cup);
+    }
   }
   else if (field === 'classAge') {
     const ci = Number(inp.dataset.class);
     const age = Math.max(6, Math.min(19, Number(inp.value) || 10));
-    if (cup.classes[ci]) {
-      cup.classes[ci].age = age;
-      // Auto-update NFF defaults (can be overridden)
+    const cls = cup.classes[ci];
+    if (cls) {
+      // Auto-update name if it looks auto-generated
+      if (!cls.name || /^[GJ]\d+/.test(cls.name)) {
+        cls.name = `${cls.gender || 'G'}${age}`;
+      }
+      cls.age = age;
       const nff = CS.getNffDefaults(age);
-      cup.classes[ci].playFormat = nff.playFormat;
-      cup.classes[ci].matchMinutes = nff.matchMinutes;
-      if ((cup.classes[ci].matches || []).length > 0) {
+      cls.playFormat = nff.playFormat;
+      cls.matchMinutes = nff.matchMinutes;
+      if ((cls.matches || []).length > 0) {
         markScheduleStale(cup, 'Aldersgruppe endret');
       }
       saveCup(cup);

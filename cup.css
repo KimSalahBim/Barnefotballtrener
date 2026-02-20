@@ -1443,17 +1443,17 @@
   border: 1px solid var(--cup-gray-200, #e5e7eb);
   border-radius: 10px;
   padding: 8px;
-  background: #fff;
+  background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
 }
 .cup-pitch-preview svg { width: 100%; height: auto; display: block; }
-.cup-pitch-preview-rect {
-  fill: var(--cup-gray-50, #f9fafb);
-  stroke: var(--cup-gray-300, #d1d5db);
-  stroke-width: 0.6;
+.cup-pitch-preview-label {
+  font-size: 6px;
+  font-weight: 700;
+  fill: var(--cup-gray-700, #374151);
 }
-.cup-pitch-preview-text {
-  font-size: 5px;
-  fill: var(--cup-gray-600, #4b5563);
+.cup-pitch-preview-name {
+  font-size: 4px;
+  fill: var(--cup-gray-500, #6b7280);
 }
 .cup-pitch-sublist {
   margin-top: 8px;
