@@ -1279,7 +1279,7 @@
         <div class="wo-block-header">
           <div class="wo-block-title">Del ${idx + 1}${isParallel ? ' • Parallelt' : ''}</div>
           <div class="wo-block-actions">
-            <button class="btn-small" type="button" id="wo_${b.id}_up" title="Flytt opp">â†‘</button>
+            <button class="btn-small" type="button" id="wo_${b.id}_up" title="Flytt opp">↑</button>
             <button class="btn-small" type="button" id="wo_${b.id}_down" title="Flytt ned">↓</button>
             ${isParallel ? '' : `<button class="btn-small" type="button" id="wo_${b.id}_addParallel" title="Legg til parallell øvelse">Øvelser parallelt</button>`}
             <button class="btn-small btn-danger" type="button" id="wo_${b.id}_del" title="Slett">Slett</button>
@@ -2523,7 +2523,7 @@ function serializeWorkoutFromState() {
           '<div class="guide-title">Slik lagrer du som PDF på iPhone/iPad</div>' +
           '<div class="guide-steps">' +
           '<div class="guide-step"><span class="step-num">1</span> Trykk på <b>Lagre som PDF</b>-knappen over</div>' +
-          '<div class="guide-step"><span class="step-num">2</span> Trykk på <b>Del-ikonet</b> <span class="step-icon">â†‘</span> øverst i Valg-dialogen</div>' +
+          '<div class="guide-step"><span class="step-num">2</span> Trykk på <b>Del-ikonet</b> <span class="step-icon">↑</span> øverst i Valg-dialogen</div>' +
           '<div class="guide-step"><span class="step-num">3</span> Velg <b>Arkiver i Filer</b> for å lagre PDF-en</div>' +
           '</div>';
       } else if (isAndroid) {
@@ -2772,7 +2772,7 @@ function serializeWorkoutFromState() {
         if (currentPrefix !== initialPrefix) {
           // Auth resolved with real uid — re-render with correct keys
           clearInterval(timer);
-          console.log('[workout.js] auth resolved, rehydrating storage from', initialPrefix, 'â†’', currentPrefix);
+          console.log('[workout.js] auth resolved, rehydrating storage from', initialPrefix, '→', currentPrefix);
           renderTemplates();
           renderWorkouts();
           restoreDraftIfAny();
@@ -2792,9 +2792,9 @@ function serializeWorkoutFromState() {
     if (!window._bftCloud) return;
     try {
       var rows = await window._bftCloud.loadAll();
-      if (rows === null) return; // Supabase feil â†’ ikke gjør noe
+      if (rows === null) return; // Supabase feil → ikke gjør noe
       if (rows.length === 0) {
-        // Cloud tom â†’ bootstrap: push lokal data opp
+        // Cloud tom → bootstrap: push lokal data opp
         var tRaw = safeGet(STORE_KEY());
         if (tRaw && tRaw !== '{}' && tRaw !== '[]') window._bftCloud.save('workout_templates_v1', tRaw);
         var sRaw = safeGet(WORKOUTS_KEY());

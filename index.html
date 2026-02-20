@@ -77,7 +77,7 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <!-- Styles -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="auth-styles.css">
   <link rel="stylesheet" href="pricing.css">
@@ -121,6 +121,13 @@
         <i class="fas fa-tags" aria-hidden="true"></i>
         Se priser
       </button>
+
+      <!-- Trust pills -->
+      <div class="lp-trust-row" style="margin-top:14px;">
+        <div class="lp-trust-pill"><i class="fas fa-check-circle"></i> Gratis i 7 dager</div>
+        <div class="lp-trust-pill"><i class="fas fa-check-circle"></i> Ingen kortinfo</div>
+        <div class="lp-trust-pill"><i class="fas fa-check-circle"></i> Mobilvennlig</div>
+      </div>
       
       <!-- Phone mockups -->
       <div class="lp-phones-section">
@@ -248,6 +255,21 @@
           </div>
         </div>
         <div class="lp-phones-caption">Startoppstilling · Spilletid · Treningsgrupper</div>
+      </div>
+
+      <!-- Video demo -->
+      <div class="lp-section lp-demo-section">
+        <h2 class="lp-section-title">Se appen i aksjon</h2>
+        <p class="lp-section-sub">Kampdag-planleggeren genererer rettferdig spilletid og bytteplan på sekunder.</p>
+        <div class="lp-demo-device">
+          <div class="lp-demo-notch"></div>
+          <div class="lp-demo-url">barnefotballtrener.no</div>
+          <div class="lp-demo-screen">
+            <video autoplay muted loop playsinline webkit-playsinline preload="metadata" poster="demo-poster.jpg">
+              <source src="demo-recording.mp4" type="video/mp4">
+            </video>
+          </div>
+        </div>
       </div>
 
       <!-- Features -->
@@ -1262,7 +1284,14 @@
 
             <div class="wo-meta-field wo-meta-field-wide">
               <label for="woTitle" class="wo-label">Navn på økta (valgfritt)</label>
-              <input id="woTitle" type="text" class="input" placeholder="f.eks. Tirsdag – pe="font-size:1.4rem; font-weight:900;">0 min</div>
+              <input id="woTitle" type="text" class="input" placeholder="f.eks. Tirsdag – pasning og avslutning">
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div>
+              <div style="font-weight:800; font-size:14px;">Total tid</div>
+              <div id="woTotalTop" style="font-size:1.4rem; font-weight:900;">0 min</div>
             </div>
           </div>
 
