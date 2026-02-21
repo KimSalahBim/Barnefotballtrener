@@ -656,9 +656,9 @@ body {
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 .pos-btn:hover { border-color: var(--text-300); }
-.pos-btn.pos-f-on { border: 1.5px solid var(--primary-dim); background: var(--primary-dim); color: var(--primary); }
-.pos-btn.pos-m-on { border: 1.5px solid var(--primary-dim); background: var(--primary-dim); color: var(--primary); }
-.pos-btn.pos-a-on { border: 1.5px solid var(--primary-dim); background: var(--primary-dim); color: var(--primary); }
+.pos-btn.pos-f-on { border: 1.5px solid rgba(34,197,94,0.3); background: rgba(34,197,94,0.1); color: #16a34a; }
+.pos-btn.pos-m-on { border: 1.5px solid rgba(59,130,246,0.3); background: rgba(59,130,246,0.1); color: #2563eb; }
+.pos-btn.pos-a-on { border: 1.5px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.1); color: #dc2626; }
 
 .player-name {
     font-weight: 700;

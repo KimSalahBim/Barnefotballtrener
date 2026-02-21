@@ -1034,7 +1034,7 @@
 
   function updateTotalUI() {
     const t = `${totalMinutes()} min`;
-    const el = $('woTotal');
+    const el = $('woTotalTop');
     if (el) el.textContent = t;
     const elB = $('woTotalBottom');
     if (elB) elB.textContent = t;
