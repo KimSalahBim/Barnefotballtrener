@@ -1,4 +1,4 @@
-// Â© 2026 Barnefotballtrener.no. All rights reserved.
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - kampdag.js
 // Kampdag: oppm\u00f8te -> start/benk -> bytteplan med roligere bytter og bedre spilletidsfordeling.
 // Bruker global variabel "window.players" (Array) som settes av core.js.
@@ -304,6 +304,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       kdPreviousPlayerIds = currentIds;
       renderKampdagPlayers();
       updateKampdagCounts();
+      refreshKeeperUI();
       if (kdFormationOn) { renderPositionList(); updateCoverage(); }
       console.log('[Kampdag] Players re-rendered, count:', getPlayersArray().length);
     } catch (err) {
@@ -766,8 +767,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const warn = zones.some(z => z.have < z.need);
     el.style.display = 'block';
-    el.style.background = warn ? 'rgba(245,158,11,0.08)' : 'rgba(34,197,94,0.06)';
-    el.style.color = warn ? '#d97706' : '#16a34a';
+    el.style.background = warn ? 'var(--warning-dim)' : 'var(--success-dim)';
+    el.style.color = warn ? 'var(--warning)' : 'var(--success)';
 
     el.innerHTML = `<div style="font-weight:800; margin-bottom:6px;">${warn ? '\u26a0 ' : ''}Sonedekning for ${kdFormationKey}</div>` +
       zones.map(z => {
@@ -777,9 +778,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           <span style="width:8px;height:8px;border-radius:50%;background:${z.color};flex-shrink:0;"></span>
           <span style="width:72px;">${z.name} (${z.need})</span>
           <div style="flex:1;height:6px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:${low ? '#d97706' : z.color};border-radius:3px;"></div>
+            <div style="height:100%;width:${pct}%;background:${low ? 'var(--warning)' : z.color};border-radius:3px;"></div>
           </div>
-          <span style="width:32px;text-align:right;font-weight:800;${low ? 'color:#d97706;' : ''}">${z.have}${low ? ' \u26a0' : ''}</span>
+          <span style="width:32px;text-align:right;font-weight:800;${low ? 'color:var(--warning);' : ''}">${z.have}${low ? ' \u26a0' : ''}</span>
         </div>`;
       }).join('') +
       (warn ? `<div style="margin-top:6px;font-size:12px;">Noen spillere vil bli plassert utenfor preferanse.</div>` : '');
@@ -902,7 +903,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       zr.zones[zone].forEach((pid, i) => { if (i < zoneSlots[zone].length) map[zoneSlots[zone][i]] = pid; });
     }
     const gk = slots.find(s => s.zone === 'K');
-    if (gk && seg.keeperId) map[gk.key] = seg.keeperId;
+    // Use keeperId from assignZones (auto-picks when seg.keeperId is null)
+    const effectiveKeeper = zr.keeperId || seg.keeperId;
+    if (gk && effectiveKeeper) map[gk.key] = effectiveKeeper;
     return { slots: map, bench: lastPresent.filter(p => !seg.lineup.includes(p.id)).map(p => p.id) };
   }
 
@@ -1159,15 +1162,32 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 1, 1, 4);
 
+    // Auto-pick: if a keeper dropdown is empty, try to find a goalie-tagged player
+    function autoPickKeeper(excludeIds) {
+      const present = getPresentPlayers();
+      const goalies = present.filter(p => p.goalie && !excludeIds.has(p.id));
+      if (goalies.length) return goalies[0].id;
+      // Fallback: pick last present player not already assigned
+      const fallback = present.filter(p => !excludeIds.has(p.id));
+      return fallback.length ? fallback[fallback.length - 1].id : null;
+    }
+
     const timeline = [];
     let t = 0;
+    const usedKeepers = new Set();
 
     for (let i = 1; i <= kc; i++) {
-      const pid = $(`kdKeeper${i}`)?.value || '';
+      let pid = $(`kdKeeper${i}`)?.value || '';
       const minsRaw = parseInt($(`kdKeeperMin${i}`)?.value, 10) || 0;
       const mins = clamp(minsRaw, 0, 999);
 
       if (mins <= 0) continue;
+
+      // Auto-assign keeper if dropdown is empty
+      if (!pid) {
+        pid = autoPickKeeper(usedKeepers);
+      }
+      if (pid) usedKeepers.add(pid);
 
       const start = t;
       const end = Math.min(T, t + mins);
@@ -1833,6 +1853,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   // MAIN
   // ------------------------------
   function generateKampdagPlan() {
+   try {
     const present = getPresentPlayers();
     const format = parseInt($('kdFormat')?.value, 10) || 7;
     const T = clamp(parseInt($('kdMinutes')?.value, 10) || 48, 10, 200);
@@ -2062,6 +2083,11 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     // Show start match button
     const startBtn = $('kdStartMatch');
     if (startBtn) startBtn.style.display = '';
+   } catch (err) {
+    console.error('[kampdag] generateKampdagPlan feil:', err);
+    const lineupEl = $('kdLineup');
+    if (lineupEl) lineupEl.innerHTML = '<div class="small-text" style="opacity:0.8;">En feil oppstod. Pr\u00f8v \u00e5 endre innstillinger og generer p\u00e5 nytt.</div>';
+   }
   }
 
   function renderKampdagOutput(presentPlayers, best, P, T) {
@@ -2347,7 +2373,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
             <div class="group-card" style="margin-bottom:12px;">
               <div class="group-header" style="display:flex;justify-content:space-between;align-items:center;">
                 <div class="group-name">Minutt ${ev.minute}</div>
-                ${keeperName ? `<div style="background:var(--gray-100);padding:6px 10px;border-radius:999px;font-size:12px;opacity:0.85;">Keeper: ${escapeHtml(keeperName)}</div>` : ''}
+                ${keeperName ? `<div style="background:var(--bg);padding:6px 10px;border-radius:999px;font-size:12px;opacity:0.85;">Keeper: ${escapeHtml(keeperName)}</div>` : ''}
               </div>
               <div class="group-players" style="gap:6px;">${empty}${ins}${outs}</div>
             </div>`;

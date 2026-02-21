@@ -148,18 +148,12 @@
    SCREEN STYLES: Scale wrapper
    Uses REAL app CSS classes (kd-*, results-card, etc.)
    scaled down to fit phone mockup.
-   
-   When you change kampdag.css or style.css,
-   these mockups update automatically.
    ------------------------------------------- */
 
-/* Scale wrapper: renders app HTML at 340px then shrinks to fit phone */
 .lp-screen-scaled {
   overflow: hidden;
-  background: #0f172a; /* match kd-timeline-chart bg */
+  background: #0f172a;
   position: relative;
-  /* Aspect ratio makes it look like a real phone screen (9:16 portrait) */
-  /* Inner width 152px × 16/9 = 270px (close to real phone proportions) */
   aspect-ratio: 9 / 16;
 }
 
@@ -173,18 +167,15 @@
   position: absolute;
   top: 0;
   left: 0;
-  /* Desktop: phone is 160px, padding eats 8px → 152px inner → scale 0.447 */
   transform: scale(0.447);
 }
 
-/* Mobile: phone is 148px, padding eats 8px → 140px inner → scale 0.412 */
 @media (max-width: 520px) {
   .lp-scale-wrap {
     transform: scale(0.412);
   }
 }
 
-/* Neutralise kd-timeline-chart margin/shadow inside phone (already has frame) */
 .lp-phone .kd-timeline-chart {
   margin-bottom: 0;
   border: none;
@@ -192,19 +183,16 @@
   border-radius: 0;
 }
 
-/* Neutralise kd-dark-output border-radius/shadow inside phone */
 .lp-phone .kd-dark-output {
   border-radius: 0;
   box-shadow: none;
   margin-bottom: 0;
 }
 
-/* Neutralise kd-pitch-card margin inside phone */
 .lp-phone .kd-pitch-card {
   margin-bottom: 0;
 }
 
-/* Desktop fallback for results-card (original only in @media max-width:768px) */
 .lp-phone .results-card {
   background: var(--gray-50, #f8f9fa);
   border: 1px solid var(--gray-200, #e2e8f0);
@@ -237,7 +225,7 @@
    ------------------------------------------- */
 .lp-section {
   padding: 28px 24px;
-  text-align: left;  /* Override password-box text-align: center */
+  text-align: left;
 }
 
 .lp-section + .lp-section {
@@ -597,7 +585,7 @@
    FIX: password-box override (beat style.css ID rule)
    ------------------------------------------- */
 #passwordProtection .password-box.landing-page-box {
-  max-width: 640px;
+  max-width: 640px !important;
   padding: 0 0 30px;
   text-align: center;
 }
@@ -630,4 +618,209 @@
   text-align: center;
   margin-bottom: 10px;
   line-height: 1.45;
+}
+
+/* -------------------------------------------
+   VIDEO DEMO DEVICE
+   ------------------------------------------- */
+.lp-demo-section {
+  text-align: center;
+}
+
+.lp-demo-device {
+  max-width: 300px;
+  margin: 0 auto;
+  background: #1a1a2e;
+  border-radius: 30px;
+  padding: 10px 8px 10px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+}
+
+.lp-demo-notch {
+  width: 60px;
+  height: 5px;
+  background: #333;
+  border-radius: 3px;
+  margin: 0 auto 4px;
+}
+
+.lp-demo-url {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+.lp-demo-screen {
+  background: #0f172a;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.lp-demo-screen video {
+  width: 100%;
+  display: block;
+  border-radius: 18px;
+}
+
+@media (max-width: 380px) {
+  .lp-demo-device { max-width: 260px; }
+}
+
+/* -------------------------------------------
+   PHONE MOCKUP: overrides for pitch inside landing
+   ------------------------------------------- */
+.lp-scale-wrap .kd-pos-bubble,
+.lp-scale-wrap .kd-bench-bubble {
+  cursor: default !important;
+  touch-action: auto !important;
+}
+
+.lp-scale-wrap .kd-pitch-card-header {
+  padding: 4px 8px;
+}
+
+.lp-scale-wrap .kd-pitch-card-title {
+  font-size: 11px;
+}
+
+.lp-scale-wrap .kd-bench-bubble {
+  width: 32px;
+  height: 32px;
+}
+
+.lp-scale-wrap .kd-bench-bubble .kd-p-name {
+  font-size: 8px;
+  max-width: 28px;
+}
+
+/* -------------------------------------------
+   DESKTOP RESPONSIVE: Full-width landing
+   ------------------------------------------- */
+@media (min-width: 768px) {
+  #passwordProtection .password-box.landing-page-box {
+    max-width: calc(100vw - 80px) !important;
+    padding: 0 0 40px;
+    border-radius: 28px;
+  }
+
+  .lp-hero {
+    padding: 52px 48px 36px;
+  }
+
+  .lp-hero h1 {
+    font-size: 42px;
+  }
+
+  #passwordProtection .lp-hero .landing-tagline {
+    font-size: 18px;
+    max-width: 560px;
+    margin: 0 auto 28px;
+  }
+
+  .lp-phones {
+    gap: 20px;
+  }
+
+  .lp-phone {
+    width: 210px;
+  }
+
+  .lp-scale-wrap {
+    transform: scale(0.595);
+  }
+
+  .lp-section {
+    padding: 40px 48px;
+  }
+
+  .lp-section-title {
+    font-size: 28px;
+  }
+
+  .lp-section-sub {
+    font-size: 16px;
+    max-width: 560px;
+    margin: 0 auto 28px;
+  }
+
+  .lp-features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .lp-demo-device {
+    max-width: 360px;
+  }
+
+  .lp-how {
+    padding: 36px 40px;
+  }
+
+  .lp-steps {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .lp-price-cards {
+    display: flex;
+    max-width: 640px;
+    margin: 0 auto 14px;
+    gap: 16px;
+  }
+
+  .lp-price-card {
+    flex: 1;
+  }
+
+  .lp-club-card {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 1200px) {
+  #passwordProtection .password-box.landing-page-box {
+    max-width: calc(100vw - 120px) !important;
+  }
+
+  .lp-hero h1 {
+    font-size: 52px;
+  }
+
+  #passwordProtection .lp-hero .landing-tagline {
+    font-size: 20px;
+    max-width: 640px;
+  }
+
+  .lp-phone {
+    width: 240px;
+  }
+
+  .lp-scale-wrap {
+    transform: scale(0.68);
+  }
+
+  .lp-features {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    max-width: 960px;
+  }
+
+  .lp-price-cards {
+    max-width: 720px;
+  }
+
+  .lp-demo-device {
+    max-width: 400px;
+  }
+
+  .lp-club-card {
+    max-width: 720px;
+  }
 }

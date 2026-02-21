@@ -5,9 +5,9 @@
 
 /* -- Pitch card container -- */
 .kd-pitch-card {
-  background: var(--card-bg, #1e293b);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
+  background: var(--bg-dark-card);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-lg);
   margin-bottom: 12px;
   overflow: hidden;
 }
@@ -17,7 +17,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--border-dark);
   flex-wrap: wrap;
   gap: 3px;
 }
@@ -25,7 +25,7 @@
 .kd-pitch-card-title {
   font-weight: 900;
   font-size: 13px;
-  color: #fff;
+  color: var(--text-white);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -33,8 +33,8 @@
 
 .kd-override-badge {
   display: inline-flex;
-  background: rgba(251,191,36,0.12);
-  color: #fbbf24;
+  background: var(--warning-dim);
+  color: var(--warning);
   font-size: 9px;
   font-weight: 700;
   padding: 1px 6px;
@@ -56,7 +56,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid var(--border-dark);
   font-size: 9px;
   font-weight: 700;
   padding: 3px 8px;
@@ -66,12 +66,12 @@
   -webkit-user-select: none;
   user-select: none;
   background: rgba(255,255,255,0.06);
-  color: #94a3b8;
+  color: var(--text-white-dim);
 }
 
 .kd-copy-btn {
-  color: #60a5fa;
-  border-color: rgba(59,130,246,0.3);
+  color: var(--primary-light);
+  border-color: var(--primary-glow);
 }
 
 .kd-copy-btn:active,
@@ -83,7 +83,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid var(--border-dark);
   font-size: 10px;
   font-weight: 700;
   padding: 3px 10px;
@@ -93,7 +93,7 @@
   -webkit-user-select: none;
   user-select: none;
   background: rgba(255,255,255,0.06);
-  color: #94a3b8;
+  color: var(--text-white-dim);
   margin-left: 8px;
   vertical-align: middle;
 }
@@ -147,7 +147,8 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-white);
+  opacity: 0.45;
   margin-bottom: 1px;
   pointer-events: none;
 }
@@ -181,7 +182,7 @@
 
 .kd-pos-bubble .kd-p-name {
   font-weight: 800;
-  color: #fff;
+  color: var(--text-white);
   text-shadow: 0 1px 2px rgba(0,0,0,0.4);
   white-space: nowrap;
   overflow: hidden;
@@ -193,7 +194,7 @@
   font-size: 7px;
   font-weight: 700;
   opacity: 0.6;
-  color: #fff;
+  color: var(--text-white);
   pointer-events: none;
 }
 
@@ -205,7 +206,7 @@
 
 /* State indicators */
 .kd-pref-warn {
-  box-shadow: 0 0 0 2px #f59e0b, 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 0 0 2px var(--warning), 0 2px 8px rgba(0,0,0,0.3);
 }
 .kd-pref-warn::after {
   content: '\26a0';
@@ -213,7 +214,7 @@
   top: -3px;
   right: -3px;
   font-size: 8px;
-  background: #f59e0b;
+  background: var(--warning);
   color: #000;
   width: 13px;
   height: 13px;
@@ -252,7 +253,7 @@
 }
 
 .kd-bench-label {
-  color: #94a3b8;
+  color: var(--text-white-dim);
   font-size: 10px;
   font-weight: 700;
 }
@@ -281,7 +282,7 @@
 .kd-bench-bubble .kd-p-name {
   font-size: 9px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-white);
   pointer-events: none;
   white-space: nowrap;
   overflow: hidden;
@@ -296,8 +297,9 @@
   flex-wrap: wrap;
   gap: 3px 6px;
   font-size: 11px;
-  color: #cbd5e1;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  color: var(--text-white);
+  opacity: 0.85;
+  border-top: 1px solid var(--border-dark);
   line-height: 1.4;
 }
 
@@ -337,7 +339,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 3px #60a5fa;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 3px var(--primary-light);
   transform: translate(-50%, -50%) scale(1.08);
   will-change: left, top;
 }
@@ -345,7 +347,7 @@
 .kd-drag-ghost .kd-g-name {
   font-size: 10px;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-white);
   text-shadow: 0 1px 3px rgba(0,0,0,0.5);
   pointer-events: none;
 }

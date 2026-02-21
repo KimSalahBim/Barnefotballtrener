@@ -35,7 +35,7 @@
       Date.now() < statusCache.expires &&
       statusCache.userId === currentUserId
     ) {
-      console.log(`${LOG_PREFIX} 💾 Using cached subscription status for user ${currentUserId?.substring(0, 8)}... (${Math.floor((statusCache.expires - Date.now())/1000)}s left)`);
+      console.log(`${LOG_PREFIX} ðŸ’¾ Using cached subscription status for user ${currentUserId?.substring(0, 8)}... (${Math.floor((statusCache.expires - Date.now())/1000)}s left)`);
       return statusCache.status;
     }
     return null;
@@ -56,7 +56,7 @@
     if (tokenCache.token && 
         Date.now() < tokenCache.expires && 
         tokenCache.userId === currentUserId) {
-      console.log(`${LOG_PREFIX} 💾 Using cached token for user ${currentUserId?.substring(0, 8)}... (${Math.floor((tokenCache.expires - Date.now())/1000)}s left)`);
+      console.log(`${LOG_PREFIX} ðŸ’¾ Using cached token for user ${currentUserId?.substring(0, 8)}... (${Math.floor((tokenCache.expires - Date.now())/1000)}s left)`);
       return tokenCache.token;
     }
     return null;
@@ -66,7 +66,7 @@
     tokenCache.token = token;
     tokenCache.userId = userId;
     tokenCache.expires = Date.now() + (5 * 60 * 1000); // 5 min
-    console.log(`${LOG_PREFIX} 💾 Cached token for user ${userId?.substring(0, 8)}... (5 min)`);
+    console.log(`${LOG_PREFIX} ðŸ’¾ Cached token for user ${userId?.substring(0, 8)}... (5 min)`);
   }
 
   function clearTokenCache() {
@@ -74,7 +74,7 @@
     tokenCache = { token: null, expires: 0, userId: null };
     clearStatusCache();
     if (hadToken) {
-      console.log(`${LOG_PREFIX} 🗑️ Token cache cleared`);
+      console.log(`${LOG_PREFIX} ðŸ—‘️ Token cache cleared`);
     }
   }
 
@@ -93,7 +93,7 @@
         const newUserId = session?.user?.id || null;
         const cachedUserId = tokenCache.userId;
 
-        console.log(`${LOG_PREFIX} 🔐 Auth state change: ${event}, user: ${newUserId?.substring(0, 8) || 'none'}`);
+        console.log(`${LOG_PREFIX} ðŸ” Auth state change: ${event}, user: ${newUserId?.substring(0, 8) || 'none'}`);
 
         // Clear cache if user changed or signed out
         if (newUserId !== cachedUserId) {
@@ -330,7 +330,7 @@
         throw new Error("Trial only supported for month/year plans");
       }
 
-      console.log(`${LOG_PREFIX} 🎁 Starting trial for user ${userId}, plan: ${planType}`);
+      console.log(`${LOG_PREFIX} ðŸŽ Starting trial for user ${userId}, plan: ${planType}`);
 
       const token = await getAccessToken();
       const data = await callApiJson(TRIAL_ENDPOINT, {
@@ -385,7 +385,7 @@
     cancelBtn.type = "button";
     cancelBtn.className = manageBtn.className; // samme stil
     cancelBtn.style.marginLeft = "8px";
-    cancelBtn.innerHTML = `🛑 Kanseller abonnement`;
+    cancelBtn.innerHTML = `ðŸ›‘ Kanseller abonnement`;
     manageBtn.insertAdjacentElement("afterend", cancelBtn);
 
     return cancelBtn;
@@ -505,7 +505,7 @@ function setModalTexts(status) {
       const createdByScript = cancelBtn.dataset?.createdBy === "subscriptionjs";
 
       if (isLifetime) {
-        if (createdByScript) cancelBtn.innerHTML = "🏆 Livstid (ingen kansellering)";
+        if (createdByScript) cancelBtn.innerHTML = "ðŸ† Livstid (ingen kansellering)";
         cancelBtn.title = "Livstidskjøp kan ikke kanselleres.";
       } else if (isTrial) {
         if (createdByScript) cancelBtn.innerHTML = "🧪 Prøveperiode (ingen kansellering)";
@@ -517,7 +517,7 @@ function setModalTexts(status) {
         if (createdByScript) cancelBtn.innerHTML = "✅ Allerede kansellert";
         cancelBtn.title = "Abonnementet er allerede satt til å avsluttes ved periodens slutt.";
       } else {
-        if (createdByScript) cancelBtn.innerHTML = "🛑 Kanseller abonnement";
+        if (createdByScript) cancelBtn.innerHTML = "ðŸ›‘ Kanseller abonnement";
         cancelBtn.title = "";
       }
     }
@@ -624,7 +624,7 @@ if (cancelBtn && !cancelBtn.__bound) {
           alert("✅ Dine data er lastet ned!\n\nFilen inneholder:\n- Kontoinformasjon\n- Abonnementshistorikk\n- Betalingshistorikk\n\nSpillerlister må eksporteres separat via \"Eksporter\"-knappen i Spillere-seksjonen.");
 
         } catch (err) {
-          console.error(`${LOG_PREFIX} ❌ Export failed:`, err);
+          console.error(`${LOG_PREFIX} âŒ Export failed:`, err);
           alert(`Kunne ikke eksportere data: ${err.message}\n\nKontakt support@barnefotballtrener.no hvis problemet vedvarer.`);
         }
       }, { capture: true });
@@ -663,7 +663,7 @@ if (cancelBtn && !cancelBtn.__bound) {
           return;
         }
 
-        console.log(`${LOG_PREFIX} 🗑️ Sletter konto...`);
+        console.log(`${LOG_PREFIX} ðŸ—‘️ Sletter konto...`);
         
         try {
           const token = await getAccessToken();
@@ -707,7 +707,7 @@ if (cancelBtn && !cancelBtn.__bound) {
           window.location.href = "/";
 
         } catch (err) {
-          console.error(`${LOG_PREFIX} ❌ Delete failed:`, err);
+          console.error(`${LOG_PREFIX} âŒ Delete failed:`, err);
           alert(
             `Kunne ikke slette konto: ${err.message}\n\n` +
             "Kontakt support@barnefotballtrener.no for manuell sletting."
@@ -732,7 +732,7 @@ if (cancelBtn && !cancelBtn.__bound) {
     const oldHandler = window.__bf_subscription_click_handler;
     if (oldHandler) {
       document.removeEventListener("click", oldHandler, true);
-      console.log(`${LOG_PREFIX} 🗑️ Removed old click handler`);
+      console.log(`${LOG_PREFIX} ðŸ—‘️ Removed old click handler`);
     }
 
     // Lag ny handler
@@ -745,7 +745,7 @@ if (cancelBtn && !cancelBtn.__bound) {
         if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
 
         console.log(`${LOG_PREFIX} ⚙️ Gear clicked, opening modal...`);
-        openSubscriptionModal().catch((err) => console.error(`${LOG_PREFIX} ❌ openSubscriptionModal failed:`, err));
+        openSubscriptionModal().catch((err) => console.error(`${LOG_PREFIX} âŒ openSubscriptionModal failed:`, err));
         return;
       }
 
@@ -753,7 +753,7 @@ if (cancelBtn && !cancelBtn.__bound) {
       const close = e.target.closest("#closeSubscriptionModal, [data-close='subscriptionModal']");
       if (close) {
         e.preventDefault();
-        console.log(`${LOG_PREFIX} ❌ Close clicked`);
+        console.log(`${LOG_PREFIX} âŒ Close clicked`);
         closeSubscriptionModal();
         return;
       }
