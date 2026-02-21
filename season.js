@@ -194,6 +194,33 @@
   })();
 
   // =========================================================================
+  //  DOM SELF-REPAIR
+  //  Original index.html has an unclosed div in the workout section.
+  //  Some browsers nest #sesong inside #workout as error recovery.
+  //  This fix detects and corrects the nesting at runtime.
+  // =========================================================================
+  function repairDomNesting() {
+    var el = document.getElementById('sesong');
+    if (!el) return;
+    var parent = el.parentElement;
+    if (parent && parent.id !== '' && parent.classList.contains('tab-content')) {
+      // sesong is nested inside another tab — move it to <main>
+      var main = el.closest('main');
+      if (main) {
+        main.appendChild(el);
+        console.log('[season.js] DOM repaired: #sesong moved out of #' + parent.id);
+      }
+    }
+  }
+
+  // Run repair when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', repairDomNesting);
+  } else {
+    repairDomNesting();
+  }
+
+  // =========================================================================
   //  EVENT LISTENERS (immediately, NOT in DOMContentLoaded)
   // =========================================================================
   var _snInitialized = false;
