@@ -54,7 +54,7 @@
     { key: 'drink', label: 'Drikkepause', defaultMin: 2, category: 'special' },
 
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸƒ OPPVARMING
+    // 🏃 OPPVARMING
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: 'tag', label: 'Lek / Sisten', defaultMin: 8, category: 'oppvarming',
@@ -524,7 +524,7 @@
     },
 
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸŸ️ SMÅLAGSSPILL
+    // 🏟️ SMÅLAGSSPILL
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: 'ssg', label: 'Smålagsspill', defaultMin: 18, category: 'smalagsspill',
@@ -724,11 +724,11 @@
 
   // Category definitions for optgroup rendering
   const EXERCISE_CATEGORIES = [
-    { id: 'oppvarming', label: 'ðŸƒ Oppvarming' },
+    { id: 'oppvarming', label: '🏃 Oppvarming' },
     { id: 'teknikk', label: '⚽ Teknikk' },
     { id: 'avslutning', label: '🎯 Avslutning' },
     { id: 'spill_m_motstand', label: '⚔️ Spill med motstand' },
-    { id: 'smalagsspill', label: 'ðŸŸ️ Smålagsspill' },
+    { id: 'smalagsspill', label: '🏟️ Smålagsspill' },
     { id: 'keeper', label: '🧤 Keeper' },
   ];
 
@@ -1336,8 +1336,8 @@
     const meta = EX_BY_KEY.get(exerciseKey);
     if (!meta || !meta.description || !meta.steps) return '';
     const tags = [];
-    if (meta.ages) meta.ages.forEach(a => tags.push('ðŸ“ ' + a + ' år'));
-    if (meta.players) tags.push('ðŸ‘¥ ' + meta.players);
+    if (meta.ages) meta.ages.forEach(a => tags.push('📍 ' + a + ' år'));
+    if (meta.players) tags.push('👥 ' + meta.players);
     if (meta.equipment) tags.push('⚙️ ' + meta.equipment);
     let html = '<div class="wo-info-content">';
     html += '<p class="wo-info-desc">' + escapeHtml(meta.description) + '</p>';
