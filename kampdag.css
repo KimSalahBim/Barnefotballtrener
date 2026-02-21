@@ -206,9 +206,9 @@
 .kd-pos-tag{cursor:default; opacity:0.85;}
 
 .kd-pos-tag{cursor:default; opacity:0.85;}
-.kd-pos-btn.kd-pos-f-on, .kd-pos-tag.kd-pos-f-on{background:var(--primary-dim); color:var(--primary); border-color:var(--primary-dim);}
-.kd-pos-btn.kd-pos-m-on, .kd-pos-tag.kd-pos-m-on{background:var(--primary-dim); color:var(--primary); border-color:var(--primary-dim);}
-.kd-pos-btn.kd-pos-a-on, .kd-pos-tag.kd-pos-a-on{background:var(--primary-dim); color:var(--primary); border-color:var(--primary-dim);}
+.kd-pos-btn.kd-pos-f-on, .kd-pos-tag.kd-pos-f-on{background:rgba(34,197,94,0.1); color:#16a34a; border-color:rgba(34,197,94,0.3);}
+.kd-pos-btn.kd-pos-m-on, .kd-pos-tag.kd-pos-m-on{background:rgba(59,130,246,0.1); color:#2563eb; border-color:rgba(59,130,246,0.3);}
+.kd-pos-btn.kd-pos-a-on, .kd-pos-tag.kd-pos-a-on{background:rgba(239,68,68,0.1); color:#dc2626; border-color:rgba(239,68,68,0.3);}
 
 /* Zone colors in output */
 .kd-zone-dot{width:8px; height:8px; border-radius:50%; display:inline-block; flex-shrink:0;}

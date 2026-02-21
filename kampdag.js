@@ -304,6 +304,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       kdPreviousPlayerIds = currentIds;
       renderKampdagPlayers();
       updateKampdagCounts();
+      refreshKeeperUI();
       if (kdFormationOn) { renderPositionList(); updateCoverage(); }
       console.log('[Kampdag] Players re-rendered, count:', getPlayersArray().length);
     } catch (err) {

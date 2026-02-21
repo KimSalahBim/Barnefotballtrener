@@ -431,8 +431,47 @@
     if (!sb || !uid) return;
 
     var teams = await loadTeams();
+
+    // Dedup: Hvis flere lag heter "Mitt lag", behold eldste og migrer spillere
+    if (teams.length > 1) {
+      var mittLagTeams = teams.filter(function(t) { return t.name === 'Mitt lag'; });
+      if (mittLagTeams.length > 1) {
+        console.log('[core.js] Fant', mittLagTeams.length, 'duplikat "Mitt lag" - rydder opp...');
+        var keep = mittLagTeams[0]; // eldste (sortert by created_at asc)
+        var dupes = mittLagTeams.slice(1);
+        for (var d = 0; d < dupes.length; d++) {
+          try {
+            // Flytt spillere fra duplikat til hovedlaget
+            await sb.from('players')
+              .update({ team_id: keep.id })
+              .eq('user_id', uid)
+              .eq('team_id', dupes[d].id);
+            // Slett duplikatlaget
+            await sb.from('teams')
+              .delete()
+              .eq('id', dupes[d].id)
+              .eq('user_id', uid);
+            console.log('[core.js] Slettet duplikat "Mitt lag":', dupes[d].id);
+          } catch (e) {
+            console.warn('[core.js] Dedup feilet for', dupes[d].id, ':', e.message);
+          }
+        }
+        // Fjern duplikatene fra listen
+        teams = teams.filter(function(t) {
+          return !dupes.some(function(dup) { return dup.id === t.id; });
+        });
+      }
+    }
+
     if (teams.length > 0) {
       state.teams = teams;
+      return;
+    }
+
+    // Dobbeltsjekk: last på nytt for å unngå race condition
+    var retryTeams = await loadTeams();
+    if (retryTeams.length > 0) {
+      state.teams = retryTeams;
       return;
     }
 
