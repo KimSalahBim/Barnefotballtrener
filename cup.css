@@ -1476,7 +1476,7 @@
 }
 .cup-cfg-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 8px;
   margin-bottom: 10px;
 }
@@ -1484,25 +1484,30 @@
   border: 2px solid var(--cup-gray-200, #e5e7eb);
   border-radius: 10px;
   padding: 10px 8px 8px;
-  background: #f9fafb;
-  opacity: 0.5;
+  background: #fff;
   cursor: pointer;
-  transition: border-color 0.15s, opacity 0.15s, background 0.15s;
+  transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 5px;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.cup-cfg-card.is-enabled {
-  opacity: 1;
-  background: #fff;
+.cup-cfg-card:hover {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.cup-cfg-card:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
 }
 .cup-cfg-card.is-active {
   border-color: #10b981;
-  background: rgba(16,185,129,0.04);
-}
-.cup-cfg-card:hover:not(.is-active) {
-  border-color: #6366f1;
+  background: rgba(16,185,129,0.05);
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+  cursor: default;
 }
 .cup-cfg-card-header {
   display: flex;
@@ -1511,17 +1516,32 @@
   flex-wrap: wrap;
   margin-bottom: 2px;
 }
-.cup-cfg-check {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.cup-cfg-check input[type="checkbox"] {
+/* Radio-circle */
+.cup-cfg-radio {
   width: 15px;
   height: 15px;
-  cursor: pointer;
-  accent-color: #10b981;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: #fff;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s;
+}
+.cup-cfg-radio.is-checked {
+  border-color: #10b981;
+  background: #10b981;
+}
+.cup-cfg-radio.is-checked::after {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+.cup-cfg-card:hover .cup-cfg-radio:not(.is-checked) {
+  border-color: #6366f1;
 }
 .cup-cfg-best-badge {
   font-size: 10px;
@@ -1543,13 +1563,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  min-height: 24px;
+  min-height: 22px;
 }
 .cup-cfg-block {
   font-size: 9px;
   font-weight: 700;
   color: #1e293b;
-  background: #4ade80;
   border-radius: 3px;
   padding: 2px 4px;
   opacity: 0.85;
@@ -1574,20 +1593,6 @@
 .cup-cfg-hint-good { background: rgba(16,185,129,0.1); color: #065f46; }
 .cup-cfg-hint-ok   { background: rgba(37,99,235,0.08); color: #1e40af; }
 .cup-cfg-hint-warn { background: rgba(239,68,68,0.08); color: #991b1b; }
-.cup-cfg-activate-btn {
-  margin-top: 4px;
-  width: 100%;
-  padding: 4px 8px;
-  font-size: 11px;
-  font-weight: 700;
-  background: #6366f1;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.cup-cfg-activate-btn:hover { background: #4f46e5; }
 
 .cup-pitch-sublist {
   margin-top: 8px;

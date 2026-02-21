@@ -644,10 +644,9 @@ function syncPoolsWithTeams(cls) {
 
       const configCards = catalog.map((entry, catIdx) => {
         const existingCfg = configs.find(c => arraysEqual(c.subs, entry.subs));
-        const isEnabled  = !!(existingCfg && existingCfg.enabled !== false);
-        const isActive   = !!(existingCfg && existingCfg.active);
-        const isBest     = (catIdx === bestCatalogIdx && classes.length > 0);
-        const fit        = calcDivisionFit(entry.subs, pf, classes);
+        const isActive = !!(existingCfg && existingCfg.active);
+        const isBest   = (catIdx === bestCatalogIdx && classes.length > 0);
+        const fit      = calcDivisionFit(entry.subs, pf, classes);
 
         const subSet = {};
         for (const s of entry.subs) subSet[s] = (subSet[s]||0)+1;
@@ -661,27 +660,26 @@ function syncPoolsWithTeams(cls) {
         let hintHtml = '';
         if (classes.length > 0) {
           if (fit.parallelCount >= 2)
-            hintHtml = `<span class="cup-cfg-hint cup-cfg-hint-good">${fit.parallelCount} klasser simultant</span>`;
+            hintHtml = `<span class="cup-cfg-hint cup-cfg-hint-good">${fit.parallelCount} simultant</span>`;
           else if (fit.matchCount > 0)
-            hintHtml = `<span class="cup-cfg-hint cup-cfg-hint-ok">${fit.matchCount} klasse passer</span>`;
+            hintHtml = `<span class="cup-cfg-hint cup-cfg-hint-ok">${fit.matchCount} klasse</span>`;
           else
             hintHtml = `<span class="cup-cfg-hint cup-cfg-hint-warn">Ingen klasser</span>`;
         }
 
-        return `<div class="cup-cfg-card ${isEnabled ? 'is-enabled' : ''} ${isActive ? 'is-active' : ''}">
+        return `<div class="cup-cfg-card is-enabled ${isActive ? 'is-active' : ''}"
+            data-action="activateConfig" data-pitch="${pi}" data-catidx="${catIdx}"
+            role="radio" aria-checked="${isActive}" tabindex="0"
+            title="${isActive ? 'Aktiv oppdeling' : 'Klikk for å velge'}">
           <div class="cup-cfg-card-header">
-            <label class="cup-cfg-check" title="${isActive ? 'Aktiv oppdeling kan ikke fjernes' : 'Aktiver/deaktiver'}">
-              <input type="checkbox" ${isEnabled ? 'checked' : ''} ${isActive ? 'disabled' : ''}
-                data-action="toggleConfigEnabled" data-pitch="${pi}" data-catidx="${catIdx}">
-            </label>
+            <span class="cup-cfg-radio ${isActive ? 'is-checked' : ''}"></span>
             ${isBest ? '<span class="cup-cfg-best-badge">★ Anbefalt</span>' : ''}
             ${isActive ? '<span class="cup-cfg-active-badge">Aktiv</span>' : ''}
           </div>
           <div class="cup-cfg-blocks">${blockHtml}</div>
           <div class="cup-cfg-label">${esc(entry.label)}</div>
-          <div class="cup-cfg-meta">${entry.parallelCount} bane${entry.parallelCount > 1 ? 'r' : ''} · ${entry.coveragePct}% av banen</div>
+          <div class="cup-cfg-meta">${entry.parallelCount} bane${entry.parallelCount > 1 ? 'r' : ''} · ${entry.coveragePct}%</div>
           ${hintHtml}
-          ${isEnabled && !isActive ? `<button class="cup-cfg-activate-btn" data-action="activateConfig" data-pitch="${pi}" data-catidx="${catIdx}">Bruk nå</button>` : ''}
         </div>`;
       }).join('');
 
@@ -722,8 +720,8 @@ function syncPoolsWithTeams(cls) {
           </div>
         </div>
         <div class="cup-input-label" style="margin-bottom:6px;">
-          Mulige oppdelinger
-          <span class="cup-input-hint">Huk av alle du vil kunne bruke. Klikk «Bruk nå» for å bytte aktiv.</span>
+          Oppdeling
+          <span class="cup-input-hint">Klikk for å velge aktiv oppdeling.</span>
         </div>
         <div class="cup-cfg-grid">${configCards}</div>
         ${buildPitchPreviewSvg(p)}
@@ -1299,28 +1297,8 @@ function syncPoolsWithTeams(cls) {
         saveCup(cup); renderSetup(cup);
         toast(`Byttet til: ${def.label}`, 'success');
       }
-      else if (action === 'toggleConfigEnabled') {
-        // Checkbox: legg til eller fjern en konfigurasjon fra pitch.configurations
-        const pi = Number(btn.dataset.pitch);
-        const catIdx = Number(btn.dataset.catidx);
-        const p = cup.pitches[pi];
-        if (!p) return;
-        const pf = getPitchPhysicalFormat(p);
-        const catalog = getPitchDivisionCatalog(pf);
-        const entry = catalog[catIdx];
-        if (!entry) return;
-        if (!Array.isArray(p.configurations)) p.configurations = [];
-        const existing = p.configurations.find(c => arraysEqual(c.subs, entry.subs));
-        if (existing) {
-          if (existing.active) return; // Kan ikke fjerne aktiv konfig
-          existing.enabled = !existing.enabled;
-        } else {
-          p.configurations.push({ id: CS.uuid(), subs: entry.subs, enabled: true, active: false });
-        }
-        saveCup(cup); renderPitches(cup);
-      }
       else if (action === 'activateConfig') {
-        // Bytt aktiv konfigurasjon — det er denne scheduleren bruker
+        // Radio-button: klikk på kort = aktiver direkte
         const pi = Number(btn.dataset.pitch);
         const catIdx = Number(btn.dataset.catidx);
         const p = cup.pitches[pi];
@@ -1329,30 +1307,31 @@ function syncPoolsWithTeams(cls) {
         const catalog = getPitchDivisionCatalog(pf);
         const entry = catalog[catIdx];
         if (!entry) return;
+        // Allerede aktiv? Ikke gjør noe
+        if (!Array.isArray(p.configurations)) p.configurations = [];
+        const already = p.configurations.find(c => arraysEqual(c.subs, entry.subs) && c.active);
+        if (already) return;
+        // Bekreft bare hvis kampprogram allerede er generert
         if (hasExistingSchedule(cup)) {
-          if (!confirm('Bytte aktiv oppdeling nullstiller kampplasseringer. Fortsette?')) return;
+          if (!confirm('Bytte oppdeling nullstiller kampplasseringer. Fortsette?')) return;
           for (const cls of cup.classes) {
             for (const m of (cls.matches || [])) {
               m.pitchId = null; m.start = null; m.end = null; m.dayIndex = null; m.locked = false;
             }
           }
-          markScheduleStale(cup, 'Aktiv oppdeling endret');
+          markScheduleStale(cup, 'Oppdeling endret');
         }
-        if (!Array.isArray(p.configurations)) p.configurations = [];
-        // Sett alle til ikke-aktiv
+        // Sett alle til ikke-aktiv, aktiver valgt
         for (const c of p.configurations) c.active = false;
-        // Aktiver valgt konfig
         const existing = p.configurations.find(c => arraysEqual(c.subs, entry.subs));
         if (existing) {
           existing.active = true;
-          existing.enabled = true;
         } else {
-          p.configurations.push({ id: CS.uuid(), subs: entry.subs, enabled: true, active: true });
+          p.configurations.push({ id: CS.uuid(), subs: entry.subs, active: true });
         }
-        // Oppdater subPitches fra ny aktiv konfig
         applyDivisionToPitch(p, entry.subs);
         saveCup(cup); renderSetup(cup);
-        toast(`Aktiv oppdeling: ${entry.label}`, 'success');
+        toast(`Oppdeling: ${entry.label}`, 'success');
       }
       else if (action === 'addClass') {
         const nff = CS.getNffDefaults(10);
@@ -1717,6 +1696,15 @@ function handleCupField(inp) {
 }
 
 main.addEventListener('input', e => handleCupField(e.target));
+
+    // Keyboard: Enter/Space aktiverer konfig-kort (tilgjengelighet)
+    main.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('[data-action="activateConfig"]');
+      if (!card) return;
+      e.preventDefault();
+      card.click();
+    });
 main.addEventListener('change', e => handleCupField(e.target));
 
 
