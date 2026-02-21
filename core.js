@@ -1610,7 +1610,8 @@
         kampdag: 'Kampdag',
         competitions: 'Konkurranse',
         liga: 'Liga',
-        workout: 'Treningsøkt'
+        workout: 'Treningsøkt',
+        sesong: 'Sesong'
       };
       const titleEl = document.getElementById('pageTitleText');
       if (titleEl && titleMap[tabId]) titleEl.textContent = titleMap[tabId];
@@ -1784,6 +1785,7 @@
 
     // Expose for other modules if needed
     window.__BF_switchTab = switchTab;
+    window.__BF_getTeamId = function() { return state.currentTeamId; };
   }
 
   function setupSkillToggle() {

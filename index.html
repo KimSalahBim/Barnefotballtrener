@@ -1364,6 +1364,19 @@
         </div>
       </div>
 
+      <!-- SESONG TAB -->
+      <div id="sesong" class="tab-content">
+        <div class="tab-header">
+          <h2><i class="fas fa-calendar-days"></i> Sesong</h2>
+          <p class="tab-description" id="snDescription">
+            Planlegg sesongen med kamper og treninger.
+          </p>
+        </div>
+        <div id="snRoot">
+          <!-- season.js renderer her -->
+        </div>
+      </div>
+
     </main>
   </div> <!-- /#mainApp -->
 
@@ -1390,6 +1403,10 @@
 <div class="mer-popup" id="merPopup" style="display:none;">
   <div class="mer-overlay" id="merOverlay"></div>
   <div class="mer-menu">
+    <button class="mer-item" data-tab="sesong">
+      <div class="mer-item-title">Sesong</div>
+      <div class="mer-item-desc">Kamper, treninger, oversikt</div>
+    </button>
     <button class="mer-item" data-tab="competitions">
       <div class="mer-item-title">Konkurranse</div>
       <div class="mer-item-desc">Mesternes mester</div>
@@ -1430,6 +1447,7 @@
 <script src="kampdag.js"></script>
 <script src="competitions.js"></script>
 <script src="workout.js"></script>
+<script src="season.js"></script>
 <script src="logout-fix.js"></script>
 
 </body>

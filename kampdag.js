@@ -2980,4 +2980,37 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
       if (subsEl) subsEl.style.display = 'none';
     }
   }
+
+  // === SESONG-INTEGRASJON: Prefill fra sesong-event ===
+  window.kampdagPrefill = function(opts) {
+    var formatEl = $('kdFormat');
+    var minutesEl = $('kdMinutes');
+
+    // 1. Sett format og trigger change-lyttere (auto-minutes + formasjon)
+    if (opts.format && formatEl) {
+      formatEl.value = opts.format;
+      formatEl.dispatchEvent(new Event('change'));
+    }
+
+    // 2. Overstyr minutter (etter format-change som auto-setter default)
+    if (opts.minutes && minutesEl) {
+      minutesEl.value = opts.minutes;
+      minutesEl.dispatchEvent(new Event('input'));
+    }
+
+    // 3. Sett oppmøte (hvilke spillere som er med)
+    if (opts.playerIds && Array.isArray(opts.playerIds)) {
+      kdSelected = new Set(opts.playerIds);
+      renderKampdagPlayers();
+    }
+
+    // 4. Oppdater avhengig UI
+    refreshKeeperUI();
+    updateKampdagCounts();
+    if (kdFormationOn) { renderPositionList(); updateCoverage(); }
+
+    console.log('[Kampdag] Prefilled from sesong:', opts);
+    return true;
+  };
+
 })();

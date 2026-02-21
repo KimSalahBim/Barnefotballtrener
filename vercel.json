@@ -94,10 +94,6 @@
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
     {
-      "source": "/club.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
-    },
-    {
       "source": "/competitions.js",
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
@@ -107,6 +103,10 @@
     },
     {
       "source": "/workout.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/season.js",
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
     {
