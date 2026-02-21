@@ -25,6 +25,7 @@ function migrateInPlace(cup) {
 }
 
 function getEffectivePitches(cup) {
+  // Returnerer virtuelle baner basert på GLOBAL aktiv konfig (for bakoverkompatibilitet / UI-visning)
   try {
     if (window.CupScheduler && typeof window.CupScheduler.expandPitches === 'function') {
       return window.CupScheduler.expandPitches((cup && cup.pitches) ? cup.pitches : []);
@@ -36,8 +37,25 @@ function getEffectivePitches(cup) {
 }
 
 function buildPitchMap(cup) {
+  // Bygg map som dekker ALLE virtuelle bane-IDs på tvers av alle dager
+  // slik at renderSchedule alltid finner riktig navn for en pitchId+dayIndex
   const map = Object.create(null);
-  for (const p of getEffectivePitches(cup)) map[p.id] = p;
+  const CS = window.CupScheduler;
+  const pitches = (cup && cup.pitches) ? cup.pitches : [];
+  const days = (cup && cup.days) ? cup.days : [];
+
+  if (CS && typeof CS.expandPitchesForDay === 'function') {
+    // Ekspander for hver dag og merge inn i map
+    for (let di = 0; di < days.length; di++) {
+      const dayId = days[di].id || null;
+      const dayPitches = CS.expandPitchesForDay(pitches, dayId);
+      for (const p of dayPitches) if (!map[p.id]) map[p.id] = p;
+    }
+    // Fallback: global ekspansjon for pitches uten dagsspesifikk konfig
+    for (const p of CS.expandPitches(pitches)) if (!map[p.id]) map[p.id] = p;
+  } else {
+    for (const p of getEffectivePitches(cup)) map[p.id] = p;
+  }
   return map;
 }
 
@@ -698,9 +716,43 @@ function syncPoolsWithTeams(cls) {
         subListHtml = `<div class="cup-pitch-meta">Hel bane (${esc(pf)})</div>`;
       }
 
+      // Per-dag oppdeling section
+      const dayConfigs = p.dayConfigs || {};
+      const hasDays = (cup.days || []).length > 0;
+
       const activeLabel = activeCfg
         ? (catalog.find(e => arraysEqual(e.subs, activeCfg.subs))?.label || divisionToHumanText(activeCfg.subs))
         : 'Ikke satt';
+
+      let perDagHtml = '';
+      if (hasDays && (cup.days || []).length > 1) {
+        perDagHtml = `
+        <div class="cup-input-label" style="margin-top:12px;">
+          Oppdeling per dag
+          <span class="cup-input-hint">Sett ulik oppdeling for hvert av turneringsdagene.</span>
+        </div>
+        <div class="cup-day-cfg-list">
+          ${(cup.days || []).map((day, di) => {
+            const dayId = day.id;
+            const daySubs = dayConfigs[dayId];
+            const dayCatalogEntry = daySubs ? catalog.find(e => arraysEqual(e.subs, daySubs)) : null;
+            const dayLabel = dayCatalogEntry ? dayCatalogEntry.label : (daySubs ? divisionToHumanText(daySubs) : 'Global standard');
+            const isOverridden = !!daySubs && daySubs.length > 0;
+            return `<div class="cup-day-cfg-row">
+              <span class="cup-day-cfg-name">${esc(day.date || ('Dag ' + (di+1)))}</span>
+              <span class="cup-day-cfg-value ${isOverridden ? 'is-overridden' : ''}">${esc(dayLabel)}</span>
+              <div class="cup-day-cfg-actions">
+                <select class="cup-input cup-select cup-day-cfg-select" data-action="setDayConfig" data-pitch="${pi}" data-dayid="${esc(dayId)}">
+                  <option value="">Global (${esc(activeLabel)})</option>
+                  ${catalog.map((entry, catIdx) =>
+                    `<option value="${catIdx}" ${(daySubs && arraysEqual(daySubs, entry.subs)) ? 'selected' : ''}>${esc(entry.label)}</option>`
+                  ).join('')}
+                </select>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }
 
       return `<div class="cup-pitch-card">
         <div class="cup-pitch-card-header">
@@ -724,6 +776,7 @@ function syncPoolsWithTeams(cls) {
           <span class="cup-input-hint">Klikk for å velge aktiv oppdeling.</span>
         </div>
         <div class="cup-cfg-grid">${configCards}</div>
+        ${perDagHtml}
         ${buildPitchPreviewSvg(p)}
         <div class="cup-input-label" style="margin-top:10px;">Delbaner</div>
         ${subListHtml}
@@ -1333,6 +1386,26 @@ function syncPoolsWithTeams(cls) {
         saveCup(cup); renderSetup(cup);
         toast(`Oppdeling: ${entry.label}`, 'success');
       }
+      else if (action === 'setDayConfig') {
+        // Sett dagsspesifikk oppdeling for én dag
+        const pi = Number(btn.dataset.pitch);
+        const dayId = btn.dataset.dayid;
+        const catIdx = btn.value; // '' = fjern override, ellers katalog-indeks
+        const p = cup.pitches[pi];
+        if (!p || !dayId) return;
+        if (!p.dayConfigs || typeof p.dayConfigs !== 'object') p.dayConfigs = {};
+        if (catIdx === '' || catIdx === undefined) {
+          delete p.dayConfigs[dayId]; // Tilbake til global default
+        } else {
+          const pf = getPitchPhysicalFormat(p);
+          const catalog = getPitchDivisionCatalog(pf);
+          const entry = catalog[Number(catIdx)];
+          if (!entry) return;
+          p.dayConfigs[dayId] = entry.subs;
+        }
+        saveCup(cup);
+        renderPitches(cup);
+      }
       else if (action === 'addClass') {
         const nff = CS.getNffDefaults(10);
         const genderPrefix = 'G';
@@ -1749,6 +1822,29 @@ main.addEventListener('change', e => handleCupField(e.target));
     // Walk-over select (results step)
     main.addEventListener('change', e => {
       const sel = e.target;
+
+      // Dagsspesifikk oppdeling per bane
+      if (sel.dataset.action === 'setDayConfig') {
+        const cup = getCurrentCup();
+        if (!cup) return;
+        const pi = Number(sel.dataset.pitch);
+        const dayId = sel.dataset.dayid;
+        const p = cup.pitches[pi];
+        if (!p || !dayId) return;
+        if (!p.dayConfigs || typeof p.dayConfigs !== 'object') p.dayConfigs = {};
+        if (!sel.value) {
+          delete p.dayConfigs[dayId];
+        } else {
+          const pf = getPitchPhysicalFormat(p);
+          const catalog = getPitchDivisionCatalog(pf);
+          const entry = catalog[Number(sel.value)];
+          if (entry) p.dayConfigs[dayId] = entry.subs;
+        }
+        saveCup(cup);
+        renderPitches(cup);
+        return;
+      }
+
       if (!sel.classList.contains('cup-wo-select')) return;
       if (!sel.value) return;
 
@@ -1946,7 +2042,7 @@ main.addEventListener('change', e => handleCupField(e.target));
     const numAttempts = Math.min(200, Math.max(50, cup.classes.reduce((sum, c) => sum + c.teams.length, 0) * 10));
 
     const effectivePitches = getEffectivePitches(cup);
-    const result = CS.scheduleAllClasses(cup.classes, effectivePitches, cup.days, globalSeed, numAttempts);
+    const result = CS.scheduleAllClasses(cup.classes, cup.pitches, cup.days, globalSeed, numAttempts);
     state.scheduleData = result;
 
     // Lagre global seed/attempts for reproduserbarhet ved feilsoking
@@ -2026,8 +2122,8 @@ main.addEventListener('change', e => handleCupField(e.target));
 
     const globalSeed = CS.newSeed();
     const numAttempts = Math.min(200, Math.max(50, cup.classes.reduce((sum, c) => sum + c.teams.length, 0) * 10));
-    const effectivePitches = getEffectivePitches(cup);
-    const result = CS.scheduleAllClasses(cup.classes, effectivePitches, cup.days, globalSeed, numAttempts);
+    const effectivePitches = getEffectivePitches(cup) // keep local var;
+    const result = CS.scheduleAllClasses(cup.classes, cup.pitches, cup.days, globalSeed, numAttempts);
     state.scheduleData = result;
 
     // Lagre global seed/attempts for reproduserbarhet ved feilsoking

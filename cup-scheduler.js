@@ -392,46 +392,152 @@
 
 
   /**
-   * Bygg tidsslots filtrert for en spesifikk klasse.
-   * Tar hensyn til bane-format-kompatibilitet og tillatte dager.
-   * Bevarer original dayIndex fra den globale days-arrayen.
+   * Ekspander fysiske baner til virtuelle for én spesifikk dag.
+   * Prioritet: pitch.dayConfigs[dayId] > pitch.subPitches (global aktiv konfig) > hel bane.
+   * Brukes av buildTimeSlotsForClass for dag-aware planlegging.
+   *
+   * @param {Array} physicalPitches - fysiske baner med dayConfigs/subPitches
+   * @param {string} dayId - ID til dagen som planlegges
+   * @returns {Array<{ id, name, maxFormat, parentPitchId }>}
    */
-  function buildTimeSlotsForClass(cls, pitches, days) {
-    var compatiblePitches = [];
-    for (var i = 0; i < (pitches || []).length; i++) {
-      if (isFormatCompatible(pitches[i], cls.playFormat)) {
-        compatiblePitches.push(pitches[i]);
-      }
+  function expandPitchesForDay(physicalPitches, dayId) {
+    var result = [];
+    var list = physicalPitches || [];
+
+    function autoName(base, idx) {
+      return String(base || 'Bane') + ' ' + String.fromCharCode(65 + idx);
     }
 
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i] || {};
+      var physFmt = p.physicalFormat || p.maxFormat || '11v11';
+
+      // Prioritet 1: dagsspesifikk oppdeling
+      if (dayId && p.dayConfigs && p.dayConfigs[dayId] && p.dayConfigs[dayId].length > 0) {
+        var daySubs = p.dayConfigs[dayId];
+        for (var ds = 0; ds < daySubs.length; ds++) {
+          result.push({
+            id: p.id + '_' + (ds + 1),
+            name: autoName(p.name, ds),
+            maxFormat: daySubs[ds],
+            parentPitchId: p.id,
+          });
+        }
+        continue;
+      }
+
+      // Prioritet 2: global aktiv oppdeling (subPitches)
+      if (p.subPitches && p.subPitches.length > 0) {
+        for (var si = 0; si < p.subPitches.length; si++) {
+          var sub = p.subPitches[si] || {};
+          result.push({
+            id: sub.id || (p.id + '_' + (si + 1)),
+            name: sub.name || autoName(p.name, si),
+            maxFormat: sub.format || physFmt,
+            parentPitchId: p.id,
+          });
+        }
+        continue;
+      }
+
+      // Fallback: hel bane
+      result.push({ id: p.id, name: p.name, maxFormat: physFmt, parentPitchId: p.id });
+    }
+
+    return result;
+  }
+
+  /**
+   * Bygg tidsslots for én dag og en liste virtuelle baner.
+   * Intern hjelper brukt av buildTimeSlotsForClass (dag-aware path).
+   */
+  function buildTimeSlotsForDay(pitches, day, dayIdx, slotMinutes, bufferMinutes) {
+    var slots = [];
+    var dayStart = parseTime(day.startTime);
+    var dayEnd = parseTime(day.endTime);
+    var breaks = (day.breaks || []).map(function(b) {
+      return { start: parseTime(b.start), end: parseTime(b.end) };
+    }).sort(function(a, b) { return a.start - b.start; });
+
+    for (var pi = 0; pi < pitches.length; pi++) {
+      var pitch = pitches[pi];
+      var cursor = dayStart;
+      while (cursor + slotMinutes <= dayEnd) {
+        var inBreak = false;
+        for (var bi = 0; bi < breaks.length; bi++) {
+          if (cursor < breaks[bi].end && cursor + slotMinutes > breaks[bi].start) {
+            cursor = breaks[bi].end;
+            inBreak = true;
+            break;
+          }
+        }
+        if (inBreak) continue;
+        if (cursor + slotMinutes <= dayEnd) {
+          slots.push({ pitchId: pitch.id, dayIndex: dayIdx, start: cursor, end: cursor + slotMinutes });
+          cursor += slotMinutes + bufferMinutes;
+        } else break;
+      }
+    }
+    return slots;
+  }
+
+  /**
+   * Bygg tidsslots filtrert for en spesifikk klasse.
+   * Støtter to path:
+   *   - Fysiske baner (med physicalFormat/dayConfigs): dag-aware ekspansjon per dag
+   *   - Virtuelle baner (bakoverkompatibilitet): bruker buildTimeSlots direkte
+   */
+  function buildTimeSlotsForClass(cls, pitches, days) {
     var matchMin = numOrDefault(cls.matchMinutes, 20);
     var bufferMin = numOrDefault(cls.bufferMinutes, 5);
 
-    // Bygg slots for ALLE dager (bevarer dayIndex), filtrer etterpaa
-    var allSlots = buildTimeSlots(compatiblePitches, days || [], matchMin, bufferMin);
+    // Detect: er pitches fysiske (ny API) eller allerede virtuelle (gammel API)?
+    var usePhysical = (pitches || []).length > 0 &&
+      (pitches[0].physicalFormat !== undefined ||
+       pitches[0].configurations !== undefined ||
+       pitches[0].dayConfigs !== undefined);
 
-    // Filtrer paa allowedDayIds
+    if (usePhysical) {
+      // Ny dag-aware path: ekspander per dag, filtrer format-kompatibilitet per dag
+      var allSlots = [];
+      for (var di = 0; di < (days || []).length; di++) {
+        var day = days[di];
+        if (cls.allowedDayIds && cls.allowedDayIds.length > 0) {
+          if (!day.id || cls.allowedDayIds.indexOf(day.id) < 0) continue;
+        }
+        var dayVirtual = expandPitchesForDay(pitches, day.id);
+        var compatible = [];
+        for (var ci = 0; ci < dayVirtual.length; ci++) {
+          if (isFormatCompatible(dayVirtual[ci], cls.playFormat)) compatible.push(dayVirtual[ci]);
+        }
+        var daySlots = buildTimeSlotsForDay(compatible, day, di, matchMin, bufferMin);
+        for (var dsi = 0; dsi < daySlots.length; dsi++) allSlots.push(daySlots[dsi]);
+      }
+      return allSlots;
+    }
+
+    // Legacy path: virtuelle baner, bruker buildTimeSlots
+    var compatiblePitches = [];
+    for (var i = 0; i < (pitches || []).length; i++) {
+      if (isFormatCompatible(pitches[i], cls.playFormat)) compatiblePitches.push(pitches[i]);
+    }
+    var allSlotsOld = buildTimeSlots(compatiblePitches, days || [], matchMin, bufferMin);
+
     if (cls.allowedDayIds && cls.allowedDayIds.length > 0) {
       var allowedDayIndices = {};
-      for (var di = 0; di < (days || []).length; di++) {
-        if (days[di].id && cls.allowedDayIds.indexOf(days[di].id) >= 0) {
-          allowedDayIndices[di] = true;
-        }
+      for (var dj = 0; dj < (days || []).length; dj++) {
+        if (days[dj].id && cls.allowedDayIds.indexOf(days[dj].id) >= 0) allowedDayIndices[dj] = true;
       }
-      // Hvis ingen dager matchet (stale IDs), behold alle
       var hasAnyMatch = Object.keys(allowedDayIndices).length > 0;
       if (hasAnyMatch) {
         var filtered = [];
-        for (var fi = 0; fi < allSlots.length; fi++) {
-          if (allowedDayIndices[allSlots[fi].dayIndex]) {
-            filtered.push(allSlots[fi]);
-          }
+        for (var fi = 0; fi < allSlotsOld.length; fi++) {
+          if (allowedDayIndices[allSlotsOld[fi].dayIndex]) filtered.push(allSlotsOld[fi]);
         }
         return filtered;
       }
     }
-
-    return allSlots;
+    return allSlotsOld;
   }
 
   /**
@@ -549,6 +655,9 @@
         if (!sp.format) sp.format = p.physicalFormat;
         p.subPitches[spi] = sp;
       }
+
+      // dayConfigs: per-dag oppdeling (overstyrer global subPitches for den dagen)
+      if (!p.dayConfigs || typeof p.dayConfigs !== 'object') p.dayConfigs = {};
 
       cup.pitches[pi] = p;
     }
@@ -1996,6 +2105,7 @@
     PITCH_DIVISIONS: PITCH_DIVISIONS,
     isFormatCompatible: isFormatCompatible,
     expandPitches: expandPitches,
+    expandPitchesForDay: expandPitchesForDay,
     migrateCupData: migrateCupData,
 
     // Plassering

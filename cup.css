@@ -1594,6 +1594,49 @@
 .cup-cfg-hint-ok   { background: rgba(37,99,235,0.08); color: #1e40af; }
 .cup-cfg-hint-warn { background: rgba(239,68,68,0.08); color: #991b1b; }
 
+/* ── Per-dag oppdeling ── */
+.cup-day-cfg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.cup-day-cfg-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.cup-day-cfg-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  min-width: 80px;
+}
+.cup-day-cfg-value {
+  font-size: 11.5px;
+  color: #9ca3af;
+  flex: 1;
+  min-width: 80px;
+}
+.cup-day-cfg-value.is-overridden {
+  color: #059669;
+  font-weight: 600;
+}
+.cup-day-cfg-actions {
+  display: flex;
+  align-items: center;
+}
+.cup-day-cfg-select {
+  font-size: 11.5px;
+  padding: 4px 8px;
+  max-width: 200px;
+  min-width: 120px;
+}
+
 .cup-pitch-sublist {
   margin-top: 8px;
   display: flex;
