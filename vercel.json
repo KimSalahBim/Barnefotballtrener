@@ -13,125 +13,292 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://accounts.google.com https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://api.stripe.com https://accounts.google.com https://cdn.jsdelivr.net https://cloud.umami.is https://api-gateway.umami.dev; frame-src https://js.stripe.com https://accounts.google.com; base-uri 'self'; form-action 'self' https://accounts.google.com" }
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://accounts.google.com https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://api.stripe.com https://accounts.google.com https://cdn.jsdelivr.net https://cloud.umami.is https://api-gateway.umami.dev; frame-src https://js.stripe.com https://accounts.google.com; base-uri 'self'; form-action 'self' https://accounts.google.com"
+        }
       ]
     },
     {
       "source": "/index.html",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/pricing.html",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/style.css",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/core-ui.css",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/auth-styles.css",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/pricing.css",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/kampdag.css",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/competitions.css",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/auth.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/env.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/config.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/logout-fix.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/core.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/app.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/auth-ui.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/pricing.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/subscription.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/club.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/competitions.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/kampdag.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/workout.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/grouping.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/cup.html",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/cup.css",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/cup.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/cup-scheduler.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/error-logger.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     },
     {
       "source": "/api/:path*",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     }
   ]
 }
