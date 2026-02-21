@@ -11,6 +11,80 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="cup.css">
 
+  <script>
+    // ── Auth-guard ────────────────────────────────────────────────────
+    // Kjøres synkront (inline) slik at beskyttet innhold ikke flasher.
+    // Sjekker Supabase-sesjon + abonnementsstatus.
+    // Redirecter til / (main-appen) hvis ikke autentisert / ikke aktiv tilgang.
+    (function () {
+      var SUPABASE_URL = "https://jxteosjxgrblasksfeyu.supabase.co";
+      var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4dGVvc2p4Z3JibGFza3NmZXl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTE1ODMsImV4cCI6MjA4NDc2NzU4M30.4VhLfxcX0PCkUeK9aYrTrfmTwESH9zOyx4sY61lIZ9w";
+      var AUTH_STORAGE_KEY_PREFIX = 'sb-jxteosjxgrblasksfeyu-auth-token';
+
+      // Viser spinner mens vi sjekker — unngår flash av innhold
+      document.documentElement.style.visibility = 'hidden';
+
+      function redirectToMain() {
+        window.location.replace('/');
+      }
+
+      // Rask sjekk: finnes det et gyldig auth-token i localStorage?
+      // Supabase lagrer token som JSON under nøkkel som starter med AUTH_STORAGE_KEY_PREFIX.
+      function getStoredSession() {
+        try {
+          for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i);
+            if (key && key.indexOf(AUTH_STORAGE_KEY_PREFIX) === 0) {
+              var raw = localStorage.getItem(key);
+              if (!raw) continue;
+              var parsed = JSON.parse(raw);
+              var session = parsed && (parsed.session || parsed);
+              if (session && session.access_token && session.expires_at) {
+                // Sjekk om token er utløpt
+                var expiresAt = Number(session.expires_at);
+                var nowSec = Math.floor(Date.now() / 1000);
+                if (expiresAt > nowSec + 10) return session;
+              }
+            }
+          }
+        } catch (e) {}
+        return null;
+      }
+
+      var stored = getStoredSession();
+      if (!stored) {
+        // Ingen lagret sesjon — gå til main-appen (håndterer login)
+        redirectToMain();
+        return;
+      }
+
+      // Sesjon funnet — vis siden (abonnementssjekk gjøres av main-appen ved retur)
+      // For fullt sikkert: verifiser mot /api/subscription-status asynkront
+      document.documentElement.style.visibility = 'visible';
+
+      // Bakgrunnssjekk (ikke-blokkerende): hvis subscription ikke er aktiv, redirect
+      (function asyncCheck() {
+        try {
+          var token = stored.access_token;
+          fetch('/api/subscription-status', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            signal: (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) ? AbortSignal.timeout(5000) : undefined,
+          }).then(function (res) {
+            if (!res.ok) return;
+            return res.json();
+          }).then(function (data) {
+            if (!data) return;
+            var hasAccess = !!(data.active || data.trial || data.lifetime);
+            if (!hasAccess) redirectToMain();
+          }).catch(function () {
+            // Nettverksfeil / timeout — la brukeren bruke siden (offline-tolerant)
+          });
+        } catch (e) {}
+      })();
+    })();
+  </script>
+
   <style>
     /* Minimal page chrome — rest is in cup.css */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

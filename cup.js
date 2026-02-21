@@ -632,117 +632,60 @@ function syncPoolsWithTeams(cls) {
     container.innerHTML = (cup.pitches || []).map((p, pi) => {
       const pf = getPitchPhysicalFormat(p);
       const catalog = getPitchDivisionCatalog(pf);
-      const currentSubs = getCurrentSubFormats(p);
-
-      let selectedIdx = -1;
-      for (let di = 0; di < catalog.length; di++) {
-        if (arraysEqual(catalog[di].subs, currentSubs)) { selectedIdx = di; break; }
-      }
-
-      // Finn anbefalt oppdeling basert på klasser
+      const configs = Array.isArray(p.configurations) ? p.configurations : [];
       const bestCatalogIdx = findBestDivisionIdx(pf, classes, catalog);
 
-      // Gruppert dropdown med optgroups
-      const groups = {};
-      catalog.forEach((d, idx) => {
-        const grp = d.group || 'Andre';
-        if (!groups[grp]) groups[grp] = [];
-        const isBest = (idx === bestCatalogIdx && classes.length > 0);
-        const parallel = d.parallelCount > 1 ? ` (${d.parallelCount}×)` : '';
-        const coverLbl = d.coveragePct < 100 && d.coveragePct > 0 ? ` · ${d.coveragePct}%` : '';
-        groups[grp].push(`<option value="${idx}" ${idx === selectedIdx ? 'selected' : ''}>${isBest ? '★ ' : ''}${esc(d.label)}${parallel}${coverLbl}</option>`);
-      });
+      // Aktiv konfigurasjon
+      const activeCfg = configs.find(c => c.active) || configs[0];
 
-      const groupOrder = ['Hel bane', '2 parallelle', '3 parallelle', '4 parallelle', '5 parallelle', '6 parallelle', '8 parallelle', 'Andre'];
-      let divisionOptions = '';
-      if (selectedIdx < 0) {
-        divisionOptions = `<option value="custom" selected>Egendefinert (${esc(divisionToHumanText(currentSubs))})</option>`;
-      }
-      for (const grp of groupOrder) {
-        if (!groups[grp] || groups[grp].length === 0) continue;
-        // Hel bane trenger ikke optgroup
-        if (grp === 'Hel bane') {
-          divisionOptions += groups[grp].join('');
-        } else {
-          divisionOptions += `<optgroup label="${esc(grp)}">${groups[grp].join('')}</optgroup>`;
-        }
-      }
-      // Eventuelle grupper som ikke er i groupOrder
-      for (const grp of Object.keys(groups)) {
-        if (!groupOrder.includes(grp)) {
-          divisionOptions += `<optgroup label="${esc(grp)}">${groups[grp].join('')}</optgroup>`;
-        }
-      }
+      // Bygg konfigurasjonskort (ett per katalog-entry)
+      const COLORS = ['#4ade80','#60a5fa','#f59e0b','#f472b6','#a78bfa','#34d399','#fb923c'];
+      const fmtOrder = ['11v11','9v9','7v7','5v5','3v3'];
 
-      // Klassematch-analyse for valgt oppdeling
-      const fits = catalog.map(d => calcDivisionFit(d.subs, pf, classes));
-      const currentFit = calcDivisionFit(currentSubs, pf, classes);
-      const isWholePitch = (currentSubs.length === 1 && currentSubs[0] === pf);
-      let fitBarHtml = '';
+      const configCards = catalog.map((entry, catIdx) => {
+        const existingCfg = configs.find(c => arraysEqual(c.subs, entry.subs));
+        const isEnabled  = !!(existingCfg && existingCfg.enabled !== false);
+        const isActive   = !!(existingCfg && existingCfg.active);
+        const isBest     = (catIdx === bestCatalogIdx && classes.length > 0);
+        const fit        = calcDivisionFit(entry.subs, pf, classes);
 
-      if (classes.length > 0) {
-        const isBestSelected = (selectedIdx === bestCatalogIdx);
-        const bestEntry = bestCatalogIdx >= 0 ? catalog[bestCatalogIdx] : null;
-        const bestFit = bestCatalogIdx >= 0 ? fits[bestCatalogIdx] : null;
+        const subSet = {};
+        for (const s of entry.subs) subSet[s] = (subSet[s]||0)+1;
+        const blockHtml = fmtOrder.filter(f => subSet[f]).map(f => {
+          const ci = fmtOrder.indexOf(f);
+          return Array(subSet[f]).fill(0).map(() =>
+            `<span class="cup-cfg-block" style="background:${COLORS[ci % COLORS.length]}">${f}</span>`
+          ).join('');
+        }).join('');
 
-        let barClass = 'cup-fit-ok';
-        let icon = '●';
-        let mainMsg = '';
-        let subMsg = '';
-        let applyBtn = '';
-
-        if ((barClass === 'cup-fit-suggest' || barClass === 'cup-fit-bad') && bestCatalogIdx >= 0) {
-          applyBtn = ` <button class="cup-fit-apply-btn" data-action="applyBestDivision" data-pitch="${pi}" data-division="${bestCatalogIdx}">Bruk anbefalt</button>`;
+        let hintHtml = '';
+        if (classes.length > 0) {
+          if (fit.parallelCount >= 2)
+            hintHtml = `<span class="cup-cfg-hint cup-cfg-hint-good">${fit.parallelCount} klasser simultant</span>`;
+          else if (fit.matchCount > 0)
+            hintHtml = `<span class="cup-cfg-hint cup-cfg-hint-ok">${fit.matchCount} klasse passer</span>`;
+          else
+            hintHtml = `<span class="cup-cfg-hint cup-cfg-hint-warn">Ingen klasser</span>`;
         }
 
-        if (isWholePitch) {
-          if (bestEntry && bestFit && bestFit.parallelCount >= 2) {
-            barClass = 'cup-fit-suggest'; icon = '💡';
-            mainMsg = `Deling kan gi <strong>${bestFit.parallelCount} klasser parallelt</strong>`;
-            subMsg = `Anbefalt: ${esc(bestEntry.label)}`;
-            applyBtn = ` <button class="cup-fit-apply-btn" data-action="applyBestDivision" data-pitch="${pi}" data-division="${bestCatalogIdx}">Bruk anbefalt</button>`;
-          } else {
-            barClass = 'cup-fit-ok'; icon = '✓';
-            mainMsg = 'Hel bane passer med dine klasser';
-          }
-        } else {
-          const currentEntry = selectedIdx >= 0 ? catalog[selectedIdx] : null;
-          const parallelNow = currentEntry ? currentEntry.parallelCount : currentFit.parallelCount;
-          const coverNow = currentEntry ? currentEntry.coveragePct : null;
+        return `<div class="cup-cfg-card ${isEnabled ? 'is-enabled' : ''} ${isActive ? 'is-active' : ''}">
+          <div class="cup-cfg-card-header">
+            <label class="cup-cfg-check" title="${isActive ? 'Aktiv oppdeling kan ikke fjernes' : 'Aktiver/deaktiver'}">
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} ${isActive ? 'disabled' : ''}
+                data-action="toggleConfigEnabled" data-pitch="${pi}" data-catidx="${catIdx}">
+            </label>
+            ${isBest ? '<span class="cup-cfg-best-badge">★ Anbefalt</span>' : ''}
+            ${isActive ? '<span class="cup-cfg-active-badge">Aktiv</span>' : ''}
+          </div>
+          <div class="cup-cfg-blocks">${blockHtml}</div>
+          <div class="cup-cfg-label">${esc(entry.label)}</div>
+          <div class="cup-cfg-meta">${entry.parallelCount} bane${entry.parallelCount > 1 ? 'r' : ''} · ${entry.coveragePct}% av banen</div>
+          ${hintHtml}
+          ${isEnabled && !isActive ? `<button class="cup-cfg-activate-btn" data-action="activateConfig" data-pitch="${pi}" data-catidx="${catIdx}">Bruk nå</button>` : ''}
+        </div>`;
+      }).join('');
 
-          if (currentFit.matchCount === 0) {
-            barClass = 'cup-fit-bad'; icon = '⚠';
-            mainMsg = 'Ingen av dine klasser trenger dette formatet';
-            subMsg = bestEntry ? `Vurder heller: ${esc(bestEntry.label)}` : '';
-            if (bestCatalogIdx >= 0) applyBtn = ` <button class="cup-fit-apply-btn" data-action="applyBestDivision" data-pitch="${pi}" data-division="${bestCatalogIdx}">Bruk anbefalt</button>`;
-          } else if (!isBestSelected && bestFit && bestFit.parallelCount > parallelNow) {
-            barClass = 'cup-fit-suggest'; icon = '💡';
-            mainMsg = `<strong>${esc(bestEntry.label)}</strong> gir bedre utnyttelse`;
-            subMsg = `${bestFit.parallelCount} parallelle vs. ${parallelNow} nå`;
-            applyBtn = ` <button class="cup-fit-apply-btn" data-action="applyBestDivision" data-pitch="${pi}" data-division="${bestCatalogIdx}">Bruk anbefalt</button>`;
-          } else if (parallelNow >= 2) {
-            barClass = 'cup-fit-good'; icon = '✓';
-            mainMsg = `${parallelNow} simultane baner`;
-            if (coverNow != null) subMsg = `${coverNow}% av ${pf}-banen utnyttes`;
-            if (currentFit.matchNames.length > 0 && currentFit.matchNames.length <= 4) {
-              subMsg += (subMsg ? ' · ' : '') + currentFit.matchNames.join(', ');
-            }
-          } else {
-            barClass = 'cup-fit-ok'; icon = '✓';
-            mainMsg = `1 bane`;
-            if (coverNow != null) subMsg = `${coverNow}% av ${pf}-banen utnyttes`;
-          }
-        }
-
-        fitBarHtml = `
-          <div class="cup-fit-bar ${barClass}">
-            <span class="cup-fit-icon">${icon}</span>
-            <span class="cup-fit-main">${mainMsg}</span>
-            ${subMsg || applyBtn ? `<span class="cup-fit-sub">${subMsg}${applyBtn}</span>` : ''}
-          </div>`;
-      }
-
-      // Subpitch list
+      // Subpitch list (fra aktiv konfig)
       let subListHtml = '';
       if (Array.isArray(p.subPitches) && p.subPitches.length > 0) {
         subListHtml = '<div class="cup-pitch-sublist">' + p.subPitches.map((sp, si) => {
@@ -757,32 +700,39 @@ function syncPoolsWithTeams(cls) {
         subListHtml = `<div class="cup-pitch-meta">Hel bane (${esc(pf)})</div>`;
       }
 
+      const activeLabel = activeCfg
+        ? (catalog.find(e => arraysEqual(e.subs, activeCfg.subs))?.label || divisionToHumanText(activeCfg.subs))
+        : 'Ikke satt';
+
       return `<div class="cup-pitch-card">
         <div class="cup-pitch-card-header">
           <input class="cup-input" type="text" value="${esc(p.name)}" data-pitch="${pi}" data-field="pitchName" placeholder="Banenavn">
           ${(cup.pitches || []).length > 1 ? `<button class="cup-item-remove" data-action="removePitch" data-idx="${pi}" title="Fjern bane"><i class="fas fa-times"></i></button>` : ''}
         </div>
-        <div class="cup-pitch-grid">
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
           <div>
             <div class="cup-input-label">Fysisk størrelse</div>
             <select class="cup-input cup-select" data-pitch="${pi}" data-field="pitchPhysicalFormat">
               ${['3v3','5v5','7v7','9v9','11v11'].map(f => `<option value="${f}" ${pf === f ? 'selected' : ''}>${f}</option>`).join('')}
             </select>
           </div>
-          <div>
-            <div class="cup-input-label">Oppdeling</div>
-            <select class="cup-input cup-select" data-pitch="${pi}" data-field="pitchDivision">
-              ${divisionOptions}
-            </select>
+          <div style="flex:1;">
+            <div class="cup-input-label">Aktiv oppdeling</div>
+            <div class="cup-active-config-label">${esc(activeLabel)}</div>
           </div>
         </div>
-        ${fitBarHtml}
+        <div class="cup-input-label" style="margin-bottom:6px;">
+          Mulige oppdelinger
+          <span class="cup-input-hint">Huk av alle du vil kunne bruke. Klikk «Bruk nå» for å bytte aktiv.</span>
+        </div>
+        <div class="cup-cfg-grid">${configCards}</div>
         ${buildPitchPreviewSvg(p)}
         <div class="cup-input-label" style="margin-top:10px;">Delbaner</div>
         ${subListHtml}
       </div>`;
     }).join('');
   }
+
 
   // --- Classes ---
   function renderClasses(cup) {
@@ -1349,6 +1299,61 @@ function syncPoolsWithTeams(cls) {
         saveCup(cup); renderSetup(cup);
         toast(`Byttet til: ${def.label}`, 'success');
       }
+      else if (action === 'toggleConfigEnabled') {
+        // Checkbox: legg til eller fjern en konfigurasjon fra pitch.configurations
+        const pi = Number(btn.dataset.pitch);
+        const catIdx = Number(btn.dataset.catidx);
+        const p = cup.pitches[pi];
+        if (!p) return;
+        const pf = getPitchPhysicalFormat(p);
+        const catalog = getPitchDivisionCatalog(pf);
+        const entry = catalog[catIdx];
+        if (!entry) return;
+        if (!Array.isArray(p.configurations)) p.configurations = [];
+        const existing = p.configurations.find(c => arraysEqual(c.subs, entry.subs));
+        if (existing) {
+          if (existing.active) return; // Kan ikke fjerne aktiv konfig
+          existing.enabled = !existing.enabled;
+        } else {
+          p.configurations.push({ id: CS.uuid(), subs: entry.subs, enabled: true, active: false });
+        }
+        saveCup(cup); renderPitches(cup);
+      }
+      else if (action === 'activateConfig') {
+        // Bytt aktiv konfigurasjon — det er denne scheduleren bruker
+        const pi = Number(btn.dataset.pitch);
+        const catIdx = Number(btn.dataset.catidx);
+        const p = cup.pitches[pi];
+        if (!p) return;
+        const pf = getPitchPhysicalFormat(p);
+        const catalog = getPitchDivisionCatalog(pf);
+        const entry = catalog[catIdx];
+        if (!entry) return;
+        if (hasExistingSchedule(cup)) {
+          if (!confirm('Bytte aktiv oppdeling nullstiller kampplasseringer. Fortsette?')) return;
+          for (const cls of cup.classes) {
+            for (const m of (cls.matches || [])) {
+              m.pitchId = null; m.start = null; m.end = null; m.dayIndex = null; m.locked = false;
+            }
+          }
+          markScheduleStale(cup, 'Aktiv oppdeling endret');
+        }
+        if (!Array.isArray(p.configurations)) p.configurations = [];
+        // Sett alle til ikke-aktiv
+        for (const c of p.configurations) c.active = false;
+        // Aktiver valgt konfig
+        const existing = p.configurations.find(c => arraysEqual(c.subs, entry.subs));
+        if (existing) {
+          existing.active = true;
+          existing.enabled = true;
+        } else {
+          p.configurations.push({ id: CS.uuid(), subs: entry.subs, enabled: true, active: true });
+        }
+        // Oppdater subPitches fra ny aktiv konfig
+        applyDivisionToPitch(p, entry.subs);
+        saveCup(cup); renderSetup(cup);
+        toast(`Aktiv oppdeling: ${entry.label}`, 'success');
+      }
       else if (action === 'addClass') {
         const nff = CS.getNffDefaults(10);
         const genderPrefix = 'G';
@@ -1542,6 +1547,7 @@ function handleCupField(inp) {
     p.physicalFormat = inp.value;
     p.maxFormat = inp.value;
     p.subPitches = [];
+    p.configurations = []; // Reset: gamle configs er ugyldige for nytt format
     saveCup(cup); renderSetup(cup);
   }
   else if (field === 'pitchDivision') {

@@ -463,6 +463,59 @@
         p.subPitches = [];
       }
 
+      // Migrer til configurations-modell (multi-config support)
+      // configurations er en liste av oppdelinger banen kan brukes til.
+      // Én er aktiv (brukes av scheduler), resten er bookmarked for hurtig bytte.
+      if (!Array.isArray(p.configurations) || p.configurations.length === 0) {
+        // Bygg en default configurations-liste fra eksisterende subPitches
+        var existingSubs = (p.subPitches && p.subPitches.length > 0)
+          ? p.subPitches.map(function(sp) { return sp.format || p.physicalFormat; })
+          : [p.physicalFormat];
+        p.configurations = [{
+          id: cupUuid(),
+          subs: existingSubs,
+          active: true,
+          enabled: true,
+        }];
+        // Legg alltid til "hel bane" som alternativ hvis ikke allerede der
+        var hasWhole = p.configurations.some(function(c) { return c.subs.length === 1 && c.subs[0] === p.physicalFormat; });
+        if (!hasWhole) {
+          p.configurations.unshift({
+            id: cupUuid(),
+            subs: [p.physicalFormat],
+            active: false,
+            enabled: true,
+          });
+        }
+      }
+
+      // Synkroniser subPitches fra aktiv konfigurasjon
+      var activeConfig = null;
+      for (var ci2 = 0; ci2 < p.configurations.length; ci2++) {
+        if (p.configurations[ci2].active) { activeConfig = p.configurations[ci2]; break; }
+      }
+      if (!activeConfig && p.configurations.length > 0) {
+        p.configurations[0].active = true;
+        activeConfig = p.configurations[0];
+      }
+      if (activeConfig) {
+        // Rebuild subPitches fra aktiv config (bevarer navn der mulig)
+        var newSubs = [];
+        for (var ns = 0; ns < activeConfig.subs.length; ns++) {
+          var oldSp = p.subPitches && p.subPitches[ns];
+          newSubs.push({
+            id: (oldSp && oldSp.id && oldSp.format === activeConfig.subs[ns]) ? oldSp.id : p.id + '_' + (ns + 1),
+            name: (oldSp && oldSp.name) ? oldSp.name : String(p.name) + ' ' + String.fromCharCode(65 + ns),
+            format: activeConfig.subs[ns],
+          });
+        }
+        // Bare oppdater hvis ulik (unngår ID-churn)
+        if (newSubs.length !== p.subPitches.length ||
+            newSubs.some(function(s, i) { return !p.subPitches[i] || p.subPitches[i].format !== s.format; })) {
+          p.subPitches = newSubs;
+        }
+      }
+
       // Konverter legacy splits/activeMode -> subPitches (stabile IDs)
       if (p.splits && p.activeMode && (!p.subPitches || p.subPitches.length === 0)) {
         var mode = null;
