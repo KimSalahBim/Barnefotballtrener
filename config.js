@@ -1,7 +1,7 @@
-// © 2026 Barnefotballtrener.no. All rights reserved.
+// Â© 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - Konfigurasjon
 // ================================================
-// Stripe: LIVE nøkler (test-nøkler brukes via Vercel Preview)
+// Stripe: LIVE nÃ¸kler (test-nÃ¸kler brukes via Vercel Preview)
 // Supabase: Offentlig anon key (trygt i frontend)
 // ================================================
 
@@ -24,16 +24,16 @@ const CONFIG = {
       amount: 49,
       currency: 'NOK',
       interval: 'month',
-      name: 'Månedlig',
-      description: '49 kr per måned'
+      name: 'MÃ¥nedlig',
+      description: '49 kr per mÃ¥ned'
     },
     year: {
       id: 'price_1SyaIVDo19YzWAtSbKIfLMqn',
       amount: 299,
       currency: 'NOK',
       interval: 'year',
-      name: 'Årlig',
-      description: '299 kr per år (spar 49%)'
+      name: 'Ã…rlig',
+      description: '299 kr per Ã¥r (spar 49%)'
     },
     lifetime: {
       id: 'price_1SyaJ2Do19YzWAtS55jH22b9',
@@ -41,7 +41,7 @@ const CONFIG = {
       currency: 'NOK',
       interval: 'one_time',
       name: 'Livstid',
-      description: '799 kr - betal én gang'
+      description: '799 kr - betal Ã©n gang'
     }
   },
 
@@ -56,7 +56,7 @@ const CONFIG = {
     name: 'Barnefotballtrener',
     domain: 'barnefotballtrener.no',
     supportEmail: 'support@barnefotballtrener.no',
-    sessionDuration: 12 // timer før auto-logout
+    sessionDuration: 12 // timer fÃ¸r auto-logout
   }
 };
 

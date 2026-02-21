@@ -1,5 +1,5 @@
-// © 2026 Barnefotballtrener.no. All rights reserved.
-// logout-fix.js — Holmes v3.2 (force logout + timeouts + safe storage cleanup)
+// Â© 2026 Barnefotballtrener.no. All rights reserved.
+// logout-fix.js â€” Holmes v3.2 (force logout + timeouts + safe storage cleanup)
 // ==========================================================================
 // Goal: Logout must ALWAYS work, even when Edge Tracking Prevention blocks storage
 // or Supabase auth locks/aborts. This file is intentionally defensive.
@@ -210,13 +210,13 @@
 
           // Confirm before logout (U1c fix)
           try {
-            var ok = window.confirm("Er du sikker på at du vil logge ut?");
+            var ok = window.confirm("Er du sikker pÃ¥ at du vil logge ut?");
             if (!ok) return;
           } catch (_) {
             // If confirm() fails (e.g. some enterprise browsers), proceed with logout
           }
 
-          safeNotify("Logger ut…");
+          safeNotify("Logger utâ€¦");
 
           // Prevent unhandled rejections
           forceLogout().catch(function (fatal) {
@@ -239,7 +239,7 @@
       return forceLogout();
     };
 
-    console.log(LOG, "✅ Delegated logout handler bound (capture) [v3.2]");
+    console.log(LOG, "âœ… Delegated logout handler bound (capture) [v3.2]");
   }
 
   if (document.readyState === "loading") {

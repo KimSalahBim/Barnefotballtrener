@@ -412,9 +412,9 @@
             <h3>Klubblisens</h3>
             <p>Gi alle trenerne i klubben tilgang. Gruppekjøp fra 10 lisenser med rabatt.</p>
             <p class="lp-club-how">Kontakt oss for pris og oppsett.</p>
-            <button type="button" class="lp-club-btn" onclick="try{showClubContactForm();}catch(e){location.hash='landingPricing';}">
+            <a href="mailto:support@barnefotballtrener.no?subject=Klubblisens" class="lp-club-btn">
               <i class="fas fa-envelope"></i> Kontakt oss
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -799,48 +799,6 @@
       </div>
     </div>
 
-    <!-- Club Contact Modal -->
-    <div id="clubContactModal" class="modal" style="display: none;">
-      <div class="modal-content">
-        <span class="modal-close" onclick="closeClubContactForm()">&times;</span>
-        <h2>Klubb-lisens forespørsel</h2>
-        <form id="clubContactForm" class="contact-form">
-          <div class="form-group">
-            <label>Klubbnavn *</label>
-            <input type="text" name="clubName" required>
-          </div>
-          <div class="form-group">
-            <label>Kontaktperson *</label>
-            <input type="text" name="name" required>
-          </div>
-          <div class="form-group">
-            <label>E-post *</label>
-            <input type="email" name="email" required>
-          </div>
-          <div class="form-group">
-            <label>Telefon</label>
-            <input type="tel" name="phone">
-          </div>
-          <div class="form-group">
-            <label>Antall trenere *</label>
-            <input type="number" name="quantity" min="3" required>
-          </div>
-          <div class="form-group">
-            <label>Ønsket plan *</label>
-            <select name="planType" required>
-              <option value="">Velg...</option>
-              <option value="yearly">Årlig lisens</option>
-              <option value="lifetime">Engangskjøp</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Melding</label>
-            <textarea name="message" rows="4"></textarea>
-          </div>
-          <button type="submit" class="btn-submit">Send forespørsel</button>
-        </form>
-      </div>
-    </div>
 
   <!-- HOVEDAPP -->
   <div id="mainApp" class="app-container" style="display:none;">
@@ -1464,7 +1422,7 @@
 <script src="auth.js"></script>
 <script src="error-logger.js"></script>
 <script src="subscription.js"></script>
-<script src="club.js"></script>
+
 <script src="auth-ui.js"></script>
 <script src="pricing.js"></script>
 <script src="grouping.js"></script>

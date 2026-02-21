@@ -1,18 +1,18 @@
-// © 2026 Barnefotballtrener.no. All rights reserved.
+// Â© 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - auth.js (robust, no optional chaining) v2
 // =============================================================
 
 (function () {
-  // AbortError guard (støy fra intern auth / fetch aborts)
+  // AbortError guard (stÃ¸y fra intern auth / fetch aborts)
   if (!window.__bf_aborterror_guard) {
     window.__bf_aborterror_guard = true;
-    // Use capture=true to intercept early (Edge kan logge/stoppe på "Uncaught (in promise) AbortError")
+    // Use capture=true to intercept early (Edge kan logge/stoppe pÃ¥ "Uncaught (in promise) AbortError")
     window.addEventListener('unhandledrejection', function (event) {
       try {
         var reason = event && event.reason;
         var msg = String((reason && reason.message) || reason || '');
         if (msg.indexOf('AbortError') !== -1 || msg.indexOf('signal is aborted') !== -1) {
-          console.warn('⚠️ Ignorerer AbortError fra intern auth:', reason);
+          console.warn('âš ï¸ Ignorerer AbortError fra intern auth:', reason);
           if (event && typeof event.preventDefault === 'function') event.preventDefault();
         }
       } catch (e) {}
@@ -173,7 +173,7 @@ function showSupabaseBlockedMessage(err) {
     msg.className = 'supabase-blocked-text';
     msg.textContent =
       'Det ser ut som nettverket eller nettleseren din blokkerer innloggingskomponenten. ' +
-      'Prøv å laste siden på nytt, bytt nettverk, eller bruk mobilnett.';
+      'PrÃ¸v Ã¥ laste siden pÃ¥ nytt, bytt nettverk, eller bruk mobilnett.';
 
     var details = null;
     if (isDebugHost && err && (err.message || String(err))) {
@@ -188,7 +188,7 @@ function showSupabaseBlockedMessage(err) {
     var reloadBtn = document.createElement('button');
     reloadBtn.type = 'button';
     reloadBtn.className = 'supabase-blocked-retry';
-    reloadBtn.textContent = 'Prøv igjen';
+    reloadBtn.textContent = 'PrÃ¸v igjen';
     reloadBtn.addEventListener('click', function () {
       try { window.location.reload(); } catch (_) {}
     });
@@ -264,7 +264,7 @@ function showSupabaseBlockedMessage(err) {
       }
 
       if (now - start >= maxWait) {
-        console.warn('⚠️ acquireLock timeout – fortsetter likevel');
+        console.warn('âš ï¸ acquireLock timeout â€“ fortsetter likevel');
         return;
       }
 
@@ -279,7 +279,7 @@ function showSupabaseBlockedMessage(err) {
   AuthService.prototype._loadSupabaseScript = async function () {
     if (window.supabase) return;
 
-    console.log('📦 Laster Supabase script...');
+    console.log('ðŸ“¦ Laster Supabase script...');
 
     return new Promise(function (resolve, reject) {
       var existing = document.querySelector('script[data-supabase-script="1"]');
@@ -297,11 +297,11 @@ function showSupabaseBlockedMessage(err) {
       script.setAttribute('data-supabase-script', '1');
 
       script.onload = function () {
-        console.log('✅ Supabase script lastet');
+        console.log('âœ… Supabase script lastet');
         resolve();
       };
       script.onerror = function (e) {
-        console.error('❌ Kunne ikke laste Supabase script', e);
+        console.error('âŒ Kunne ikke laste Supabase script', e);
         // Ultra-safe: only mutate UI after DOM is ready, and never throw
         try {
           var show = function () {
@@ -329,7 +329,7 @@ function showSupabaseBlockedMessage(err) {
 
     await self._acquireLock();
     try {
-      // 0) Fast path: localStorage (unngår Supabase internal lock på Edge hvis storage er ok)
+      // 0) Fast path: localStorage (unngÃ¥r Supabase internal lock pÃ¥ Edge hvis storage er ok)
       var ls0 = readSessionFromLocalStorage();
       if (ls0) return ls0;
 
@@ -339,7 +339,7 @@ function showSupabaseBlockedMessage(err) {
       if (!self._sessionPromise || (now - (self._sessionPromiseAt || 0) > 15000)) {
         self._sessionPromiseAt = now;
 
-        // Catch -> strukturert retur for å unngå "Uncaught (in promise) AbortError" ved interne locks
+        // Catch -> strukturert retur for Ã¥ unngÃ¥ "Uncaught (in promise) AbortError" ved interne locks
         self._sessionPromise = self.supabase.auth.getSession().catch(function (err) {
           return { data: { session: null }, error: err };
         });
@@ -357,27 +357,27 @@ function showSupabaseBlockedMessage(err) {
         } catch (e0) {}
       }
 
-      // 2) Vent litt lengre (Edge kan henge litt) – men uten å trigge nye getSession-kall
+      // 2) Vent litt lengre (Edge kan henge litt) â€“ men uten Ã¥ trigge nye getSession-kall
       var r1 = null;
       try {
         r1 = await withTimeout(self._sessionPromise, 8000, "supabase.getSession");
       } catch (e1) {
-        console.warn("⚠️ getSession timeout/feil:", e1);
+        console.warn("âš ï¸ getSession timeout/feil:", e1);
       }
 
       if (r1 && r1.error) {
         var msg = String((r1.error && r1.error.message) || r1.error || '');
         if (msg.indexOf('AbortError') !== -1 || msg.indexOf('signal is aborted') !== -1 || msg.toLowerCase().indexOf('lock') !== -1) {
-          console.warn('⚠️ Supabase auth lock/AbortError – bruker localStorage fallback. (Tips: lukk andre faner)');
+          console.warn('âš ï¸ Supabase auth lock/AbortError â€“ bruker localStorage fallback. (Tips: lukk andre faner)');
         } else {
-          console.warn('⚠️ Supabase getSession error:', r1.error);
+          console.warn('âš ï¸ Supabase getSession error:', r1.error);
         }
       }
 
       var s1 = (r1 && r1.data && r1.data.session) ? r1.data.session : null;
       if (s1 && s1.user) return s1;
 
-      // 3) Fallback: localStorage (ofte stabil selv når getSession henger)
+      // 3) Fallback: localStorage (ofte stabil selv nÃ¥r getSession henger)
       var ls = readSessionFromLocalStorage();
       if (ls) return ls;
 
@@ -407,24 +407,24 @@ function showSupabaseBlockedMessage(err) {
     if (self._initPromise) return self._initPromise;
 
     self._initPromise = (async function () {
-      console.log('🟦 DOM ready - initialiserer auth');
+      console.log('ðŸŸ¦ DOM ready - initialiserer auth');
 
       try {
         await self._loadSupabaseScript();
 
         if (!window.supabase) {
-          console.error('❌ Supabase library ikke lastet (window.supabase mangler)');
+          console.error('âŒ Supabase library ikke lastet (window.supabase mangler)');
           self.showLoginScreen();
           return;
         }
 
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-          console.error('❌ Mangler Supabase config (SUPABASE_URL / SUPABASE_ANON_KEY)');
+          console.error('âŒ Mangler Supabase config (SUPABASE_URL / SUPABASE_ANON_KEY)');
           self.showLoginScreen();
           return;
         }
 
-        // Behold referanse til supabase-biblioteket før vi legger klient på window.supabase
+        // Behold referanse til supabase-biblioteket fÃ¸r vi legger klient pÃ¥ window.supabase
 const supabaseLib = window.supabase;
 
 self.supabase = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -440,7 +440,7 @@ window.supabaseLib = supabaseLib;
 window.supabase = self.supabase;
 window.supabaseClient = self.supabase;
 
-console.log('✅ Supabase client opprettet (window.supabase = client)');
+console.log('âœ… Supabase client opprettet (window.supabase = client)');
 
 
         var session = null;
@@ -448,19 +448,19 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
 
         if (session && session.user) {
           self.currentUser = session.user;
-          console.log('✅ Bruker allerede logget inn:', session.user.email);
+          console.log('âœ… Bruker allerede logget inn:', session.user.email);
           await self.handleSignIn(session.user);
         } else {
           self.showLoginScreen();
         }
 
         self.supabase.auth.onAuthStateChange(async function (event, sess) {
-          console.log('🔄 Auth state changed:', event);
+          console.log('ðŸ”„ Auth state changed:', event);
 
           if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && sess && sess.user) {
-            // Unngå re-trigger hvis appen allerede er vist for samme bruker
+            // UnngÃ¥ re-trigger hvis appen allerede er vist for samme bruker
             if (self._mainShown && self.currentUser && self.currentUser.id === sess.user.id) {
-              console.log('ℹ️ Ignorerer duplikat auth event (allerede vist for denne brukeren)');
+              console.log('â„¹ï¸ Ignorerer duplikat auth event (allerede vist for denne brukeren)');
               return;
             }
             await self.handleSignIn(sess.user);
@@ -474,41 +474,41 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
           }
 
           if (event === 'SIGNED_OUT') {
-            console.log('👋 Bruker logget ut');
+            console.log('ðŸ‘‹ Bruker logget ut');
             self.currentUser = null;
             self._mainShown = false;
             self.showLoginScreen();
           }
         });
 
-        // FIX 3: Visibilitychange-handler — refresh session når tab aktiveres
+        // FIX 3: Visibilitychange-handler â€” refresh session nÃ¥r tab aktiveres
         try {
           document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'visible' && self.currentUser && self.supabase) {
-              console.log('👁️ Tab ble synlig igjen, refresher session...');
-              // Best-effort refresh med timeout — ikke blokker UI
+              console.log('ðŸ‘ï¸ Tab ble synlig igjen, refresher session...');
+              // Best-effort refresh med timeout â€” ikke blokker UI
               try {
                 withTimeout(self.supabase.auth.getSession(), 5000, 'visibility getSession').then(function (r) {
                   var s = r && r.data && r.data.session;
                   if (s && s.user) {
-                    console.log('✅ Session fortsatt gyldig etter tab-switch');
+                    console.log('âœ… Session fortsatt gyldig etter tab-switch');
                   } else {
-                    console.warn('⚠️ Session tapt etter tab-switch, prøver refresh...');
+                    console.warn('âš ï¸ Session tapt etter tab-switch, prÃ¸ver refresh...');
                     withTimeout(self.supabase.auth.refreshSession(), 5000, 'visibility refresh').catch(function (e) {
-                      console.warn('⚠️ refreshSession feilet:', e && e.message);
+                      console.warn('âš ï¸ refreshSession feilet:', e && e.message);
                     });
                   }
                 }).catch(function (e) {
-                  console.warn('⚠️ getSession feilet etter tab-switch:', e && e.message);
+                  console.warn('âš ï¸ getSession feilet etter tab-switch:', e && e.message);
                 });
               } catch (_) {}
             }
           });
         } catch (_) {}
 
-        console.log('✅ AuthService initialisert');
+        console.log('âœ… AuthService initialisert');
       } catch (err) {
-        console.error('❌ Auth init feilet:', err);
+        console.error('âŒ Auth init feilet:', err);
         self.showLoginScreen();
       }
     })();
@@ -553,7 +553,7 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
       if (res && res.error) throw res.error;
       return { success: true };
     } catch (error) {
-      console.error('❌ Google sign-in error:', error);
+      console.error('âŒ Google sign-in error:', error);
       return { success: false, error: (error && error.message) || String(error) };
     }
   };
@@ -577,7 +577,7 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
       if (res && res.error) throw res.error;
       return { success: true };
     } catch (error) {
-      console.error('❌ Magic link error:', error);
+      console.error('âŒ Magic link error:', error);
       return { success: false, error: (error && error.message) || String(error) };
     }
   };
@@ -598,7 +598,7 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
       this.showLoginScreen();
       return { success: true };
     } catch (error) {
-      console.error('❌ Logout error:', error);
+      console.error('âŒ Logout error:', error);
       return { success: false, error: (error && error.message) || String(error) };
     } finally {
       this._releaseLock();
@@ -613,16 +613,16 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
       safeRemoveStorage('bf_force_google_picker');
       this.currentUser = user;
 
-      console.log('🔎 Sjekker subscription for bruker:', user && user.id);
+      console.log('ðŸ”Ž Sjekker subscription for bruker:', user && user.id);
 
       var svc = window.subscriptionService;
       if (!svc || typeof svc.checkSubscription !== 'function') {
-        console.warn('⚠️ subscriptionService.checkSubscription mangler - viser prisside');
+        console.warn('âš ï¸ subscriptionService.checkSubscription mangler - viser prisside');
         this.showPricingPage();
         return;
       }
 
-      // Prøv subscription-sjekk med retry ved nettverksfeil
+      // PrÃ¸v subscription-sjekk med retry ved nettverksfeil
       var status = null;
       var lastError = null;
       var MAX_ATTEMPTS = 2;
@@ -630,8 +630,8 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
         try {
           status = await svc.checkSubscription(attempt > 0 ? { forceFresh: true } : undefined);
 
-          // checkSubscription() returnerer soft-fail objekter i stedet for å kaste.
-          // Behandle disse som retryable errors slik at fallback-logikken kjører.
+          // checkSubscription() returnerer soft-fail objekter i stedet for Ã¥ kaste.
+          // Behandle disse som retryable errors slik at fallback-logikken kjÃ¸rer.
           if (status && (status.reason === 'status_error' || status.reason === 'no_session')) {
             throw new Error('Subscription check soft-failed: ' + status.reason);
           }
@@ -640,20 +640,20 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
           break;
         } catch (e) {
           lastError = e;
-          console.warn('⚠️ Subscription check attempt ' + (attempt + 1) + ' failed:', e && e.message);
+          console.warn('âš ï¸ Subscription check attempt ' + (attempt + 1) + ' failed:', e && e.message);
           if (attempt < MAX_ATTEMPTS - 1) {
             await new Promise(function (r) { setTimeout(r, 2000); });
           }
         }
       }
 
-      // Hvis alle forsøk feilet: sjekk cachet status for å avgjøre
+      // Hvis alle forsÃ¸k feilet: sjekk cachet status for Ã¥ avgjÃ¸re
       if (lastError) {
-        console.error('❌ Subscription check failed etter ' + MAX_ATTEMPTS + ' forsøk:', lastError);
+        console.error('âŒ Subscription check failed etter ' + MAX_ATTEMPTS + ' forsÃ¸k:', lastError);
 
         // Allerede i appen? Behold den synlig.
         if (this._mainShown) {
-          console.log('ℹ️ Beholder appen synlig (allerede vist)');
+          console.log('â„¹ï¸ Beholder appen synlig (allerede vist)');
           return;
         }
 
@@ -664,33 +664,33 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
         } catch (_) {}
 
         if (lastKnown && (lastKnown.active || lastKnown.trial || lastKnown.lifetime)) {
-          // Hadde tilgang sist — sannsynligvis nettverksfeil, ikke mistet abonnement
-          console.log('ℹ️ Cachet status sier aktiv tilgang — viser appen');
+          // Hadde tilgang sist â€” sannsynligvis nettverksfeil, ikke mistet abonnement
+          console.log('â„¹ï¸ Cachet status sier aktiv tilgang â€” viser appen');
           this.showMainApp();
           try {
             if (typeof window.showNotification === 'function') {
-              window.showNotification('Kunne ikke verifisere abonnement. Prøv å oppdatere siden om problemet vedvarer.', 'warning');
+              window.showNotification('Kunne ikke verifisere abonnement. PrÃ¸v Ã¥ oppdatere siden om problemet vedvarer.', 'warning');
             }
           } catch (_) {}
         } else {
-          // Ingen cachet status eller hadde IKKE tilgang → vis prisside (trygt)
-          console.log('ℹ️ Ingen cachet tilgang — viser prisside');
+          // Ingen cachet status eller hadde IKKE tilgang â†’ vis prisside (trygt)
+          console.log('â„¹ï¸ Ingen cachet tilgang â€” viser prisside');
           this.showPricingPage();
         }
         return;
       }
 
-      console.log('📊 Subscription status:', status);
+      console.log('ðŸ“Š Subscription status:', status);
 
       var hasAccess = !!(status && (status.active || status.trial || status.lifetime));
 
       if (hasAccess) this.showMainApp();
       else this.showPricingPage();
     } catch (e) {
-      console.error('❌ handleSignIn uventet feil:', e);
+      console.error('âŒ handleSignIn uventet feil:', e);
       // Hvis appen allerede vises, behold den
       if (this._mainShown) {
-        console.log('ℹ️ Beholder appen synlig tross feil');
+        console.log('â„¹ï¸ Beholder appen synlig tross feil');
       } else {
         // Uten kjent status, vis prisside (trygt default)
         this.showPricingPage();
@@ -745,20 +745,20 @@ console.log('✅ Supabase client opprettet (window.supabase = client)');
     }
 
     if (this._mainShown) {
-      console.log('ℹ️ showMainApp: allerede vist - hopper over init');
+      console.log('â„¹ï¸ showMainApp: allerede vist - hopper over init');
       return;
     }
     this._mainShown = true;
 
     try {
       if (typeof window.initApp === 'function') {
-        console.log('🚀 Initialiserer app');
+        console.log('ðŸš€ Initialiserer app');
         window.initApp();
       } else {
-        console.warn('⚠️ initApp finnes ikke på window');
+        console.warn('âš ï¸ initApp finnes ikke pÃ¥ window');
       }
     } catch (e) {
-      console.error('❌ initApp feilet:', e);
+      console.error('âŒ initApp feilet:', e);
     }
   };
   
@@ -820,15 +820,15 @@ if (typeof authService.getSessionWithRetry !== 'function') {
         return;
       }
 
-      console.log('🟦 Google-knapp klikket, starter OAuth...');
+      console.log('ðŸŸ¦ Google-knapp klikket, starter OAuth...');
       var res = await authService.signInWithGoogle();
       if (res && res.success === false) {
-        console.error('❌ Google-login feilet:', res.error);
-        notify('Innlogging feilet. Prøv igjen.', 'error');
+        console.error('âŒ Google-login feilet:', res.error);
+        notify('Innlogging feilet. PrÃ¸v igjen.', 'error');
       }
     }, { passive: false });
 
-    console.log('✅ Google-knapp bundet');
+    console.log('âœ… Google-knapp bundet');
   }
 
   function bindMagicLink() {
@@ -880,7 +880,7 @@ if (typeof authService.getSessionWithRetry !== 'function') {
 
       var now = Date.now();
       if (now - lastGlobal < GLOBAL_MIN_MS) {
-        notify('Vent litt før du prøver igjen.', 'info');
+        notify('Vent litt fÃ¸r du prÃ¸ver igjen.', 'info');
         return;
       }
       lastGlobal = now;
@@ -888,7 +888,7 @@ if (typeof authService.getSessionWithRetry !== 'function') {
       var until = getCooldownUntil(email);
       if (until && now < until) {
         var remaining = Math.max(1, Math.ceil((until - now) / 1000));
-        notify('Vent ' + remaining + 's før du sender ny lenke.', 'info');
+        notify('Vent ' + remaining + 's fÃ¸r du sender ny lenke.', 'info');
         return;
       }
 
@@ -901,14 +901,14 @@ if (typeof authService.getSessionWithRetry !== 'function') {
       try {
         var res = await authService.signInWithMagicLink(email);
         if (res && res.success) {
-          if (hint) hint.textContent = 'Sjekk e-posten din og klikk på lenka for å logge inn ✅';
+          if (hint) hint.textContent = 'Sjekk e-posten din og klikk pÃ¥ lenka for Ã¥ logge inn âœ…';
           notify('Innloggingslenke sendt. Sjekk e-posten.', 'success');
         } else {
-          notify((res && res.error) || 'Kunne ikke sende lenke. Prøv igjen.', 'error');
+          notify((res && res.error) || 'Kunne ikke sende lenke. PrÃ¸v igjen.', 'error');
         }
       } catch (err) {
-        console.error('❌ Magic link exception:', err);
-        notify('Kunne ikke sende lenke. Prøv igjen.', 'error');
+        console.error('âŒ Magic link exception:', err);
+        notify('Kunne ikke sende lenke. PrÃ¸v igjen.', 'error');
       } finally {
         setButtonState(false, oldText);
       }
@@ -928,7 +928,7 @@ if (typeof authService.getSessionWithRetry !== 'function') {
       }
     });
 
-    console.log('✅ Magic link bundet (#magicLinkBtn)');
+    console.log('âœ… Magic link bundet (#magicLinkBtn)');
   }
 
   // -------------------------------
@@ -949,7 +949,7 @@ if (typeof authService.getSessionWithRetry !== 'function') {
     if (isStagingHost()) {
       bindMagicLink();
     } else {
-      // Prod: Google-only (skjul magic link for å unngå rate-limit og support)
+      // Prod: Google-only (skjul magic link for Ã¥ unngÃ¥ rate-limit og support)
       var emailInput = document.getElementById('magicLinkEmail');
       var btn = document.getElementById('magicLinkBtn');
       var hint = document.getElementById('magicLinkHint');

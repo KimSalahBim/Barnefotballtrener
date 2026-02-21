@@ -340,12 +340,12 @@
 
       if (result.error) {
         console.warn('[core.js] loadTeams feilet:', result.error.message);
-        return [];
+        return null;
       }
       return result.data || [];
     } catch (e) {
       console.warn('[core.js] loadTeams exception:', e.message);
-      return [];
+      return null;
     }
   }
 
@@ -431,6 +431,10 @@
     if (!sb || !uid) return;
 
     var teams = await loadTeams();
+    if (teams === null) {
+      console.warn('[core.js] ensureDefaultTeam: Avbryter – klarte ikke å laste lag (unngår duplikat standardlag).');
+      return;
+    }
 
     // Dedup: Hvis flere lag heter "Mitt lag", behold eldste og migrer spillere
     if (teams.length > 1) {
@@ -470,6 +474,10 @@
 
     // Dobbeltsjekk: last på nytt for å unngå race condition
     var retryTeams = await loadTeams();
+    if (retryTeams === null) {
+      console.warn('[core.js] ensureDefaultTeam: Retry feilet – avbryter (unngår duplikat standardlag).');
+      return;
+    }
     if (retryTeams.length > 0) {
       state.teams = retryTeams;
       return;

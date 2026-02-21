@@ -1,5 +1,5 @@
 /* Barnefotballtrener - Auth & Subscription Styles
-   Tema: bruker farger inspirert av logo (oransje/gul + grønn)
+   Tema: bruker farger inspirert av logo (oransje/gul + grÃ¸nn)
 */
 
 /* ------------------------------
@@ -46,7 +46,7 @@
   margin: 0 auto 28px;
   border-radius: 36px;
 
-  /* “kortet” bak logoen – lett logo-inspirert */
+  /* â€œkortetâ€ bak logoen â€“ lett logo-inspirert */
   background: linear-gradient(135deg,
     rgba(243, 154, 31, 0.16),
     rgba(46, 139, 87, 0.14)
@@ -83,14 +83,14 @@
 }
 
 /* ------------------------------
-   Google button (moderne, “proff”)
+   Google button (moderne, â€œproffâ€)
 --------------------------------- */
 .btn-google{
   width: 100%;
   padding: 14px 18px;
   background: #ffffff;
 
-  /* subtil “brand” outline */
+  /* subtil â€œbrandâ€ outline */
   border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: var(--bf-radius-lg);
 
@@ -110,7 +110,7 @@
   isolation: isolate;
 }
 
-/* “gradient ring” (logo-farger) */
+/* â€œgradient ringâ€ (logo-farger) */
 .btn-google::before{
   content: "";
   position: absolute;
@@ -136,7 +136,7 @@
 }
 
 .btn-google:hover::before{
-  opacity: 0.95; /* ring aktiveres på hover */
+  opacity: 0.95; /* ring aktiveres pÃ¥ hover */
 }
 
 .btn-google:active{
@@ -148,7 +148,7 @@
   outline: none;
 }
 
-/* synlig tastaturfokus uten å “bråke” */
+/* synlig tastaturfokus uten Ã¥ â€œbrÃ¥keâ€ */
 .btn-google:focus-visible{
   outline: 3px solid rgba(243,154,31,0.30);
   outline-offset: 3px;
@@ -374,7 +374,7 @@ button#googleSignInBtn.btn-google:active{
 
 
 
-/* Login landing — keypoint paragraphs (no bullet list) */
+/* Login landing â€” keypoint paragraphs (no bullet list) */
 #passwordProtection .landing-kps {
   margin: 14px 0 10px;
   text-align: left;
@@ -487,7 +487,7 @@ button#googleSignInBtn.btn-google:active{
 #passwordProtection .public-landing .landing-faq summary::-webkit-details-marker { display: none; }
 
 #passwordProtection .public-landing .landing-faq summary::after {
-  content: "▾";
+  content: "â–¾";
   flex: 0 0 auto;
   font-weight: 800;
   line-height: 1;

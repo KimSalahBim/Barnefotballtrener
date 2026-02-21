@@ -311,7 +311,7 @@
 }
 
 .team-features li:before {
-  content: "✓";
+  content: "âœ“";
   color: var(--success);
   font-weight: bold;
 }
@@ -551,7 +551,7 @@
 /* ========================================
    iOS SAFARI FIX - Pricing Page Scrolling
    ======================================== */
-/* Når body er låst (gated), gjør pricing page scrollbar uavhengig */
+/* NÃ¥r body er lÃ¥st (gated), gjÃ¸r pricing page scrollbar uavhengig */
 body.gated #pricingPage,
 body.lock-scroll #pricingPage {
   position: fixed;
@@ -560,7 +560,7 @@ body.lock-scroll #pricingPage {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   box-sizing: border-box;  /* KRITISK: Sikrer padding ikke lager overflow */
-  z-index: 9999;  /* Sikrer pricing page alltid er øverst */
+  z-index: 9999;  /* Sikrer pricing page alltid er Ã¸verst */
   touch-action: pan-y;
 }
 
