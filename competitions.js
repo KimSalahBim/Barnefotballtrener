@@ -401,7 +401,7 @@
             </button>
 
             <p class="comp-muted">
-              Tips: Du kan ha “uendeligâ€ mange øvelser – bare legg til øvelser før du starter.
+              Tips: Du kan ha "uendelig" mange øvelser – bare legg til øvelser før du starter.
             </p>
           </div>
         </div>
@@ -506,7 +506,7 @@
             <div class="comp-actions">
               <button class="btn-primary comp-btn" data-comp-action="saveCompetition">Lagre</button>
             </div>
-            <p class="comp-muted">Lagrer automatisk når du endrer plasseringer – “Lagreâ€ er ekstra trygghet.</p>
+            <p class="comp-muted">Lagrer automatisk når du endrer plasseringer – "Lagre" er ekstra trygghet.</p>
           </div>
         </div>
       </div>
@@ -697,7 +697,7 @@
       const id = btn.getAttribute('data-comp-id');
 
       if (action === 'goPlayers') {
-        const playersBtn = qs('.nav-btn[data-tab="players"]') || qs('[data-tab="players"]');
+        const playersBtn = qs('.bottom-nav-btn[data-tab="players"]') || qs('[data-tab="players"]');
         if (playersBtn) playersBtn.click();
         return;
       }
@@ -1026,7 +1026,7 @@
   });
   
   document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.nav-btn[data-tab="competitions"]');
+    const btn = e.target.closest('.nav-btn[data-tab="competitions"], .bottom-nav-btn[data-tab="competitions"], .mer-item[data-tab="competitions"]');
     if (btn) {
       console.log('[Competitions] Tab klikket - renderer nå');
       if (ui.view === 'detail') ui.view = 'history';
@@ -1064,7 +1064,7 @@
       const currentPrefix = getUserKeyPrefix();
       if (currentPrefix !== initialPrefix) {
         clearInterval(timer);
-        console.log('[Competitions] auth resolved, rehydrating storage from', initialPrefix, 'â†’', currentPrefix);
+        console.log('[Competitions] auth resolved, rehydrating storage from', initialPrefix, '→', currentPrefix);
         migrateAnonData();
         render();
 
@@ -1081,9 +1081,9 @@
     if (!window._bftCloud) return;
     try {
       var rows = await window._bftCloud.loadAll();
-      if (rows === null) return; // Supabase feil â†’ ikke gjør noe
+      if (rows === null) return; // Supabase feil → ikke gjør noe
       if (rows.length === 0) {
-        // Cloud tom â†’ bootstrap: push lokal data opp
+        // Cloud tom → bootstrap: push lokal data opp
         var cRaw = safeGet(STORAGE_KEY());
         if (cRaw && cRaw !== '[]') window._bftCloud.save('competitions', cRaw);
         return;

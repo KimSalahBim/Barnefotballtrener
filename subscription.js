@@ -97,7 +97,7 @@
 
         // Clear cache if user changed or signed out
         if (newUserId !== cachedUserId) {
-          console.log(`${LOG_PREFIX} ⚠️ User changed (${cachedUserId?.substring(0, 8) || 'none'} â†’ ${newUserId?.substring(0, 8) || 'none'}), clearing token cache`);
+          console.log(`${LOG_PREFIX} ⚠️ User changed (${cachedUserId?.substring(0, 8) || 'none'} → ${newUserId?.substring(0, 8) || 'none'}), clearing token cache`);
           clearTokenCache();
         }
       });

@@ -1,4 +1,4 @@
-// Ã‚Â© 2026 Barnefotballtrener.no. All rights reserved.
+// © 2026 Barnefotballtrener.no. All rights reserved.
 // Barnefotballtrener - kampdag.js
 // Kampdag: oppm\u00f8te -> start/benk -> bytteplan med roligere bytter og bedre spilletidsfordeling.
 // Bruker global variabel "window.players" (Array) som settes av core.js.
@@ -902,7 +902,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       zr.zones[zone].forEach((pid, i) => { if (i < zoneSlots[zone].length) map[zoneSlots[zone][i]] = pid; });
     }
     const gk = slots.find(s => s.zone === 'K');
-    if (gk && seg.keeperId) map[gk.key] = seg.keeperId;
+    // Use keeperId from assignZones (auto-picks when seg.keeperId is null)
+    const effectiveKeeper = zr.keeperId || seg.keeperId;
+    if (gk && effectiveKeeper) map[gk.key] = effectiveKeeper;
     return { slots: map, bench: lastPresent.filter(p => !seg.lineup.includes(p.id)).map(p => p.id) };
   }
 
@@ -1159,15 +1161,32 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 1, 1, 4);
 
+    // Auto-pick: if a keeper dropdown is empty, try to find a goalie-tagged player
+    function autoPickKeeper(excludeIds) {
+      const present = getPresentPlayers();
+      const goalies = present.filter(p => p.goalie && !excludeIds.has(p.id));
+      if (goalies.length) return goalies[0].id;
+      // Fallback: pick last present player not already assigned
+      const fallback = present.filter(p => !excludeIds.has(p.id));
+      return fallback.length ? fallback[fallback.length - 1].id : null;
+    }
+
     const timeline = [];
     let t = 0;
+    const usedKeepers = new Set();
 
     for (let i = 1; i <= kc; i++) {
-      const pid = $(`kdKeeper${i}`)?.value || '';
+      let pid = $(`kdKeeper${i}`)?.value || '';
       const minsRaw = parseInt($(`kdKeeperMin${i}`)?.value, 10) || 0;
       const mins = clamp(minsRaw, 0, 999);
 
       if (mins <= 0) continue;
+
+      // Auto-assign keeper if dropdown is empty
+      if (!pid) {
+        pid = autoPickKeeper(usedKeepers);
+      }
+      if (pid) usedKeepers.add(pid);
 
       const start = t;
       const end = Math.min(T, t + mins);
@@ -1833,6 +1852,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   // MAIN
   // ------------------------------
   function generateKampdagPlan() {
+   try {
     const present = getPresentPlayers();
     const format = parseInt($('kdFormat')?.value, 10) || 7;
     const T = clamp(parseInt($('kdMinutes')?.value, 10) || 48, 10, 200);
@@ -2062,6 +2082,11 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     // Show start match button
     const startBtn = $('kdStartMatch');
     if (startBtn) startBtn.style.display = '';
+   } catch (err) {
+    console.error('[kampdag] generateKampdagPlan feil:', err);
+    const lineupEl = $('kdLineup');
+    if (lineupEl) lineupEl.innerHTML = '<div class="small-text" style="opacity:0.8;">En feil oppstod. Pr\u00f8v \u00e5 endre innstillinger og generer p\u00e5 nytt.</div>';
+   }
   }
 
   function renderKampdagOutput(presentPlayers, best, P, T) {

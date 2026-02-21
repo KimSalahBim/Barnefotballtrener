@@ -743,7 +743,7 @@ function ensurePricingSupportAndContact() {
         <li><strong>Kansellering:</strong> Du kan kansellere når som helst i <em>Innstillinger</em> (tannhjul). Du har fortsatt tilgang ut perioden du allerede har betalt for.</li>
         <li><strong>Innlogging:</strong> Bruk samme Google-konto på alle enheter.</li>
         <li><strong>Bytter du konto på samme mobil/PC?</strong> Logg ut først.</li>
-        <li><strong>Hvis noe “hengerâ€:</strong> Oppdater siden, eller prøv privat fane.</li>
+        <li><strong>Hvis noe "henger":</strong> Oppdater siden, eller prøv privat fane.</li>
         <li><strong>Spørsmål:</strong> Bruk kontaktinformasjonen under.</li>
       </ul>
     `;

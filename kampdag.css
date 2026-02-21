@@ -177,6 +177,15 @@
   transition:background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 .kd-formation-opt:hover{border-color:var(--text-300); transform: translateY(-1px);}
+.kd-formation-opt.kd-formation-active{border-color:var(--primary); background:var(--primary-dim);}
+.kd-formation-opt .kd-f-name{font-weight:900; font-size:15px;}
+.kd-formation-opt .kd-f-desc{font-size:11px; color:var(--text-500); margin-top:2px;}
+.kd-pos-row{
+  display:flex; align-items:center; gap:4px;
+  padding:4px 6px; border-radius:var(--radius-sm);
+  background:var(--bg); margin-bottom:0;
+  min-width:0;
+}
 .kd-pos-name{flex:1; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
 .kd-pos-checks{display:flex; gap:3px; flex-shrink:0;}
 .kd-pos-btn, .kd-pos-tag{
