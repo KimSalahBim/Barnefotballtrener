@@ -101,6 +101,31 @@
     return '\uD83D\uDCC5';
   }
 
+  // Build a local date string for input[type=date]
+  function toLocalDate(isoStr) {
+    if (!isoStr) return '';
+    try {
+      var d = new Date(isoStr);
+      if (isNaN(d.getTime())) return '';
+      var y = d.getFullYear();
+      var m = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    } catch (e) { return ''; }
+  }
+
+  // Build a local time string for input[type=time]
+  function toLocalTime(isoStr) {
+    if (!isoStr) return '';
+    try {
+      var d = new Date(isoStr);
+      if (isNaN(d.getTime())) return '';
+      var h = String(d.getHours()).padStart(2, '0');
+      var min = String(d.getMinutes()).padStart(2, '0');
+      return h + ':' + min;
+    } catch (e) { return ''; }
+  }
+
   // Build a local ISO datetime string for input[type=datetime-local]
   function toLocalDatetime(isoStr) {
     if (!isoStr) return '';
@@ -368,7 +393,7 @@
         type: data.type,
         title: (data.title || '').trim() || null,
         start_time: data.start_time,
-        duration_minutes: parseInt(data.duration_minutes) || 60,
+        duration_minutes: parseInt(data.duration_minutes) || 90,
         location: (data.location || '').trim() || null,
         opponent: (data.opponent || '').trim() || null,
         is_home: (data.type === 'match' || data.type === 'cup_match') ? (data.is_home !== false) : null,
@@ -764,12 +789,16 @@
           '</div>' +
           '<div class="sn-form-row">' +
             '<div class="form-group">' +
-              '<label for="snDateTime">Dato og tid</label>' +
-              '<input type="datetime-local" id="snDateTime" value="' + toLocalDatetime(ev.start_time || '') + '">' +
+              '<label for="snDate">Dato</label>' +
+              '<input type="date" id="snDate" value="' + toLocalDate(ev.start_time || '') + '">' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label for="snTime">Klokkeslett</label>' +
+              '<input type="time" id="snTime" value="' + (toLocalTime(ev.start_time || '') || '17:30') + '">' +
             '</div>' +
             '<div class="form-group">' +
               '<label for="snDuration">Varighet (min)</label>' +
-              '<input type="number" id="snDuration" min="10" max="180" value="' + (ev.duration_minutes || 60) + '">' +
+              '<input type="number" id="snDuration" min="10" max="180" value="' + (ev.duration_minutes || 90) + '">' +
             '</div>' +
           '</div>' +
           '<div class="form-group">' +
@@ -808,12 +837,13 @@
     $('snCancelEvent').addEventListener('click', goToDashboard);
 
     $('snSaveEvent').addEventListener('click', async function() {
-      var dateVal = ($('snDateTime').value || '').trim();
+      var dateVal = ($('snDate').value || '').trim();
       if (!dateVal) {
-        notify('Velg dato og tid.', 'warning');
-        $('snDateTime').focus();
+        notify('Velg dato.', 'warning');
+        $('snDate').focus();
         return;
       }
+      var timeVal = ($('snTime').value || '17:30').trim();
 
       var btn = $('snSaveEvent');
       btn.disabled = true;
@@ -827,8 +857,8 @@
       var fields = {
         type: typeVal,
         title: $('snTitle').value || null,
-        start_time: new Date(dateVal).toISOString(),
-        duration_minutes: parseInt($('snDuration').value) || 60,
+        start_time: new Date(dateVal + 'T' + timeVal).toISOString(),
+        duration_minutes: parseInt($('snDuration').value) || 90,
         location: $('snLocation').value || null,
         opponent: isMatchNow ? ($('snOpponent').value || null) : null,
         is_home: isMatchNow ? isHomeVal : null,
@@ -888,7 +918,7 @@
     html += detailRow('Type', typeLabel(ev.type));
     html += detailRow('Dato', formatDateLong(ev.start_time));
     html += detailRow('Klokkeslett', formatTime(ev.start_time));
-    html += detailRow('Varighet', (ev.duration_minutes || 60) + ' min');
+    html += detailRow('Varighet', (ev.duration_minutes || 90) + ' min');
 
     if (isMatch && ev.opponent) html += detailRow('Motstander', ev.opponent);
     if (isMatch) html += detailRow('Hjemme/Borte', ev.is_home ? 'Hjemme' : 'Borte');
@@ -966,7 +996,7 @@
 
     window.kampdagPrefill({
       format: ev.format || (currentSeason ? currentSeason.format : 7),
-      minutes: ev.duration_minutes || 60,
+      minutes: ev.duration_minutes || 90,
       playerIds: playerIds
     });
 
