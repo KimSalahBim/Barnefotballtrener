@@ -15,7 +15,7 @@
   var currentSeason = null;
   var events = [];
   var seasonPlayers = [];
-  var dashTab = 'calendar'; // 'calendar' | 'roster'
+  var dashTab = 'calendar'; // 'calendar' | 'roster' | 'stats'
   var snView = 'list'; // 'list' | 'create-season' | 'dashboard' | 'create-event' | 'edit-event' | 'event-detail' | 'roster-import'
   var editingEvent = null; // event object when editing
   var editingSeasonPlayer = null; // season player object when editing
@@ -235,6 +235,41 @@
       '.sn-roster-remove:hover { color:var(--error); background:var(--error-dim, #fef2f2); }',
       '.sn-roster-count { font-size:13px; color:var(--text-400); margin-left:4px; }',
       '.sn-roster-empty { text-align:center; padding:32px 20px; color:var(--text-400); }',
+
+      // Attendance
+      '.sn-att-list { padding:0; }',
+      '.sn-att-item { display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); cursor:pointer; -webkit-tap-highlight-color:transparent; }',
+      '.sn-att-item:last-child { border-bottom:none; }',
+      '.sn-att-item.absent { opacity:0.45; }',
+      '.sn-att-check { width:22px; height:22px; border-radius:6px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s; font-size:13px; color:transparent; }',
+      '.sn-att-item.present .sn-att-check { background:var(--success, #22c55e); border-color:var(--success, #22c55e); color:#fff; }',
+      '.sn-att-name { flex:1; font-size:15px; font-weight:500; }',
+      '.sn-att-summary { padding:12px 14px; font-size:14px; color:var(--text-600); font-weight:600; text-align:center; border-top:2px solid var(--border-light, #f1f5f9); }',
+      '.sn-att-badge { width:20px; height:20px; border-radius:50%; background:var(--success, #22c55e); color:#fff; font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }',
+      '.sn-att-reason { display:flex; gap:4px; padding:2px 14px 10px 46px; }',
+      '.sn-reason-btn { padding:4px 10px; border-radius:12px; border:1px solid var(--border); background:var(--bg); font-size:11px; color:var(--text-400); cursor:pointer; font-family:inherit; transition:all 0.15s; }',
+      '.sn-reason-btn.active { background:var(--error-dim, #fef2f2); border-color:var(--error, #ef4444); color:var(--error, #ef4444); font-weight:600; }',
+
+      // Stats
+      '.sn-stats-cards { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }',
+      '.sn-stat-card { background:var(--bg-card); border:1px solid var(--border-light, #f1f5f9); border-radius:var(--radius-lg); padding:14px; text-align:center; }',
+      '.sn-stat-num { font-size:24px; font-weight:700; color:var(--text-800); }',
+      '.sn-stat-label { font-size:11px; color:var(--text-400); margin-top:2px; text-transform:uppercase; letter-spacing:0.5px; }',
+      '.sn-stat-table { width:100%; border-collapse:collapse; font-size:13px; }',
+      '.sn-stat-table th { text-align:left; padding:8px 10px; font-weight:600; color:var(--text-400); font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); }',
+      '.sn-stat-table td { padding:10px 10px; border-bottom:1px solid var(--border-light, #f1f5f9); }',
+      '.sn-stat-table tr:last-child td { border-bottom:none; }',
+      '.sn-stat-table .sn-pname { font-weight:600; color:var(--text-800); }',
+      '.sn-stat-table td:not(:first-child) { text-align:center; }',
+      '.sn-stat-table th:not(:first-child) { text-align:center; }',
+      '.sn-bar-wrap { height:6px; background:var(--border-light, #e2e8f0); border-radius:3px; margin-top:4px; overflow:hidden; }',
+      '.sn-bar-fill { height:100%; border-radius:3px; transition:width 0.3s; }',
+      '.sn-fair-badge { display:inline-block; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:600; }',
+      '.sn-fair-good { background:rgba(34,197,94,0.12); color:#16a34a; }',
+      '.sn-fair-ok { background:rgba(234,179,8,0.12); color:#a16207; }',
+      '.sn-fair-bad { background:rgba(239,68,68,0.12); color:#dc2626; }',
+      '.sn-player-stat-row { cursor:pointer; }',
+      '.sn-player-stat-row:active { background:var(--bg-hover, #f8fafc); }',
 
       // Import checkboxes
       '.sn-import-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); cursor:pointer; }',
@@ -664,8 +699,184 @@
   }
 
   // =========================================================================
-  //  RENDER ROUTER
+  //  CRUD: EVENT PLAYERS / ATTENDANCE (Fase 2, Steg 4)
   // =========================================================================
+
+  var eventAttendance = []; // loaded per event
+  var seasonStats = [];     // all event_players for the season
+  var registeredEventIds = {}; // { event_id: true } for events with saved attendance
+
+  async function loadEventAttendance(eventId) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid || !eventId) { eventAttendance = []; return; }
+
+    try {
+      var res = await sb.from('event_players')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('user_id', uid);
+      if (res.error) throw res.error;
+      eventAttendance = res.data || [];
+    } catch (e) {
+      console.error('[season.js] loadEventAttendance error:', e);
+      eventAttendance = [];
+    }
+  }
+
+  async function saveAttendance(eventId, seasonId, attendanceMap, reasonMap) {
+    // attendanceMap = { player_id: true/false, ... }
+    // reasonMap = { player_id: 'syk'|'skade'|'borte'|null, ... } (optional)
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid || !eventId || !seasonId) return false;
+
+    try {
+      var rows = [];
+      var playerIds = Object.keys(attendanceMap);
+      for (var i = 0; i < playerIds.length; i++) {
+        var pid = playerIds[i];
+        var row = {
+          event_id: eventId,
+          season_id: seasonId,
+          user_id: uid,
+          player_id: pid,
+          attended: attendanceMap[pid]
+        };
+        if (reasonMap && reasonMap[pid] && !attendanceMap[pid]) {
+          row.absence_reason = reasonMap[pid];
+        }
+        rows.push(row);
+      }
+
+      var res = await sb.from('event_players')
+        .upsert(rows, { onConflict: 'event_id,player_id' });
+      if (res.error) throw res.error;
+
+      // Mark this event as registered
+      registeredEventIds[eventId] = true;
+
+      notify('Oppm\u00f8te lagret.', 'success');
+      return true;
+    } catch (e) {
+      console.error('[season.js] saveAttendance error:', e);
+      notify('Feil ved lagring av oppm\u00f8te.', 'error');
+      return false;
+    }
+  }
+
+  async function loadRegisteredEventIds(seasonId) {
+    var sb = getSb();
+    var uid = getUserId();
+    registeredEventIds = {};
+    if (!sb || !uid || !seasonId) return;
+
+    try {
+      // Get distinct event_ids that have attendance data
+      var res = await sb.from('event_players')
+        .select('event_id')
+        .eq('season_id', seasonId)
+        .eq('user_id', uid);
+      if (res.error) throw res.error;
+      var rows = res.data || [];
+      for (var i = 0; i < rows.length; i++) {
+        registeredEventIds[rows[i].event_id] = true;
+      }
+    } catch (e) {
+      console.error('[season.js] loadRegisteredEventIds error:', e);
+    }
+  }
+
+  async function loadSeasonStats(seasonId) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid || !seasonId) { seasonStats = []; return; }
+
+    try {
+      var res = await sb.from('event_players')
+        .select('*')
+        .eq('season_id', seasonId)
+        .eq('user_id', uid);
+      if (res.error) throw res.error;
+      seasonStats = res.data || [];
+    } catch (e) {
+      console.error('[season.js] loadSeasonStats error:', e);
+      seasonStats = [];
+    }
+  }
+
+  function computeStats() {
+    // Build per-player aggregates from seasonStats + events
+    var players = seasonPlayers.filter(function(p) { return p.active; });
+
+    // Categorize events
+    var matchEvents = events.filter(function(e) { return e.type === 'match' || e.type === 'cup_match'; });
+    var trainingEvents = events.filter(function(e) { return e.type === 'training'; });
+
+    // Only count events that have at least one attendance record (i.e. registered)
+    var registeredEventIds = {};
+    for (var s = 0; s < seasonStats.length; s++) {
+      registeredEventIds[seasonStats[s].event_id] = true;
+    }
+
+    var registeredMatches = matchEvents.filter(function(e) { return registeredEventIds[e.id]; });
+    var registeredTrainings = trainingEvents.filter(function(e) { return registeredEventIds[e.id]; });
+
+    // Build per-player lookup: { player_id: { matchesAttended, trainingsAttended, minutesPlayed } }
+    var playerMap = {};
+    for (var i = 0; i < players.length; i++) {
+      playerMap[players[i].player_id] = {
+        player: players[i],
+        matchesAttended: 0,
+        trainingsAttended: 0,
+        minutesPlayed: 0,
+        totalEvents: 0
+      };
+    }
+
+    // Map event ids to types
+    var eventTypeMap = {};
+    for (var e = 0; e < events.length; e++) {
+      eventTypeMap[events[e].id] = events[e].type;
+    }
+
+    for (var j = 0; j < seasonStats.length; j++) {
+      var row = seasonStats[j];
+      if (!playerMap[row.player_id]) continue;
+      if (row.attended !== true) continue;
+
+      var evType = eventTypeMap[row.event_id];
+      if (evType === 'match' || evType === 'cup_match') {
+        playerMap[row.player_id].matchesAttended++;
+      } else if (evType === 'training') {
+        playerMap[row.player_id].trainingsAttended++;
+      }
+      playerMap[row.player_id].totalEvents++;
+      if (row.minutes_played) {
+        playerMap[row.player_id].minutesPlayed += row.minutes_played;
+      }
+    }
+
+    // Convert to sorted array
+    var result = [];
+    for (var pid in playerMap) {
+      result.push(playerMap[pid]);
+    }
+
+    // Sort by total events desc, then name
+    result.sort(function(a, b) {
+      if (b.totalEvents !== a.totalEvents) return b.totalEvents - a.totalEvents;
+      return a.player.name.localeCompare(b.player.name);
+    });
+
+    return {
+      players: result,
+      totalMatches: registeredMatches.length,
+      totalTrainings: registeredTrainings.length,
+      allMatches: matchEvents.length,
+      allTrainings: trainingEvents.length
+    };
+  }
 
   function render() {
     var root = $('snRoot');
@@ -682,6 +893,7 @@
       case 'roster-add-manual': renderManualPlayerAdd(root); break;
       case 'roster-edit-player': renderEditPlayer(root); break;
       case 'create-series': renderCreateSeries(root); break;
+      case 'player-stats': renderPlayerStats(root); break;
       default:               renderSeasonList(root);   break;
     }
   }
@@ -842,8 +1054,9 @@
         '</div>' +
         '<div class="sn-dash-meta">' + escapeHtml(metaParts.join(' \u00B7 ')) + '</div>' +
         '<div class="sn-tabs">' +
-          '<button class="sn-tab' + (dashTab === 'calendar' ? ' active' : '') + '" data-dtab="calendar"><i class="fas fa-calendar-alt" style="margin-right:5px;"></i>Kalender</button>' +
-          '<button class="sn-tab' + (dashTab === 'roster' ? ' active' : '') + '" data-dtab="roster"><i class="fas fa-users" style="margin-right:5px;"></i>Spillerstall' + (rosterCount > 0 ? ' <span class="sn-roster-count">(' + rosterCount + ')</span>' : '') + '</button>' +
+          '<button class="sn-tab' + (dashTab === 'calendar' ? ' active' : '') + '" data-dtab="calendar"><i class="fas fa-calendar-alt" style="margin-right:4px;"></i>Kalender</button>' +
+          '<button class="sn-tab' + (dashTab === 'roster' ? ' active' : '') + '" data-dtab="roster"><i class="fas fa-users" style="margin-right:4px;"></i>Stall' + (rosterCount > 0 ? ' <span class="sn-roster-count">(' + rosterCount + ')</span>' : '') + '</button>' +
+          '<button class="sn-tab' + (dashTab === 'stats' ? ' active' : '') + '" data-dtab="stats"><i class="fas fa-chart-bar" style="margin-right:4px;"></i>Statistikk</button>' +
         '</div>' +
       '</div>';
 
@@ -852,6 +1065,8 @@
       html += renderCalendarTab();
     } else if (dashTab === 'roster') {
       html += renderRosterTab();
+    } else if (dashTab === 'stats') {
+      html += renderStatsTab();
     }
 
     root.innerHTML = html;
@@ -859,8 +1074,12 @@
     // Bind tab clicks
     var tabs = root.querySelectorAll('.sn-tab');
     for (var t = 0; t < tabs.length; t++) {
-      tabs[t].addEventListener('click', function() {
-        dashTab = this.getAttribute('data-dtab');
+      tabs[t].addEventListener('click', async function() {
+        var newTab = this.getAttribute('data-dtab');
+        if (newTab === 'stats' && dashTab !== 'stats') {
+          await loadSeasonStats(currentSeason.id);
+        }
+        dashTab = newTab;
         render();
       });
     }
@@ -873,6 +1092,8 @@
       bindCalendarHandlers(root);
     } else if (dashTab === 'roster') {
       bindRosterHandlers(root);
+    } else if (dashTab === 'stats') {
+      bindStatsHandlers(root);
     }
   }
 
@@ -1046,15 +1267,261 @@
     var items = root.querySelectorAll('.sn-roster-item[data-spid]');
     for (var i = 0; i < items.length; i++) {
       items[i].addEventListener('click', (function(spid) {
-        return function() {
+        return async function() {
           editingSeasonPlayer = seasonPlayers.find(function(p) { return p.id === spid; });
           if (editingSeasonPlayer) {
-            snView = 'roster-edit-player';
+            if (seasonStats.length === 0) await loadSeasonStats(currentSeason.id);
+            snView = 'player-stats';
             render();
           }
         };
       })(items[i].getAttribute('data-spid')));
     }
+  }
+
+  // =========================================================================
+  //  DASHBOARD TAB: STATISTIKK
+  // =========================================================================
+
+  function renderStatsTab() {
+    var stats = computeStats();
+    var p = stats.players;
+
+    var html =
+      '<div class="settings-card" style="margin-top:0; border-radius:0 0 var(--radius-lg) var(--radius-lg); padding-top:16px;">';
+
+    // Summary cards
+    html += '<div class="sn-stats-cards">';
+    html +=
+      '<div class="sn-stat-card">' +
+        '<div class="sn-stat-num">' + stats.totalTrainings + '<span style="font-size:14px; color:var(--text-400);">/' + stats.allTrainings + '</span></div>' +
+        '<div class="sn-stat-label">Treninger registrert</div>' +
+      '</div>';
+    html +=
+      '<div class="sn-stat-card">' +
+        '<div class="sn-stat-num">' + stats.totalMatches + '<span style="font-size:14px; color:var(--text-400);">/' + stats.allMatches + '</span></div>' +
+        '<div class="sn-stat-label">Kamper registrert</div>' +
+      '</div>';
+    html += '</div>';
+
+    // Fairness indicator
+    if (p.length > 0 && (stats.totalTrainings + stats.totalMatches) > 0) {
+      var totalRegistered = stats.totalTrainings + stats.totalMatches;
+      var attendances = p.map(function(x) { return x.totalEvents; });
+      var avg = attendances.reduce(function(a, b) { return a + b; }, 0) / attendances.length;
+
+      if (avg > 0) {
+        var maxDev = 0;
+        for (var f = 0; f < attendances.length; f++) {
+          var dev = Math.abs(attendances[f] - avg) / avg;
+          if (dev > maxDev) maxDev = dev;
+        }
+
+        var fairClass, fairText;
+        if (maxDev <= 0.15) {
+          fairClass = 'sn-fair-good';
+          fairText = '\u2705 Jevnt fordelt oppm\u00f8te';
+        } else if (maxDev <= 0.30) {
+          fairClass = 'sn-fair-ok';
+          fairText = '\u26a0\ufe0f Noe ujevnt oppm\u00f8te';
+        } else {
+          fairClass = 'sn-fair-bad';
+          fairText = '\u26a0\ufe0f Skjevt fordelt \u2014 noen spillere faller etter';
+        }
+
+        html += '<div style="text-align:center; margin-bottom:14px;"><span class="sn-fair-badge ' + fairClass + '">' + fairText + '</span></div>';
+      }
+    }
+
+    html += '</div>';
+
+    // Player table
+    if (p.length === 0 || (stats.totalTrainings + stats.totalMatches) === 0) {
+      html +=
+        '<div class="sn-roster-empty">' +
+          '<div style="font-size:36px; margin-bottom:12px;">📊</div>' +
+          '<div style="font-weight:600; margin-bottom:6px;">Ingen data enn\u00e5</div>' +
+          '<div>Registrer oppm\u00f8te p\u00e5 treninger og kamper for \u00e5 se statistikk.</div>' +
+        '</div>';
+    } else {
+      html += '<div class="sn-section">Spilleroversikt</div>';
+      html += '<div class="settings-card" style="padding:0; overflow-x:auto;">';
+      html += '<table class="sn-stat-table">';
+      html += '<thead><tr>' +
+        '<th>Spiller</th>' +
+        '<th>Trening</th>' +
+        '<th>Kamp</th>' +
+        '<th>Oppm\u00f8te</th>' +
+      '</tr></thead>';
+      html += '<tbody>';
+
+      var maxEvents = stats.totalTrainings + stats.totalMatches;
+
+      for (var i = 0; i < p.length; i++) {
+        var pl = p[i];
+        var totalPossible = stats.totalTrainings + stats.totalMatches;
+        var pct = totalPossible > 0 ? Math.round((pl.totalEvents / totalPossible) * 100) : 0;
+
+        var barColor;
+        if (pct >= 80) barColor = 'var(--success, #22c55e)';
+        else if (pct >= 50) barColor = '#eab308';
+        else barColor = 'var(--error, #ef4444)';
+
+        html += '<tr class="sn-player-stat-row" data-spid="' + escapeHtml(pl.player.id) + '">' +
+          '<td class="sn-pname">' + escapeHtml(pl.player.name) + '</td>' +
+          '<td>' + pl.trainingsAttended + '/' + stats.totalTrainings + '</td>' +
+          '<td>' + pl.matchesAttended + '/' + stats.totalMatches + '</td>' +
+          '<td>' +
+            '<div style="font-weight:600;">' + pct + '%</div>' +
+            '<div class="sn-bar-wrap"><div class="sn-bar-fill" style="width:' + pct + '%; background:' + barColor + ';"></div></div>' +
+          '</td>' +
+        '</tr>';
+      }
+
+      html += '</tbody></table></div>';
+    }
+
+    return html;
+  }
+
+  function bindStatsHandlers(root) {
+    var rows = root.querySelectorAll('.sn-player-stat-row');
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].addEventListener('click', (function(spid) {
+        return async function() {
+          var sp = seasonPlayers.find(function(p) { return p.id === spid; });
+          if (sp) {
+            editingSeasonPlayer = sp;
+            snView = 'player-stats';
+            render();
+          }
+        };
+      })(rows[i].getAttribute('data-spid')));
+    }
+  }
+
+  // =========================================================================
+  //  VIEW: PLAYER STATS (individ)
+  // =========================================================================
+
+  function renderPlayerStats(root) {
+    var sp = editingSeasonPlayer;
+    if (!sp) { snView = 'dashboard'; dashTab = 'stats'; render(); return; }
+
+    var stats = computeStats();
+    var ps = stats.players.find(function(x) { return x.player.id === sp.id; });
+    if (!ps) ps = { matchesAttended: 0, trainingsAttended: 0, minutesPlayed: 0, totalEvents: 0 };
+
+    var totalPossible = stats.totalTrainings + stats.totalMatches;
+    var pct = totalPossible > 0 ? Math.round((ps.totalEvents / totalPossible) * 100) : 0;
+
+    var html =
+      '<div class="settings-card">' +
+        '<div class="sn-dash-header">' +
+          '<button class="sn-back" id="snBackFromPlayerStats">\u2190</button>' +
+          '<span class="sn-dash-title">' + escapeHtml(sp.name) + '</span>' +
+        '</div>';
+
+    // Badges
+    var posLabels = (sp.positions || []).join('/');
+    html += '<div style="margin:8px 0 16px; display:flex; gap:6px;">';
+    if (sp.goalie) html += '<span class="sn-badge sn-badge-keeper">Kan st\u00e5 i m\u00e5l</span>';
+    html += '<span class="sn-badge sn-badge-pos">' + escapeHtml(posLabels) + '</span>';
+    html += '<span class="sn-badge sn-badge-skill">' + sp.skill + '</span>';
+    html += '</div>';
+
+    // Stats cards
+    html += '<div class="sn-stats-cards">';
+    html +=
+      '<div class="sn-stat-card">' +
+        '<div class="sn-stat-num">' + ps.trainingsAttended + '<span style="font-size:14px; color:var(--text-400);">/' + stats.totalTrainings + '</span></div>' +
+        '<div class="sn-stat-label">Treninger</div>' +
+      '</div>';
+    html +=
+      '<div class="sn-stat-card">' +
+        '<div class="sn-stat-num">' + ps.matchesAttended + '<span style="font-size:14px; color:var(--text-400);">/' + stats.totalMatches + '</span></div>' +
+        '<div class="sn-stat-label">Kamper</div>' +
+      '</div>';
+    html +=
+      '<div class="sn-stat-card">' +
+        '<div class="sn-stat-num">' + pct + '%</div>' +
+        '<div class="sn-stat-label">Oppm\u00f8te</div>' +
+      '</div>';
+    html +=
+      '<div class="sn-stat-card">' +
+        '<div class="sn-stat-num">' + (ps.minutesPlayed || 0) + '</div>' +
+        '<div class="sn-stat-label">Spilletid (min)</div>' +
+      '</div>';
+    html += '</div>';
+
+    // Event-by-event history
+    html += '<div class="sn-section">Hendelseslogg</div>';
+
+    // Build history from seasonStats for this player
+    var playerEvents = seasonStats.filter(function(row) { return row.player_id === sp.player_id; });
+    var eventMap = {};
+    for (var e = 0; e < events.length; e++) { eventMap[events[e].id] = events[e]; }
+
+    // Sort by event date
+    playerEvents.sort(function(a, b) {
+      var evA = eventMap[a.event_id];
+      var evB = eventMap[b.event_id];
+      if (!evA || !evB) return 0;
+      return new Date(evB.start_time) - new Date(evA.start_time);
+    });
+
+    if (playerEvents.length === 0) {
+      html += '<div style="text-align:center; padding:20px; color:var(--text-400); font-size:13px;">Ingen registrert oppm\u00f8te enn\u00e5.</div>';
+    } else {
+      html += '<div class="settings-card" style="padding:0;">';
+      for (var h = 0; h < playerEvents.length; h++) {
+        var row = playerEvents[h];
+        var ev = eventMap[row.event_id];
+        if (!ev) continue;
+
+        var evTitle = ev.title || ev.opponent || typeLabel(ev.type);
+        var attended = row.attended === true;
+        var reasonText = '';
+        if (!attended && row.absence_reason) {
+          var reasonLabels = { syk: 'Syk', skade: 'Skade', borte: 'Borte' };
+          reasonText = ' \u00B7 ' + (reasonLabels[row.absence_reason] || row.absence_reason);
+        }
+
+        html +=
+          '<div class="sn-roster-item" style="cursor:default;">' +
+            '<div style="font-size:16px; width:24px; text-align:center;">' + (attended ? '\u2705' : '\u274c') + '</div>' +
+            '<div style="flex:1;">' +
+              '<div style="font-weight:600; font-size:14px;">' + escapeHtml(evTitle) + '</div>' +
+              '<div style="font-size:12px; color:var(--text-400);">' + formatDateLong(ev.start_time) + (attended ? '' : reasonText) + '</div>' +
+            '</div>' +
+            '<div style="font-size:12px; color:var(--text-400);">' + typeIcon(ev.type) + '</div>' +
+          '</div>';
+      }
+      html += '</div>';
+    }
+
+    // Edit player link
+    html +=
+      '<button class="btn-secondary" id="snEditFromStats" style="width:100%; margin-top:16px;">' +
+        '<i class="fas fa-pen" style="margin-right:5px;"></i>Rediger spiller' +
+      '</button>';
+
+    html += '</div>';
+
+    root.innerHTML = html;
+
+    $('snBackFromPlayerStats').addEventListener('click', function() {
+      editingSeasonPlayer = null;
+      snView = 'dashboard';
+      // Return to wherever we came from (stats or roster)
+      render();
+    });
+
+    var editBtn = $('snEditFromStats');
+    if (editBtn) editBtn.addEventListener('click', function() {
+      snView = 'roster-edit-player';
+      render();
+    });
   }
 
   // =========================================================================
@@ -1526,15 +1993,14 @@
       editPosBtns[ep].addEventListener('click', function() { this.classList.toggle('active'); });
     }
 
-    function goBackToRoster() {
-      editingSeasonPlayer = null;
-      snView = 'dashboard';
-      dashTab = 'roster';
+    function goBackFromEdit() {
+      // Return to player-stats view (keeps editingSeasonPlayer)
+      snView = 'player-stats';
       render();
     }
 
-    $('snBackFromEdit').addEventListener('click', goBackToRoster);
-    $('snCancelEdit').addEventListener('click', goBackToRoster);
+    $('snBackFromEdit').addEventListener('click', goBackFromEdit);
+    $('snCancelEdit').addEventListener('click', goBackFromEdit);
 
     $('snSaveEdit').addEventListener('click', async function() {
       var name = ($('snEditName').value || '').trim();
@@ -1567,7 +2033,8 @@
       if (ok) {
         notify('Spiller oppdatert.', 'success');
         await loadSeasonPlayers(currentSeason.id);
-        goBackToRoster();
+        editingSeasonPlayer = seasonPlayers.find(function(p) { return p.id === sp.id; });
+        goBackFromEdit();
       } else {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre';
@@ -1585,7 +2052,10 @@
       if (ok) {
         notify(sp.name + ' fjernet.', 'success');
         await loadSeasonPlayers(currentSeason.id);
-        goBackToRoster();
+        editingSeasonPlayer = null;
+        snView = 'dashboard';
+        dashTab = 'roster';
+        render();
       } else {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-trash" style="margin-right:6px;"></i>Fjern fra sesongen';
@@ -1606,6 +2076,10 @@
       if (time) meta += ', kl. ' + time;
       if (ev.location) meta += ' \u00B7 ' + ev.location;
 
+      var regBadge = registeredEventIds[ev.id]
+        ? '<div class="sn-att-badge" title="Oppm\u00f8te registrert">\u2713</div>'
+        : '';
+
       html +=
         '<div class="sn-event-item" data-eid="' + ev.id + '">' +
           '<div class="sn-event-icon">' + typeIcon(ev.type) + '</div>' +
@@ -1613,6 +2087,7 @@
             '<div class="sn-event-title">' + escapeHtml(title) + '</div>' +
             '<div class="sn-event-meta">' + escapeHtml(meta) + '</div>' +
           '</div>' +
+          regBadge +
           '<div class="sn-event-arrow">\u203A</div>' +
         '</div>';
     }
@@ -1623,10 +2098,11 @@
     var items = root.querySelectorAll('.sn-event-item');
     for (var i = 0; i < items.length; i++) {
       items[i].addEventListener('click', (function(eid) {
-        return function() {
+        return async function() {
           var ev = events.find(function(e) { return e.id === eid; });
           if (ev) {
             editingEvent = ev;
+            await loadEventAttendance(ev.id);
             snView = 'event-detail';
             render();
           }
@@ -1724,8 +2200,17 @@
       });
     }
 
-    $('snBackFromEvent').addEventListener('click', goToDashboard);
-    $('snCancelEvent').addEventListener('click', goToDashboard);
+    function goBackFromForm() {
+      if (isEdit && editingEvent) {
+        snView = 'event-detail';
+      } else {
+        snView = 'dashboard';
+      }
+      render();
+    }
+
+    $('snBackFromEvent').addEventListener('click', goBackFromForm);
+    $('snCancelEvent').addEventListener('click', goBackFromForm);
 
     $('snSaveEvent').addEventListener('click', async function() {
       var dateVal = ($('snDate').value || '').trim();
@@ -1765,7 +2250,14 @@
 
       if (result) {
         await loadEvents(currentSeason.id);
-        snView = 'dashboard';
+        if (isEdit) {
+          // Update editingEvent with fresh data
+          editingEvent = events.find(function(e) { return e.id === existing.id; }) || editingEvent;
+          await loadEventAttendance(editingEvent.id);
+          snView = 'event-detail';
+        } else {
+          snView = 'dashboard';
+        }
         render();
       } else {
         btn.disabled = false;
@@ -1835,8 +2327,76 @@
 
     html += '</div>';
 
+    // --- ATTENDANCE SECTION ---
+    var ABSENCE_REASONS = [
+      { key: 'syk', label: 'Syk' },
+      { key: 'skade', label: 'Skade' },
+      { key: 'borte', label: 'Borte' }
+    ];
+
+    var activePlayers = seasonPlayers.filter(function(p) { return p.active; });
+    if (activePlayers.length > 0) {
+      // Build attendance + reason lookup
+      var attMap = {};
+      var reasonLookup = {};
+      for (var a = 0; a < eventAttendance.length; a++) {
+        attMap[eventAttendance[a].player_id] = eventAttendance[a].attended;
+        if (eventAttendance[a].absence_reason) {
+          reasonLookup[eventAttendance[a].player_id] = eventAttendance[a].absence_reason;
+        }
+      }
+
+      var hasExistingData = eventAttendance.length > 0;
+
+      var presentCount = 0;
+      var playerHtml = '';
+      for (var i = 0; i < activePlayers.length; i++) {
+        var p = activePlayers[i];
+        var isPresent;
+        if (hasExistingData) {
+          isPresent = attMap[p.player_id] === true;
+        } else {
+          isPresent = true;
+        }
+        if (isPresent) presentCount++;
+
+        var existingReason = reasonLookup[p.player_id] || '';
+
+        playerHtml +=
+          '<div class="sn-att-item ' + (isPresent ? 'present' : 'absent') + '" data-pid="' + escapeHtml(p.player_id) + '">' +
+            '<div class="sn-att-check">\u2713</div>' +
+            '<div class="sn-att-name">' + escapeHtml(p.name) + '</div>' +
+          '</div>';
+
+        // Reason buttons (visible only when absent)
+        var reasonHtml = '<div class="sn-att-reason" data-rpid="' + escapeHtml(p.player_id) + '" style="' + (isPresent ? 'display:none;' : '') + '">';
+        for (var r = 0; r < ABSENCE_REASONS.length; r++) {
+          var ar = ABSENCE_REASONS[r];
+          reasonHtml += '<button class="sn-reason-btn' + (existingReason === ar.key ? ' active' : '') + '" data-reason="' + ar.key + '" type="button">' + ar.label + '</button>';
+        }
+        reasonHtml += '</div>';
+        playerHtml += reasonHtml;
+      }
+
+      html +=
+        '<div class="sn-section">Oppm\u00f8te</div>' +
+        '<div class="settings-card" style="padding:0;">' +
+          '<div class="sn-att-list">' + playerHtml + '</div>' +
+          '<div class="sn-att-summary" id="snAttSummary">' + presentCount + ' av ' + activePlayers.length + ' til stede</div>' +
+        '</div>' +
+        '<button class="btn-primary" id="snSaveAttendance" style="width:100%; margin-top:12px;">' +
+          '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre oppm\u00f8te' +
+        '</button>';
+    } else {
+      html +=
+        '<div style="margin-top:16px; padding:16px; text-align:center; color:var(--text-400); font-size:13px;">' +
+          'Legg til spillere i spillerstallen for \u00e5 registrere oppm\u00f8te.' +
+        '</div>';
+    }
+
     root.innerHTML = html;
 
+    // --- BIND HANDLERS ---
     $('snBackFromDetail').addEventListener('click', goToDashboard);
 
     if ($('snOpenKampdag')) {
@@ -1867,6 +2427,83 @@
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-trash" style="margin-right:5px;"></i>Slett';
       }
+    });
+
+    // --- ATTENDANCE INTERACTION ---
+    var attItems = root.querySelectorAll('.sn-att-item');
+    for (var ai = 0; ai < attItems.length; ai++) {
+      attItems[ai].addEventListener('click', function() {
+        var pid = this.getAttribute('data-pid');
+        this.classList.toggle('present');
+        this.classList.toggle('absent');
+
+        // Show/hide reason row
+        var reasonRow = root.querySelector('.sn-att-reason[data-rpid="' + pid + '"]');
+        if (reasonRow) {
+          if (this.classList.contains('absent')) {
+            reasonRow.style.display = 'flex';
+          } else {
+            reasonRow.style.display = 'none';
+            // Clear reason selection when marking present
+            var rBtns = reasonRow.querySelectorAll('.sn-reason-btn');
+            for (var rb = 0; rb < rBtns.length; rb++) rBtns[rb].classList.remove('active');
+          }
+        }
+        updateAttSummary();
+      });
+    }
+
+    // Reason buttons
+    var reasonBtns = root.querySelectorAll('.sn-reason-btn');
+    for (var ri = 0; ri < reasonBtns.length; ri++) {
+      reasonBtns[ri].addEventListener('click', function(e) {
+        e.stopPropagation();
+        // Toggle: click same reason deselects, click different selects
+        var siblings = this.parentElement.querySelectorAll('.sn-reason-btn');
+        var wasActive = this.classList.contains('active');
+        for (var sb = 0; sb < siblings.length; sb++) siblings[sb].classList.remove('active');
+        if (!wasActive) this.classList.add('active');
+      });
+    }
+
+    function updateAttSummary() {
+      var summary = $('snAttSummary');
+      if (!summary) return;
+      var count = root.querySelectorAll('.sn-att-item.present').length;
+      var total = root.querySelectorAll('.sn-att-item').length;
+      summary.textContent = count + ' av ' + total + ' til stede';
+    }
+
+    var saveAttBtn = $('snSaveAttendance');
+    if (saveAttBtn) saveAttBtn.addEventListener('click', async function() {
+      var items = root.querySelectorAll('.sn-att-item');
+      var map = {};
+      var reasonMap = {};
+      for (var s = 0; s < items.length; s++) {
+        var pid = items[s].getAttribute('data-pid');
+        map[pid] = items[s].classList.contains('present');
+
+        // Get reason for absent players
+        if (!map[pid]) {
+          var reasonRow = root.querySelector('.sn-att-reason[data-rpid="' + pid + '"]');
+          if (reasonRow) {
+            var activeReason = reasonRow.querySelector('.sn-reason-btn.active');
+            if (activeReason) {
+              reasonMap[pid] = activeReason.getAttribute('data-reason');
+            }
+          }
+        }
+      }
+
+      saveAttBtn.disabled = true;
+      saveAttBtn.textContent = 'Lagrer\u2026';
+
+      var ok = await saveAttendance(ev.id, currentSeason.id, map, reasonMap);
+      if (ok) {
+        await loadEventAttendance(ev.id);
+      }
+      saveAttBtn.disabled = false;
+      saveAttBtn.innerHTML = '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre oppm\u00f8te';
     });
   }
 
@@ -1917,7 +2554,7 @@
     if (!s) return;
     currentSeason = s;
     dashTab = 'calendar';
-    await Promise.all([loadEvents(seasonId), loadSeasonPlayers(seasonId)]);
+    await Promise.all([loadEvents(seasonId), loadSeasonPlayers(seasonId), loadRegisteredEventIds(seasonId)]);
     snView = 'dashboard';
     render();
   }
