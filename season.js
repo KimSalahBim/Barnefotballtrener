@@ -2886,17 +2886,16 @@
 
         if (troppForGoals.length > 0) {
           html +=
-            '<div class="sn-goal-add" style="flex-wrap:wrap;">' +
-              '<select class="sn-goal-select" id="snGoalPlayer" style="flex:1 1 40%;">';
+            '<div class="sn-goal-add" style="flex-wrap:wrap; gap:8px;">' +
+              '<select class="sn-goal-select" id="snGoalPlayer" style="flex:1 1 55%;">';
           for (var gp = 0; gp < troppForGoals.length; gp++) {
             html += '<option value="' + escapeHtml(troppForGoals[gp].player_id) + '">' + escapeHtml(troppForGoals[gp].name) + '</option>';
           }
           html +=
               '</select>' +
               '<input type="number" class="sn-goal-min" id="snGoalMinute" placeholder="min" min="1" max="120" inputmode="numeric">' +
-              '<button class="sn-goal-add-btn" id="snAddGoal">+M\u00e5l</button>' +
             '</div>' +
-            '<div class="sn-goal-add" style="padding-top:0;">' +
+            '<div class="sn-goal-add" style="padding-top:0; gap:8px;">' +
               '<select class="sn-goal-select" id="snGoalAssist" style="flex:1; font-size:12px; color:var(--text-500);">' +
                 '<option value="">Ingen m\u00e5lgivende</option>';
           for (var ga = 0; ga < troppForGoals.length; ga++) {
@@ -2904,6 +2903,7 @@
           }
           html +=
               '</select>' +
+              '<button class="sn-goal-add-btn" id="snAddGoal">+M\u00e5l</button>' +
             '</div>';
         }
 
