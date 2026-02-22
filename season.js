@@ -271,6 +271,10 @@
       '.sn-player-stat-row { cursor:pointer; }',
       '.sn-player-stat-row:active { background:var(--bg-hover, #f8fafc); }',
 
+      // Tropp
+      '.sn-tropp-hint { font-size:11px; color:var(--text-300); margin-left:auto; white-space:nowrap; }',
+      '.sn-tropp-low { color:var(--error, #ef4444); font-weight:600; }',
+
       // Import checkboxes
       '.sn-import-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); cursor:pointer; }',
       '.sn-import-item:hover { background:var(--bg-hover, #f8fafc); }',
@@ -724,12 +728,18 @@
     }
   }
 
-  async function saveAttendance(eventId, seasonId, attendanceMap, reasonMap) {
-    // attendanceMap = { player_id: true/false, ... }
-    // reasonMap = { player_id: 'syk'|'skade'|'borte'|null, ... } (optional)
+  async function saveAttendance(eventId, seasonId, attendanceMap, reasonMap, squadList) {
+    // attendanceMap = { player_id: true/false }
+    // reasonMap = { player_id: 'syk'|'skade'|'borte'|null } (optional)
+    // squadList = ['player_id', ...] or null (for matches)
     var sb = getSb();
     var uid = getUserId();
     if (!sb || !uid || !eventId || !seasonId) return false;
+
+    var squadSet = {};
+    if (squadList) {
+      for (var q = 0; q < squadList.length; q++) squadSet[squadList[q]] = true;
+    }
 
     try {
       var rows = [];
@@ -743,6 +753,9 @@
           player_id: pid,
           attended: attendanceMap[pid]
         };
+        if (squadList) {
+          row.in_squad = !!squadSet[pid];
+        }
         if (reasonMap && reasonMap[pid] && !attendanceMap[pid]) {
           row.absence_reason = reasonMap[pid];
         }
@@ -2102,7 +2115,12 @@
           var ev = events.find(function(e) { return e.id === eid; });
           if (ev) {
             editingEvent = ev;
-            await loadEventAttendance(ev.id);
+            var loads = [loadEventAttendance(ev.id)];
+            // Load season stats for match tropp hints
+            if ((ev.type === 'match' || ev.type === 'cup_match') && seasonStats.length === 0) {
+              loads.push(loadSeasonStats(currentSeason.id));
+            }
+            await Promise.all(loads);
             snView = 'event-detail';
             render();
           }
@@ -2311,14 +2329,7 @@
 
     html += '</div>';
 
-    // Action buttons
-    if (isMatch) {
-      html +=
-        '<button class="btn-primary" id="snOpenKampdag" style="width:100%;margin-top:20px;">' +
-          '<i class="fas fa-clipboard-list" style="margin-right:6px;"></i>\u00C5pne i Kampdag' +
-        '</button>';
-    }
-
+    // Edit/delete
     html +=
       '<div class="sn-detail-actions">' +
         '<button class="btn-secondary" id="snEditEvent"><i class="fas fa-pen" style="margin-right:5px;"></i>Rediger</button>' +
@@ -2327,7 +2338,7 @@
 
     html += '</div>';
 
-    // --- ATTENDANCE SECTION ---
+    // --- ABSENCE REASONS (shared) ---
     var ABSENCE_REASONS = [
       { key: 'syk', label: 'Syk' },
       { key: 'skade', label: 'Skade' },
@@ -2335,41 +2346,66 @@
     ];
 
     var activePlayers = seasonPlayers.filter(function(p) { return p.active; });
+
     if (activePlayers.length > 0) {
-      // Build attendance + reason lookup
+      // Build lookups from existing data
       var attMap = {};
+      var squadMap = {};
       var reasonLookup = {};
       for (var a = 0; a < eventAttendance.length; a++) {
-        attMap[eventAttendance[a].player_id] = eventAttendance[a].attended;
-        if (eventAttendance[a].absence_reason) {
-          reasonLookup[eventAttendance[a].player_id] = eventAttendance[a].absence_reason;
+        var row = eventAttendance[a];
+        attMap[row.player_id] = row.attended;
+        squadMap[row.player_id] = row.in_squad;
+        if (row.absence_reason) reasonLookup[row.player_id] = row.absence_reason;
+      }
+      var hasExistingData = eventAttendance.length > 0;
+
+      // Compute playing time per player (for tropp hints)
+      var playTimeMap = {};
+      if (isMatch) {
+        for (var st = 0; st < seasonStats.length; st++) {
+          var sr = seasonStats[st];
+          if (!playTimeMap[sr.player_id]) playTimeMap[sr.player_id] = { matches: 0, minutes: 0 };
+          if (sr.in_squad) playTimeMap[sr.player_id].matches++;
+          if (sr.minutes_played) playTimeMap[sr.player_id].minutes += sr.minutes_played;
         }
       }
 
-      var hasExistingData = eventAttendance.length > 0;
-
       var presentCount = 0;
       var playerHtml = '';
+
       for (var i = 0; i < activePlayers.length; i++) {
         var p = activePlayers[i];
         var isPresent;
         if (hasExistingData) {
-          isPresent = attMap[p.player_id] === true;
+          isPresent = isMatch ? (squadMap[p.player_id] === true) : (attMap[p.player_id] === true);
         } else {
-          isPresent = true;
+          isPresent = isMatch ? false : true; // Matches: default nobody selected. Trainings: default all present.
         }
         if (isPresent) presentCount++;
 
         var existingReason = reasonLookup[p.player_id] || '';
 
+        // Playing time hint for matches
+        var hintHtml = '';
+        if (isMatch) {
+          var pt = playTimeMap[p.player_id];
+          if (pt && pt.matches > 0) {
+            hintHtml = '<div class="sn-tropp-hint">' + pt.matches + ' k</div>';
+          } else {
+            hintHtml = '<div class="sn-tropp-hint sn-tropp-low">0 k</div>';
+          }
+        }
+
         playerHtml +=
           '<div class="sn-att-item ' + (isPresent ? 'present' : 'absent') + '" data-pid="' + escapeHtml(p.player_id) + '">' +
             '<div class="sn-att-check">\u2713</div>' +
             '<div class="sn-att-name">' + escapeHtml(p.name) + '</div>' +
+            hintHtml +
           '</div>';
 
-        // Reason buttons (visible only when absent)
-        var reasonHtml = '<div class="sn-att-reason" data-rpid="' + escapeHtml(p.player_id) + '" style="' + (isPresent ? 'display:none;' : '') + '">';
+        // Reason buttons (visible only when absent, and only for non-match or for match absent)
+        var reasonHtml = '<div class="sn-att-reason" data-rpid="' + escapeHtml(p.player_id) + '" style="' + (isPresent || (isMatch && !hasExistingData) ? 'display:none;' : '') + '">';
         for (var r = 0; r < ABSENCE_REASONS.length; r++) {
           var ar = ABSENCE_REASONS[r];
           reasonHtml += '<button class="sn-reason-btn' + (existingReason === ar.key ? ' active' : '') + '" data-reason="' + ar.key + '" type="button">' + ar.label + '</button>';
@@ -2378,19 +2414,36 @@
         playerHtml += reasonHtml;
       }
 
+      var sectionTitle = isMatch ? 'Tropp' : 'Oppm\u00f8te';
+      var summaryText = isMatch
+        ? presentCount + ' av ' + activePlayers.length + ' i troppen'
+        : presentCount + ' av ' + activePlayers.length + ' til stede';
+
       html +=
-        '<div class="sn-section">Oppm\u00f8te</div>' +
+        '<div class="sn-section">' + sectionTitle + '</div>' +
         '<div class="settings-card" style="padding:0;">' +
           '<div class="sn-att-list">' + playerHtml + '</div>' +
-          '<div class="sn-att-summary" id="snAttSummary">' + presentCount + ' av ' + activePlayers.length + ' til stede</div>' +
-        '</div>' +
-        '<button class="btn-primary" id="snSaveAttendance" style="width:100%; margin-top:12px;">' +
-          '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre oppm\u00f8te' +
-        '</button>';
+          '<div class="sn-att-summary" id="snAttSummary">' + summaryText + '</div>' +
+        '</div>';
+
+      if (isMatch) {
+        html +=
+          '<button class="btn-primary" id="snSaveAttendance" style="width:100%; margin-top:12px;">' +
+            '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre tropp' +
+          '</button>' +
+          '<button class="btn-primary" id="snOpenKampdag" style="width:100%; margin-top:8px; background:var(--text-700);">' +
+            '<i class="fas fa-clipboard-list" style="margin-right:6px;"></i>\u00C5pne i Kampdag med tropp' +
+          '</button>';
+      } else {
+        html +=
+          '<button class="btn-primary" id="snSaveAttendance" style="width:100%; margin-top:12px;">' +
+            '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre oppm\u00f8te' +
+          '</button>';
+      }
     } else {
       html +=
         '<div style="margin-top:16px; padding:16px; text-align:center; color:var(--text-400); font-size:13px;">' +
-          'Legg til spillere i spillerstallen for \u00e5 registrere oppm\u00f8te.' +
+          'Legg til spillere i spillerstallen for \u00e5 registrere ' + (isMatch ? 'tropp' : 'oppm\u00f8te') + '.' +
         '</div>';
     }
 
@@ -2401,7 +2454,17 @@
 
     if ($('snOpenKampdag')) {
       $('snOpenKampdag').addEventListener('click', function() {
-        openInKampdag(ev);
+        // Get tropp players from UI state
+        var troppItems = root.querySelectorAll('.sn-att-item.present');
+        if (troppItems.length === 0) {
+          notify('Velg minst \u00e9n spiller i troppen f\u00f8rst.', 'warning');
+          return;
+        }
+        var troppIds = [];
+        for (var t = 0; t < troppItems.length; t++) {
+          troppIds.push(troppItems[t].getAttribute('data-pid'));
+        }
+        openInKampdagWithTropp(ev, troppIds);
       });
     }
 
@@ -2471,7 +2534,9 @@
       if (!summary) return;
       var count = root.querySelectorAll('.sn-att-item.present').length;
       var total = root.querySelectorAll('.sn-att-item').length;
-      summary.textContent = count + ' av ' + total + ' til stede';
+      summary.textContent = isMatch
+        ? count + ' av ' + total + ' i troppen'
+        : count + ' av ' + total + ' til stede';
     }
 
     var saveAttBtn = $('snSaveAttendance');
@@ -2479,9 +2544,11 @@
       var items = root.querySelectorAll('.sn-att-item');
       var map = {};
       var reasonMap = {};
+      var squadList = [];
       for (var s = 0; s < items.length; s++) {
         var pid = items[s].getAttribute('data-pid');
         map[pid] = items[s].classList.contains('present');
+        if (isMatch && map[pid]) squadList.push(pid);
 
         // Get reason for absent players
         if (!map[pid]) {
@@ -2498,12 +2565,14 @@
       saveAttBtn.disabled = true;
       saveAttBtn.textContent = 'Lagrer\u2026';
 
-      var ok = await saveAttendance(ev.id, currentSeason.id, map, reasonMap);
+      var ok = await saveAttendance(ev.id, currentSeason.id, map, reasonMap, isMatch ? squadList : null);
       if (ok) {
         await loadEventAttendance(ev.id);
       }
       saveAttBtn.disabled = false;
-      saveAttBtn.innerHTML = '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre oppm\u00f8te';
+      saveAttBtn.innerHTML = isMatch
+        ? '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre tropp'
+        : '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre oppm\u00f8te';
     });
   }
 
@@ -2529,6 +2598,39 @@
     });
 
     if (window.__BF_switchTab) window.__BF_switchTab('kampdag');
+  }
+
+  function openInKampdagWithTropp(ev, troppPlayerIds) {
+    // Temporarily set window.players to only tropp players with season data
+    var originalPlayers = window.players;
+
+    var troppPlayers = [];
+    for (var i = 0; i < troppPlayerIds.length; i++) {
+      var sp = seasonPlayers.find(function(p) { return p.player_id === troppPlayerIds[i]; });
+      if (sp) {
+        troppPlayers.push({
+          id: sp.player_id,
+          name: sp.name,
+          skill: sp.skill,
+          goalie: sp.goalie,
+          positions: sp.positions,
+          active: true
+        });
+      }
+    }
+
+    window.players = troppPlayers;
+
+    window.kampdagPrefill({
+      format: ev.format || (currentSeason ? currentSeason.format : 7),
+      minutes: ev.duration_minutes || 90,
+      playerIds: troppPlayers.map(function(p) { return p.id; })
+    });
+
+    if (window.__BF_switchTab) window.__BF_switchTab('kampdag');
+
+    // Restore original players after a short delay (kampdag has already read them)
+    setTimeout(function() { window.players = originalPlayers; }, 500);
   }
 
   // =========================================================================
