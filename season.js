@@ -18,6 +18,7 @@
   var dashTab = 'calendar'; // 'calendar' | 'roster'
   var snView = 'list'; // 'list' | 'create-season' | 'dashboard' | 'create-event' | 'edit-event' | 'event-detail' | 'roster-import'
   var editingEvent = null; // event object when editing
+  var editingSeasonPlayer = null; // season player object when editing
 
   // =========================================================================
   //  HELPERS
@@ -556,6 +557,25 @@
     }
   }
 
+  async function updateSeasonPlayer(rowId, fields) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid) return false;
+
+    try {
+      var res = await sb.from('season_players')
+        .update(fields)
+        .eq('id', rowId)
+        .eq('user_id', uid);
+      if (res.error) throw res.error;
+      return true;
+    } catch (e) {
+      console.error('[season.js] updateSeasonPlayer error:', e);
+      notify('Feil ved oppdatering.', 'error');
+      return false;
+    }
+  }
+
   // =========================================================================
   //  RENDER ROUTER
   // =========================================================================
@@ -573,6 +593,7 @@
       case 'event-detail':   renderEventDetail(root);  break;
       case 'roster-import':  renderRosterImport(root); break;
       case 'roster-add-manual': renderManualPlayerAdd(root); break;
+      case 'roster-edit-player': renderEditPlayer(root); break;
       default:               renderSeasonList(root);   break;
     }
   }
@@ -893,14 +914,14 @@
         var p = active[i];
         var posLabels = (p.positions || []).join('/');
         html +=
-          '<div class="sn-roster-item">' +
+          '<div class="sn-roster-item" data-spid="' + p.id + '" style="cursor:pointer;">' +
             '<div class="sn-roster-name">' + escapeHtml(p.name) + '</div>' +
             '<div class="sn-roster-badges">' +
-              (p.goalie ? '<span class="sn-badge sn-badge-keeper">MV</span>' : '') +
+              (p.goalie ? '<span class="sn-badge sn-badge-keeper">Kan stå i mål</span>' : '') +
               '<span class="sn-badge sn-badge-pos">' + escapeHtml(posLabels) + '</span>' +
               '<span class="sn-badge sn-badge-skill">' + p.skill + '</span>' +
             '</div>' +
-            '<button class="sn-roster-remove" data-rid="' + p.id + '" title="Fjern spiller">&times;</button>' +
+            '<div class="sn-event-arrow">\u203A</div>' +
           '</div>';
       }
 
@@ -924,20 +945,18 @@
       render();
     });
 
-    // Remove buttons
-    var removeBtns = root.querySelectorAll('.sn-roster-remove');
-    for (var i = 0; i < removeBtns.length; i++) {
-      removeBtns[i].addEventListener('click', function() {
-        var rid = this.getAttribute('data-rid');
-        var sp = seasonPlayers.find(function(p) { return p.id === rid; });
-        if (!sp) return;
-        if (!confirm('Fjerne ' + sp.name + ' fra sesongen?')) return;
-        removeSeasonPlayer(rid).then(function(ok) {
-          if (ok) {
-            loadSeasonPlayers(currentSeason.id).then(render);
+    // Click on player to edit
+    var items = root.querySelectorAll('.sn-roster-item[data-spid]');
+    for (var i = 0; i < items.length; i++) {
+      items[i].addEventListener('click', (function(spid) {
+        return function() {
+          editingSeasonPlayer = seasonPlayers.find(function(p) { return p.id === spid; });
+          if (editingSeasonPlayer) {
+            snView = 'roster-edit-player';
+            render();
           }
-        });
-      });
+        };
+      })(items[i].getAttribute('data-spid')));
     }
   }
 
@@ -998,7 +1017,7 @@
             (already ? ' checked disabled title="Allerede i sesongen"' : ' checked') + '>' +
           '<div class="sn-roster-name">' + escapeHtml(p.name) + '</div>' +
           '<div class="sn-roster-badges">' +
-            (p.goalie ? '<span class="sn-badge sn-badge-keeper">MV</span>' : '') +
+            (p.goalie ? '<span class="sn-badge sn-badge-keeper">Kan stå i mål</span>' : '') +
             '<span class="sn-badge sn-badge-pos">' + escapeHtml(posLabels) + '</span>' +
           '</div>' +
         '</label>';
@@ -1083,7 +1102,7 @@
             '<input type="text" id="snManualName" placeholder="Fornavn" maxlength="40" autocomplete="off">' +
           '</div>' +
           '<div class="form-group">' +
-            '<label>Keeper?</label>' +
+            '<label>Kan st\u00e5 i m\u00e5l?</label>' +
             '<div class="sn-toggle-group" style="max-width:200px;">' +
               '<button class="sn-toggle-btn active" data-val="false" id="snManualGkNo">Nei</button>' +
               '<button class="sn-toggle-btn" data-val="true" id="snManualGkYes">Ja</button>' +
@@ -1095,10 +1114,10 @@
           '</div>' +
           '<div class="form-group">' +
             '<label>Posisjoner</label>' +
-            '<div style="display:flex; gap:8px;">' +
-              '<label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="snManualPos" value="F" checked> Forsvar</label>' +
-              '<label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="snManualPos" value="M" checked> Midtbane</label>' +
-              '<label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="snManualPos" value="A" checked> Angrep</label>' +
+            '<div style="display:flex; gap:16px; flex-wrap:wrap;">' +
+              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snManualPos" value="F" checked style="width:18px; height:18px;"> Forsvar</label>' +
+              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snManualPos" value="M" checked style="width:18px; height:18px;"> Midtbane</label>' +
+              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snManualPos" value="A" checked style="width:18px; height:18px;"> Angrep</label>' +
             '</div>' +
           '</div>' +
           '<div class="sn-actions" style="margin-top:16px;">' +
@@ -1165,6 +1184,138 @@
       } else {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-plus" style="margin-right:5px;"></i>Legg til';
+      }
+    });
+  }
+
+  // =========================================================================
+  //  VIEW: EDIT SEASON PLAYER
+  // =========================================================================
+
+  function renderEditPlayer(root) {
+    var sp = editingSeasonPlayer;
+    if (!sp) { snView = 'dashboard'; dashTab = 'roster'; render(); return; }
+
+    var posF = (sp.positions || []).indexOf('F') >= 0;
+    var posM = (sp.positions || []).indexOf('M') >= 0;
+    var posA = (sp.positions || []).indexOf('A') >= 0;
+
+    var html =
+      '<div class="settings-card">' +
+        '<div class="sn-dash-header">' +
+          '<button class="sn-back" id="snBackFromEdit">\u2190</button>' +
+          '<span class="sn-dash-title">Rediger spiller</span>' +
+        '</div>' +
+        '<div class="sn-form">' +
+          '<div class="form-group">' +
+            '<label for="snEditName">Navn</label>' +
+            '<input type="text" id="snEditName" value="' + escapeHtml(sp.name) + '" maxlength="40" autocomplete="off">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label>Kan st\u00e5 i m\u00e5l?</label>' +
+            '<div class="sn-toggle-group" style="max-width:200px;">' +
+              '<button class="sn-toggle-btn' + (!sp.goalie ? ' active' : '') + '" data-val="false" id="snEditGkNo">Nei</button>' +
+              '<button class="sn-toggle-btn' + (sp.goalie ? ' active' : '') + '" data-val="true" id="snEditGkYes">Ja</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="snEditSkill">Ferdighetsniv\u00e5 (1\u20136)</label>' +
+            '<input type="number" id="snEditSkill" min="1" max="6" value="' + sp.skill + '">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label>Posisjoner</label>' +
+            '<div style="display:flex; gap:16px; flex-wrap:wrap;">' +
+              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snEditPos" value="F"' + (posF ? ' checked' : '') + ' style="width:18px; height:18px;"> Forsvar</label>' +
+              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snEditPos" value="M"' + (posM ? ' checked' : '') + ' style="width:18px; height:18px;"> Midtbane</label>' +
+              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snEditPos" value="A"' + (posA ? ' checked' : '') + ' style="width:18px; height:18px;"> Angrep</label>' +
+            '</div>' +
+          '</div>' +
+          '<div class="sn-actions" style="margin-top:16px;">' +
+            '<button class="btn-secondary" id="snCancelEdit">Avbryt</button>' +
+            '<button class="btn-primary" id="snSaveEdit"><i class="fas fa-check" style="margin-right:5px;"></i>Lagre</button>' +
+          '</div>' +
+          '<div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border);">' +
+            '<button class="sn-btn-danger" id="snRemovePlayer" style="width:100%;">' +
+              '<i class="fas fa-trash" style="margin-right:6px;"></i>Fjern fra sesongen' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    root.innerHTML = html;
+
+    // Keeper toggle
+    var gkBtns = root.querySelectorAll('.sn-toggle-btn');
+    for (var g = 0; g < gkBtns.length; g++) {
+      gkBtns[g].addEventListener('click', function() {
+        for (var b = 0; b < gkBtns.length; b++) gkBtns[b].classList.remove('active');
+        this.classList.add('active');
+      });
+    }
+
+    function goBackToRoster() {
+      editingSeasonPlayer = null;
+      snView = 'dashboard';
+      dashTab = 'roster';
+      render();
+    }
+
+    $('snBackFromEdit').addEventListener('click', goBackToRoster);
+    $('snCancelEdit').addEventListener('click', goBackToRoster);
+
+    $('snSaveEdit').addEventListener('click', async function() {
+      var name = ($('snEditName').value || '').trim();
+      if (!name) {
+        notify('Navn kan ikke v\u00e6re tomt.', 'warning');
+        $('snEditName').focus();
+        return;
+      }
+
+      var goalie = $('snEditGkYes').classList.contains('active');
+      var skill = parseInt($('snEditSkill').value) || 3;
+      skill = Math.max(1, Math.min(6, skill));
+
+      var posCbs = root.querySelectorAll('.snEditPos:checked');
+      var positions = [];
+      for (var p = 0; p < posCbs.length; p++) positions.push(posCbs[p].value);
+      if (positions.length === 0) positions = ['F', 'M', 'A'];
+
+      var btn = $('snSaveEdit');
+      btn.disabled = true;
+      btn.textContent = 'Lagrer\u2026';
+
+      var ok = await updateSeasonPlayer(sp.id, {
+        player_name: name,
+        player_goalie: goalie,
+        player_skill: skill,
+        player_positions: positions
+      });
+
+      if (ok) {
+        notify('Spiller oppdatert.', 'success');
+        await loadSeasonPlayers(currentSeason.id);
+        goBackToRoster();
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre';
+      }
+    });
+
+    $('snRemovePlayer').addEventListener('click', async function() {
+      if (!confirm('Fjerne ' + sp.name + ' fra sesongen?\n\nEventuell statistikk for denne spilleren beholdes ikke.')) return;
+
+      var btn = $('snRemovePlayer');
+      btn.disabled = true;
+      btn.textContent = 'Fjerner\u2026';
+
+      var ok = await removeSeasonPlayer(sp.id);
+      if (ok) {
+        notify(sp.name + ' fjernet.', 'success');
+        await loadSeasonPlayers(currentSeason.id);
+        goBackToRoster();
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-trash" style="margin-right:6px;"></i>Fjern fra sesongen';
       }
     });
   }
