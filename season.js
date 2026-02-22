@@ -3078,8 +3078,6 @@
       // Prevent assist = scorer
       if (assistId === pid) assistId = null;
 
-      console.log('[season.js] addGoal:', { pid, pName, minVal, assistId, assistName });
-
       addGoalBtn.disabled = true;
       var ok = await addMatchGoal(ev.id, pid, pName, minVal, assistId, assistName);
       if (ok) {
