@@ -288,7 +288,9 @@
       '.sn-nff-warning i { margin-right:6px; }',
       '.sn-goal-item { display:flex; align-items:center; gap:8px; padding:8px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); font-size:14px; }',
       '.sn-goal-item:last-child { border-bottom:none; }',
-      '.sn-goal-remove { background:none; border:none; color:var(--text-300); cursor:pointer; padding:4px; font-size:16px; margin-left:auto; }',
+      '.sn-goal-remove { background:none; border:none; color:var(--text-300); cursor:pointer; padding:4px; font-size:16px; }',
+      '.sn-goal-dup { background:none; border:1px solid var(--border); color:var(--primary, #2563eb); cursor:pointer; padding:2px 8px; font-size:16px; font-weight:700; border-radius:6px; margin-left:auto; line-height:1; }',
+      '.sn-goal-dup:active { background:var(--primary, #2563eb); color:#fff; }',
       '.sn-goal-add { display:flex; gap:6px; padding:10px 14px; align-items:flex-end; }',
       '.sn-goal-select { flex:1; padding:8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:13px; background:var(--bg); }',
       '.sn-goal-min { width:50px; padding:8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:13px; text-align:center; }',
@@ -1067,6 +1069,18 @@
       return a.player.name.localeCompare(b.player.name);
     });
 
+    var topAssisters = result.filter(function(p) { return p.assists > 0; });
+    topAssisters.sort(function(a, b) {
+      if (b.assists !== a.assists) return b.assists - a.assists;
+      if (b.goals !== a.goals) return b.goals - a.goals;
+      return a.player.name.localeCompare(b.player.name);
+    });
+
+    var totalAssists = 0;
+    for (var ta = 0; ta < seasonGoals.length; ta++) {
+      if (seasonGoals[ta].assist_player_id) totalAssists++;
+    }
+
     return {
       players: result,
       totalMatches: registeredMatches.length,
@@ -1080,7 +1094,9 @@
       goalsFor: goalsFor,
       goalsAgainst: goalsAgainst,
       topScorers: topScorers,
-      totalGoals: seasonGoals.length
+      topAssisters: topAssisters,
+      totalGoals: seasonGoals.length,
+      totalAssists: totalAssists
     };
   }
 
@@ -1614,6 +1630,36 @@
       html += '</div>';
     }
 
+    // Top assisters
+    if (stats.topAssisters.length > 0) {
+      html += '<div class="sn-section">M\u00e5lgivende</div>';
+      html += '<div class="settings-card" style="padding:0;">';
+      for (var ta = 0; ta < stats.topAssisters.length; ta++) {
+        var as = stats.topAssisters[ta];
+        html +=
+          '<div class="sn-roster-item sn-player-stat-row" data-spid="' + escapeHtml(as.player.id) + '">' +
+            '<div style="font-size:14px; width:24px; text-align:center; font-weight:800; color:var(--primary, #2563eb);">A</div>' +
+            '<div style="flex:1;">' +
+              '<div style="font-weight:600;">' + escapeHtml(as.player.name) + '</div>' +
+            '</div>' +
+            '<div style="display:flex; gap:10px; align-items:center;">' +
+              '<div style="text-align:center;">' +
+                '<div style="font-weight:700; font-size:16px;">' + as.assists + '</div>' +
+                '<div style="font-size:10px; color:var(--text-400);">assist</div>' +
+              '</div>' +
+              (as.goals > 0
+                ? '<div style="text-align:center;">' +
+                    '<div style="font-weight:700; font-size:16px; color:var(--text-600);">' + as.goals + '</div>' +
+                    '<div style="font-size:10px; color:var(--text-400);">m\u00e5l</div>' +
+                  '</div>'
+                : '') +
+            '</div>' +
+            '<div class="sn-event-arrow">\u203A</div>' +
+          '</div>';
+      }
+      html += '</div>';
+    }
+
     // Player attendance table
     html += '<div class="sn-section">Oppm\u00f8te</div>';
     html += '<div class="settings-card" style="padding:0; overflow-x:auto;">';
@@ -1789,7 +1835,7 @@
         if (pgm) {
           var parts = [];
           if (pgm.goals > 0) parts.push('\u26BD' + (pgm.goals > 1 ? '\u00d7' + pgm.goals : ''));
-          if (pgm.assists > 0) parts.push('\uD83C\uDFA8' + (pgm.assists > 1 ? '\u00d7' + pgm.assists : ''));
+          if (pgm.assists > 0) parts.push('<span style="font-weight:800; color:var(--primary, #2563eb);">A</span>' + (pgm.assists > 1 ? '\u00d7' + pgm.assists : ''));
           if (parts.length > 0) goalBadge = '<div style="font-size:12px; white-space:nowrap;">' + parts.join(' ') + '</div>';
         }
 
@@ -3046,6 +3092,28 @@
       })(removeGoalBtns[rg].getAttribute('data-gid')));
     }
 
+    // Duplicate goal (+)
+    var dupGoalBtns = root.querySelectorAll('.sn-goal-dup');
+    for (var dg = 0; dg < dupGoalBtns.length; dg++) {
+      dupGoalBtns[dg].addEventListener('click', (function(btn) {
+        return async function(e) {
+          e.stopPropagation();
+          btn.disabled = true;
+          var pid = btn.getAttribute('data-pid');
+          var pName = btn.getAttribute('data-pname');
+          var aid = btn.getAttribute('data-aid') || null;
+          var aName = btn.getAttribute('data-aname') || null;
+          var ok = await addMatchGoal(ev.id, pid, pName, null, aid, aName);
+          if (ok) {
+            await loadMatchGoals(ev.id);
+            render();
+          } else {
+            btn.disabled = false;
+          }
+        };
+      })(dupGoalBtns[dg]));
+    }
+
     // Complete match
     var completeBtn = $('snCompleteMatch');
     if (completeBtn) completeBtn.addEventListener('click', async function() {
@@ -3085,17 +3153,23 @@
     });
   }
 
-  function goalItemHtml(goal, showRemove) {
+  function goalItemHtml(goal, showActions) {
     var assistText = '';
     if (goal.assist_player_name) {
       assistText = '<span style="color:var(--text-400); font-size:12px;">(' + escapeHtml(goal.assist_player_name) + ')</span>';
+    }
+    var actions = '';
+    if (showActions) {
+      actions =
+        '<button class="sn-goal-dup" data-pid="' + escapeHtml(goal.player_id) + '" data-pname="' + escapeHtml(goal.player_name || '') + '" data-aid="' + escapeHtml(goal.assist_player_id || '') + '" data-aname="' + escapeHtml(goal.assist_player_name || '') + '" title="Legg til enda et m\u00e5l">+</button>' +
+        '<button class="sn-goal-remove" data-gid="' + goal.id + '" title="Fjern">\u00d7</button>';
     }
     return '<div class="sn-goal-item">' +
       '<span>\u26BD</span>' +
       '<span style="font-weight:600;">' + escapeHtml(goal.player_name || 'Ukjent') + '</span>' +
       assistText +
       (goal.minute ? '<span style="color:var(--text-400); font-size:12px;">' + goal.minute + '\'</span>' : '') +
-      (showRemove ? '<button class="sn-goal-remove" data-gid="' + goal.id + '" title="Fjern">\u00d7</button>' : '') +
+      actions +
     '</div>';
   }
 
