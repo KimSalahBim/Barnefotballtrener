@@ -275,6 +275,26 @@
       '.sn-tropp-hint { font-size:11px; color:var(--text-300); margin-left:auto; white-space:nowrap; }',
       '.sn-tropp-low { color:var(--error, #ef4444); font-weight:600; }',
 
+      // Result
+      '.sn-result-box { display:flex; align-items:center; justify-content:center; gap:12px; padding:16px; }',
+      '.sn-score-input { width:56px; height:56px; text-align:center; font-size:28px; font-weight:700; border:2px solid var(--border); border-radius:var(--radius-lg); background:var(--bg); color:var(--text-800); font-family:inherit; }',
+      '.sn-score-input:focus { border-color:var(--primary, #2563eb); outline:none; }',
+      '.sn-score-dash { font-size:28px; font-weight:300; color:var(--text-300); }',
+      '.sn-score-label { font-size:11px; color:var(--text-400); text-align:center; margin-top:2px; }',
+      '.sn-result-display { display:flex; align-items:center; justify-content:center; gap:12px; padding:12px; }',
+      '.sn-result-num { font-size:32px; font-weight:800; color:var(--text-800); }',
+      '.sn-result-dash { font-size:24px; color:var(--text-300); }',
+      '.sn-nff-warning { padding:12px 14px; margin:10px 0; border-radius:var(--radius-lg); background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.2); font-size:12px; line-height:1.5; color:#92400e; }',
+      '.sn-nff-warning i { margin-right:6px; }',
+      '.sn-goal-item { display:flex; align-items:center; gap:8px; padding:8px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); font-size:14px; }',
+      '.sn-goal-item:last-child { border-bottom:none; }',
+      '.sn-goal-remove { background:none; border:none; color:var(--text-300); cursor:pointer; padding:4px; font-size:16px; margin-left:auto; }',
+      '.sn-goal-add { display:flex; gap:6px; padding:10px 14px; align-items:flex-end; }',
+      '.sn-goal-select { flex:1; padding:8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:13px; background:var(--bg); }',
+      '.sn-goal-min { width:50px; padding:8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:13px; text-align:center; }',
+      '.sn-goal-add-btn { padding:8px 12px; border:none; background:var(--primary, #2563eb); color:#fff; border-radius:var(--radius-sm); cursor:pointer; font-size:13px; font-weight:600; white-space:nowrap; }',
+      '.sn-completed-badge { display:inline-block; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:600; background:rgba(34,197,94,0.12); color:#16a34a; margin-left:8px; }',
+
       // Import checkboxes
       '.sn-import-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); cursor:pointer; }',
       '.sn-import-item:hover { background:var(--bg-hover, #f8fafc); }',
@@ -709,6 +729,7 @@
   var eventAttendance = []; // loaded per event
   var seasonStats = [];     // all event_players for the season
   var registeredEventIds = {}; // { event_id: true } for events with saved attendance
+  var matchGoals = [];          // goals for current event
 
   async function loadEventAttendance(eventId) {
     var sb = getSb();
@@ -800,6 +821,107 @@
     }
   }
 
+  // =========================================================================
+  //  CRUD: MATCH RESULT & GOALS (Fase 2, Steg 6)
+  // =========================================================================
+
+  async function loadMatchGoals(eventId) {
+    var sb = getSb();
+    var uid = getUserId();
+    matchGoals = [];
+    if (!sb || !uid || !eventId) return;
+
+    try {
+      var res = await sb.from('match_events')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('user_id', uid)
+        .order('minute', { ascending: true, nullsFirst: false });
+      if (res.error) throw res.error;
+      matchGoals = res.data || [];
+    } catch (e) {
+      console.error('[season.js] loadMatchGoals error:', e);
+      matchGoals = [];
+    }
+  }
+
+  async function saveMatchResult(eventId, resultHome, resultAway, status) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid || !eventId) return false;
+
+    try {
+      var fields = { status: status || 'completed' };
+      if (resultHome !== null && resultHome !== '') fields.result_home = parseInt(resultHome);
+      if (resultAway !== null && resultAway !== '') fields.result_away = parseInt(resultAway);
+
+      var res = await sb.from('events')
+        .update(fields)
+        .eq('id', eventId)
+        .eq('user_id', uid);
+      if (res.error) throw res.error;
+      return true;
+    } catch (e) {
+      console.error('[season.js] saveMatchResult error:', e);
+      notify('Feil ved lagring av resultat.', 'error');
+      return false;
+    }
+  }
+
+  async function addMatchGoal(eventId, playerId, playerName, minute, assistId, assistName) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid || !eventId) return false;
+
+    try {
+      var row = {
+        event_id: eventId,
+        user_id: uid,
+        player_id: playerId,
+        player_name: playerName,
+        type: 'goal'
+      };
+      if (minute !== null && minute !== undefined && minute !== '') {
+        row.minute = parseInt(minute);
+      }
+      if (assistId) {
+        row.assist_player_id = assistId;
+        row.assist_player_name = assistName || null;
+      }
+
+      var res = await sb.from('match_events').insert(row);
+      if (res.error) throw res.error;
+      return true;
+    } catch (e) {
+      console.error('[season.js] addMatchGoal error:', e);
+      notify('Feil ved registrering av m\u00e5l.', 'error');
+      return false;
+    }
+  }
+
+  async function removeMatchGoal(goalId) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid || !goalId) return false;
+
+    try {
+      var res = await sb.from('match_events')
+        .delete()
+        .eq('id', goalId)
+        .eq('user_id', uid);
+      if (res.error) throw res.error;
+      return true;
+    } catch (e) {
+      console.error('[season.js] removeMatchGoal error:', e);
+      return false;
+    }
+  }
+
+  function isBarnefotball() {
+    var fmt = (editingEvent && editingEvent.format) || (currentSeason && currentSeason.format) || 7;
+    return fmt <= 9; // 3v3, 5v5, 7v7, 9v9 = barnefotball (under 13)
+  }
+
   async function loadSeasonStats(seasonId) {
     var sb = getSb();
     var uid = getUserId();
@@ -818,24 +940,66 @@
     }
   }
 
+  var seasonGoals = []; // all match_events for the season
+
+  async function loadSeasonGoals(seasonId) {
+    var sb = getSb();
+    var uid = getUserId();
+    seasonGoals = [];
+    if (!sb || !uid || !seasonId) return;
+
+    try {
+      // Get all goals for events in this season
+      var eventIds = events
+        .filter(function(e) { return e.type === 'match' || e.type === 'cup_match'; })
+        .map(function(e) { return e.id; });
+
+      if (eventIds.length === 0) return;
+
+      var res = await sb.from('match_events')
+        .select('*')
+        .in('event_id', eventIds)
+        .eq('user_id', uid);
+      if (res.error) throw res.error;
+      seasonGoals = res.data || [];
+    } catch (e) {
+      console.error('[season.js] loadSeasonGoals error:', e);
+      seasonGoals = [];
+    }
+  }
+
   function computeStats() {
-    // Build per-player aggregates from seasonStats + events
     var players = seasonPlayers.filter(function(p) { return p.active; });
 
     // Categorize events
-    var matchEvents = events.filter(function(e) { return e.type === 'match' || e.type === 'cup_match'; });
-    var trainingEvents = events.filter(function(e) { return e.type === 'training'; });
+    var matchEvts = events.filter(function(e) { return e.type === 'match' || e.type === 'cup_match'; });
+    var trainingEvts = events.filter(function(e) { return e.type === 'training'; });
 
-    // Only count events that have at least one attendance record (i.e. registered)
-    var registeredEventIds = {};
+    // Registered events
+    var regIds = {};
     for (var s = 0; s < seasonStats.length; s++) {
-      registeredEventIds[seasonStats[s].event_id] = true;
+      regIds[seasonStats[s].event_id] = true;
+    }
+    var registeredMatches = matchEvts.filter(function(e) { return regIds[e.id]; });
+    var registeredTrainings = trainingEvts.filter(function(e) { return regIds[e.id]; });
+
+    // Completed matches with results
+    var completedMatches = matchEvts.filter(function(e) {
+      return e.status === 'completed' && e.result_home !== null && e.result_home !== undefined;
+    });
+    var wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0;
+    for (var cm = 0; cm < completedMatches.length; cm++) {
+      var m = completedMatches[cm];
+      var ourGoals = m.is_home ? m.result_home : m.result_away;
+      var theirGoals = m.is_home ? m.result_away : m.result_home;
+      goalsFor += (ourGoals || 0);
+      goalsAgainst += (theirGoals || 0);
+      if (ourGoals > theirGoals) wins++;
+      else if (ourGoals < theirGoals) losses++;
+      else draws++;
     }
 
-    var registeredMatches = matchEvents.filter(function(e) { return registeredEventIds[e.id]; });
-    var registeredTrainings = trainingEvents.filter(function(e) { return registeredEventIds[e.id]; });
-
-    // Build per-player lookup: { player_id: { matchesAttended, trainingsAttended, minutesPlayed } }
+    // Per-player lookup
     var playerMap = {};
     for (var i = 0; i < players.length; i++) {
       playerMap[players[i].player_id] = {
@@ -843,16 +1007,19 @@
         matchesAttended: 0,
         trainingsAttended: 0,
         minutesPlayed: 0,
-        totalEvents: 0
+        totalEvents: 0,
+        goals: 0,
+        assists: 0
       };
     }
 
-    // Map event ids to types
+    // Event type map
     var eventTypeMap = {};
     for (var e = 0; e < events.length; e++) {
       eventTypeMap[events[e].id] = events[e].type;
     }
 
+    // Attendance
     for (var j = 0; j < seasonStats.length; j++) {
       var row = seasonStats[j];
       if (!playerMap[row.player_id]) continue;
@@ -870,15 +1037,33 @@
       }
     }
 
+    // Goals & assists from seasonGoals
+    for (var g = 0; g < seasonGoals.length; g++) {
+      var goal = seasonGoals[g];
+      if (playerMap[goal.player_id]) {
+        playerMap[goal.player_id].goals++;
+      }
+      if (goal.assist_player_id && playerMap[goal.assist_player_id]) {
+        playerMap[goal.assist_player_id].assists++;
+      }
+    }
+
     // Convert to sorted array
     var result = [];
     for (var pid in playerMap) {
       result.push(playerMap[pid]);
     }
 
-    // Sort by total events desc, then name
     result.sort(function(a, b) {
       if (b.totalEvents !== a.totalEvents) return b.totalEvents - a.totalEvents;
+      return a.player.name.localeCompare(b.player.name);
+    });
+
+    // Top scorers (sorted by goals desc)
+    var topScorers = result.filter(function(p) { return p.goals > 0; });
+    topScorers.sort(function(a, b) {
+      if (b.goals !== a.goals) return b.goals - a.goals;
+      if (b.assists !== a.assists) return b.assists - a.assists;
       return a.player.name.localeCompare(b.player.name);
     });
 
@@ -886,8 +1071,16 @@
       players: result,
       totalMatches: registeredMatches.length,
       totalTrainings: registeredTrainings.length,
-      allMatches: matchEvents.length,
-      allTrainings: trainingEvents.length
+      allMatches: matchEvts.length,
+      allTrainings: trainingEvts.length,
+      completedMatches: completedMatches.length,
+      wins: wins,
+      draws: draws,
+      losses: losses,
+      goalsFor: goalsFor,
+      goalsAgainst: goalsAgainst,
+      topScorers: topScorers,
+      totalGoals: seasonGoals.length
     };
   }
 
@@ -1090,7 +1283,7 @@
       tabs[t].addEventListener('click', async function() {
         var newTab = this.getAttribute('data-dtab');
         if (newTab === 'stats' && dashTab !== 'stats') {
-          await loadSeasonStats(currentSeason.id);
+          await Promise.all([loadSeasonStats(currentSeason.id), loadSeasonGoals(currentSeason.id)]);
         }
         dashTab = newTab;
         render();
@@ -1283,7 +1476,10 @@
         return async function() {
           editingSeasonPlayer = seasonPlayers.find(function(p) { return p.id === spid; });
           if (editingSeasonPlayer) {
-            if (seasonStats.length === 0) await loadSeasonStats(currentSeason.id);
+            var loads = [];
+            if (seasonStats.length === 0) loads.push(loadSeasonStats(currentSeason.id));
+            if (seasonGoals.length === 0) loads.push(loadSeasonGoals(currentSeason.id));
+            if (loads.length > 0) await Promise.all(loads);
             snView = 'player-stats';
             render();
           }
@@ -1299,27 +1495,47 @@
   function renderStatsTab() {
     var stats = computeStats();
     var p = stats.players;
+    var barnefotball = isBarnefotball();
 
     var html =
       '<div class="settings-card" style="margin-top:0; border-radius:0 0 var(--radius-lg) var(--radius-lg); padding-top:16px;">';
 
-    // Summary cards
+    // Summary cards row 1: Activity
     html += '<div class="sn-stats-cards">';
     html +=
       '<div class="sn-stat-card">' +
         '<div class="sn-stat-num">' + stats.totalTrainings + '<span style="font-size:14px; color:var(--text-400);">/' + stats.allTrainings + '</span></div>' +
-        '<div class="sn-stat-label">Treninger registrert</div>' +
+        '<div class="sn-stat-label">Treninger reg.</div>' +
       '</div>';
     html +=
       '<div class="sn-stat-card">' +
-        '<div class="sn-stat-num">' + stats.totalMatches + '<span style="font-size:14px; color:var(--text-400);">/' + stats.allMatches + '</span></div>' +
-        '<div class="sn-stat-label">Kamper registrert</div>' +
+        '<div class="sn-stat-num">' + stats.completedMatches + '<span style="font-size:14px; color:var(--text-400);">/' + stats.allMatches + '</span></div>' +
+        '<div class="sn-stat-label">Kamper spilt</div>' +
       '</div>';
     html += '</div>';
 
+    // Match record (only if completed matches exist)
+    if (stats.completedMatches > 0) {
+      html += '<div class="sn-stats-cards" style="margin-top:8px;">';
+      html +=
+        '<div class="sn-stat-card">' +
+          '<div class="sn-stat-num" style="font-size:18px;">' +
+            '<span style="color:var(--success, #22c55e);">' + stats.wins + 'S</span> ' +
+            '<span style="color:var(--text-400);">' + stats.draws + 'U</span> ' +
+            '<span style="color:var(--error, #ef4444);">' + stats.losses + 'T</span>' +
+          '</div>' +
+          '<div class="sn-stat-label">Seier / Uavgjort / Tap</div>' +
+        '</div>';
+      html +=
+        '<div class="sn-stat-card">' +
+          '<div class="sn-stat-num">' + stats.goalsFor + '<span style="font-size:14px; color:var(--text-400);"> \u2013 ' + stats.goalsAgainst + '</span></div>' +
+          '<div class="sn-stat-label">M\u00e5l for / mot</div>' +
+        '</div>';
+      html += '</div>';
+    }
+
     // Fairness indicator
     if (p.length > 0 && (stats.totalTrainings + stats.totalMatches) > 0) {
-      var totalRegistered = stats.totalTrainings + stats.totalMatches;
       var attendances = p.map(function(x) { return x.totalEvents; });
       var avg = attendances.reduce(function(a, b) { return a + b; }, 0) / attendances.length;
 
@@ -1342,57 +1558,98 @@
           fairText = '\u26a0\ufe0f Skjevt fordelt \u2014 noen spillere faller etter';
         }
 
-        html += '<div style="text-align:center; margin-bottom:14px;"><span class="sn-fair-badge ' + fairClass + '">' + fairText + '</span></div>';
+        html += '<div style="text-align:center; margin:10px 0;"><span class="sn-fair-badge ' + fairClass + '">' + fairText + '</span></div>';
       }
     }
 
     html += '</div>';
 
-    // Player table
-    if (p.length === 0 || (stats.totalTrainings + stats.totalMatches) === 0) {
+    // No data state
+    if (p.length === 0 || (stats.totalTrainings + stats.totalMatches + stats.completedMatches) === 0) {
       html +=
         '<div class="sn-roster-empty">' +
-          '<div style="font-size:36px; margin-bottom:12px;">📊</div>' +
+          '<div style="font-size:36px; margin-bottom:12px;">\uD83D\uDCCA</div>' +
           '<div style="font-weight:600; margin-bottom:6px;">Ingen data enn\u00e5</div>' +
-          '<div>Registrer oppm\u00f8te p\u00e5 treninger og kamper for \u00e5 se statistikk.</div>' +
+          '<div>Registrer oppm\u00f8te og fullf\u00f8r kamper for \u00e5 se statistikk.</div>' +
         '</div>';
-    } else {
-      html += '<div class="sn-section">Spilleroversikt</div>';
-      html += '<div class="settings-card" style="padding:0; overflow-x:auto;">';
-      html += '<table class="sn-stat-table">';
-      html += '<thead><tr>' +
-        '<th>Spiller</th>' +
-        '<th>Trening</th>' +
-        '<th>Kamp</th>' +
-        '<th>Oppm\u00f8te</th>' +
-      '</tr></thead>';
-      html += '<tbody>';
+      return html;
+    }
 
-      var maxEvents = stats.totalTrainings + stats.totalMatches;
+    // Top scorers
+    if (stats.topScorers.length > 0) {
+      html += '<div class="sn-section">Toppscorere</div>';
 
-      for (var i = 0; i < p.length; i++) {
-        var pl = p[i];
-        var totalPossible = stats.totalTrainings + stats.totalMatches;
-        var pct = totalPossible > 0 ? Math.round((pl.totalEvents / totalPossible) * 100) : 0;
-
-        var barColor;
-        if (pct >= 80) barColor = 'var(--success, #22c55e)';
-        else if (pct >= 50) barColor = '#eab308';
-        else barColor = 'var(--error, #ef4444)';
-
-        html += '<tr class="sn-player-stat-row" data-spid="' + escapeHtml(pl.player.id) + '">' +
-          '<td class="sn-pname">' + escapeHtml(pl.player.name) + '</td>' +
-          '<td>' + pl.trainingsAttended + '/' + stats.totalTrainings + '</td>' +
-          '<td>' + pl.matchesAttended + '/' + stats.totalMatches + '</td>' +
-          '<td>' +
-            '<div style="font-weight:600;">' + pct + '%</div>' +
-            '<div class="sn-bar-wrap"><div class="sn-bar-fill" style="width:' + pct + '%; background:' + barColor + ';"></div></div>' +
-          '</td>' +
-        '</tr>';
+      if (barnefotball) {
+        html +=
+          '<div class="sn-nff-warning" style="margin:0 0 8px;">' +
+            '<i class="fas fa-shield-alt"></i>' +
+            'NFF: Kun til intern bruk. Skal ikke deles eller brukes til rangering (6\u201312 \u00e5r).' +
+          '</div>';
       }
 
-      html += '</tbody></table></div>';
+      html += '<div class="settings-card" style="padding:0;">';
+      for (var ts = 0; ts < stats.topScorers.length; ts++) {
+        var sc = stats.topScorers[ts];
+        html +=
+          '<div class="sn-roster-item sn-player-stat-row" data-spid="' + escapeHtml(sc.player.id) + '">' +
+            '<div style="font-size:16px; width:24px; text-align:center;">\u26BD</div>' +
+            '<div style="flex:1;">' +
+              '<div style="font-weight:600;">' + escapeHtml(sc.player.name) + '</div>' +
+            '</div>' +
+            '<div style="display:flex; gap:10px; align-items:center;">' +
+              '<div style="text-align:center;">' +
+                '<div style="font-weight:700; font-size:16px;">' + sc.goals + '</div>' +
+                '<div style="font-size:10px; color:var(--text-400);">m\u00e5l</div>' +
+              '</div>' +
+              (sc.assists > 0
+                ? '<div style="text-align:center;">' +
+                    '<div style="font-weight:700; font-size:16px; color:var(--text-600);">' + sc.assists + '</div>' +
+                    '<div style="font-size:10px; color:var(--text-400);">assist</div>' +
+                  '</div>'
+                : '') +
+            '</div>' +
+            '<div class="sn-event-arrow">\u203A</div>' +
+          '</div>';
+      }
+      html += '</div>';
     }
+
+    // Player attendance table
+    html += '<div class="sn-section">Oppm\u00f8te</div>';
+    html += '<div class="settings-card" style="padding:0; overflow-x:auto;">';
+    html += '<table class="sn-stat-table">';
+    html += '<thead><tr>' +
+      '<th>Spiller</th>' +
+      '<th>Tr</th>' +
+      '<th>Ka</th>' +
+      (stats.totalGoals > 0 ? '<th>\u26BD</th>' : '') +
+      '<th>Oppm.</th>' +
+    '</tr></thead>';
+    html += '<tbody>';
+
+    for (var i = 0; i < p.length; i++) {
+      var pl = p[i];
+      var totalPossible = stats.totalTrainings + stats.totalMatches;
+      var pct = totalPossible > 0 ? Math.round((pl.totalEvents / totalPossible) * 100) : 0;
+
+      var barColor;
+      if (pct >= 80) barColor = 'var(--success, #22c55e)';
+      else if (pct >= 50) barColor = '#eab308';
+      else barColor = 'var(--error, #ef4444)';
+
+      html += '<tr class="sn-player-stat-row" data-spid="' + escapeHtml(pl.player.id) + '">' +
+        '<td class="sn-pname">' + escapeHtml(pl.player.name) + '</td>' +
+        '<td>' + pl.trainingsAttended + '</td>' +
+        '<td>' + pl.matchesAttended + '</td>' +
+        (stats.totalGoals > 0 ? '<td>' + (pl.goals > 0 ? pl.goals : '') + '</td>' : '') +
+        '<td>' +
+          '<div style="font-weight:600;">' + pct + '%</div>' +
+          '<div class="sn-bar-wrap"><div class="sn-bar-fill" style="width:' + pct + '%; background:' + barColor + ';"></div></div>' +
+        '</td>' +
+      '</tr>';
+    }
+
+    html += '</tbody></table></div>';
 
     return html;
   }
@@ -1423,7 +1680,7 @@
 
     var stats = computeStats();
     var ps = stats.players.find(function(x) { return x.player.id === sp.id; });
-    if (!ps) ps = { matchesAttended: 0, trainingsAttended: 0, minutesPlayed: 0, totalEvents: 0 };
+    if (!ps) ps = { matchesAttended: 0, trainingsAttended: 0, minutesPlayed: 0, totalEvents: 0, goals: 0, assists: 0 };
 
     var totalPossible = stats.totalTrainings + stats.totalMatches;
     var pct = totalPossible > 0 ? Math.round((ps.totalEvents / totalPossible) * 100) : 0;
@@ -1443,7 +1700,7 @@
     html += '<span class="sn-badge sn-badge-skill">' + sp.skill + '</span>';
     html += '</div>';
 
-    // Stats cards
+    // Stats cards - row 1: attendance
     html += '<div class="sn-stats-cards">';
     html +=
       '<div class="sn-stat-card">' +
@@ -1455,16 +1712,28 @@
         '<div class="sn-stat-num">' + ps.matchesAttended + '<span style="font-size:14px; color:var(--text-400);">/' + stats.totalMatches + '</span></div>' +
         '<div class="sn-stat-label">Kamper</div>' +
       '</div>';
+    html += '</div>';
+
+    // Stats cards - row 2: performance
+    html += '<div class="sn-stats-cards" style="margin-top:8px;">';
     html +=
       '<div class="sn-stat-card">' +
         '<div class="sn-stat-num">' + pct + '%</div>' +
         '<div class="sn-stat-label">Oppm\u00f8te</div>' +
       '</div>';
-    html +=
-      '<div class="sn-stat-card">' +
-        '<div class="sn-stat-num">' + (ps.minutesPlayed || 0) + '</div>' +
-        '<div class="sn-stat-label">Spilletid (min)</div>' +
-      '</div>';
+    if (ps.goals > 0 || ps.assists > 0) {
+      html +=
+        '<div class="sn-stat-card">' +
+          '<div class="sn-stat-num">' + ps.goals + (ps.assists > 0 ? '<span style="font-size:14px; color:var(--text-400);"> + ' + ps.assists + 'a</span>' : '') + '</div>' +
+          '<div class="sn-stat-label">M\u00e5l' + (ps.assists > 0 ? ' + assist' : '') + '</div>' +
+        '</div>';
+    } else {
+      html +=
+        '<div class="sn-stat-card">' +
+          '<div class="sn-stat-num">' + (ps.minutesPlayed || 0) + '</div>' +
+          '<div class="sn-stat-label">Spilletid (min)</div>' +
+        '</div>';
+    }
     html += '</div>';
 
     // Event-by-event history
@@ -1474,6 +1743,20 @@
     var playerEvents = seasonStats.filter(function(row) { return row.player_id === sp.player_id; });
     var eventMap = {};
     for (var e = 0; e < events.length; e++) { eventMap[events[e].id] = events[e]; }
+
+    // Build goal/assist lookup for this player per event
+    var playerGoalMap = {}; // { event_id: { goals: N, assists: N } }
+    for (var sg = 0; sg < seasonGoals.length; sg++) {
+      var sGoal = seasonGoals[sg];
+      if (sGoal.player_id === sp.player_id) {
+        if (!playerGoalMap[sGoal.event_id]) playerGoalMap[sGoal.event_id] = { goals: 0, assists: 0 };
+        playerGoalMap[sGoal.event_id].goals++;
+      }
+      if (sGoal.assist_player_id === sp.player_id) {
+        if (!playerGoalMap[sGoal.event_id]) playerGoalMap[sGoal.event_id] = { goals: 0, assists: 0 };
+        playerGoalMap[sGoal.event_id].assists++;
+      }
+    }
 
     // Sort by event date
     playerEvents.sort(function(a, b) {
@@ -1500,6 +1783,22 @@
           reasonText = ' \u00B7 ' + (reasonLabels[row.absence_reason] || row.absence_reason);
         }
 
+        // Goal/assist badges for this event
+        var goalBadge = '';
+        var pgm = playerGoalMap[ev.id];
+        if (pgm) {
+          var parts = [];
+          if (pgm.goals > 0) parts.push('\u26BD' + (pgm.goals > 1 ? '\u00d7' + pgm.goals : ''));
+          if (pgm.assists > 0) parts.push('\uD83C\uDFA8' + (pgm.assists > 1 ? '\u00d7' + pgm.assists : ''));
+          if (parts.length > 0) goalBadge = '<div style="font-size:12px; white-space:nowrap;">' + parts.join(' ') + '</div>';
+        }
+
+        // Match score
+        var scoreText = '';
+        if ((ev.type === 'match' || ev.type === 'cup_match') && ev.status === 'completed' && ev.result_home !== null && ev.result_home !== undefined) {
+          scoreText = '<div style="font-size:13px; font-weight:700; color:var(--text-500);">' + ev.result_home + '\u2013' + ev.result_away + '</div>';
+        }
+
         html +=
           '<div class="sn-roster-item" style="cursor:default;">' +
             '<div style="font-size:16px; width:24px; text-align:center;">' + (attended ? '\u2705' : '\u274c') + '</div>' +
@@ -1507,6 +1806,8 @@
               '<div style="font-weight:600; font-size:14px;">' + escapeHtml(evTitle) + '</div>' +
               '<div style="font-size:12px; color:var(--text-400);">' + formatDateLong(ev.start_time) + (attended ? '' : reasonText) + '</div>' +
             '</div>' +
+            goalBadge +
+            scoreText +
             '<div style="font-size:12px; color:var(--text-400);">' + typeIcon(ev.type) + '</div>' +
           '</div>';
       }
@@ -2093,6 +2394,13 @@
         ? '<div class="sn-att-badge" title="Oppm\u00f8te registrert">\u2713</div>'
         : '';
 
+      // Score badge for completed matches
+      var scoreBadge = '';
+      if ((ev.type === 'match' || ev.type === 'cup_match') && ev.status === 'completed' && ev.result_home !== null && ev.result_home !== undefined) {
+        scoreBadge = '<div style="font-size:13px; font-weight:700; color:var(--text-600); white-space:nowrap;">' + ev.result_home + '\u2013' + ev.result_away + '</div>';
+        regBadge = ''; // Don't show both
+      }
+
       html +=
         '<div class="sn-event-item" data-eid="' + ev.id + '">' +
           '<div class="sn-event-icon">' + typeIcon(ev.type) + '</div>' +
@@ -2100,6 +2408,7 @@
             '<div class="sn-event-title">' + escapeHtml(title) + '</div>' +
             '<div class="sn-event-meta">' + escapeHtml(meta) + '</div>' +
           '</div>' +
+          scoreBadge +
           regBadge +
           '<div class="sn-event-arrow">\u203A</div>' +
         '</div>';
@@ -2116,9 +2425,10 @@
           if (ev) {
             editingEvent = ev;
             var loads = [loadEventAttendance(ev.id)];
-            // Load season stats for match tropp hints
-            if ((ev.type === 'match' || ev.type === 'cup_match') && seasonStats.length === 0) {
-              loads.push(loadSeasonStats(currentSeason.id));
+            // Load season stats for match tropp hints + match goals
+            if (ev.type === 'match' || ev.type === 'cup_match') {
+              loads.push(loadMatchGoals(ev.id));
+              if (seasonStats.length === 0) loads.push(loadSeasonStats(currentSeason.id));
             }
             await Promise.all(loads);
             snView = 'event-detail';
@@ -2271,7 +2581,11 @@
         if (isEdit) {
           // Update editingEvent with fresh data
           editingEvent = events.find(function(e) { return e.id === existing.id; }) || editingEvent;
-          await loadEventAttendance(editingEvent.id);
+          var detailLoads = [loadEventAttendance(editingEvent.id)];
+          if (editingEvent.type === 'match' || editingEvent.type === 'cup_match') {
+            detailLoads.push(loadMatchGoals(editingEvent.id));
+          }
+          await Promise.all(detailLoads);
           snView = 'event-detail';
         } else {
           snView = 'dashboard';
@@ -2447,6 +2761,117 @@
         '</div>';
     }
 
+    // --- MATCH RESULT SECTION ---
+    if (isMatch) {
+      var isCompleted = (ev.status === 'completed');
+      var hasResult = (ev.result_home !== null && ev.result_home !== undefined);
+      var barnefotball = isBarnefotball();
+
+      if (isCompleted && hasResult) {
+        html +=
+          '<div class="sn-section">Resultat <span class="sn-completed-badge">Fullf\u00f8rt</span></div>' +
+          '<div class="settings-card">' +
+            '<div class="sn-result-display">' +
+              '<div>' +
+                '<div class="sn-result-num">' + (ev.result_home !== null ? ev.result_home : '-') + '</div>' +
+                '<div class="sn-score-label">' + (ev.is_home ? 'Oss' : 'Borte') + '</div>' +
+              '</div>' +
+              '<div class="sn-result-dash">\u2013</div>' +
+              '<div>' +
+                '<div class="sn-result-num">' + (ev.result_away !== null ? ev.result_away : '-') + '</div>' +
+                '<div class="sn-score-label">' + (ev.is_home ? 'Motstander' : 'Oss') + '</div>' +
+              '</div>' +
+            '</div>';
+
+        if (matchGoals.length > 0) {
+          html += '<div style="border-top:1px solid var(--border-light, #f1f5f9); padding-top:8px;">';
+          for (var g = 0; g < matchGoals.length; g++) {
+            html += goalItemHtml(matchGoals[g], true);
+          }
+          html += '</div>';
+        }
+
+        html +=
+          '<div style="padding:10px 14px;">' +
+            '<button class="btn-secondary" id="snReopenMatch" style="width:100%; font-size:13px;"><i class="fas fa-pen" style="margin-right:5px;"></i>Endre resultat</button>' +
+          '</div></div>';
+
+      } else {
+        html += '<div class="sn-section">Resultat</div><div class="settings-card">';
+
+        html +=
+          '<div class="sn-result-box">' +
+            '<div>' +
+              '<input type="number" class="sn-score-input" id="snScoreHome" min="0" max="99" inputmode="numeric" value="' + (ev.result_home !== null && ev.result_home !== undefined ? ev.result_home : '') + '" placeholder="-">' +
+              '<div class="sn-score-label">' + (ev.is_home ? 'Oss' : 'Borte') + '</div>' +
+            '</div>' +
+            '<div class="sn-score-dash">\u2013</div>' +
+            '<div>' +
+              '<input type="number" class="sn-score-input" id="snScoreAway" min="0" max="99" inputmode="numeric" value="' + (ev.result_away !== null && ev.result_away !== undefined ? ev.result_away : '') + '" placeholder="-">' +
+              '<div class="sn-score-label">' + (ev.is_home ? 'Motstander' : 'Oss') + '</div>' +
+            '</div>' +
+          '</div>';
+
+        html += '<div style="border-top:1px solid var(--border-light, #f1f5f9);">';
+
+        if (barnefotball) {
+          html +=
+            '<div class="sn-nff-warning">' +
+              '<i class="fas fa-shield-alt"></i>' +
+              '<strong>NFF barnefotball:</strong> M\u00e5lscorere er kun til intern bruk for treneren. ' +
+              'Skal ikke deles offentlig eller brukes til rangering av enkeltspillere (alder 6\u201312).' +
+            '</div>';
+        }
+
+        html += '<div style="padding:8px 14px 4px; font-size:12px; font-weight:600; color:var(--text-400); text-transform:uppercase; letter-spacing:0.5px;">M\u00e5lscorere (valgfritt)</div>';
+
+        if (matchGoals.length > 0) {
+          for (var ge = 0; ge < matchGoals.length; ge++) {
+            html += goalItemHtml(matchGoals[ge], true);
+          }
+        }
+
+        // Add goal dropdown (from tropp or all active players)
+        var troppForGoals = [];
+        for (var tp = 0; tp < activePlayers.length; tp++) {
+          var inSquadForGoal = hasExistingData ? squadMap[activePlayers[tp].player_id] : true;
+          if (inSquadForGoal) troppForGoals.push(activePlayers[tp]);
+        }
+
+        if (troppForGoals.length > 0) {
+          html +=
+            '<div class="sn-goal-add" style="flex-wrap:wrap;">' +
+              '<select class="sn-goal-select" id="snGoalPlayer" style="flex:1 1 40%;">';
+          for (var gp = 0; gp < troppForGoals.length; gp++) {
+            html += '<option value="' + escapeHtml(troppForGoals[gp].player_id) + '">' + escapeHtml(troppForGoals[gp].name) + '</option>';
+          }
+          html +=
+              '</select>' +
+              '<input type="number" class="sn-goal-min" id="snGoalMinute" placeholder="min" min="1" max="120" inputmode="numeric">' +
+              '<button class="sn-goal-add-btn" id="snAddGoal">+M\u00e5l</button>' +
+            '</div>' +
+            '<div class="sn-goal-add" style="padding-top:0;">' +
+              '<select class="sn-goal-select" id="snGoalAssist" style="flex:1; font-size:12px; color:var(--text-500);">' +
+                '<option value="">Ingen m\u00e5lgivende</option>';
+          for (var ga = 0; ga < troppForGoals.length; ga++) {
+            html += '<option value="' + escapeHtml(troppForGoals[ga].player_id) + '">' + escapeHtml(troppForGoals[ga].name) + '</option>';
+          }
+          html +=
+              '</select>' +
+            '</div>';
+        }
+
+        html += '</div>';
+
+        html +=
+          '<div style="padding:10px 14px;">' +
+            '<button class="btn-primary" id="snCompleteMatch" style="width:100%;">' +
+              '<i class="fas fa-check" style="margin-right:5px;"></i>Fullf\u00f8r kamp' +
+            '</button>' +
+          '</div></div>';
+      }
+    }
+
     root.innerHTML = html;
 
     // --- BIND HANDLERS ---
@@ -2574,6 +2999,104 @@
         ? '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre tropp'
         : '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre oppm\u00f8te';
     });
+
+    // --- MATCH RESULT HANDLERS ---
+    // Add goal
+    var addGoalBtn = $('snAddGoal');
+    if (addGoalBtn) addGoalBtn.addEventListener('click', async function() {
+      var playerSel = $('snGoalPlayer');
+      var minuteInp = $('snGoalMinute');
+      var assistSel = $('snGoalAssist');
+      if (!playerSel) return;
+
+      var pid = playerSel.value;
+      var pName = playerSel.options[playerSel.selectedIndex].text;
+      var minVal = minuteInp ? minuteInp.value : null;
+
+      var assistId = (assistSel && assistSel.value) ? assistSel.value : null;
+      var assistName = null;
+      if (assistId && assistSel) {
+        assistName = assistSel.options[assistSel.selectedIndex].text;
+      }
+      // Prevent assist = scorer
+      if (assistId === pid) assistId = null;
+
+      addGoalBtn.disabled = true;
+      var ok = await addMatchGoal(ev.id, pid, pName, minVal, assistId, assistName);
+      if (ok) {
+        await loadMatchGoals(ev.id);
+        render();
+      } else {
+        addGoalBtn.disabled = false;
+      }
+    });
+
+    // Remove goals
+    var removeGoalBtns = root.querySelectorAll('.sn-goal-remove');
+    for (var rg = 0; rg < removeGoalBtns.length; rg++) {
+      removeGoalBtns[rg].addEventListener('click', (function(gid) {
+        return async function(e) {
+          e.stopPropagation();
+          var ok = await removeMatchGoal(gid);
+          if (ok) {
+            await loadMatchGoals(ev.id);
+            render();
+          }
+        };
+      })(removeGoalBtns[rg].getAttribute('data-gid')));
+    }
+
+    // Complete match
+    var completeBtn = $('snCompleteMatch');
+    if (completeBtn) completeBtn.addEventListener('click', async function() {
+      var homeVal = $('snScoreHome') ? $('snScoreHome').value : null;
+      var awayVal = $('snScoreAway') ? $('snScoreAway').value : null;
+
+      completeBtn.disabled = true;
+      completeBtn.textContent = 'Lagrer\u2026';
+
+      var ok = await saveMatchResult(ev.id, homeVal, awayVal, 'completed');
+      if (ok) {
+        // Update local event data
+        ev.status = 'completed';
+        if (homeVal !== '' && homeVal !== null) ev.result_home = parseInt(homeVal);
+        if (awayVal !== '' && awayVal !== null) ev.result_away = parseInt(awayVal);
+        editingEvent = ev;
+        await loadEvents(currentSeason.id);
+        editingEvent = events.find(function(e) { return e.id === ev.id; }) || editingEvent;
+        render();
+      } else {
+        completeBtn.disabled = false;
+        completeBtn.innerHTML = '<i class="fas fa-check" style="margin-right:5px;"></i>Fullf\u00f8r kamp';
+      }
+    });
+
+    // Reopen match for editing
+    var reopenBtn = $('snReopenMatch');
+    if (reopenBtn) reopenBtn.addEventListener('click', async function() {
+      var ok = await saveMatchResult(ev.id, ev.result_home, ev.result_away, 'planned');
+      if (ok) {
+        ev.status = 'planned';
+        editingEvent = ev;
+        await loadEvents(currentSeason.id);
+        editingEvent = events.find(function(e) { return e.id === ev.id; }) || editingEvent;
+        render();
+      }
+    });
+  }
+
+  function goalItemHtml(goal, showRemove) {
+    var assistText = '';
+    if (goal.assist_player_name) {
+      assistText = '<span style="color:var(--text-400); font-size:12px;">(' + escapeHtml(goal.assist_player_name) + ')</span>';
+    }
+    return '<div class="sn-goal-item">' +
+      '<span>\u26BD</span>' +
+      '<span style="font-weight:600;">' + escapeHtml(goal.player_name || 'Ukjent') + '</span>' +
+      assistText +
+      (goal.minute ? '<span style="color:var(--text-400); font-size:12px;">' + goal.minute + '\'</span>' : '') +
+      (showRemove ? '<button class="sn-goal-remove" data-gid="' + goal.id + '" title="Fjern">\u00d7</button>' : '') +
+    '</div>';
   }
 
   function detailRow(label, value) {
