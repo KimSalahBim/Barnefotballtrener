@@ -2886,24 +2886,35 @@
 
         if (troppForGoals.length > 0) {
           html +=
-            '<div class="sn-goal-add" style="flex-wrap:wrap; gap:8px;">' +
-              '<select class="sn-goal-select" id="snGoalPlayer" style="flex:1 1 55%;">';
+            '<div style="padding:10px 14px; display:flex; flex-direction:column; gap:8px;">' +
+              '<div style="display:flex; gap:8px; align-items:flex-end;">' +
+                '<div style="flex:1;">' +
+                  '<div style="font-size:11px; color:var(--text-400); margin-bottom:3px;">M\u00e5lscorer</div>' +
+                  '<select class="sn-goal-select" id="snGoalPlayer" style="width:100%;">';
           for (var gp = 0; gp < troppForGoals.length; gp++) {
             html += '<option value="' + escapeHtml(troppForGoals[gp].player_id) + '">' + escapeHtml(troppForGoals[gp].name) + '</option>';
           }
           html +=
-              '</select>' +
-              '<input type="number" class="sn-goal-min" id="snGoalMinute" placeholder="min" min="1" max="120" inputmode="numeric">' +
-            '</div>' +
-            '<div class="sn-goal-add" style="padding-top:0; gap:8px;">' +
-              '<select class="sn-goal-select" id="snGoalAssist" style="flex:1; font-size:12px; color:var(--text-500);">' +
-                '<option value="">Ingen m\u00e5lgivende</option>';
+                  '</select>' +
+                '</div>' +
+                '<div>' +
+                  '<div style="font-size:11px; color:var(--text-400); margin-bottom:3px;">Min</div>' +
+                  '<input type="number" class="sn-goal-min" id="snGoalMinute" placeholder="-" min="1" max="120" inputmode="numeric">' +
+                '</div>' +
+              '</div>' +
+              '<div style="display:flex; gap:8px; align-items:flex-end;">' +
+                '<div style="flex:1;">' +
+                  '<div style="font-size:11px; color:var(--text-400); margin-bottom:3px;">M\u00e5lgivende (valgfritt)</div>' +
+                  '<select class="sn-goal-select" id="snGoalAssist" style="width:100%;">' +
+                    '<option value="">Ingen</option>';
           for (var ga = 0; ga < troppForGoals.length; ga++) {
             html += '<option value="' + escapeHtml(troppForGoals[ga].player_id) + '">' + escapeHtml(troppForGoals[ga].name) + '</option>';
           }
           html +=
-              '</select>' +
-              '<button class="sn-goal-add-btn" id="snAddGoal">+M\u00e5l</button>' +
+                  '</select>' +
+                '</div>' +
+                '<button class="sn-goal-add-btn" id="snAddGoal" style="height:36px;">+M\u00e5l</button>' +
+              '</div>' +
             '</div>';
         }
 
@@ -3066,6 +3077,8 @@
       }
       // Prevent assist = scorer
       if (assistId === pid) assistId = null;
+
+      console.log('[season.js] addGoal:', { pid, pName, minVal, assistId, assistName });
 
       addGoalBtn.disabled = true;
       var ok = await addMatchGoal(ev.id, pid, pName, minVal, assistId, assistName);
