@@ -1114,10 +1114,10 @@
           '</div>' +
           '<div class="form-group">' +
             '<label>Posisjoner</label>' +
-            '<div style="display:flex; gap:16px; flex-wrap:wrap;">' +
-              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snManualPos" value="F" checked style="width:18px; height:18px;"> Forsvar</label>' +
-              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snManualPos" value="M" checked style="width:18px; height:18px;"> Midtbane</label>' +
-              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snManualPos" value="A" checked style="width:18px; height:18px;"> Angrep</label>' +
+            '<div style="display:flex; gap:6px;">' +
+              '<button class="sn-toggle-btn snManualPos active" data-pos="F" type="button" style="flex:1; border-radius:var(--radius-sm);">Forsvar</button>' +
+              '<button class="sn-toggle-btn snManualPos active" data-pos="M" type="button" style="flex:1; border-radius:var(--radius-sm);">Midtbane</button>' +
+              '<button class="sn-toggle-btn snManualPos active" data-pos="A" type="button" style="flex:1; border-radius:var(--radius-sm);">Angrep</button>' +
             '</div>' +
           '</div>' +
           '<div class="sn-actions" style="margin-top:16px;">' +
@@ -1129,13 +1129,16 @@
 
     root.innerHTML = html;
 
-    // Keeper toggle
-    var gkBtns = root.querySelectorAll('.sn-toggle-btn');
-    for (var g = 0; g < gkBtns.length; g++) {
-      gkBtns[g].addEventListener('click', function() {
-        for (var b = 0; b < gkBtns.length; b++) gkBtns[b].classList.remove('active');
-        this.classList.add('active');
-      });
+    // Keeper toggle (radio-style: only one active)
+    var gkNo = $('snManualGkNo');
+    var gkYes = $('snManualGkYes');
+    if (gkNo) gkNo.addEventListener('click', function() { gkNo.classList.add('active'); gkYes.classList.remove('active'); });
+    if (gkYes) gkYes.addEventListener('click', function() { gkYes.classList.add('active'); gkNo.classList.remove('active'); });
+
+    // Position toggles (multi-select: each toggles independently)
+    var manualPosBtns = root.querySelectorAll('.snManualPos');
+    for (var mp = 0; mp < manualPosBtns.length; mp++) {
+      manualPosBtns[mp].addEventListener('click', function() { this.classList.toggle('active'); });
     }
 
     function goBackToRoster() {
@@ -1159,9 +1162,9 @@
       var skill = parseInt($('snManualSkill').value) || 3;
       skill = Math.max(1, Math.min(6, skill));
 
-      var posCbs = root.querySelectorAll('.snManualPos:checked');
+      var activePosBtns = root.querySelectorAll('.snManualPos.active');
       var positions = [];
-      for (var p = 0; p < posCbs.length; p++) positions.push(posCbs[p].value);
+      for (var p = 0; p < activePosBtns.length; p++) positions.push(activePosBtns[p].getAttribute('data-pos'));
       if (positions.length === 0) positions = ['F', 'M', 'A'];
 
       // Generate a unique player_id (not linked to Spillere-fanen)
@@ -1224,10 +1227,10 @@
           '</div>' +
           '<div class="form-group">' +
             '<label>Posisjoner</label>' +
-            '<div style="display:flex; gap:16px; flex-wrap:wrap;">' +
-              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snEditPos" value="F"' + (posF ? ' checked' : '') + ' style="width:18px; height:18px;"> Forsvar</label>' +
-              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snEditPos" value="M"' + (posM ? ' checked' : '') + ' style="width:18px; height:18px;"> Midtbane</label>' +
-              '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;"><input type="checkbox" class="snEditPos" value="A"' + (posA ? ' checked' : '') + ' style="width:18px; height:18px;"> Angrep</label>' +
+            '<div style="display:flex; gap:6px;">' +
+              '<button class="sn-toggle-btn snEditPos' + (posF ? ' active' : '') + '" data-pos="F" type="button" style="flex:1; border-radius:var(--radius-sm);">Forsvar</button>' +
+              '<button class="sn-toggle-btn snEditPos' + (posM ? ' active' : '') + '" data-pos="M" type="button" style="flex:1; border-radius:var(--radius-sm);">Midtbane</button>' +
+              '<button class="sn-toggle-btn snEditPos' + (posA ? ' active' : '') + '" data-pos="A" type="button" style="flex:1; border-radius:var(--radius-sm);">Angrep</button>' +
             '</div>' +
           '</div>' +
           '<div class="sn-actions" style="margin-top:16px;">' +
@@ -1244,13 +1247,16 @@
 
     root.innerHTML = html;
 
-    // Keeper toggle
-    var gkBtns = root.querySelectorAll('.sn-toggle-btn');
-    for (var g = 0; g < gkBtns.length; g++) {
-      gkBtns[g].addEventListener('click', function() {
-        for (var b = 0; b < gkBtns.length; b++) gkBtns[b].classList.remove('active');
-        this.classList.add('active');
-      });
+    // Keeper toggle (radio-style)
+    var editGkNo = $('snEditGkNo');
+    var editGkYes = $('snEditGkYes');
+    if (editGkNo) editGkNo.addEventListener('click', function() { editGkNo.classList.add('active'); editGkYes.classList.remove('active'); });
+    if (editGkYes) editGkYes.addEventListener('click', function() { editGkYes.classList.add('active'); editGkNo.classList.remove('active'); });
+
+    // Position toggles (multi-select)
+    var editPosBtns = root.querySelectorAll('.snEditPos');
+    for (var ep = 0; ep < editPosBtns.length; ep++) {
+      editPosBtns[ep].addEventListener('click', function() { this.classList.toggle('active'); });
     }
 
     function goBackToRoster() {
@@ -1275,9 +1281,9 @@
       var skill = parseInt($('snEditSkill').value) || 3;
       skill = Math.max(1, Math.min(6, skill));
 
-      var posCbs = root.querySelectorAll('.snEditPos:checked');
+      var activeEditPos = root.querySelectorAll('.snEditPos.active');
       var positions = [];
-      for (var p = 0; p < posCbs.length; p++) positions.push(posCbs[p].value);
+      for (var p = 0; p < activeEditPos.length; p++) positions.push(activeEditPos[p].getAttribute('data-pos'));
       if (positions.length === 0) positions = ['F', 'M', 'A'];
 
       var btn = $('snSaveEdit');
