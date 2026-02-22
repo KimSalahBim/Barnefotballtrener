@@ -14,7 +14,9 @@
   var seasons = [];
   var currentSeason = null;
   var events = [];
-  var snView = 'list'; // 'list' | 'create-season' | 'dashboard' | 'create-event' | 'edit-event' | 'event-detail'
+  var seasonPlayers = [];
+  var dashTab = 'calendar'; // 'calendar' | 'roster'
+  var snView = 'list'; // 'list' | 'create-season' | 'dashboard' | 'create-event' | 'edit-event' | 'event-detail' | 'roster-import'
   var editingEvent = null; // event object when editing
 
   // =========================================================================
@@ -211,6 +213,32 @@
       // Delete button
       '.sn-btn-danger { background:var(--error-dim); color:var(--error); border:1.5px solid var(--error); border-radius:var(--radius-md); padding:11px 16px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:background 0.15s; }',
       '.sn-btn-danger:hover { background:var(--error); color:#fff; }',
+
+      // Dashboard tabs
+      '.sn-tabs { display:flex; gap:0; margin:12px 0 4px; border-bottom:2px solid var(--border); }',
+      '.sn-tab { flex:1; padding:10px 8px; border:none; background:none; font-size:14px; font-weight:600; color:var(--text-400); cursor:pointer; font-family:inherit; position:relative; transition:color 0.15s; }',
+      '.sn-tab.active { color:var(--primary, #2563eb); }',
+      '.sn-tab.active::after { content:""; position:absolute; bottom:-2px; left:0; right:0; height:2px; background:var(--primary, #2563eb); border-radius:2px 2px 0 0; }',
+      '.sn-tab:hover:not(.active) { color:var(--text-600); }',
+
+      // Roster
+      '.sn-roster-item { display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); }',
+      '.sn-roster-item:last-child { border-bottom:none; }',
+      '.sn-roster-name { flex:1; font-size:15px; font-weight:600; color:var(--text-800); }',
+      '.sn-roster-badges { display:flex; gap:4px; align-items:center; }',
+      '.sn-badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; line-height:1.4; }',
+      '.sn-badge-keeper { background:rgba(234,179,8,0.15); color:#a16207; }',
+      '.sn-badge-pos { background:rgba(59,130,246,0.1); color:#2563eb; }',
+      '.sn-badge-skill { background:rgba(34,197,94,0.1); color:#16a34a; }',
+      '.sn-roster-remove { background:none; border:none; color:var(--text-300); cursor:pointer; padding:4px 8px; font-size:16px; border-radius:var(--radius-sm); }',
+      '.sn-roster-remove:hover { color:var(--error); background:var(--error-dim, #fef2f2); }',
+      '.sn-roster-count { font-size:13px; color:var(--text-400); margin-left:4px; }',
+      '.sn-roster-empty { text-align:center; padding:32px 20px; color:var(--text-400); }',
+
+      // Import checkboxes
+      '.sn-import-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); cursor:pointer; }',
+      '.sn-import-item:hover { background:var(--bg-hover, #f8fafc); }',
+      '.sn-import-cb { width:18px; height:18px; accent-color:var(--primary, #2563eb); cursor:pointer; }',
 
       // Responsive
       '@media (max-width:480px) { .sn-form-row { flex-direction:column; gap:0; } .sn-actions { flex-direction:column; } }'
@@ -446,6 +474,89 @@
   }
 
   // =========================================================================
+  //  CRUD: SEASON PLAYERS (Fase 2)
+  // =========================================================================
+
+  async function loadSeasonPlayers(seasonId) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid || !seasonId) { seasonPlayers = []; return; }
+
+    try {
+      var res = await sb.from('season_players')
+        .select('*')
+        .eq('season_id', seasonId)
+        .eq('user_id', uid)
+        .order('player_name', { ascending: true });
+      if (res.error) throw res.error;
+      seasonPlayers = (res.data || []).map(function(row) {
+        return {
+          id: row.id,
+          season_id: row.season_id,
+          player_id: row.player_id,
+          name: row.player_name,
+          skill: row.player_skill || 3,
+          goalie: !!row.player_goalie,
+          positions: row.player_positions || ['F','M','A'],
+          active: row.active !== false
+        };
+      });
+    } catch (e) {
+      console.error('[season.js] loadSeasonPlayers error:', e);
+      seasonPlayers = [];
+    }
+  }
+
+  async function importPlayersToSeason(seasonId, players) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid || !seasonId || !players.length) return false;
+
+    try {
+      var rows = players.map(function(p) {
+        return {
+          season_id: seasonId,
+          user_id: uid,
+          player_id: p.id,
+          player_name: p.name,
+          player_skill: p.skill || 3,
+          player_goalie: !!p.goalie,
+          player_positions: p.positions || ['F','M','A'],
+          active: true
+        };
+      });
+
+      var res = await sb.from('season_players')
+        .upsert(rows, { onConflict: 'season_id,player_id' });
+      if (res.error) throw res.error;
+
+      await loadSeasonPlayers(seasonId);
+      notify(players.length + ' spiller' + (players.length === 1 ? '' : 'e') + ' importert.', 'success');
+      return true;
+    } catch (e) {
+      console.error('[season.js] importPlayersToSeason error:', e);
+      notify('Feil ved import av spillere.', 'error');
+      return false;
+    }
+  }
+
+  async function removeSeasonPlayer(rowId) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid) return false;
+
+    try {
+      var res = await sb.from('season_players').delete().eq('id', rowId).eq('user_id', uid);
+      if (res.error) throw res.error;
+      return true;
+    } catch (e) {
+      console.error('[season.js] removeSeasonPlayer error:', e);
+      notify('Feil ved fjerning.', 'error');
+      return false;
+    }
+  }
+
+  // =========================================================================
   //  RENDER ROUTER
   // =========================================================================
 
@@ -460,6 +571,8 @@
       case 'create-event':   renderCreateEvent(root);  break;
       case 'edit-event':     renderEditEvent(root);    break;
       case 'event-detail':   renderEventDetail(root);  break;
+      case 'roster-import':  renderRosterImport(root); break;
+      case 'roster-add-manual': renderManualPlayerAdd(root); break;
       default:               renderSeasonList(root);   break;
     }
   }
@@ -610,20 +723,65 @@
     var metaParts = [formatLabel(s.format)];
     if (range) metaParts.push(range);
 
+    var rosterCount = seasonPlayers.filter(function(p) { return p.active; }).length;
+
     var html =
-      '<div class="settings-card" style="margin-bottom:12px;">' +
+      '<div class="settings-card" style="margin-bottom:0; border-radius:var(--radius-lg) var(--radius-lg) 0 0; padding-bottom:0;">' +
         '<div class="sn-dash-header">' +
           '<button class="sn-back" id="snBackFromDash">\u2190</button>' +
           '<span class="sn-dash-title">' + escapeHtml(s.name) + '</span>' +
         '</div>' +
         '<div class="sn-dash-meta">' + escapeHtml(metaParts.join(' \u00B7 ')) + '</div>' +
+        '<div class="sn-tabs">' +
+          '<button class="sn-tab' + (dashTab === 'calendar' ? ' active' : '') + '" data-dtab="calendar"><i class="fas fa-calendar-alt" style="margin-right:5px;"></i>Kalender</button>' +
+          '<button class="sn-tab' + (dashTab === 'roster' ? ' active' : '') + '" data-dtab="roster"><i class="fas fa-users" style="margin-right:5px;"></i>Spillerstall' + (rosterCount > 0 ? ' <span class="sn-roster-count">(' + rosterCount + ')</span>' : '') + '</button>' +
+        '</div>' +
+      '</div>';
+
+    // Tab content
+    if (dashTab === 'calendar') {
+      html += renderCalendarTab();
+    } else if (dashTab === 'roster') {
+      html += renderRosterTab();
+    }
+
+    root.innerHTML = html;
+
+    // Bind tab clicks
+    var tabs = root.querySelectorAll('.sn-tab');
+    for (var t = 0; t < tabs.length; t++) {
+      tabs[t].addEventListener('click', function() {
+        dashTab = this.getAttribute('data-dtab');
+        render();
+      });
+    }
+
+    // Bind back button
+    $('snBackFromDash').addEventListener('click', goToList);
+
+    // Bind tab-specific handlers
+    if (dashTab === 'calendar') {
+      bindCalendarHandlers(root);
+    } else if (dashTab === 'roster') {
+      bindRosterHandlers(root);
+    }
+  }
+
+  // =========================================================================
+  //  DASHBOARD TAB: KALENDER
+  // =========================================================================
+
+  function renderCalendarTab() {
+    var s = currentSeason;
+    var html =
+      '<div class="settings-card" style="margin-top:0; border-radius:0 0 var(--radius-lg) var(--radius-lg); padding-top:12px;">' +
         '<div class="sn-actions">' +
           '<button class="btn-primary" id="snAddMatch"><i class="fas fa-futbol" style="margin-right:5px;"></i>Legg til kamp</button>' +
           '<button class="btn-secondary" id="snAddTraining"><i class="fas fa-dumbbell" style="margin-right:5px;"></i>Legg til trening</button>' +
         '</div>' +
       '</div>';
 
-    // Split events into upcoming and past
+    // Split events
     var upcoming = [];
     var past = [];
     var sorted = sortEvents(events);
@@ -657,27 +815,29 @@
         '</button>' +
       '</div>';
 
-    root.innerHTML = html;
+    return html;
+  }
 
-    // Bind handlers
-    $('snBackFromDash').addEventListener('click', goToList);
-
-    $('snAddMatch').addEventListener('click', function() {
+  function bindCalendarHandlers(root) {
+    var addMatch = $('snAddMatch');
+    if (addMatch) addMatch.addEventListener('click', function() {
       editingEvent = null;
       snView = 'create-event';
       render();
-      // Pre-select match type
       setTimeout(function() { var el = $('snEventType'); if (el) { el.value = 'match'; el.dispatchEvent(new Event('change')); } }, 20);
     });
 
-    $('snAddTraining').addEventListener('click', function() {
+    var addTraining = $('snAddTraining');
+    if (addTraining) addTraining.addEventListener('click', function() {
       editingEvent = null;
       snView = 'create-event';
       render();
       setTimeout(function() { var el = $('snEventType'); if (el) { el.value = 'training'; el.dispatchEvent(new Event('change')); } }, 20);
     });
 
-    $('snDeleteSeason').addEventListener('click', async function() {
+    var delBtn = $('snDeleteSeason');
+    if (delBtn) delBtn.addEventListener('click', async function() {
+      var s = currentSeason;
       var evCount = events.length;
       var msg = 'Er du sikker p\u00e5 at du vil slette sesongen \u00AB' + s.name + '\u00BB?';
       if (evCount > 0) msg += '\n\nDette vil ogs\u00e5 slette ' + evCount + ' hendelse' + (evCount === 1 ? '' : 'r') + '.';
@@ -691,6 +851,7 @@
       if (ok) {
         currentSeason = null;
         events = [];
+        seasonPlayers = [];
         snView = 'list';
         await loadSeasons();
       } else {
@@ -700,6 +861,312 @@
     });
 
     bindEventItemClicks(root);
+  }
+
+  // =========================================================================
+  //  DASHBOARD TAB: SPILLERSTALL
+  // =========================================================================
+
+  function renderRosterTab() {
+    var active = seasonPlayers.filter(function(p) { return p.active; });
+
+    var html =
+      '<div class="settings-card" style="margin-top:0; border-radius:0 0 var(--radius-lg) var(--radius-lg); padding-top:12px;">' +
+        '<div class="sn-actions">' +
+          '<button class="btn-primary" id="snImportPlayers" style="flex:1;"><i class="fas fa-download" style="margin-right:5px;"></i>Importer fra Spillere</button>' +
+          '<button class="btn-secondary" id="snAddManualPlayer" style="flex:0 0 auto;"><i class="fas fa-plus"></i></button>' +
+        '</div>' +
+      '</div>';
+
+    if (active.length === 0) {
+      html +=
+        '<div class="sn-roster-empty">' +
+          '<div style="font-size:36px; margin-bottom:12px;">👥</div>' +
+          '<div style="font-weight:600; margin-bottom:6px;">Ingen spillere i sesongen</div>' +
+          '<div>Importer spillere fra Spillere-fanen for \u00e5 komme i gang.</div>' +
+        '</div>';
+    } else {
+      html += '<div class="sn-section">Spillere (' + active.length + ')</div>';
+      html += '<div class="settings-card" style="padding:0;">';
+
+      for (var i = 0; i < active.length; i++) {
+        var p = active[i];
+        var posLabels = (p.positions || []).join('/');
+        html +=
+          '<div class="sn-roster-item">' +
+            '<div class="sn-roster-name">' + escapeHtml(p.name) + '</div>' +
+            '<div class="sn-roster-badges">' +
+              (p.goalie ? '<span class="sn-badge sn-badge-keeper">MV</span>' : '') +
+              '<span class="sn-badge sn-badge-pos">' + escapeHtml(posLabels) + '</span>' +
+              '<span class="sn-badge sn-badge-skill">' + p.skill + '</span>' +
+            '</div>' +
+            '<button class="sn-roster-remove" data-rid="' + p.id + '" title="Fjern spiller">&times;</button>' +
+          '</div>';
+      }
+
+      html += '</div>';
+    }
+
+    return html;
+  }
+
+  function bindRosterHandlers(root) {
+    var importBtn = $('snImportPlayers');
+    if (importBtn) importBtn.addEventListener('click', function() {
+      snView = 'roster-import';
+      render();
+    });
+
+    // Manual add
+    var addBtn = $('snAddManualPlayer');
+    if (addBtn) addBtn.addEventListener('click', function() {
+      snView = 'roster-add-manual';
+      render();
+    });
+
+    // Remove buttons
+    var removeBtns = root.querySelectorAll('.sn-roster-remove');
+    for (var i = 0; i < removeBtns.length; i++) {
+      removeBtns[i].addEventListener('click', function() {
+        var rid = this.getAttribute('data-rid');
+        var sp = seasonPlayers.find(function(p) { return p.id === rid; });
+        if (!sp) return;
+        if (!confirm('Fjerne ' + sp.name + ' fra sesongen?')) return;
+        removeSeasonPlayer(rid).then(function(ok) {
+          if (ok) {
+            loadSeasonPlayers(currentSeason.id).then(render);
+          }
+        });
+      });
+    }
+  }
+
+  // =========================================================================
+  //  VIEW: ROSTER IMPORT
+  // =========================================================================
+
+  function renderRosterImport(root) {
+    var players = window.players || [];
+    if (!players.length) {
+      root.innerHTML =
+        '<div class="settings-card">' +
+          '<div class="sn-dash-header">' +
+            '<button class="sn-back" id="snBackFromImport">\u2190</button>' +
+            '<span class="sn-dash-title">Importer spillere</span>' +
+          '</div>' +
+          '<div class="sn-roster-empty" style="padding:24px;">' +
+            '<div>Ingen spillere funnet. G\u00e5 til <b>Spillere</b>-fanen og legg til spillere f\u00f8rst.</div>' +
+          '</div>' +
+        '</div>';
+      $('snBackFromImport').addEventListener('click', function() {
+        snView = 'dashboard';
+        dashTab = 'roster';
+        render();
+      });
+      return;
+    }
+
+    // Figure out which players are already in the season
+    var existingIds = {};
+    for (var e = 0; e < seasonPlayers.length; e++) {
+      existingIds[seasonPlayers[e].player_id] = true;
+    }
+
+    var html =
+      '<div class="settings-card">' +
+        '<div class="sn-dash-header">' +
+          '<button class="sn-back" id="snBackFromImport">\u2190</button>' +
+          '<span class="sn-dash-title">Importer spillere</span>' +
+        '</div>' +
+        '<div style="padding:4px 0 12px; color:var(--text-400); font-size:13px;">' +
+          'Velg spillere fra <b>' + escapeHtml(document.querySelector('.team-name')?.textContent || 'aktivt lag') + '</b> (' + players.length + ' spillere)' +
+        '</div>' +
+        '<div style="margin-bottom:12px; display:flex; gap:8px;">' +
+          '<button class="btn-secondary" id="snSelectAll" style="font-size:12px; padding:6px 12px;">Velg alle</button>' +
+          '<button class="btn-secondary" id="snSelectNone" style="font-size:12px; padding:6px 12px;">Velg ingen</button>' +
+        '</div>';
+
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i];
+      if (!p.active && p.active !== undefined) continue; // skip inactive
+      var already = existingIds[p.id];
+      var posLabels = (p.positions || ['F','M','A']).join('/');
+
+      html +=
+        '<label class="sn-import-item"' + (already ? ' style="opacity:0.5;"' : '') + '>' +
+          '<input type="checkbox" class="sn-import-cb" value="' + p.id + '"' +
+            (already ? ' checked disabled title="Allerede i sesongen"' : ' checked') + '>' +
+          '<div class="sn-roster-name">' + escapeHtml(p.name) + '</div>' +
+          '<div class="sn-roster-badges">' +
+            (p.goalie ? '<span class="sn-badge sn-badge-keeper">MV</span>' : '') +
+            '<span class="sn-badge sn-badge-pos">' + escapeHtml(posLabels) + '</span>' +
+          '</div>' +
+        '</label>';
+    }
+
+    html +=
+        '<div class="sn-actions" style="margin-top:16px;">' +
+          '<button class="btn-secondary" id="snCancelImport">Avbryt</button>' +
+          '<button class="btn-primary" id="snConfirmImport"><i class="fas fa-check" style="margin-right:5px;"></i>Importer valgte</button>' +
+        '</div>' +
+      '</div>';
+
+    root.innerHTML = html;
+
+    // Bind handlers
+    $('snBackFromImport').addEventListener('click', function() {
+      snView = 'dashboard';
+      dashTab = 'roster';
+      render();
+    });
+
+    $('snCancelImport').addEventListener('click', function() {
+      snView = 'dashboard';
+      dashTab = 'roster';
+      render();
+    });
+
+    $('snSelectAll').addEventListener('click', function() {
+      var cbs = root.querySelectorAll('.sn-import-cb:not([disabled])');
+      for (var c = 0; c < cbs.length; c++) cbs[c].checked = true;
+    });
+
+    $('snSelectNone').addEventListener('click', function() {
+      var cbs = root.querySelectorAll('.sn-import-cb:not([disabled])');
+      for (var c = 0; c < cbs.length; c++) cbs[c].checked = false;
+    });
+
+    $('snConfirmImport').addEventListener('click', async function() {
+      var cbs = root.querySelectorAll('.sn-import-cb:not([disabled]):checked');
+      var selectedIds = {};
+      for (var c = 0; c < cbs.length; c++) selectedIds[cbs[c].value] = true;
+
+      var toImport = players.filter(function(p) {
+        return selectedIds[p.id] && !existingIds[p.id];
+      });
+
+      if (toImport.length === 0) {
+        notify('Ingen nye spillere \u00e5 importere.', 'info');
+        return;
+      }
+
+      var btn = $('snConfirmImport');
+      btn.disabled = true;
+      btn.textContent = 'Importerer\u2026';
+
+      var ok = await importPlayersToSeason(currentSeason.id, toImport);
+      if (ok) {
+        snView = 'dashboard';
+        dashTab = 'roster';
+        render();
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check" style="margin-right:5px;"></i>Importer valgte';
+      }
+    });
+  }
+
+  // =========================================================================
+  //  VIEW: MANUAL PLAYER ADD
+  // =========================================================================
+
+  function renderManualPlayerAdd(root) {
+    var html =
+      '<div class="settings-card">' +
+        '<div class="sn-dash-header">' +
+          '<button class="sn-back" id="snBackFromManual">\u2190</button>' +
+          '<span class="sn-dash-title">Legg til spiller</span>' +
+        '</div>' +
+        '<div class="sn-form">' +
+          '<div class="form-group">' +
+            '<label for="snManualName">Navn</label>' +
+            '<input type="text" id="snManualName" placeholder="Fornavn" maxlength="40" autocomplete="off">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label>Keeper?</label>' +
+            '<div class="sn-toggle-group" style="max-width:200px;">' +
+              '<button class="sn-toggle-btn active" data-val="false" id="snManualGkNo">Nei</button>' +
+              '<button class="sn-toggle-btn" data-val="true" id="snManualGkYes">Ja</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="snManualSkill">Ferdighetsniv\u00e5 (1\u20136)</label>' +
+            '<input type="number" id="snManualSkill" min="1" max="6" value="3">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label>Posisjoner</label>' +
+            '<div style="display:flex; gap:8px;">' +
+              '<label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="snManualPos" value="F" checked> Forsvar</label>' +
+              '<label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="snManualPos" value="M" checked> Midtbane</label>' +
+              '<label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="snManualPos" value="A" checked> Angrep</label>' +
+            '</div>' +
+          '</div>' +
+          '<div class="sn-actions" style="margin-top:16px;">' +
+            '<button class="btn-secondary" id="snCancelManual">Avbryt</button>' +
+            '<button class="btn-primary" id="snConfirmManual"><i class="fas fa-plus" style="margin-right:5px;"></i>Legg til</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    root.innerHTML = html;
+
+    // Keeper toggle
+    var gkBtns = root.querySelectorAll('.sn-toggle-btn');
+    for (var g = 0; g < gkBtns.length; g++) {
+      gkBtns[g].addEventListener('click', function() {
+        for (var b = 0; b < gkBtns.length; b++) gkBtns[b].classList.remove('active');
+        this.classList.add('active');
+      });
+    }
+
+    function goBackToRoster() {
+      snView = 'dashboard';
+      dashTab = 'roster';
+      render();
+    }
+
+    $('snBackFromManual').addEventListener('click', goBackToRoster);
+    $('snCancelManual').addEventListener('click', goBackToRoster);
+
+    $('snConfirmManual').addEventListener('click', async function() {
+      var name = ($('snManualName').value || '').trim();
+      if (!name) {
+        notify('Skriv inn et navn.', 'warning');
+        $('snManualName').focus();
+        return;
+      }
+
+      var goalie = $('snManualGkYes').classList.contains('active');
+      var skill = parseInt($('snManualSkill').value) || 3;
+      skill = Math.max(1, Math.min(6, skill));
+
+      var posCbs = root.querySelectorAll('.snManualPos:checked');
+      var positions = [];
+      for (var p = 0; p < posCbs.length; p++) positions.push(posCbs[p].value);
+      if (positions.length === 0) positions = ['F', 'M', 'A'];
+
+      // Generate a unique player_id (not linked to Spillere-fanen)
+      var playerId = 'sp_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+
+      var btn = $('snConfirmManual');
+      btn.disabled = true;
+      btn.textContent = 'Legger til\u2026';
+
+      var ok = await importPlayersToSeason(currentSeason.id, [{
+        id: playerId,
+        name: name,
+        skill: skill,
+        goalie: goalie,
+        positions: positions
+      }]);
+
+      if (ok) {
+        goBackToRoster();
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-plus" style="margin-right:5px;"></i>Legg til';
+      }
+    });
   }
 
   function renderEventItems(arr) {
@@ -1025,7 +1492,8 @@
     var s = seasons.find(function(x) { return x.id === seasonId; });
     if (!s) return;
     currentSeason = s;
-    await loadEvents(seasonId);
+    dashTab = 'calendar';
+    await Promise.all([loadEvents(seasonId), loadSeasonPlayers(seasonId)]);
     snView = 'dashboard';
     render();
   }
