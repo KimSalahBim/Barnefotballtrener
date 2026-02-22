@@ -577,6 +577,93 @@
   }
 
   // =========================================================================
+  //  CRUD: TRAINING SERIES (Fase 2, Steg 3)
+  // =========================================================================
+
+  var DAY_NAMES = ['S\u00f8ndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'L\u00f8rdag'];
+
+  // Generate all dates for a given day-of-week between start and end (inclusive)
+  function generateSeriesDates(dayOfWeek, startDate, endDate) {
+    var dates = [];
+    var d = new Date(startDate + 'T00:00:00');
+    var end = new Date(endDate + 'T23:59:59');
+
+    // Advance to first occurrence of dayOfWeek
+    while (d.getDay() !== dayOfWeek && d <= end) {
+      d.setDate(d.getDate() + 1);
+    }
+
+    while (d <= end) {
+      dates.push(new Date(d));
+      d.setDate(d.getDate() + 7);
+    }
+    return dates;
+  }
+
+  async function createTrainingSeries(seasonId, data) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid || !seasonId) return false;
+
+    try {
+      // 1. Insert the series record
+      var seriesRes = await sb.from('training_series').insert({
+        season_id: seasonId,
+        user_id: uid,
+        title: data.title || (DAY_NAMES[data.day_of_week] + 'strening'),
+        day_of_week: data.day_of_week,
+        start_time: data.start_time,
+        duration_minutes: data.duration_minutes || 90,
+        location: data.location || null,
+        start_date: data.start_date,
+        end_date: data.end_date
+      }).select('id').single();
+
+      if (seriesRes.error) throw seriesRes.error;
+      var seriesId = seriesRes.data.id;
+
+      // 2. Generate individual events
+      var dates = generateSeriesDates(data.day_of_week, data.start_date, data.end_date);
+      if (dates.length === 0) {
+        notify('Ingen treningsdatoer i valgt periode.', 'warning');
+        return false;
+      }
+
+      var title = data.title || (DAY_NAMES[data.day_of_week] + 'strening');
+      var eventRows = dates.map(function(dt) {
+        // Combine date with time
+        var parts = data.start_time.split(':');
+        dt.setHours(parseInt(parts[0]) || 17, parseInt(parts[1]) || 0, 0, 0);
+
+        return {
+          season_id: seasonId,
+          user_id: uid,
+          type: 'training',
+          title: title,
+          start_time: dt.toISOString(),
+          duration_minutes: data.duration_minutes || 90,
+          location: data.location || null,
+          series_id: seriesId
+        };
+      });
+
+      // Insert in batches of 50 (Supabase limit)
+      for (var i = 0; i < eventRows.length; i += 50) {
+        var batch = eventRows.slice(i, i + 50);
+        var batchRes = await sb.from('events').insert(batch);
+        if (batchRes.error) throw batchRes.error;
+      }
+
+      notify(dates.length + ' treninger opprettet.', 'success');
+      return true;
+    } catch (e) {
+      console.error('[season.js] createTrainingSeries error:', e);
+      notify('Feil ved oppretting av treningsserie.', 'error');
+      return false;
+    }
+  }
+
+  // =========================================================================
   //  RENDER ROUTER
   // =========================================================================
 
@@ -594,6 +681,7 @@
       case 'roster-import':  renderRosterImport(root); break;
       case 'roster-add-manual': renderManualPlayerAdd(root); break;
       case 'roster-edit-player': renderEditPlayer(root); break;
+      case 'create-series': renderCreateSeries(root); break;
       default:               renderSeasonList(root);   break;
     }
   }
@@ -800,6 +888,9 @@
           '<button class="btn-primary" id="snAddMatch"><i class="fas fa-futbol" style="margin-right:5px;"></i>Legg til kamp</button>' +
           '<button class="btn-secondary" id="snAddTraining"><i class="fas fa-dumbbell" style="margin-right:5px;"></i>Legg til trening</button>' +
         '</div>' +
+        '<div style="margin-top:8px;">' +
+          '<button class="btn-secondary" id="snAddSeries" style="width:100%; font-size:13px;"><i class="fas fa-redo" style="margin-right:5px;"></i>Opprett treningsserie</button>' +
+        '</div>' +
       '</div>';
 
     // Split events
@@ -854,6 +945,12 @@
       snView = 'create-event';
       render();
       setTimeout(function() { var el = $('snEventType'); if (el) { el.value = 'training'; el.dispatchEvent(new Event('change')); } }, 20);
+    });
+
+    var addSeries = $('snAddSeries');
+    if (addSeries) addSeries.addEventListener('click', function() {
+      snView = 'create-series';
+      render();
     });
 
     var delBtn = $('snDeleteSeason');
@@ -1187,6 +1284,176 @@
       } else {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-plus" style="margin-right:5px;"></i>Legg til';
+      }
+    });
+  }
+
+  // =========================================================================
+  //  VIEW: CREATE TRAINING SERIES
+  // =========================================================================
+
+  function renderCreateSeries(root) {
+    if (!currentSeason) { goToList(); return; }
+
+    // Default dates from season
+    var defaultStart = currentSeason.start_date || '';
+    var defaultEnd = currentSeason.end_date || '';
+
+    var html =
+      '<div class="settings-card">' +
+        '<div class="sn-dash-header">' +
+          '<button class="sn-back" id="snBackFromSeries">\u2190</button>' +
+          '<span class="sn-dash-title">Opprett treningsserie</span>' +
+        '</div>' +
+        '<div class="sn-form">' +
+          '<div class="form-group">' +
+            '<label for="snSeriesTitle">Tittel</label>' +
+            '<input type="text" id="snSeriesTitle" placeholder="Mandagstrening" maxlength="60" autocomplete="off">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label>Ukedag</label>' +
+            '<div style="display:flex; gap:4px; flex-wrap:wrap;">' +
+              '<button class="sn-toggle-btn snDayBtn" data-day="1" type="button" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:8px 2px; font-size:13px;">Man</button>' +
+              '<button class="sn-toggle-btn snDayBtn" data-day="2" type="button" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:8px 2px; font-size:13px;">Tir</button>' +
+              '<button class="sn-toggle-btn snDayBtn" data-day="3" type="button" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:8px 2px; font-size:13px;">Ons</button>' +
+              '<button class="sn-toggle-btn snDayBtn" data-day="4" type="button" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:8px 2px; font-size:13px;">Tor</button>' +
+              '<button class="sn-toggle-btn snDayBtn" data-day="5" type="button" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:8px 2px; font-size:13px;">Fre</button>' +
+              '<button class="sn-toggle-btn snDayBtn" data-day="6" type="button" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:8px 2px; font-size:13px;">L\u00f8r</button>' +
+              '<button class="sn-toggle-btn snDayBtn" data-day="0" type="button" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:8px 2px; font-size:13px;">S\u00f8n</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="sn-form-row">' +
+            '<div class="form-group" style="flex:1;">' +
+              '<label for="snSeriesTime">Klokkeslett</label>' +
+              '<input type="time" id="snSeriesTime" value="17:00">' +
+            '</div>' +
+            '<div class="form-group" style="flex:1;">' +
+              '<label for="snSeriesDuration">Varighet (min)</label>' +
+              '<input type="number" id="snSeriesDuration" value="90" min="15" max="180" step="15">' +
+            '</div>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="snSeriesLocation">Sted</label>' +
+            '<input type="text" id="snSeriesLocation" placeholder="Bane / hall" maxlength="100">' +
+          '</div>' +
+          '<div class="sn-form-row">' +
+            '<div class="form-group" style="flex:1;">' +
+              '<label for="snSeriesStart">Fra dato</label>' +
+              '<input type="date" id="snSeriesStart" value="' + defaultStart + '">' +
+            '</div>' +
+            '<div class="form-group" style="flex:1;">' +
+              '<label for="snSeriesEnd">Til dato</label>' +
+              '<input type="date" id="snSeriesEnd" value="' + defaultEnd + '">' +
+            '</div>' +
+          '</div>' +
+          '<div id="snSeriesPreview" style="padding:10px 0; font-size:13px; color:var(--text-400);"></div>' +
+          '<div class="sn-actions" style="margin-top:8px;">' +
+            '<button class="btn-secondary" id="snCancelSeries">Avbryt</button>' +
+            '<button class="btn-primary" id="snConfirmSeries"><i class="fas fa-check" style="margin-right:5px;"></i>Opprett</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    root.innerHTML = html;
+
+    var selectedDay = null;
+
+    // Day toggles (radio)
+    var dayBtns = root.querySelectorAll('.snDayBtn');
+    for (var d = 0; d < dayBtns.length; d++) {
+      dayBtns[d].addEventListener('click', function() {
+        for (var b = 0; b < dayBtns.length; b++) dayBtns[b].classList.remove('active');
+        this.classList.add('active');
+        selectedDay = parseInt(this.getAttribute('data-day'));
+        updatePreview();
+      });
+    }
+
+    function updatePreview() {
+      var preview = $('snSeriesPreview');
+      if (!preview) return;
+      if (selectedDay === null) { preview.textContent = ''; return; }
+
+      var startVal = $('snSeriesStart').value;
+      var endVal = $('snSeriesEnd').value;
+      if (!startVal || !endVal) { preview.textContent = ''; return; }
+
+      var dates = generateSeriesDates(selectedDay, startVal, endVal);
+      if (dates.length === 0) {
+        preview.innerHTML = '\u26a0\ufe0f Ingen ' + DAY_NAMES[selectedDay].toLowerCase() + 'er i valgt periode.';
+      } else {
+        preview.innerHTML = '\u2192 <b>' + dates.length + ' treninger</b> blir opprettet (' + DAY_NAMES[selectedDay].toLowerCase() + 'er fra ' + formatDate(startVal) + ' til ' + formatDate(endVal) + ')';
+      }
+    }
+
+    // Update preview on date changes
+    var startInput = $('snSeriesStart');
+    var endInput = $('snSeriesEnd');
+    if (startInput) startInput.addEventListener('change', updatePreview);
+    if (endInput) endInput.addEventListener('change', updatePreview);
+
+    // Auto-fill title from day selection
+    function autoTitle() {
+      var titleInput = $('snSeriesTitle');
+      if (!titleInput || titleInput.value.trim()) return;
+      if (selectedDay !== null) {
+        titleInput.placeholder = DAY_NAMES[selectedDay] + 'strening';
+      }
+    }
+
+    // Navigation
+    $('snBackFromSeries').addEventListener('click', goToDashboard);
+    $('snCancelSeries').addEventListener('click', goToDashboard);
+
+    $('snConfirmSeries').addEventListener('click', async function() {
+      if (selectedDay === null) {
+        notify('Velg en ukedag.', 'warning');
+        return;
+      }
+
+      var startVal = $('snSeriesStart').value;
+      var endVal = $('snSeriesEnd').value;
+      if (!startVal || !endVal) {
+        notify('Velg fra- og til-dato.', 'warning');
+        return;
+      }
+
+      if (endVal < startVal) {
+        notify('Til-dato m\u00e5 v\u00e6re etter fra-dato.', 'warning');
+        return;
+      }
+
+      var dates = generateSeriesDates(selectedDay, startVal, endVal);
+      if (dates.length === 0) {
+        notify('Ingen treningsdatoer i valgt periode.', 'warning');
+        return;
+      }
+
+      var titleVal = ($('snSeriesTitle').value || '').trim() || (DAY_NAMES[selectedDay] + 'strening');
+      var timeVal = $('snSeriesTime').value || '17:00';
+      var durationVal = parseInt($('snSeriesDuration').value) || 90;
+      var locationVal = ($('snSeriesLocation').value || '').trim();
+
+      var btn = $('snConfirmSeries');
+      btn.disabled = true;
+      btn.textContent = 'Oppretter ' + dates.length + ' treninger\u2026';
+
+      var ok = await createTrainingSeries(currentSeason.id, {
+        title: titleVal,
+        day_of_week: selectedDay,
+        start_time: timeVal,
+        duration_minutes: durationVal,
+        location: locationVal,
+        start_date: startVal,
+        end_date: endVal
+      });
+
+      if (ok) {
+        await loadEvents(currentSeason.id);
+        goToDashboard();
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check" style="margin-right:5px;"></i>Opprett';
       }
     });
   }
