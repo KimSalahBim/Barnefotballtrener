@@ -19,6 +19,8 @@
   var snView = 'list'; // 'list' | 'create-season' | 'dashboard' | 'create-event' | 'edit-event' | 'event-detail' | 'roster-import'
   var editingEvent = null; // event object when editing
   var editingSeasonPlayer = null; // season player object when editing
+  var embeddedKampdagEvent = null; // event for embedded kampdag
+  var embeddedKampdagTropp = null; // tropp players for embedded kampdag
 
   // =========================================================================
   //  HELPERS
@@ -354,6 +356,12 @@
   });
 
   window.addEventListener('team:changed', function() {
+    // Clean up embedded kampdag if active
+    if (window.sesongKampdag && window.sesongKampdag.isActive()) {
+      window.sesongKampdag.destroy();
+    }
+    embeddedKampdagEvent = null;
+    embeddedKampdagTropp = null;
     currentSeason = null;
     seasons = [];
     events = [];
@@ -870,7 +878,7 @@
     }
   }
 
-  async function addMatchGoal(eventId, playerId, playerName, minute, assistId, assistName) {
+  async function addMatchEvent(eventId, playerId, playerName, eventType) {
     var sb = getSb();
     var uid = getUserId();
     if (!sb || !uid || !eventId) return false;
@@ -881,22 +889,15 @@
         user_id: uid,
         player_id: playerId,
         player_name: playerName,
-        type: 'goal'
+        type: eventType || 'goal'
       };
-      if (minute !== null && minute !== undefined && minute !== '') {
-        row.minute = parseInt(minute);
-      }
-      if (assistId) {
-        row.assist_player_id = assistId;
-        row.assist_player_name = assistName || null;
-      }
 
       var res = await sb.from('match_events').insert(row);
       if (res.error) throw res.error;
       return true;
     } catch (e) {
-      console.error('[season.js] addMatchGoal error:', e);
-      notify('Feil ved registrering av m\u00e5l.', 'error');
+      console.error('[season.js] addMatchEvent error:', e);
+      notify('Feil ved registrering.', 'error');
       return false;
     }
   }
@@ -1039,14 +1040,14 @@
       }
     }
 
-    // Goals & assists from seasonGoals
+    // Goals & assists from seasonGoals (by type field)
     for (var g = 0; g < seasonGoals.length; g++) {
-      var goal = seasonGoals[g];
-      if (playerMap[goal.player_id]) {
-        playerMap[goal.player_id].goals++;
-      }
-      if (goal.assist_player_id && playerMap[goal.assist_player_id]) {
-        playerMap[goal.assist_player_id].assists++;
+      var me = seasonGoals[g];
+      if (!playerMap[me.player_id]) continue;
+      if (me.type === 'goal') {
+        playerMap[me.player_id].goals++;
+      } else if (me.type === 'assist') {
+        playerMap[me.player_id].assists++;
       }
     }
 
@@ -1076,9 +1077,11 @@
       return a.player.name.localeCompare(b.player.name);
     });
 
+    var totalGoalsCount = 0;
     var totalAssists = 0;
     for (var ta = 0; ta < seasonGoals.length; ta++) {
-      if (seasonGoals[ta].assist_player_id) totalAssists++;
+      if (seasonGoals[ta].type === 'goal') totalGoalsCount++;
+      else if (seasonGoals[ta].type === 'assist') totalAssists++;
     }
 
     return {
@@ -1095,7 +1098,7 @@
       goalsAgainst: goalsAgainst,
       topScorers: topScorers,
       topAssisters: topAssisters,
-      totalGoals: seasonGoals.length,
+      totalGoals: totalGoalsCount,
       totalAssists: totalAssists
     };
   }
@@ -1116,6 +1119,7 @@
       case 'roster-edit-player': renderEditPlayer(root); break;
       case 'create-series': renderCreateSeries(root); break;
       case 'player-stats': renderPlayerStats(root); break;
+      case 'embedded-kampdag': renderEmbeddedKampdag(root); break;
       default:               renderSeasonList(root);   break;
     }
   }
@@ -2792,7 +2796,7 @@
             '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre tropp' +
           '</button>' +
           '<button class="btn-primary" id="snOpenKampdag" style="width:100%; margin-top:8px; background:var(--text-700);">' +
-            '<i class="fas fa-clipboard-list" style="margin-right:6px;"></i>\u00C5pne i Kampdag med tropp' +
+            '<i class="fas fa-wand-magic-sparkles" style="margin-right:6px;"></i>Generer bytteplan' +
           '</button>';
       } else {
         html +=
@@ -2829,10 +2833,16 @@
               '</div>' +
             '</div>';
 
-        if (matchGoals.length > 0) {
+        var completedGoals = matchGoals.filter(function(x) { return x.type === 'goal'; });
+        var completedAssists = matchGoals.filter(function(x) { return x.type === 'assist'; });
+
+        if (completedGoals.length > 0 || completedAssists.length > 0) {
           html += '<div style="border-top:1px solid var(--border-light, #f1f5f9); padding-top:8px;">';
-          for (var g = 0; g < matchGoals.length; g++) {
-            html += goalItemHtml(matchGoals[g], true);
+          for (var g = 0; g < completedGoals.length; g++) {
+            html += matchEventItemHtml(completedGoals[g], true);
+          }
+          for (var ga2 = 0; ga2 < completedAssists.length; ga2++) {
+            html += matchEventItemHtml(completedAssists[ga2], true);
           }
           html += '</div>';
         }
@@ -2858,8 +2868,6 @@
             '</div>' +
           '</div>';
 
-        html += '<div style="border-top:1px solid var(--border-light, #f1f5f9);">';
-
         if (barnefotball) {
           html +=
             '<div class="sn-nff-warning">' +
@@ -2869,56 +2877,56 @@
             '</div>';
         }
 
-        html += '<div style="padding:8px 14px 4px; font-size:12px; font-weight:600; color:var(--text-400); text-transform:uppercase; letter-spacing:0.5px;">M\u00e5lscorere (valgfritt)</div>';
-
-        if (matchGoals.length > 0) {
-          for (var ge = 0; ge < matchGoals.length; ge++) {
-            html += goalItemHtml(matchGoals[ge], true);
-          }
-        }
-
-        // Add goal dropdown (from tropp or all active players)
+        // Build tropp player list for dropdowns
         var troppForGoals = [];
         for (var tp = 0; tp < activePlayers.length; tp++) {
           var inSquadForGoal = hasExistingData ? squadMap[activePlayers[tp].player_id] : true;
           if (inSquadForGoal) troppForGoals.push(activePlayers[tp]);
         }
 
+        // Split existing match events
+        var editGoals = matchGoals.filter(function(x) { return x.type === 'goal'; });
+        var editAssists = matchGoals.filter(function(x) { return x.type === 'assist'; });
+
+        // --- MÅLSCORERE ---
+        html += '<div style="padding:8px 14px 4px; font-size:12px; font-weight:600; color:var(--text-400); text-transform:uppercase; letter-spacing:0.5px;">M\u00e5lscorere (valgfritt)</div>';
+
+        for (var eg = 0; eg < editGoals.length; eg++) {
+          html += matchEventItemHtml(editGoals[eg], true);
+        }
+
         if (troppForGoals.length > 0) {
           html +=
-            '<div style="padding:10px 14px; display:flex; flex-direction:column; gap:8px;">' +
-              '<div style="display:flex; gap:8px; align-items:flex-end;">' +
-                '<div style="flex:1;">' +
-                  '<div style="font-size:11px; color:var(--text-400); margin-bottom:3px;">M\u00e5lscorer</div>' +
-                  '<select class="sn-goal-select" id="snGoalPlayer" style="width:100%;">';
+            '<div class="sn-goal-add">' +
+              '<select class="sn-goal-select" id="snGoalPlayer" style="flex:1;">';
           for (var gp = 0; gp < troppForGoals.length; gp++) {
             html += '<option value="' + escapeHtml(troppForGoals[gp].player_id) + '">' + escapeHtml(troppForGoals[gp].name) + '</option>';
           }
           html +=
-                  '</select>' +
-                '</div>' +
-                '<div>' +
-                  '<div style="font-size:11px; color:var(--text-400); margin-bottom:3px;">Min</div>' +
-                  '<input type="number" class="sn-goal-min" id="snGoalMinute" placeholder="-" min="1" max="120" inputmode="numeric">' +
-                '</div>' +
-              '</div>' +
-              '<div style="display:flex; gap:8px; align-items:flex-end;">' +
-                '<div style="flex:1;">' +
-                  '<div style="font-size:11px; color:var(--text-400); margin-bottom:3px;">M\u00e5lgivende (valgfritt)</div>' +
-                  '<select class="sn-goal-select" id="snGoalAssist" style="width:100%;">' +
-                    '<option value="">Ingen</option>';
-          for (var ga = 0; ga < troppForGoals.length; ga++) {
-            html += '<option value="' + escapeHtml(troppForGoals[ga].player_id) + '">' + escapeHtml(troppForGoals[ga].name) + '</option>';
-          }
-          html +=
-                  '</select>' +
-                '</div>' +
-                '<button class="sn-goal-add-btn" id="snAddGoal" style="height:36px;">+M\u00e5l</button>' +
-              '</div>' +
+              '</select>' +
+              '<button class="sn-goal-add-btn" id="snAddGoal">+M\u00e5l</button>' +
             '</div>';
         }
 
-        html += '</div>';
+        // --- MÅLGIVENDE ---
+        html += '<div style="padding:8px 14px 4px; margin-top:4px; font-size:12px; font-weight:600; color:var(--text-400); text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid var(--border-light, #f1f5f9);">M\u00e5lgivende (valgfritt)</div>';
+
+        for (var ea = 0; ea < editAssists.length; ea++) {
+          html += matchEventItemHtml(editAssists[ea], true);
+        }
+
+        if (troppForGoals.length > 0) {
+          html +=
+            '<div class="sn-goal-add">' +
+              '<select class="sn-goal-select" id="snAssistPlayer" style="flex:1;">';
+          for (var ap = 0; ap < troppForGoals.length; ap++) {
+            html += '<option value="' + escapeHtml(troppForGoals[ap].player_id) + '">' + escapeHtml(troppForGoals[ap].name) + '</option>';
+          }
+          html +=
+              '</select>' +
+              '<button class="sn-goal-add-btn" id="snAddAssist" style="background:var(--text-600, #475569);">+Assist</button>' +
+            '</div>';
+        }
 
         html +=
           '<div style="padding:10px 14px;">' +
@@ -2942,11 +2950,28 @@
           notify('Velg minst \u00e9n spiller i troppen f\u00f8rst.', 'warning');
           return;
         }
-        var troppIds = [];
+        var troppIds = new Set();
         for (var t = 0; t < troppItems.length; t++) {
-          troppIds.push(troppItems[t].getAttribute('data-pid'));
+          troppIds.add(troppItems[t].getAttribute('data-pid'));
         }
-        openInKampdagWithTropp(ev, troppIds);
+        // Build player objects for embedded kampdag
+        var troppPlayers = [];
+        for (var ap = 0; ap < activePlayers.length; ap++) {
+          if (troppIds.has(activePlayers[ap].player_id)) {
+            var sp = activePlayers[ap];
+            troppPlayers.push({
+              id: sp.player_id,
+              name: sp.name,
+              goalie: sp.goalie || false,
+              positions: sp.positions || ['F','M','A'],
+              skill: sp.skill || 3
+            });
+          }
+        }
+        embeddedKampdagEvent = ev;
+        embeddedKampdagTropp = troppPlayers;
+        snView = 'embedded-kampdag';
+        render();
       });
     }
 
@@ -3062,33 +3087,24 @@
     var addGoalBtn = $('snAddGoal');
     if (addGoalBtn) addGoalBtn.addEventListener('click', async function() {
       var playerSel = $('snGoalPlayer');
-      var minuteInp = $('snGoalMinute');
-      var assistSel = $('snGoalAssist');
       if (!playerSel) return;
-
-      var pid = playerSel.value;
-      var pName = playerSel.options[playerSel.selectedIndex].text;
-      var minVal = minuteInp ? minuteInp.value : null;
-
-      var assistId = (assistSel && assistSel.value) ? assistSel.value : null;
-      var assistName = null;
-      if (assistId && assistSel) {
-        assistName = assistSel.options[assistSel.selectedIndex].text;
-      }
-      // Prevent assist = scorer
-      if (assistId === pid) assistId = null;
-
       addGoalBtn.disabled = true;
-      var ok = await addMatchGoal(ev.id, pid, pName, minVal, assistId, assistName);
-      if (ok) {
-        await loadMatchGoals(ev.id);
-        render();
-      } else {
-        addGoalBtn.disabled = false;
-      }
+      var ok = await addMatchEvent(ev.id, playerSel.value, playerSel.options[playerSel.selectedIndex].text, 'goal');
+      if (ok) { await loadMatchGoals(ev.id); render(); }
+      else { addGoalBtn.disabled = false; }
     });
 
-    // Remove goals
+    var addAssistBtn = $('snAddAssist');
+    if (addAssistBtn) addAssistBtn.addEventListener('click', async function() {
+      var playerSel = $('snAssistPlayer');
+      if (!playerSel) return;
+      addAssistBtn.disabled = true;
+      var ok = await addMatchEvent(ev.id, playerSel.value, playerSel.options[playerSel.selectedIndex].text, 'assist');
+      if (ok) { await loadMatchGoals(ev.id); render(); }
+      else { addAssistBtn.disabled = false; }
+    });
+
+    // Remove goals/assists
     var removeGoalBtns = root.querySelectorAll('.sn-goal-remove');
     for (var rg = 0; rg < removeGoalBtns.length; rg++) {
       removeGoalBtns[rg].addEventListener('click', (function(gid) {
@@ -3103,7 +3119,7 @@
       })(removeGoalBtns[rg].getAttribute('data-gid')));
     }
 
-    // Duplicate goal (+)
+    // Duplicate (+)
     var dupGoalBtns = root.querySelectorAll('.sn-goal-dup');
     for (var dg = 0; dg < dupGoalBtns.length; dg++) {
       dupGoalBtns[dg].addEventListener('click', (function(btn) {
@@ -3112,15 +3128,10 @@
           btn.disabled = true;
           var pid = btn.getAttribute('data-pid');
           var pName = btn.getAttribute('data-pname');
-          var aid = btn.getAttribute('data-aid') || null;
-          var aName = btn.getAttribute('data-aname') || null;
-          var ok = await addMatchGoal(ev.id, pid, pName, null, aid, aName);
-          if (ok) {
-            await loadMatchGoals(ev.id);
-            render();
-          } else {
-            btn.disabled = false;
-          }
+          var typ = btn.getAttribute('data-type') || 'goal';
+          var ok = await addMatchEvent(ev.id, pid, pName, typ);
+          if (ok) { await loadMatchGoals(ev.id); render(); }
+          else { btn.disabled = false; }
         };
       })(dupGoalBtns[dg]));
     }
@@ -3164,22 +3175,20 @@
     });
   }
 
-  function goalItemHtml(goal, showActions) {
-    var assistText = '';
-    if (goal.assist_player_name) {
-      assistText = '<span style="color:var(--text-400); font-size:12px;">(' + escapeHtml(goal.assist_player_name) + ')</span>';
-    }
+  function matchEventItemHtml(item, showActions) {
+    var isAssist = item.type === 'assist';
+    var icon = isAssist
+      ? '<span style="font-weight:800; color:var(--primary, #2563eb); font-size:14px; width:20px; text-align:center;">A</span>'
+      : '<span>\u26BD</span>';
     var actions = '';
     if (showActions) {
       actions =
-        '<button class="sn-goal-dup" data-pid="' + escapeHtml(goal.player_id) + '" data-pname="' + escapeHtml(goal.player_name || '') + '" data-aid="' + escapeHtml(goal.assist_player_id || '') + '" data-aname="' + escapeHtml(goal.assist_player_name || '') + '" title="Legg til enda et m\u00e5l">+</button>' +
-        '<button class="sn-goal-remove" data-gid="' + goal.id + '" title="Fjern">\u00d7</button>';
+        '<button class="sn-goal-dup" data-pid="' + escapeHtml(item.player_id) + '" data-pname="' + escapeHtml(item.player_name || '') + '" data-type="' + (item.type || 'goal') + '" title="Legg til en til">+</button>' +
+        '<button class="sn-goal-remove" data-gid="' + item.id + '" title="Fjern">\u00d7</button>';
     }
     return '<div class="sn-goal-item">' +
-      '<span>\u26BD</span>' +
-      '<span style="font-weight:600;">' + escapeHtml(goal.player_name || 'Ukjent') + '</span>' +
-      assistText +
-      (goal.minute ? '<span style="color:var(--text-400); font-size:12px;">' + goal.minute + '\'</span>' : '') +
+      icon +
+      '<span style="font-weight:600;">' + escapeHtml(item.player_name || 'Ukjent') + '</span>' +
       actions +
     '</div>';
   }
@@ -3193,6 +3202,108 @@
 
   // =========================================================================
   //  KAMPDAG INTEGRATION (steg 7)
+  // =========================================================================
+  //  EMBEDDED KAMPDAG
+  // =========================================================================
+
+  function renderEmbeddedKampdag(root) {
+    if (!embeddedKampdagEvent || !embeddedKampdagTropp) {
+      snView = 'dashboard';
+      render();
+      return;
+    }
+    var ev = embeddedKampdagEvent;
+    var fmt = ev.format || (currentSeason ? currentSeason.format : 7);
+    var mins = ev.duration_minutes || 60;
+
+    root.innerHTML = '<div id="snKampdagContainer"></div>';
+    var container = document.getElementById('snKampdagContainer');
+    if (!container || !window.sesongKampdag) {
+      root.innerHTML = '<div style="padding:20px; text-align:center;">Feil: sesong-kampdag.js ikke lastet.</div>';
+      return;
+    }
+
+    window.sesongKampdag.init(container, embeddedKampdagTropp, {
+      format: fmt,
+      minutes: mins,
+      eventId: ev.id,
+      seasonId: ev.season_id,
+      opponent: ev.opponent || '',
+      isHome: ev.is_home !== false,
+      onSave: function(planJson, minutesMap) {
+        return saveKampdagToSesong(ev, planJson, minutesMap);
+      },
+      onBack: function() {
+        window.sesongKampdag.destroy();
+        embeddedKampdagEvent = null;
+        embeddedKampdagTropp = null;
+        snView = 'event-detail';
+        render();
+      }
+    });
+  }
+
+  async function saveKampdagToSesong(ev, planJson, minutesMap) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid) { notify('Ikke innlogget.', 'error'); return; }
+
+    try {
+      // 1. Save plan_json to event
+      var evRes = await sb.from('events')
+        .update({ plan_json: planJson })
+        .eq('id', ev.id)
+        .eq('user_id', uid);
+      if (evRes.error) throw evRes.error;
+
+      // Update local event object so event-detail reflects the saved plan
+      ev.plan_json = planJson;
+      if (editingEvent && editingEvent.id === ev.id) editingEvent.plan_json = planJson;
+
+      // 2. Batch upsert minutes_played per player to event_players
+      var playerIds = Object.keys(minutesMap);
+      if (playerIds.length > 0) {
+        var rows = [];
+        for (var i = 0; i < playerIds.length; i++) {
+          rows.push({
+            event_id: ev.id,
+            season_id: ev.season_id,
+            user_id: uid,
+            player_id: playerIds[i],
+            minutes_played: minutesMap[playerIds[i]],
+            in_squad: true,
+            attended: true
+          });
+        }
+        var epRes = await sb.from('event_players')
+          .upsert(rows, { onConflict: 'event_id,player_id' });
+        if (epRes.error) throw epRes.error;
+      }
+
+      notify('Spilletid lagret!', 'success');
+
+      // Clean up and return to event detail
+      window.sesongKampdag.destroy();
+      embeddedKampdagEvent = null;
+      embeddedKampdagTropp = null;
+
+      // Invalidate stats cache so stats tab shows updated data
+      seasonStats = [];
+      seasonGoals = [];
+
+      snView = 'event-detail';
+      render();
+    } catch (e) {
+      console.error('[season.js] saveKampdagToSesong error:', e);
+      notify('Feil ved lagring av spilletid.', 'error');
+      // Re-enable save button so user can retry
+      var retryBtn = document.getElementById('skdSavePlan');
+      if (retryBtn) { retryBtn.disabled = false; retryBtn.innerHTML = '<i class="fas fa-save" style="margin-right:4px;"></i>Lagre spilletid til sesong'; }
+    }
+  }
+
+  // =========================================================================
+  //  KAMPDAG LEGACY (standalone)
   // =========================================================================
 
   function openInKampdag(ev) {
