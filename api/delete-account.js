@@ -1,4 +1,4 @@
-// © 2026 Barnefotballtrener.no. All rights reserved.
+// Â© 2026 Barnefotballtrener.no. All rights reserved.
 // api/delete-account.js
 // GDPR Art. 17 - Right to Erasure ("Right to be Forgotten")
 // Allows users to permanently delete their account and all associated data
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
         }
 
         // NOTE: We do NOT delete the Stripe customer record
-        // Reason: Bokføringsloven requires keeping payment records for 7 years
+        // Reason: BokfÃ¸ringsloven requires keeping payment records for 7 years
         // Instead, we anonymize the customer metadata
         try {
           await stripe.customers.update(customerId, {
@@ -216,7 +216,36 @@ export default async function handler(req, res) {
       console.error('[delete-account] user_data database error:', udDbErr);
     }
 
-    // 4e) Delete teams from Supabase (CASCADE sletter spillere automatisk, men vi har allerede slettet dem)
+    // 4e) Delete season module data (GDPR: contains children's names and activity data)
+    // Order: child tables first to respect foreign key constraints
+    const seasonTables = [
+      'match_events',      // goals/assists per child
+      'event_players',     // attendance/minutes per child
+      'training_series',   // series metadata
+      'events',            // matches/trainings
+      'season_players',    // children's names and skills
+      'seasons',           // season metadata
+    ];
+    for (const table of seasonTables) {
+      try {
+        const { error: stErr } = await supabaseAdmin
+          .from(table)
+          .delete()
+          .eq('user_id', userId);
+
+        if (stErr) {
+          console.error(`[delete-account] Failed to delete ${table}:`, stErr);
+          deletionResults.errors.push(`Could not delete ${table}`);
+        } else {
+          deletionResults.steps_completed.push(`Deleted ${table} from database`);
+        }
+      } catch (stDbErr) {
+        console.error(`[delete-account] ${table} database error:`, stDbErr);
+        deletionResults.errors.push(`Database error during ${table} deletion`);
+      }
+    }
+
+    // 4f) Delete teams from Supabase (CASCADE sletter spillere automatisk, men vi har allerede slettet dem)
     try {
       const { error: teamDelErr } = await supabaseAdmin
         .from('teams')
@@ -261,7 +290,7 @@ export default async function handler(req, res) {
     }
 
     // 6) Log deletion for audit trail (GDPR compliance requirement)
-    console.log('[delete-account] ✅ Account deleted:', {
+    console.log('[delete-account] âœ… Account deleted:', {
       user_id: userId,
       email: email,
       timestamp: new Date().toISOString(),
@@ -274,7 +303,7 @@ export default async function handler(req, res) {
       success: true,
       message: 'Your account has been permanently deleted.',
       details: deletionResults,
-      note: 'Payment records are retained for 7 years per Norwegian accounting law (bokføringsloven), but your personal information has been anonymized.',
+      note: 'Payment records are retained for 7 years per Norwegian accounting law (bokfÃ¸ringsloven), but your personal information has been anonymized.',
     });
 
   } catch (err) {

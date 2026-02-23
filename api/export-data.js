@@ -1,4 +1,4 @@
-// © 2026 Barnefotballtrener.no. All rights reserved.
+// Â© 2026 Barnefotballtrener.no. All rights reserved.
 // api/export-data.js
 // GDPR Art. 20 - Right to Data Portability
 // Allows users to export all their personal data in machine-readable format (JSON)
@@ -131,7 +131,7 @@ export default async function handler(req, res) {
       console.error('[export-data] user_data fetch error:', udErr);
     }
 
-    // 2c) Fetch error logs from Supabase
+    // 2e) Fetch error logs from Supabase
     try {
       const { data: errorData, error: errorErr } = await supabaseAdmin
         .from('error_logs')
@@ -145,6 +145,26 @@ export default async function handler(req, res) {
       }
     } catch (errLogErr) {
       console.error('[export-data] Error logs fetch error:', errLogErr);
+    }
+
+    // 2f) Fetch season module data (seasons, events, players, attendance, goals)
+    try {
+      const seasonTables = ['seasons', 'events', 'season_players', 'event_players', 'match_events', 'training_series'];
+      exportData.app_data.season_data = {};
+      for (const table of seasonTables) {
+        const { data: tData, error: tError } = await supabaseAdmin
+          .from(table)
+          .select('*')
+          .eq('user_id', userId)
+          .limit(10000);
+
+        if (!tError && tData) {
+          exportData.app_data.season_data[table] = tData;
+        }
+      }
+    } catch (seasonErr) {
+      console.error('[export-data] Season data fetch error:', seasonErr);
+      exportData.app_data.season_data_error = 'Could not fetch season data';
     }
 
     // 3) Fetch Stripe subscription data (if customer exists)
