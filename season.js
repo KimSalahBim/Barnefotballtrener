@@ -34,6 +34,11 @@
   function $(id) { return document.getElementById(id); }
   function notify(msg, type) { if (window.showNotification) window.showNotification(msg, type || 'info'); }
 
+  // NFF standard kampvarighet per format
+  function defaultMatchMinutes(format) {
+    return { 3: 20, 5: 40, 7: 60, 9: 70, 11: 80 }[format] || 60;
+  }
+
   function escapeHtml(str) {
     return String(str == null ? '' : str)
       .replace(/&/g, '&amp;')
@@ -491,7 +496,7 @@
         type: data.type,
         title: (data.title || '').trim() || null,
         start_time: data.start_time,
-        duration_minutes: parseInt(data.duration_minutes) || 90,
+        duration_minutes: parseInt(data.duration_minutes) || defaultMatchMinutes(currentSeason ? currentSeason.format : 7),
         location: (data.location || '').trim() || null,
         opponent: (data.opponent || '').trim() || null,
         is_home: (data.type === 'match' || data.type === 'cup_match') ? (data.is_home !== false) : null,
@@ -2543,7 +2548,7 @@
             '</div>' +
             '<div class="form-group">' +
               '<label for="snDuration">Varighet (min)</label>' +
-              '<input type="number" id="snDuration" min="10" max="180" value="' + (ev.duration_minutes || 90) + '">' +
+              '<input type="number" id="snDuration" min="10" max="180" value="' + (ev.duration_minutes || defaultMatchMinutes(currentSeason ? currentSeason.format : 7)) + '">' +
             '</div>' +
           '</div>' +
           '<div class="form-group">' +
@@ -2567,6 +2572,13 @@
     $('snEventType').addEventListener('change', function() {
       var isM = (this.value === 'match' || this.value === 'cup_match');
       $('snMatchFields').style.display = isM ? '' : 'none';
+      // Auto-set duration based on type (only for new events)
+      if (!isEdit) {
+        var durEl = $('snDuration');
+        if (durEl) {
+          durEl.value = isM ? defaultMatchMinutes(currentSeason ? currentSeason.format : 7) : 90;
+        }
+      }
     });
 
     // Home/away toggle
@@ -2612,7 +2624,7 @@
         type: typeVal,
         title: $('snTitle').value || null,
         start_time: new Date(dateVal + 'T' + timeVal).toISOString(),
-        duration_minutes: parseInt($('snDuration').value) || 90,
+        duration_minutes: parseInt($('snDuration').value) || defaultMatchMinutes(currentSeason ? currentSeason.format : 7),
         location: $('snLocation').value || null,
         opponent: isMatchNow ? ($('snOpponent').value || null) : null,
         is_home: isMatchNow ? isHomeVal : null,
@@ -2683,7 +2695,7 @@
     html += detailRow('Type', typeLabel(ev.type));
     html += detailRow('Dato', formatDateLong(ev.start_time));
     html += detailRow('Klokkeslett', formatTime(ev.start_time));
-    html += detailRow('Varighet', (ev.duration_minutes || 90) + ' min');
+    html += detailRow('Varighet', (ev.duration_minutes || defaultMatchMinutes(ev.format || (currentSeason ? currentSeason.format : 7))) + ' min');
 
     if (isMatch && ev.opponent) html += detailRow('Motstander', ev.opponent);
     if (isMatch) html += detailRow('Hjemme/Borte', ev.is_home ? 'Hjemme' : 'Borte');
@@ -3214,7 +3226,7 @@
     }
     var ev = embeddedKampdagEvent;
     var fmt = ev.format || (currentSeason ? currentSeason.format : 7);
-    var mins = ev.duration_minutes || 60;
+    var mins = ev.duration_minutes || defaultMatchMinutes(fmt);
 
     root.innerHTML = '<div id="snKampdagContainer"></div>';
     var container = document.getElementById('snKampdagContainer');
@@ -3312,7 +3324,7 @@
 
     window.kampdagPrefill({
       format: ev.format || (currentSeason ? currentSeason.format : 7),
-      minutes: ev.duration_minutes || 90,
+      minutes: ev.duration_minutes || defaultMatchMinutes(ev.format || (currentSeason ? currentSeason.format : 7)),
       playerIds: playerIds
     });
 
@@ -3342,7 +3354,7 @@
 
     window.kampdagPrefill({
       format: ev.format || (currentSeason ? currentSeason.format : 7),
-      minutes: ev.duration_minutes || 90,
+      minutes: ev.duration_minutes || defaultMatchMinutes(ev.format || (currentSeason ? currentSeason.format : 7)),
       playerIds: troppPlayers.map(function(p) { return p.id; })
     });
 
