@@ -304,6 +304,15 @@
       '.sn-goal-add-btn { padding:8px 12px; border:none; background:var(--primary, #2563eb); color:#fff; border-radius:var(--radius-sm); cursor:pointer; font-size:13px; font-weight:600; white-space:nowrap; }',
       '.sn-completed-badge { display:inline-block; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:600; background:rgba(34,197,94,0.12); color:#16a34a; margin-left:8px; }',
 
+      // Spilletid (plan_confirmed)
+      '.sn-playtime-list { padding:0; }',
+      '.sn-playtime-row { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); font-size:13px; }',
+      '.sn-playtime-row:last-child { border-bottom:none; }',
+      '.sn-playtime-name { font-weight:500; }',
+      '.sn-playtime-min { font-variant-numeric:tabular-nums; font-weight:700; color:var(--text-600); }',
+      '.sn-confirmed-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:600; background:rgba(34,197,94,0.12); color:#16a34a; margin-left:8px; }',
+      '.sn-unconfirm-link { font-size:12px; color:var(--text-400); cursor:pointer; text-decoration:underline; margin-top:8px; text-align:center; }',
+
       // Import checkboxes
       '.sn-import-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); cursor:pointer; }',
       '.sn-import-item:hover { background:var(--bg-hover, #f8fafc); }',
@@ -2823,6 +2832,61 @@
         '</div>';
     }
 
+    // --- SPILLETID SECTION (only for matches with saved bytteplan) ---
+    if (isMatch && ev.plan_json) {
+      var isConfirmed = !!ev.plan_confirmed;
+
+      // Build minutes map from eventAttendance
+      var minutesRows = [];
+      for (var mi = 0; mi < eventAttendance.length; mi++) {
+        var mrow = eventAttendance[mi];
+        if (mrow.in_squad && mrow.minutes_played != null && mrow.minutes_played > 0) {
+          // Resolve name from seasonPlayers
+          var mname = mrow.player_name || '';
+          if (!mname) {
+            for (var sp2 = 0; sp2 < seasonPlayers.length; sp2++) {
+              if (seasonPlayers[sp2].player_id === mrow.player_id) { mname = seasonPlayers[sp2].name; break; }
+            }
+          }
+          minutesRows.push({ name: mname || 'Ukjent', minutes: mrow.minutes_played });
+        }
+      }
+      minutesRows.sort(function(a, b) { return b.minutes - a.minutes; });
+
+      if (minutesRows.length > 0) {
+        var totalMins = minutesRows.reduce(function(s, r) { return s + r.minutes; }, 0);
+        var avgMins = Math.round(totalMins / minutesRows.length);
+
+        html +=
+          '<div class="sn-section">Spilletid' +
+            (isConfirmed ? ' <span class="sn-confirmed-badge"><i class="fas fa-check-circle"></i>Bekreftet</span>' : '') +
+          '</div>' +
+          '<div class="settings-card" style="padding:0;">' +
+            '<div class="sn-playtime-list">';
+
+        for (var mr = 0; mr < minutesRows.length; mr++) {
+          html += '<div class="sn-playtime-row"><span class="sn-playtime-name">' + escapeHtml(minutesRows[mr].name) + '</span><span class="sn-playtime-min">' + minutesRows[mr].minutes + ' min</span></div>';
+        }
+
+        html +=
+            '</div>' +
+            '<div style="padding:8px 14px; border-top:1px solid var(--border-light, #f1f5f9); font-size:12px; color:var(--text-400); display:flex; justify-content:space-between;">' +
+              '<span>' + minutesRows.length + ' spillere</span>' +
+              '<span>Snitt: ' + avgMins + ' min</span>' +
+            '</div>' +
+          '</div>';
+
+        if (isConfirmed) {
+          html += '<div class="sn-unconfirm-link" id="snUnconfirmPlan">Angre bekreftelse</div>';
+        } else {
+          html +=
+            '<button class="btn-primary" id="snConfirmPlan" style="width:100%; margin-top:10px; background:#16a34a;">' +
+              '<i class="fas fa-check-circle" style="margin-right:5px;"></i>Bekreft spilletid' +
+            '</button>';
+        }
+      }
+    }
+
     // --- MATCH RESULT SECTION ---
     if (isMatch) {
       var isCompleted = (ev.status === 'completed');
@@ -3010,6 +3074,50 @@
         btn.innerHTML = '<i class="fas fa-trash" style="margin-right:5px;"></i>Slett';
       }
     });
+
+    // --- PLAN CONFIRMED TOGGLE ---
+    var confirmBtn = $('snConfirmPlan');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', async function() {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Bekrefter\u2026';
+        var sb = getSb();
+        var uid = getUserId();
+        if (sb && uid) {
+          var res = await sb.from('events')
+            .update({ plan_confirmed: true })
+            .eq('id', ev.id)
+            .eq('user_id', uid);
+          if (!res.error) {
+            ev.plan_confirmed = true;
+            if (editingEvent && editingEvent.id === ev.id) editingEvent.plan_confirmed = true;
+            render();
+            return;
+          }
+        }
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-check-circle" style="margin-right:5px;"></i>Bekreft spilletid';
+      });
+    }
+
+    var unconfirmLink = $('snUnconfirmPlan');
+    if (unconfirmLink) {
+      unconfirmLink.addEventListener('click', async function() {
+        var sb = getSb();
+        var uid = getUserId();
+        if (sb && uid) {
+          var res = await sb.from('events')
+            .update({ plan_confirmed: false })
+            .eq('id', ev.id)
+            .eq('user_id', uid);
+          if (!res.error) {
+            ev.plan_confirmed = false;
+            if (editingEvent && editingEvent.id === ev.id) editingEvent.plan_confirmed = false;
+            render();
+          }
+        }
+      });
+    }
 
     // --- ATTENDANCE INTERACTION ---
     var attItems = root.querySelectorAll('.sn-att-item');
@@ -3263,14 +3371,18 @@
     try {
       // 1. Save plan_json to event
       var evRes = await sb.from('events')
-        .update({ plan_json: planJson })
+        .update({ plan_json: planJson, plan_confirmed: false })
         .eq('id', ev.id)
         .eq('user_id', uid);
       if (evRes.error) throw evRes.error;
 
       // Update local event object so event-detail reflects the saved plan
       ev.plan_json = planJson;
-      if (editingEvent && editingEvent.id === ev.id) editingEvent.plan_json = planJson;
+      ev.plan_confirmed = false;
+      if (editingEvent && editingEvent.id === ev.id) {
+        editingEvent.plan_json = planJson;
+        editingEvent.plan_confirmed = false;
+      }
 
       // 2. Batch upsert minutes_played per player to event_players
       var playerIds = Object.keys(minutesMap);
@@ -3302,6 +3414,9 @@
       // Invalidate stats cache so stats tab shows updated data
       seasonStats = [];
       seasonGoals = [];
+
+      // Reload attendance to get fresh minutes_played data
+      await loadEventAttendance(ev.id);
 
       snView = 'event-detail';
       render();
