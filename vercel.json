@@ -102,6 +102,10 @@
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
     {
+      "source": "/sesong-kampdag.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
       "source": "/workout.js",
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
