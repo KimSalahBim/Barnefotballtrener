@@ -2925,7 +2925,7 @@
 
         html +=
           '<div style="padding:10px 14px;">' +
-            '<button class="btn-secondary" id="snReopenMatch" style="width:100%; font-size:13px;"><i class="fas fa-pen" style="margin-right:5px;"></i>Endre resultat</button>' +
+            '<button class="btn-secondary" id="snReopenMatch" style="width:100%; font-size:13px;"><i class="fas fa-lock-open" style="margin-right:5px;"></i>Gjen\u00e5pne kamp</button>' +
           '</div></div>';
 
       } else {
@@ -3004,11 +3004,21 @@
             '</div>';
         }
 
+        var canComplete = !!(ev.plan_confirmed);
+
         html +=
           '<div style="padding:10px 14px;">' +
-            '<button class="btn-primary" id="snCompleteMatch" style="width:100%;">' +
-              '<i class="fas fa-check" style="margin-right:5px;"></i>Fullf\u00f8r kamp' +
-            '</button>' +
+            (canComplete
+              ? '<button class="btn-primary" id="snCompleteMatch" style="width:100%;">' +
+                  '<i class="fas fa-check" style="margin-right:5px;"></i>Fullf\u00f8r kamp' +
+                '</button>'
+              : '<button class="btn-primary" disabled style="width:100%; opacity:0.5; cursor:not-allowed;">' +
+                  '<i class="fas fa-lock" style="margin-right:5px;"></i>Fullf\u00f8r kamp' +
+                '</button>' +
+                '<div style="text-align:center; font-size:12px; color:var(--text-400); margin-top:6px;">' +
+                  (ev.plan_json ? 'Bekreft spilletid f\u00f8rst' : 'Generer og bekreft bytteplan f\u00f8rst') +
+                '</div>'
+            ) +
           '</div></div>';
       }
     }
@@ -3284,14 +3294,33 @@
     // Reopen match for editing
     var reopenBtn = $('snReopenMatch');
     if (reopenBtn) reopenBtn.addEventListener('click', async function() {
-      var ok = await saveMatchResult(ev.id, ev.result_home, ev.result_away, 'planned');
-      if (ok) {
-        ev.status = 'planned';
-        editingEvent = ev;
-        await loadEvents(currentSeason.id);
-        editingEvent = events.find(function(e) { return e.id === ev.id; }) || editingEvent;
-        render();
+      if (!confirm('Gjenåpne kampen? Du kan endre resultat, spilletid og bytteplan.')) return;
+      reopenBtn.disabled = true;
+      reopenBtn.textContent = 'Gjenåpner\u2026';
+
+      var sb = getSb();
+      var uid = getUserId();
+      if (sb && uid) {
+        // Reset status and plan_confirmed so coach can redo everything
+        var res = await sb.from('events')
+          .update({ status: 'planned', plan_confirmed: false })
+          .eq('id', ev.id)
+          .eq('user_id', uid);
+        if (!res.error) {
+          ev.status = 'planned';
+          ev.plan_confirmed = false;
+          if (editingEvent && editingEvent.id === ev.id) {
+            editingEvent.status = 'planned';
+            editingEvent.plan_confirmed = false;
+          }
+          await loadEvents(currentSeason.id);
+          editingEvent = events.find(function(e) { return e.id === ev.id; }) || editingEvent;
+          render();
+          return;
+        }
       }
+      reopenBtn.disabled = false;
+      reopenBtn.innerHTML = '<i class="fas fa-lock-open" style="margin-right:5px;"></i>Gjen\u00e5pne kamp';
     });
   }
 
