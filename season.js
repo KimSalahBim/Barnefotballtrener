@@ -857,19 +857,12 @@
       var playerIds = Object.keys(attendanceMap);
       for (var i = 0; i < playerIds.length; i++) {
         var pid = playerIds[i];
-        // Resolve name from seasonPlayers
-        var pName = '';
-        for (var sp = 0; sp < seasonPlayers.length; sp++) {
-          if (seasonPlayers[sp].player_id === pid) { pName = seasonPlayers[sp].name; break; }
-        }
         var row = {
           event_id: eventId,
           season_id: seasonId,
           user_id: uid,
           player_id: pid,
-          player_name: pName || null,
-          attended: attendanceMap[pid],
-          absence_reason: null
+          attended: attendanceMap[pid]
         };
         if (squadList) {
           row.in_squad = !!squadSet[pid];
@@ -3626,13 +3619,6 @@
       // 2. Batch upsert minutes_played per player to event_players
       var playerIds = Object.keys(minutesMap);
       if (playerIds.length > 0) {
-        // Build name lookup from tropp
-        var troppNameMap = {};
-        if (embeddedKampdagTropp) {
-          for (var tn = 0; tn < embeddedKampdagTropp.length; tn++) {
-            troppNameMap[embeddedKampdagTropp[tn].id] = embeddedKampdagTropp[tn].name;
-          }
-        }
         var rows = [];
         for (var i = 0; i < playerIds.length; i++) {
           rows.push({
@@ -3640,7 +3626,6 @@
             season_id: ev.season_id,
             user_id: uid,
             player_id: playerIds[i],
-            player_name: troppNameMap[playerIds[i]] || null,
             minutes_played: minutesMap[playerIds[i]],
             in_squad: true,
             attended: true
