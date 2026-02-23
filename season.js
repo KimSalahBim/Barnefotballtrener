@@ -462,13 +462,46 @@
     if (!sb || !uid) return false;
 
     try {
+      // Defensiv sletting: barn først, selv om CASCADE håndterer det.
+      // Sikrer at sletting fungerer uavhengig av DB-constraint-endringer.
+
+      // 1. Hent event-IDer (match_events mangler season_id)
+      var evRes = await sb.from('events').select('id').eq('season_id', id).eq('user_id', uid);
+      var eventIds = (evRes.data || []).map(function(e) { return e.id; });
+
+      // 2. match_events (dypest barn, FK → events)
+      if (eventIds.length > 0) {
+        var r1 = await sb.from('match_events').delete().in('event_id', eventIds).eq('user_id', uid);
+        if (r1.error) console.warn('[season.js] match_events cleanup:', r1.error.message);
+      }
+
+      // 3. event_players (FK → events + seasons)
+      var r2 = await sb.from('event_players').delete().eq('season_id', id).eq('user_id', uid);
+      if (r2.error) console.warn('[season.js] event_players cleanup:', r2.error.message);
+
+      // 4. training_series (FK → seasons)
+      var r3 = await sb.from('training_series').delete().eq('season_id', id).eq('user_id', uid);
+      if (r3.error) console.warn('[season.js] training_series cleanup:', r3.error.message);
+
+      // 5. season_players (FK → seasons)
+      var r4 = await sb.from('season_players').delete().eq('season_id', id).eq('user_id', uid);
+      if (r4.error) console.warn('[season.js] season_players cleanup:', r4.error.message);
+
+      // 6. events (FK → seasons)
+      if (eventIds.length > 0) {
+        var r5 = await sb.from('events').delete().eq('season_id', id).eq('user_id', uid);
+        if (r5.error) console.warn('[season.js] events cleanup:', r5.error.message);
+      }
+
+      // 7. Sesongen selv
       var res = await sb.from('seasons').delete().eq('id', id).eq('user_id', uid);
       if (res.error) throw res.error;
+
       notify('Sesong slettet.', 'success');
       return true;
     } catch (e) {
       console.error('[season.js] deleteSeason error:', e);
-      notify('Feil ved sletting.', 'error');
+      notify('Feil ved sletting av sesong.', 'error');
       return false;
     }
   }
