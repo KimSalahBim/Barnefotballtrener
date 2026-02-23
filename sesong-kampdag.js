@@ -990,14 +990,15 @@
       const srcSel = kdDragState.slotKey
         ? `.kd-pos-bubble[data-seg="${kdDragState.segIdx}"][data-slot="${kdDragState.slotKey}"]`
         : `.kd-bench-bubble[data-seg="${kdDragState.segIdx}"][data-pid="${kdDragState.playerId}"]`;
-      const srcEl = document.querySelector(srcSel);
+      const srcRoot = _skdContainer || document;
+      const srcEl = srcRoot.querySelector(srcSel);
       if (srcEl) srcEl.classList.add('kd-dragging');
     }
     if (kdDragState.ghostEl) {
       kdDragState.ghostEl.style.left = clientX + 'px';
       kdDragState.ghostEl.style.top = clientY + 'px';
     }
-    document.querySelectorAll('.kd-pos-slot.kd-drop-target').forEach(el => el.classList.remove('kd-drop-target'));
+    (_skdContainer || document).querySelectorAll('.kd-pos-slot.kd-drop-target').forEach(el => el.classList.remove('kd-drop-target'));
     const tgt = findSlotDropTarget(clientX, clientY);
     if (tgt) tgt.classList.add('kd-drop-target');
     return kdDragState.isDragging;
@@ -1046,7 +1047,7 @@
     // This avoids transform: translate(-50%, -50%) offset issues on mobile
     let best = null;
     let bestDist = 60; // max pixel distance to count as hit
-    const allSlotEls = document.querySelectorAll(`.kd-pos-slot[data-seg="${kdDragState.segIdx}"]`);
+    const allSlotEls = (_skdContainer || document).querySelectorAll(`.kd-pos-slot[data-seg="${kdDragState.segIdx}"]`);
     for (const el of allSlotEls) {
       const sk = el.dataset.slotkey;
       const s = slots.find(s => s.key === sk);
@@ -1059,7 +1060,7 @@
       if (dist < bestDist) { bestDist = dist; best = el; }
     }
     // Also check bench bubbles
-    const allBench = document.querySelectorAll(`.kd-bench-bubble[data-seg="${kdDragState.segIdx}"]`);
+    const allBench = (_skdContainer || document).querySelectorAll(`.kd-bench-bubble[data-seg="${kdDragState.segIdx}"]`);
     for (const el of allBench) {
       if (el.dataset.pid === kdDragState.playerId) continue;
       const rect = el.getBoundingClientRect();
@@ -1074,7 +1075,7 @@
   function cleanupDragState() {
     if (kdDragState) {
       if (kdDragState.ghostEl) kdDragState.ghostEl.remove();
-      document.querySelectorAll('.kd-dragging,.kd-drop-target').forEach(el => {
+      (_skdContainer || document).querySelectorAll('.kd-dragging,.kd-drop-target').forEach(el => {
         el.classList.remove('kd-dragging');
         el.classList.remove('kd-drop-target');
       });
