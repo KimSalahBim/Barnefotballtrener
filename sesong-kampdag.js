@@ -884,32 +884,36 @@
     renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
   }
 
-  function copySlotToNext(si) {
+  function copySlotToAll(si) {
     if (!lastBest || si >= lastBest.segments.length - 1 || !kdSlotOverrides[si]) return;
     const slots = getActiveSlots();
     if (!slots) return;
     const src = kdSlotOverrides[si];
-    const nextLineup = new Set(lastBest.segments[si + 1].lineup);
-    ensureSlotOverride(si + 1);
-    const tgt = kdSlotOverrides[si + 1];
-    // Copy field positions where player is still in next lineup
-    for (const [sk, pid] of Object.entries(src.slots)) {
-      const slot = slots.find(s => s.key === sk);
-      if (!slot || slot.zone === 'K') continue;
-      if (nextLineup.has(pid)) {
-        // Clear player from any other slot first
-        for (const [tk, tv] of Object.entries(tgt.slots)) { if (tv === pid && tk !== sk) tgt.slots[tk] = null; }
-        tgt.slots[sk] = pid;
+
+    // Iterate through ALL subsequent segments, propagating slot overrides
+    for (let ti = si + 1; ti < lastBest.segments.length; ti++) {
+      const targetLineup = new Set(lastBest.segments[ti].lineup);
+      ensureSlotOverride(ti);
+      const tgt = kdSlotOverrides[ti];
+      // Copy field positions where player is still in target lineup
+      for (const [sk, pid] of Object.entries(src.slots)) {
+        const slot = slots.find(s => s.key === sk);
+        if (!slot || slot.zone === 'K') continue;
+        if (targetLineup.has(pid)) {
+          // Clear player from any other slot first
+          for (const [tk, tv] of Object.entries(tgt.slots)) { if (tv === pid && tk !== sk) tgt.slots[tk] = null; }
+          tgt.slots[sk] = pid;
+        }
       }
-    }
-    // Fill empty slots with unplaced players
-    for (const [sk, sv] of Object.entries(tgt.slots)) {
-      if (!sv || !nextLineup.has(sv)) {
-        const unused = [...nextLineup].filter(p => !Object.values(tgt.slots).includes(p) && p !== lastBest.segments[si + 1].keeperId);
-        if (unused.length) tgt.slots[sk] = unused[0];
+      // Fill empty slots with unplaced players
+      for (const [sk, sv] of Object.entries(tgt.slots)) {
+        if (!sv || !targetLineup.has(sv)) {
+          const unused = [...targetLineup].filter(p => !Object.values(tgt.slots).includes(p) && p !== lastBest.segments[ti].keeperId);
+          if (unused.length) tgt.slots[sk] = unused[0];
+        }
       }
+      tgt.bench = lastPresent.filter(p => !lastBest.segments[ti].lineup.includes(p.id)).map(p => p.id);
     }
-    tgt.bench = lastPresent.filter(p => !lastBest.segments[si + 1].lineup.includes(p.id)).map(p => p.id);
     renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
   }
 
@@ -990,15 +994,14 @@
       const srcSel = kdDragState.slotKey
         ? `.kd-pos-bubble[data-seg="${kdDragState.segIdx}"][data-slot="${kdDragState.slotKey}"]`
         : `.kd-bench-bubble[data-seg="${kdDragState.segIdx}"][data-pid="${kdDragState.playerId}"]`;
-      const srcRoot = _skdContainer || document;
-      const srcEl = srcRoot.querySelector(srcSel);
+      const srcEl = document.querySelector(srcSel);
       if (srcEl) srcEl.classList.add('kd-dragging');
     }
     if (kdDragState.ghostEl) {
       kdDragState.ghostEl.style.left = clientX + 'px';
       kdDragState.ghostEl.style.top = clientY + 'px';
     }
-    (_skdContainer || document).querySelectorAll('.kd-pos-slot.kd-drop-target').forEach(el => el.classList.remove('kd-drop-target'));
+    document.querySelectorAll('.kd-pos-slot.kd-drop-target').forEach(el => el.classList.remove('kd-drop-target'));
     const tgt = findSlotDropTarget(clientX, clientY);
     if (tgt) tgt.classList.add('kd-drop-target');
     return kdDragState.isDragging;
@@ -1047,7 +1050,7 @@
     // This avoids transform: translate(-50%, -50%) offset issues on mobile
     let best = null;
     let bestDist = 60; // max pixel distance to count as hit
-    const allSlotEls = (_skdContainer || document).querySelectorAll(`.kd-pos-slot[data-seg="${kdDragState.segIdx}"]`);
+    const allSlotEls = document.querySelectorAll(`.kd-pos-slot[data-seg="${kdDragState.segIdx}"]`);
     for (const el of allSlotEls) {
       const sk = el.dataset.slotkey;
       const s = slots.find(s => s.key === sk);
@@ -1060,7 +1063,7 @@
       if (dist < bestDist) { bestDist = dist; best = el; }
     }
     // Also check bench bubbles
-    const allBench = (_skdContainer || document).querySelectorAll(`.kd-bench-bubble[data-seg="${kdDragState.segIdx}"]`);
+    const allBench = document.querySelectorAll(`.kd-bench-bubble[data-seg="${kdDragState.segIdx}"]`);
     for (const el of allBench) {
       if (el.dataset.pid === kdDragState.playerId) continue;
       const rect = el.getBoundingClientRect();
@@ -1075,7 +1078,7 @@
   function cleanupDragState() {
     if (kdDragState) {
       if (kdDragState.ghostEl) kdDragState.ghostEl.remove();
-      (_skdContainer || document).querySelectorAll('.kd-dragging,.kd-drop-target').forEach(el => {
+      document.querySelectorAll('.kd-dragging,.kd-drop-target').forEach(el => {
         el.classList.remove('kd-dragging');
         el.classList.remove('kd-drop-target');
       });
@@ -2256,7 +2259,7 @@
         b.addEventListener('click', (e) => { e.stopPropagation(); resetSlotOverride(parseInt(b.dataset.seg)); });
       });
       document.querySelectorAll('[data-action="skdcopy"]').forEach(b => {
-        b.addEventListener('click', (e) => { e.stopPropagation(); copySlotToNext(parseInt(b.dataset.seg)); });
+        b.addEventListener('click', (e) => { e.stopPropagation(); copySlotToAll(parseInt(b.dataset.seg)); });
       });
 
     } else {
@@ -3073,7 +3076,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 
       // Save button
       var saveBtn = $('skdSavePlan');
-      if (saveBtn) saveBtn.addEventListener('click', function() {
+      if (saveBtn) saveBtn.addEventListener('click', async function() {
         if (saveBtn.disabled || !lastBest || !_skdCallbacks.onSave) return;
         saveBtn.disabled = true;
         saveBtn.textContent = 'Lagrer...';
@@ -3081,11 +3084,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
         var effMins = useSlots ? getEffectiveMinutes() : lastBest.minutes;
         var minutesMap = {};
         for (var pid in effMins) { minutesMap[pid] = Math.round(effMins[pid]); }
-        _skdCallbacks.onSave({
-          segments: lastBest.segments, times: lastBest.times,
-          minutes: lastBest.minutes, swaps: lastBest.swaps || [],
-          format: lastP, totalMinutes: lastT, playerCount: lastPresent.length
-        }, minutesMap);
+        try {
+          await _skdCallbacks.onSave({
+            segments: lastBest.segments, times: lastBest.times,
+            minutes: lastBest.minutes, swaps: lastBest.swaps || [],
+            format: lastP, totalMinutes: lastT, playerCount: lastPresent.length
+          }, minutesMap);
+        } catch (saveErr) {
+          console.error('[sesong-kampdag] onSave error:', saveErr);
+          // Re-enable button if still in DOM (not destroyed by callback)
+          var retryBtn = $('skdSavePlan');
+          if (retryBtn) {
+            retryBtn.disabled = false;
+            retryBtn.innerHTML = '<i class="fas fa-save" style="margin-right:4px;"></i>Lagre spilletid til sesong';
+          }
+        }
       });
 
       // Show save button after generate
@@ -3113,6 +3126,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
       lastBest = null; lastPresent = []; lastPlanText = '';
       kdSlotOverrides = {};
       kdFormationOn = true; kdFormation = null; kdFormationKey = '';
+      kdTimerEvents = null; kdTimerIdToName = {}; kdTimerVibrated = new Set();
       console.log('[sesong-kampdag] destroyed');
     },
 

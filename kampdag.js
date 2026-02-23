@@ -3012,5 +3012,4 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     console.log('[Kampdag] Prefilled from sesong:', opts);
     return true;
   };
-
 })();

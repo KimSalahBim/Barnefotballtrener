@@ -16,7 +16,7 @@
   var events = [];
   var seasonPlayers = [];
   var dashTab = 'calendar'; // 'calendar' | 'roster' | 'stats'
-  var snView = 'list'; // 'list' | 'create-season' | 'dashboard' | 'create-event' | 'edit-event' | 'event-detail' | 'roster-import'
+  var snView = 'list'; // 'list' | 'create-season' | 'edit-season' | 'dashboard' | 'create-event' | 'edit-event' | 'event-detail' | 'roster-import'
   var editingEvent = null; // event object when editing
   var editingSeasonPlayer = null; // season player object when editing
   var embeddedKampdagEvent = null; // event for embedded kampdag
@@ -165,7 +165,6 @@
       '.sn-season-card:active { transform:translateY(0); }',
       '.sn-card-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }',
       '.sn-card-name { font-size:17px; font-weight:700; color:var(--text-800); }',
-      '.sn-badge { display:inline-block; background:var(--primary-dim); color:var(--primary); font-size:12px; font-weight:700; padding:3px 10px; border-radius:var(--radius-full); }',
       '.sn-card-meta { font-size:13px; color:var(--text-500); }',
 
       // Dashboard
@@ -235,6 +234,7 @@
       '.sn-roster-name { flex:1; font-size:15px; font-weight:600; color:var(--text-800); }',
       '.sn-roster-badges { display:flex; gap:4px; align-items:center; }',
       '.sn-badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; line-height:1.4; }',
+      '.sn-badge-format { background:var(--primary-dim); color:var(--primary); padding:3px 10px; border-radius:var(--radius-full); font-size:12px; }',
       '.sn-badge-keeper { background:rgba(234,179,8,0.15); color:#a16207; }',
       '.sn-badge-pos { background:rgba(59,130,246,0.1); color:#2563eb; }',
       '.sn-badge-skill { background:rgba(34,197,94,0.1); color:#16a34a; }',
@@ -363,6 +363,8 @@
         _snInitialized = true;
         loadSeasons();
       } else {
+        // Skip re-render during team switch when players are briefly empty
+        if ((window.players || []).length === 0) return;
         var el = $('sesong');
         if (el && el.classList.contains('active')) render();
       }
@@ -379,6 +381,15 @@
     currentSeason = null;
     seasons = [];
     events = [];
+    seasonPlayers = [];
+    seasonStats = [];
+    seasonGoals = [];
+    eventAttendance = [];
+    matchGoals = [];
+    registeredEventIds = {};
+    editingEvent = null;
+    editingSeasonPlayer = null;
+    dashTab = 'calendar';
     snView = 'list';
     _snInitialized = false;
     // players:updated follows immediately after team:changed
@@ -452,6 +463,28 @@
     } catch (e) {
       console.error('[season.js] createSeason error:', e);
       notify('Feil ved oppretting av sesong.', 'error');
+      return null;
+    }
+  }
+
+  async function updateSeason(id, fields) {
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid) { notify('Kunne ikke koble til databasen.', 'error'); return null; }
+
+    try {
+      var res = await sb.from('seasons')
+        .update(fields)
+        .eq('id', id)
+        .eq('user_id', uid)
+        .select()
+        .single();
+      if (res.error) throw res.error;
+      notify('Sesong oppdatert.', 'success');
+      return res.data;
+    } catch (e) {
+      console.error('[season.js] updateSeason error:', e);
+      notify('Feil ved oppdatering.', 'error');
       return null;
     }
   }
@@ -824,12 +857,19 @@
       var playerIds = Object.keys(attendanceMap);
       for (var i = 0; i < playerIds.length; i++) {
         var pid = playerIds[i];
+        // Resolve name from seasonPlayers
+        var pName = '';
+        for (var sp = 0; sp < seasonPlayers.length; sp++) {
+          if (seasonPlayers[sp].player_id === pid) { pName = seasonPlayers[sp].name; break; }
+        }
         var row = {
           event_id: eventId,
           season_id: seasonId,
           user_id: uid,
           player_id: pid,
-          attended: attendanceMap[pid]
+          player_name: pName || null,
+          attended: attendanceMap[pid],
+          absence_reason: null
         };
         if (squadList) {
           row.in_squad = !!squadSet[pid];
@@ -867,7 +907,8 @@
       var res = await sb.from('event_players')
         .select('event_id')
         .eq('season_id', seasonId)
-        .eq('user_id', uid);
+        .eq('user_id', uid)
+        .limit(5000);
       if (res.error) throw res.error;
       var rows = res.data || [];
       for (var i = 0; i < rows.length; i++) {
@@ -981,7 +1022,8 @@
       var res = await sb.from('event_players')
         .select('*')
         .eq('season_id', seasonId)
-        .eq('user_id', uid);
+        .eq('user_id', uid)
+        .limit(5000);
       if (res.error) throw res.error;
       seasonStats = res.data || [];
     } catch (e) {
@@ -1009,7 +1051,8 @@
       var res = await sb.from('match_events')
         .select('*')
         .in('event_id', eventIds)
-        .eq('user_id', uid);
+        .eq('user_id', uid)
+        .limit(5000);
       if (res.error) throw res.error;
       seasonGoals = res.data || [];
     } catch (e) {
@@ -1035,7 +1078,7 @@
 
     // Completed matches with results
     var completedMatches = matchEvts.filter(function(e) {
-      return e.status === 'completed' && e.result_home !== null && e.result_home !== undefined;
+      return e.status === 'completed' && e.result_home !== null && e.result_home !== undefined && e.result_away !== null && e.result_away !== undefined;
     });
     var wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0;
     for (var cm = 0; cm < completedMatches.length; cm++) {
@@ -1076,6 +1119,7 @@
       if (row.attended !== true) continue;
 
       var evType = eventTypeMap[row.event_id];
+      if (!evType) continue; // Skip orphan rows for deleted events
       if (evType === 'match' || evType === 'cup_match') {
         playerMap[row.player_id].matchesAttended++;
       } else if (evType === 'training') {
@@ -1157,6 +1201,7 @@
     switch (snView) {
       case 'list':           renderSeasonList(root);   break;
       case 'create-season':  renderCreateSeason(root); break;
+      case 'edit-season':    renderEditSeason(root);   break;
       case 'dashboard':      renderDashboard(root);    break;
       case 'create-event':   renderCreateEvent(root);  break;
       case 'edit-event':     renderEditEvent(root);    break;
@@ -1203,7 +1248,7 @@
         '<div class="sn-season-card" data-sid="' + s.id + '">' +
           '<div class="sn-card-top">' +
             '<span class="sn-card-name">' + escapeHtml(s.name) + '</span>' +
-            '<span class="sn-badge">' + formatLabel(s.format) + '</span>' +
+            '<span class="sn-badge sn-badge-format">' + formatLabel(s.format) + '</span>' +
           '</div>' +
           '<div class="sn-card-meta">' + escapeHtml(meta.join(' \u00B7 ')) + '</div>' +
         '</div>';
@@ -1306,6 +1351,90 @@
   }
 
   // =========================================================================
+  //  VIEW: EDIT SEASON
+  // =========================================================================
+
+  function renderEditSeason(root) {
+    if (!currentSeason) { goToList(); return; }
+    var s = currentSeason;
+
+    root.innerHTML =
+      '<div class="settings-card">' +
+        '<div class="sn-dash-header">' +
+          '<button class="sn-back" id="snBackFromEditSeason">\u2190</button>' +
+          '<span class="sn-dash-title">Rediger sesong</span>' +
+        '</div>' +
+        '<div class="sn-form">' +
+          '<div class="form-group">' +
+            '<label for="snEditSeasonName">Navn</label>' +
+            '<input type="text" id="snEditSeasonName" placeholder="F.eks. V\u00e5r 2026" maxlength="60" autocomplete="off" value="' + escapeHtml(s.name) + '">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="snEditSeasonFormat">Kampformat</label>' +
+            '<select id="snEditSeasonFormat">' +
+              '<option value="3"' + (s.format === 3 ? ' selected' : '') + '>3er</option>' +
+              '<option value="5"' + (s.format === 5 ? ' selected' : '') + '>5er</option>' +
+              '<option value="7"' + (s.format === 7 ? ' selected' : '') + '>7er</option>' +
+              '<option value="9"' + (s.format === 9 ? ' selected' : '') + '>9er</option>' +
+              '<option value="11"' + (s.format === 11 ? ' selected' : '') + '>11er</option>' +
+            '</select>' +
+          '</div>' +
+          '<div class="sn-form-row">' +
+            '<div class="form-group">' +
+              '<label for="snEditStartDate">Startdato</label>' +
+              '<input type="date" id="snEditStartDate" value="' + (s.start_date || '') + '">' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label for="snEditEndDate">Sluttdato</label>' +
+              '<input type="date" id="snEditEndDate" value="' + (s.end_date || '') + '">' +
+            '</div>' +
+          '</div>' +
+          '<div class="sn-form-buttons">' +
+            '<button class="btn-secondary" id="snCancelEditSeason">Avbryt</button>' +
+            '<button class="btn-primary" id="snSaveEditSeason">Lagre</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    $('snBackFromEditSeason').addEventListener('click', goToDashboard);
+    $('snCancelEditSeason').addEventListener('click', goToDashboard);
+
+    $('snSaveEditSeason').addEventListener('click', async function() {
+      var name = ($('snEditSeasonName').value || '').trim();
+      if (!name) {
+        notify('Gi sesongen et navn.', 'warning');
+        $('snEditSeasonName').focus();
+        return;
+      }
+      var btn = $('snSaveEditSeason');
+      btn.disabled = true;
+      btn.textContent = 'Lagrer\u2026';
+
+      var fields = {
+        name: name,
+        format: parseInt($('snEditSeasonFormat').value) || s.format,
+        start_date: $('snEditStartDate').value || null,
+        end_date: $('snEditEndDate').value || null
+      };
+
+      var updated = await updateSeason(s.id, fields);
+      if (updated) {
+        // Update local state
+        currentSeason = updated;
+        // Refresh seasons list for when we go back
+        var idx = seasons.findIndex(function(x) { return x.id === updated.id; });
+        if (idx !== -1) seasons[idx] = Object.assign(seasons[idx], updated);
+        goToDashboard();
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Lagre';
+      }
+    });
+
+    setTimeout(function() { var el = $('snEditSeasonName'); if (el) el.focus(); }, 50);
+  }
+
+  // =========================================================================
   //  VIEW: DASHBOARD (season detail with events)
   // =========================================================================
 
@@ -1324,6 +1453,7 @@
         '<div class="sn-dash-header">' +
           '<button class="sn-back" id="snBackFromDash">\u2190</button>' +
           '<span class="sn-dash-title">' + escapeHtml(s.name) + '</span>' +
+          '<button class="sn-back" id="snEditSeason" title="Rediger sesong" style="margin-left:auto; font-size:16px;"><i class="fas fa-pen"></i></button>' +
         '</div>' +
         '<div class="sn-dash-meta">' + escapeHtml(metaParts.join(' \u00B7 ')) + '</div>' +
         '<div class="sn-tabs">' +
@@ -1349,16 +1479,33 @@
     for (var t = 0; t < tabs.length; t++) {
       tabs[t].addEventListener('click', async function() {
         var newTab = this.getAttribute('data-dtab');
-        if (newTab === 'stats' && dashTab !== 'stats') {
-          await Promise.all([loadSeasonStats(currentSeason.id), loadSeasonGoals(currentSeason.id)]);
-        }
         dashTab = newTab;
+        if (newTab === 'stats') {
+          // Reload if switching to stats OR if caches were invalidated
+          var needStats = seasonStats.length === 0;
+          var needGoals = seasonGoals.length === 0;
+          if (needStats || needGoals) {
+            var loads = [];
+            if (needStats) loads.push(loadSeasonStats(currentSeason.id));
+            if (needGoals) loads.push(loadSeasonGoals(currentSeason.id));
+            await Promise.all(loads);
+            // Guard: if user switched tab while loading, don't overwrite
+            if (dashTab !== newTab) return;
+          }
+        }
         render();
       });
     }
 
     // Bind back button
     $('snBackFromDash').addEventListener('click', goToList);
+
+    // Edit season button
+    var editSeasonBtn = $('snEditSeason');
+    if (editSeasonBtn) editSeasonBtn.addEventListener('click', function() {
+      snView = 'edit-season';
+      render();
+    });
 
     // Bind tab-specific handlers
     if (dashTab === 'calendar') {
@@ -1410,7 +1557,7 @@
 
     if (past.length > 0) {
       html += '<div class="sn-section">Tidligere</div>';
-      html += renderEventItems(past);
+      html += renderEventItems(past.reverse());
     }
 
     // Delete season button
@@ -1464,6 +1611,14 @@
         currentSeason = null;
         events = [];
         seasonPlayers = [];
+        seasonStats = [];
+        seasonGoals = [];
+        eventAttendance = [];
+        matchGoals = [];
+        registeredEventIds = {};
+        editingEvent = null;
+        editingSeasonPlayer = null;
+        dashTab = 'calendar';
         snView = 'list';
         await loadSeasons();
       } else {
@@ -1546,7 +1701,12 @@
             var loads = [];
             if (seasonStats.length === 0) loads.push(loadSeasonStats(currentSeason.id));
             if (seasonGoals.length === 0) loads.push(loadSeasonGoals(currentSeason.id));
-            if (loads.length > 0) await Promise.all(loads);
+            if (loads.length > 0) {
+              var viewBefore = snView;
+              await Promise.all(loads);
+              // Guard: if user navigated away while loading, don't force-navigate back
+              if (snView !== viewBefore) return;
+            }
             snView = 'player-stats';
             render();
           }
@@ -1847,11 +2007,11 @@
       var sGoal = seasonGoals[sg];
       if (sGoal.player_id === sp.player_id) {
         if (!playerGoalMap[sGoal.event_id]) playerGoalMap[sGoal.event_id] = { goals: 0, assists: 0 };
-        playerGoalMap[sGoal.event_id].goals++;
-      }
-      if (sGoal.assist_player_id === sp.player_id) {
-        if (!playerGoalMap[sGoal.event_id]) playerGoalMap[sGoal.event_id] = { goals: 0, assists: 0 };
-        playerGoalMap[sGoal.event_id].assists++;
+        if (sGoal.type === 'assist') {
+          playerGoalMap[sGoal.event_id].assists++;
+        } else {
+          playerGoalMap[sGoal.event_id].goals++;
+        }
       }
     }
 
@@ -2244,6 +2404,7 @@
         this.classList.add('active');
         selectedDay = parseInt(this.getAttribute('data-day'));
         updatePreview();
+        autoTitle();
       });
     }
 
@@ -2453,7 +2614,7 @@
     });
 
     $('snRemovePlayer').addEventListener('click', async function() {
-      if (!confirm('Fjerne ' + sp.name + ' fra sesongen?\n\nEventuell statistikk for denne spilleren beholdes ikke.')) return;
+      if (!confirm('Fjerne ' + sp.name + ' fra sesongen?\n\nSpilleren kan importeres p\u00e5 nytt senere.')) return;
 
       var btn = $('snRemovePlayer');
       btn.disabled = true;
@@ -2479,7 +2640,7 @@
     for (var i = 0; i < arr.length; i++) {
       var ev = arr[i];
       var title = ev.title || ev.opponent || typeLabel(ev.type);
-      if (ev.type === 'match' && ev.opponent && !ev.title) {
+      if ((ev.type === 'match' || ev.type === 'cup_match') && ev.opponent && !ev.title) {
         title = (ev.is_home ? 'Hjemme' : 'Borte') + ' vs ' + ev.opponent;
       }
       var meta = formatDateLong(ev.start_time);
@@ -2494,7 +2655,9 @@
       // Score badge for completed matches
       var scoreBadge = '';
       if ((ev.type === 'match' || ev.type === 'cup_match') && ev.status === 'completed' && ev.result_home !== null && ev.result_home !== undefined) {
-        scoreBadge = '<div style="font-size:13px; font-weight:700; color:var(--text-600); white-space:nowrap;">' + ev.result_home + '\u2013' + ev.result_away + '</div>';
+        var ourScore = ev.is_home ? ev.result_home : ev.result_away;
+        var theirScore = ev.is_home ? ev.result_away : ev.result_home;
+        scoreBadge = '<div style="font-size:13px; font-weight:700; color:var(--text-600); white-space:nowrap;">' + ourScore + '\u2013' + theirScore + '</div>';
         regBadge = ''; // Don't show both
       }
 
@@ -2521,6 +2684,7 @@
           var ev = events.find(function(e) { return e.id === eid; });
           if (ev) {
             editingEvent = ev;
+            var viewBefore = snView;
             var loads = [loadEventAttendance(ev.id)];
             // Load season stats for match tropp hints + match goals
             if (ev.type === 'match' || ev.type === 'cup_match') {
@@ -2528,6 +2692,8 @@
               if (seasonStats.length === 0) loads.push(loadSeasonStats(currentSeason.id));
             }
             await Promise.all(loads);
+            // Guard: if user navigated away while loading, don't force-navigate
+            if (snView !== viewBefore) return;
             snView = 'event-detail';
             render();
           }
@@ -2559,6 +2725,7 @@
             '<label for="snEventType">Type</label>' +
             '<select id="snEventType">' +
               '<option value="match"' + (type === 'match' ? ' selected' : '') + '>Kamp</option>' +
+              '<option value="cup_match"' + (type === 'cup_match' ? ' selected' : '') + '>Cupkamp</option>' +
               '<option value="training"' + (type === 'training' ? ' selected' : '') + '>Trening</option>' +
             '</select>' +
           '</div>' +
@@ -2933,7 +3100,7 @@
             '<div class="sn-result-display">' +
               '<div>' +
                 '<div class="sn-result-num">' + (ev.result_home !== null ? ev.result_home : '-') + '</div>' +
-                '<div class="sn-score-label">' + (ev.is_home ? 'Oss' : 'Borte') + '</div>' +
+                '<div class="sn-score-label">' + (ev.is_home ? 'Oss' : 'Motstander') + '</div>' +
               '</div>' +
               '<div class="sn-result-dash">\u2013</div>' +
               '<div>' +
@@ -2968,7 +3135,7 @@
           '<div class="sn-result-box">' +
             '<div>' +
               '<input type="number" class="sn-score-input" id="snScoreHome" min="0" max="99" inputmode="numeric" value="' + (ev.result_home !== null && ev.result_home !== undefined ? ev.result_home : '') + '" placeholder="-">' +
-              '<div class="sn-score-label">' + (ev.is_home ? 'Oss' : 'Borte') + '</div>' +
+              '<div class="sn-score-label">' + (ev.is_home ? 'Oss' : 'Motstander') + '</div>' +
             '</div>' +
             '<div class="sn-score-dash">\u2013</div>' +
             '<div>' +
@@ -3109,6 +3276,8 @@
       var ok = await deleteEvent(ev.id);
       if (ok) {
         editingEvent = null;
+        seasonStats = [];
+        seasonGoals = [];
         await loadEvents(currentSeason.id);
         snView = 'dashboard';
         render();
@@ -3237,6 +3406,7 @@
 
       var ok = await saveAttendance(ev.id, currentSeason.id, map, reasonMap, isMatch ? squadList : null);
       if (ok) {
+        seasonStats = []; // Invalidate so stats tab reloads
         await loadEventAttendance(ev.id);
       }
       saveAttBtn.disabled = false;
@@ -3253,7 +3423,7 @@
       if (!playerSel) return;
       addGoalBtn.disabled = true;
       var ok = await addMatchEvent(ev.id, playerSel.value, playerSel.options[playerSel.selectedIndex].text, 'goal');
-      if (ok) { await loadMatchGoals(ev.id); render(); }
+      if (ok) { seasonGoals = []; await loadMatchGoals(ev.id); render(); }
       else { addGoalBtn.disabled = false; }
     });
 
@@ -3263,7 +3433,7 @@
       if (!playerSel) return;
       addAssistBtn.disabled = true;
       var ok = await addMatchEvent(ev.id, playerSel.value, playerSel.options[playerSel.selectedIndex].text, 'assist');
-      if (ok) { await loadMatchGoals(ev.id); render(); }
+      if (ok) { seasonGoals = []; await loadMatchGoals(ev.id); render(); }
       else { addAssistBtn.disabled = false; }
     });
 
@@ -3275,6 +3445,7 @@
           e.stopPropagation();
           var ok = await removeMatchGoal(gid);
           if (ok) {
+            seasonGoals = [];
             await loadMatchGoals(ev.id);
             render();
           }
@@ -3293,7 +3464,7 @@
           var pName = btn.getAttribute('data-pname');
           var typ = btn.getAttribute('data-type') || 'goal';
           var ok = await addMatchEvent(ev.id, pid, pName, typ);
-          if (ok) { await loadMatchGoals(ev.id); render(); }
+          if (ok) { seasonGoals = []; await loadMatchGoals(ev.id); render(); }
           else { btn.disabled = false; }
         };
       })(dupGoalBtns[dg]));
@@ -3304,6 +3475,12 @@
     if (completeBtn) completeBtn.addEventListener('click', async function() {
       var homeVal = $('snScoreHome') ? $('snScoreHome').value : null;
       var awayVal = $('snScoreAway') ? $('snScoreAway').value : null;
+
+      // Validate: both scores must be filled
+      if (homeVal === '' || homeVal === null || awayVal === '' || awayVal === null) {
+        notify('Fyll inn begge resultat f\u00f8r du fullf\u00f8rer kampen.', 'warning');
+        return;
+      }
 
       completeBtn.disabled = true;
       completeBtn.textContent = 'Lagrer\u2026';
@@ -3449,6 +3626,13 @@
       // 2. Batch upsert minutes_played per player to event_players
       var playerIds = Object.keys(minutesMap);
       if (playerIds.length > 0) {
+        // Build name lookup from tropp
+        var troppNameMap = {};
+        if (embeddedKampdagTropp) {
+          for (var tn = 0; tn < embeddedKampdagTropp.length; tn++) {
+            troppNameMap[embeddedKampdagTropp[tn].id] = embeddedKampdagTropp[tn].name;
+          }
+        }
         var rows = [];
         for (var i = 0; i < playerIds.length; i++) {
           rows.push({
@@ -3456,6 +3640,7 @@
             season_id: ev.season_id,
             user_id: uid,
             player_id: playerIds[i],
+            player_name: troppNameMap[playerIds[i]] || null,
             minutes_played: minutesMap[playerIds[i]],
             in_squad: true,
             attended: true
@@ -3468,17 +3653,26 @@
 
       notify('Spilletid lagret!', 'success');
 
-      // Clean up and return to event detail
+      // Mark event as having attendance data
+      registeredEventIds[ev.id] = true;
+
+      // Invalidate goals cache (stats reloaded below)
+      seasonGoals = [];
+
+      // Reload attendance + stats so event-detail has fresh minutes_played AND tropp-hints
+      try {
+        await Promise.all([
+          loadEventAttendance(ev.id),
+          loadSeasonStats(ev.season_id)
+        ]);
+      } catch (reloadErr) {
+        console.warn('[season.js] Stats reload after save failed (data was saved):', reloadErr);
+      }
+
+      // Clean up and return to event detail (AFTER reload so tropp is available for name lookup)
       window.sesongKampdag.destroy();
       embeddedKampdagEvent = null;
       embeddedKampdagTropp = null;
-
-      // Invalidate stats cache so stats tab shows updated data
-      seasonStats = [];
-      seasonGoals = [];
-
-      // Reload attendance to get fresh minutes_played data
-      await loadEventAttendance(ev.id);
 
       snView = 'event-detail';
       render();
@@ -3553,15 +3747,29 @@
     loadSeasons();
   }
 
-  function goToDashboard() {
+  async function goToDashboard() {
     editingEvent = null;
     snView = 'dashboard';
+    // Ensure stats data is fresh if returning to stats tab
+    if (dashTab === 'stats' && currentSeason) {
+      var loads = [];
+      if (seasonStats.length === 0) loads.push(loadSeasonStats(currentSeason.id));
+      if (seasonGoals.length === 0) loads.push(loadSeasonGoals(currentSeason.id));
+      if (loads.length > 0) await Promise.all(loads);
+    }
     render();
   }
 
   async function openSeason(seasonId) {
     var s = seasons.find(function(x) { return x.id === seasonId; });
     if (!s) return;
+    // Clear previous season's caches
+    seasonStats = [];
+    seasonGoals = [];
+    eventAttendance = [];
+    matchGoals = [];
+    editingEvent = null;
+    editingSeasonPlayer = null;
     currentSeason = s;
     dashTab = 'calendar';
     await Promise.all([loadEvents(seasonId), loadSeasonPlayers(seasonId), loadRegisteredEventIds(seasonId)]);
