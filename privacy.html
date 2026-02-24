@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Personvernerklæring – Barnefotballtrener</title>
-  <meta name="description" content="Personvernerklæring for Barnefotballtrener." />
+  <title>PersonvernerklÃ¦ring â€“ Barnefotballtrener</title>
+  <meta name="description" content="PersonvernerklÃ¦ring for Barnefotballtrener." />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <main class="legal">
-    <h1>Personvernerklæring</h1>
+    <h1>PersonvernerklÃ¦ring</h1>
 
-    <p><strong>Sist oppdatert:</strong> 10. februar 2026</p>
+    <p><strong>Sist oppdatert:</strong> 24. februar 2026</p>
 
     <h2>1. Behandlingsansvarlig</h2>
     <p>
@@ -24,14 +24,14 @@
 
     <h3>2.1 Konto og innlogging</h3>
     <ul>
-      <li><strong>E-postadresse</strong> og <strong>navn</strong> (fra Google-innlogging) for å identifisere kontoen din.</li>
+      <li><strong>E-postadresse</strong> og <strong>navn</strong> (fra Google-innlogging) for Ã¥ identifisere kontoen din.</li>
       <li><strong>Bruker-ID</strong> (teknisk identifikator i Supabase).</li>
     </ul>
-    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) – nødvendig for å levere tjenesten.</p>
+    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) â€“ nÃ¸dvendig for Ã¥ levere tjenesten.</p>
 
     <h3>2.2 Betaling og abonnement</h3>
     <p>
-      Betaling håndteres av <strong>Stripe</strong> som selvstendig databehandler.
+      Betaling hÃ¥ndteres av <strong>Stripe</strong> som selvstendig databehandler.
       Vi mottar tekniske opplysninger som Stripe customer-id, subscription-id, status og periodedatoer.
       Vi lagrer aldri kortnummer eller fullstendige betalingsopplysninger.
     </p>
@@ -39,62 +39,87 @@
 
     <h3>2.3 Spillerdata</h3>
     <p>
-      Spillerlister lagres i vår database (Supabase, EU/Frankfurt) knyttet til din bruker-ID.
-      For hver spiller lagres: fornavn, ferdighetsnivå (1–6), om spilleren kan stå i mål,
-      og om spilleren er aktiv. Spillerdata synkroniseres også til nettleserens lokale lagring
+      Spillerlister lagres i vÃ¥r database (Supabase, EU/Frankfurt) knyttet til din bruker-ID.
+      For hver spiller lagres: fornavn, ferdighetsnivÃ¥ (1â€“6), om spilleren kan stÃ¥ i mÃ¥l,
+      og om spilleren er aktiv. Spillerdata synkroniseres ogsÃ¥ til nettleserens lokale lagring
       for raskere oppstart og offline-bruk.
     </p>
     <p>
-      <strong>Viktig for trenere:</strong> Vi oppfordrer sterkt til å kun bruke fornavn
-      og ikke lagre sensitive opplysninger (helseopplysninger, fødselsnummer, etternavn e.l.).
-      Appen advarer deg dersom du forsøker å legge inn et fullt navn.
+      <strong>Viktig for trenere:</strong> Vi oppfordrer sterkt til Ã¥ kun bruke fornavn
+      og ikke lagre sensitive opplysninger (helseopplysninger, fÃ¸dselsnummer, etternavn e.l.).
+      Appen advarer deg dersom du forsÃ¸ker Ã¥ legge inn et fullt navn.
     </p>
     <p>
       Som trener er du medansvarlig for spillerdataene du registrerer (GDPR art. 26).
-      Sørg for at dette er i tråd med din klubbs personvernrutiner og at foresatte er
-      informert om at barnas fornavn brukes i et digitalt treningsverktøy.
+      SÃ¸rg for at dette er i trÃ¥d med din klubbs personvernrutiner og at foresatte er
+      informert om at barnas fornavn brukes i et digitalt treningsverktÃ¸y.
     </p>
-    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) – nødvendig for appens kjernefunksjonalitet.</p>
+    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) â€“ nÃ¸dvendig for appens kjernefunksjonalitet.</p>
 
-    <h3>2.4 Annet appinnhold</h3>
+    <h3>2.4 Sesongdata</h3>
     <p>
-      Lagoppsett, treningsøkter, konkurransedata og ligaer lagres i vår database (Supabase, EU/Frankfurt)
-      og synkroniseres på tvers av enheter. En lokal kopi lagres også i nettleseren (localStorage) for
+      Sesongmodulen lagrer data knyttet til sesonger, kamper og treninger i vÃ¥r database
+      (Supabase, EU/Frankfurt). Dette inkluderer:
+    </p>
+    <ul>
+      <li><strong>Sesonginfo:</strong> navn, format, start- og sluttdato.</li>
+      <li><strong>Sesongspillere:</strong> fornavn, ferdighetsnivÃ¥, posisjon, keeperstatus (samme data som spillerlisten, men knyttet til en sesong).</li>
+      <li><strong>Kamper og treninger:</strong> dato, tidspunkt, sted, motstander, kampresultat.</li>
+      <li><strong>OppmÃ¸te og spilletid:</strong> hvilke spillere som var til stede, antall minutter spilt, keepervakter, fraværsÃ¥rsak.</li>
+      <li><strong>MÃ¥l og mÃ¥lgivende:</strong> spillernavn knyttet til mÃ¥lhendelser.</li>
+      <li><strong>Bytteplan:</strong> automatisk genererte bytteplaner med spillernavn, posisjoner og tidspunkter (lagret som JSON).</li>
+      <li><strong>Treningsserier:</strong> ukedag, tidspunkt, sted og varighet for gjentakende treninger.</li>
+    </ul>
+    <p>
+      <strong>Viktig:</strong> Sesongstatistikk (oppmÃ¸te, spilletid, mÃ¥l) er kun ment som et internt
+      trenerverktÃ¸y for Ã¥ sikre rettferdig spilletid. I trÃ¥d med NFFs retningslinjer for barnefotball
+      (6â€"12 Ã¥r) skal statistikken ikke deles offentlig eller brukes til rangering av enkeltspillere.
+      Treneren bekrefter dette ved fÃ¸rste gangs bruk av statistikkfunksjonen.
+    </p>
+    <p>
+      Sesongdata slettes automatisk nÃ¥r brukeren sletter en sesong eller sletter kontoen sin.
+    </p>
+    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) â€" nÃ¸dvendig for appens kjernefunksjonalitet.</p>
+
+    <h3>2.5 Annet appinnhold</h3>
+    <p>
+      Lagoppsett, treningsÃ¸kter, konkurransedata og ligaer lagres i vÃ¥r database (Supabase, EU/Frankfurt)
+      og synkroniseres pÃ¥ tvers av enheter. En lokal kopi lagres ogsÃ¥ i nettleseren (localStorage) for
       raskere tilgang. Ved sletting av konto fjernes alle data fra serveren.
     </p>
-    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) – nødvendig for appens kjernefunksjonalitet.</p>
+    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) â€“ nÃ¸dvendig for appens kjernefunksjonalitet.</p>
 
-    <h3>2.5 Feillogging</h3>
+    <h3>2.6 Feillogging</h3>
     <p>
-      For å oppdage og rette tekniske feil lagrer vi automatisk feilmeldinger som oppstår
+      For Ã¥ oppdage og rette tekniske feil lagrer vi automatisk feilmeldinger som oppstÃ¥r
       i appen mens du er innlogget. Feilloggen inneholder: feilmelding, filnavn, linjenummer,
-      nettlesertype og hvilken side feilen oppstod på. Feillogger anonymiseres dersom du sletter kontoen din.
+      nettlesertype og hvilken side feilen oppstod pÃ¥. Feillogger anonymiseres dersom du sletter kontoen din.
     </p>
-    <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) – sikkerhet og drift.</p>
+    <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) â€“ sikkerhet og drift.</p>
 
-    <h3>2.6 Tekniske logger (Vercel)</h3>
+    <h3>2.7 Tekniske logger (Vercel)</h3>
     <p>
-      Vercel (vår hosting-leverandør) kan logge tekniske opplysninger som tidspunkt, IP-adresse,
-      nettlesertype og URL-er. Disse brukes til sikkerhet og feilsøking, og slettes automatisk
-      etter kort tid i tråd med Vercels retningslinjer.
+      Vercel (vÃ¥r hosting-leverandÃ¸r) kan logge tekniske opplysninger som tidspunkt, IP-adresse,
+      nettlesertype og URL-er. Disse brukes til sikkerhet og feilsÃ¸king, og slettes automatisk
+      etter kort tid i trÃ¥d med Vercels retningslinjer.
     </p>
-    <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) – sikkerhet og drift.</p>
+    <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) â€“ sikkerhet og drift.</p>
 
     <h2>3. Databehandlere og tredjeparter</h2>
     <table style="width:100%; border-collapse:collapse; margin:10px 0;">
       <tr style="border-bottom:1px solid #ddd;">
         <th style="text-align:left; padding:6px;">Tjeneste</th>
-        <th style="text-align:left; padding:6px;">Formål</th>
+        <th style="text-align:left; padding:6px;">FormÃ¥l</th>
         <th style="text-align:left; padding:6px;">Land</th>
       </tr>
       <tr style="border-bottom:1px solid #eee;">
         <td style="padding:6px;">Supabase</td>
-        <td style="padding:6px;">Autentisering, bruker-ID, prøvetilgang, lagring av spillerdata</td>
+        <td style="padding:6px;">Autentisering, bruker-ID, prÃ¸vetilgang, lagring av spiller- og sesongdata</td>
         <td style="padding:6px;">EU (Frankfurt)</td>
       </tr>
       <tr style="border-bottom:1px solid #eee;">
         <td style="padding:6px;">Stripe</td>
-        <td style="padding:6px;">Betalingsbehandling, abonnementshåndtering</td>
+        <td style="padding:6px;">Betalingsbehandling, abonnementshÃ¥ndtering</td>
         <td style="padding:6px;">USA (EU SCCs)</td>
       </tr>
       <tr style="border-bottom:1px solid #eee;">
@@ -114,49 +139,50 @@
       </tr>
     </table>
     <p>
-      Spillerdata lagres i Supabase sitt EU-datasenter (Frankfurt) og overføres ikke til land utenfor EU/EØS.
-      For øvrige tjenester med servere i USA skjer overføring med Standard Contractual Clauses (SCCs)
-      som overføringsgrunnlag i tråd med GDPR kapittel V.
+      Spiller- og sesongdata lagres i Supabase sitt EU-datasenter (Frankfurt) og overfÃ¸res ikke til land utenfor EU/EÃ˜S.
+      For Ã¸vrige tjenester med servere i USA skjer overfÃ¸ring med Standard Contractual Clauses (SCCs)
+      som overfÃ¸ringsgrunnlag i trÃ¥d med GDPR kapittel V.
     </p>
 
     <h2>4. Lagringstid</h2>
     <ul>
-      <li>Kontoopplysninger og spillerdata: lagres så lenge kontoen eksisterer. Ved sletting av konto fjernes alle data fra Supabase automatisk.</li>
-      <li>Feillogger: anonymiseres ved kontosletting. Anonymiserte logger kan oppbevares for driftsformål.</li>
-      <li>Betalingsdata i Stripe: lagres i tråd med Stripes retningslinjer og norske regnskapskrav (5 år).</li>
-      <li>Appinnhold (lagoppsett, treningsøkter, konkurransedata, ligaer): lagres i Supabase så lenge kontoen eksisterer og fjernes ved kontosletting. En lokal kopi i nettleseren fungerer som hurtigbuffer og kan slettes uten at data går tapt.</li>
+      <li>Kontoopplysninger og spillerdata: lagres sÃ¥ lenge kontoen eksisterer. Ved sletting av konto fjernes alle data fra Supabase automatisk.</li>
+      <li>Sesongdata (oppmÃ¸te, spilletid, kampresultater, mÃ¥l, bytteplaner): lagres sÃ¥ lenge sesongen eller kontoen eksisterer. Slettes nÃ¥r treneren sletter sesongen eller kontoen.</li>
+      <li>Feillogger: anonymiseres ved kontosletting. Anonymiserte logger kan oppbevares for driftsformÃ¥l.</li>
+      <li>Betalingsdata i Stripe: lagres i trÃ¥d med Stripes retningslinjer og norske regnskapskrav (5 Ã¥r).</li>
+      <li>Appinnhold (lagoppsett, treningsÃ¸kter, konkurransedata, ligaer): lagres i Supabase sÃ¥ lenge kontoen eksisterer og fjernes ved kontosletting. En lokal kopi i nettleseren fungerer som hurtigbuffer og kan slettes uten at data gÃ¥r tapt.</li>
       <li>Tekniske logger (Vercel): slettes automatisk etter kort tid (typisk 30 dager).</li>
     </ul>
 
     <h2>5. Dine rettigheter</h2>
     <p>Etter GDPR har du rett til:</p>
     <ul>
-      <li><strong>Innsyn</strong> – få vite hvilke opplysninger vi har om deg. Bruk «Eksporter data»-knappen i appen for å laste ned alt.</li>
-      <li><strong>Retting</strong> – korrigere uriktige opplysninger direkte i appen.</li>
-      <li><strong>Sletting</strong> – slett kontoen din via «Slett konto»-knappen i appen. Dette fjerner alle dine data permanent.</li>
-      <li><strong>Dataportabilitet</strong> – eksport-funksjonen gir deg data i maskinlesbart JSON-format.</li>
-      <li><strong>Innsigelse</strong> – protestere mot behandling basert på berettiget interesse.</li>
+      <li><strong>Innsyn</strong> â€“ fÃ¥ vite hvilke opplysninger vi har om deg. Bruk Â«Eksporter dataÂ»-knappen i appen for Ã¥ laste ned alt.</li>
+      <li><strong>Retting</strong> â€“ korrigere uriktige opplysninger direkte i appen.</li>
+      <li><strong>Sletting</strong> â€“ slett kontoen din via Â«Slett kontoÂ»-knappen i appen. Dette fjerner alle dine data permanent.</li>
+      <li><strong>Dataportabilitet</strong> â€“ eksport-funksjonen gir deg data i maskinlesbart JSON-format.</li>
+      <li><strong>Innsigelse</strong> â€“ protestere mot behandling basert pÃ¥ berettiget interesse.</li>
     </ul>
     <p>
-      Du kan utøve de fleste rettighetene direkte i appen. For ytterligere henvendelser,
+      Du kan utÃ¸ve de fleste rettighetene direkte i appen. For ytterligere henvendelser,
       kontakt <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.
-      Du har også rett til å klage til <strong>Datatilsynet</strong> (datatilsynet.no).
+      Du har ogsÃ¥ rett til Ã¥ klage til <strong>Datatilsynet</strong> (datatilsynet.no).
     </p>
 
     <h2>6. Informasjonssikkerhet</h2>
     <p>
       Vi bruker HTTPS for all kommunikasjon, autentisering via Google OAuth (ingen passord hos oss),
-      og betalingsdata håndteres direkte av Stripe (PCI DSS-sertifisert).
-      Spillerdata i Supabase er beskyttet med Row Level Security (RLS) slik at hver bruker
+      og betalingsdata hÃ¥ndteres direkte av Stripe (PCI DSS-sertifisert).
+      Spiller- og sesongdata i Supabase er beskyttet med Row Level Security (RLS) slik at hver bruker
       kun har tilgang til sine egne data. Tilgang til backend-systemer
-      er begrenset til nødvendig personell.
+      er begrenset til nÃ¸dvendig personell.
     </p>
 
     <h2>7. Informasjonskapsler (cookies)</h2>
     <p>
       Barnefotballtrener bruker ikke tredjeparts sporingscookies eller annonsepiksler.
-      Autentiseringscookies fra Supabase er nødvendige for innlogging og krever ikke samtykke
-      etter ekomloven § 2-7b (teknisk nødvendige cookies).
+      Autentiseringscookies fra Supabase er nÃ¸dvendige for innlogging og krever ikke samtykke
+      etter ekomloven Â§ 2-7b (teknisk nÃ¸dvendige cookies).
     </p>
 
     <h2>8. Bruksstatistikk (Umami)</h2>
@@ -165,15 +191,15 @@
       bruker ingen cookies og lagrer ingen IP-adresser. Statistikken viser kun aggregerte tall som
       antall sidevisninger, nettlesertype og land. Ingen data kan knyttes til enkeltbrukere.
     </p>
-    <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) – forbedring av tjenesten.</p>
+    <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) â€“ forbedring av tjenesten.</p>
 
     <h2>9. Kontakt</h2>
     <p>
-      Spørsmål om personvern kan rettes til
+      SpÃ¸rsmÃ¥l om personvern kan rettes til
       <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.
     </p>
 
-    <p><em>Sist oppdatert: 12. februar 2026</em></p>
+    <p><em>Sist oppdatert: 24. februar 2026</em></p>
 
     <p><a href="/">Tilbake</a></p>
   </main>

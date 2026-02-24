@@ -2419,6 +2419,23 @@
         $('snManualName').focus();
         return;
       }
+      if (name.length > 50) {
+        notify('Spillernavn m\u00e5 v\u00e6re maks 50 tegn (kun fornavn anbefales).', 'warning');
+        return;
+      }
+
+      // PRIVACY: Warn if name contains space (might be full name)
+      if (name.indexOf(' ') !== -1) {
+        var ok = confirm(
+          'Navnet inneholder mellomrom og kan v\u00e6re et fullt navn.\n\n' +
+          'For \u00e5 beskytte barns personvern b\u00f8r du KUN bruke fornavn.\n\n' +
+          'Vil du fortsette med dette navnet likevel?'
+        );
+        if (!ok) {
+          $('snManualName').focus();
+          return;
+        }
+      }
 
       var goalie = $('snManualGkYes').classList.contains('active');
       var skill = parseInt($('snManualSkill').value) || 3;
@@ -2707,6 +2724,23 @@
         notify('Navn kan ikke v\u00e6re tomt.', 'warning');
         $('snEditName').focus();
         return;
+      }
+      if (name.length > 50) {
+        notify('Spillernavn m\u00e5 v\u00e6re maks 50 tegn (kun fornavn anbefales).', 'warning');
+        return;
+      }
+
+      // PRIVACY: Warn if name contains space (might be full name)
+      if (name.indexOf(' ') !== -1) {
+        var ok = confirm(
+          'Navnet inneholder mellomrom og kan v\u00e6re et fullt navn.\n\n' +
+          'For \u00e5 beskytte barns personvern b\u00f8r du KUN bruke fornavn.\n\n' +
+          'Vil du fortsette med dette navnet likevel?'
+        );
+        if (!ok) {
+          $('snEditName').focus();
+          return;
+        }
       }
 
       var goalie = $('snEditGkYes').classList.contains('active');
