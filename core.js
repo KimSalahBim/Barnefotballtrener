@@ -1349,13 +1349,22 @@
 
           const goalie = window.confirm('Skal spilleren kunne stå i mål? (OK = ja, Avbryt = nei)');
 
+          const oldName = p.name;
           p.name = name;
           p.skill = skill;
           p.goalie = goalie;
 
           saveState();
+          publishPlayers();
           renderAll();
           showNotification('Spiller oppdatert', 'success');
+
+          // Dispatch rename event so season module can sync denormalized names
+          if (oldName !== name) {
+            window.dispatchEvent(new CustomEvent('player:renamed', {
+              detail: { playerId: p.id, newName: name, oldName: oldName }
+            }));
+          }
         });
       }
 
@@ -1803,6 +1812,8 @@
     // Expose for other modules if needed
     window.__BF_switchTab = switchTab;
     window.__BF_getTeamId = function() { return state.currentTeamId; };
+    window.__BF_saveState = saveState;
+    window.__BF_publishPlayers = publishPlayers;
   }
 
   function setupSkillToggle() {

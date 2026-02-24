@@ -86,8 +86,9 @@
     return 'Til ' + formatDate(end);
   }
 
-  // Is event in the future?
+  // Is event in the future? Completed events are always past.
   function isFuture(ev) {
+    if (ev.status === 'completed' || ev.status === 'cancelled') return false;
     try { return new Date(ev.start_time) >= new Date(); } catch (e) { return false; }
   }
 
@@ -402,6 +403,65 @@
   window.addEventListener('season:nav-sync', function() { updateSeasonNav(); });
 
   // =========================================================================
+  //  CROSS-MODULE NAME SYNC: core.js → season tables
+  // =========================================================================
+  // When a player is renamed in Spillere-fanen (core.js), cascade to all
+  // denormalized player_name fields in season_players, event_players, match_events.
+
+  window.addEventListener('player:renamed', async function(e) {
+    var detail = e.detail || {};
+    var playerId = detail.playerId;
+    var newName = detail.newName;
+    if (!playerId || !newName) return;
+
+    var sb = getSb();
+    var uid = getUserId();
+    if (!sb || !uid) return;
+
+    try {
+      // 1. Update season_players (all seasons for this user)
+      var spRes = await sb.from('season_players')
+        .update({ player_name: newName })
+        .eq('player_id', playerId)
+        .eq('user_id', uid);
+      if (spRes.error) console.warn('[season.js] player:renamed season_players sync:', spRes.error.message);
+
+      // 2. Get all event IDs across all user's seasons for cascade
+      var evRes = await sb.from('events')
+        .select('id')
+        .eq('user_id', uid);
+      var evIds = (evRes.data || []).map(function(ev) { return ev.id; });
+
+      if (evIds.length > 0) {
+        // 3. Update event_players (attendance/minutes snapshots)
+        await sb.from('event_players')
+          .update({ player_name: newName })
+          .in('event_id', evIds)
+          .eq('player_id', playerId)
+          .eq('user_id', uid);
+
+        // 4. Update match_events (goals/assists snapshots)
+        await sb.from('match_events')
+          .update({ player_name: newName })
+          .in('event_id', evIds)
+          .eq('player_id', playerId)
+          .eq('user_id', uid);
+      }
+
+      // 5. Refresh local state if a season is loaded
+      if (currentSeason) {
+        await loadSeasonPlayers(currentSeason.id);
+        var el = $('sesong');
+        if (el && el.classList.contains('active')) render();
+      }
+
+      console.log('[season.js] player:renamed sync complete for', playerId);
+    } catch (err) {
+      console.warn('[season.js] player:renamed sync error:', err.message || err);
+    }
+  });
+
+  // =========================================================================
   //  SEASON BOTTOM NAV: wire tab buttons
   // =========================================================================
 
@@ -699,10 +759,70 @@
           active: row.active !== false
         };
       });
+
+      // Reconcile: sync names from core.js players → season_players
+      // Only for p_ players (imported from Spillere-fanen), not sp_ (season-only)
+      reconcilePlayerNames(seasonId, sb, uid);
     } catch (e) {
       console.error('[season.js] loadSeasonPlayers error:', e);
       seasonPlayers = [];
     }
+  }
+
+  // Fire-and-forget reconciliation of core.js player names → season_players + downstream
+  function reconcilePlayerNames(seasonId, sb, uid) {
+    var corePlayers = window.players || [];
+    if (!corePlayers.length || !seasonPlayers.length) return;
+
+    var stale = [];
+    for (var i = 0; i < seasonPlayers.length; i++) {
+      var sp = seasonPlayers[i];
+      if (!sp.player_id || sp.player_id.indexOf('p_') !== 0) continue;
+      for (var c = 0; c < corePlayers.length; c++) {
+        if (corePlayers[c].id === sp.player_id && corePlayers[c].name !== sp.name) {
+          stale.push({ rowId: sp.id, playerId: sp.player_id, newName: corePlayers[c].name });
+          sp.name = corePlayers[c].name; // Update local state immediately
+          break;
+        }
+      }
+    }
+
+    if (stale.length === 0) return;
+
+    console.log('[season.js] Reconciling ' + stale.length + ' player name(s) from Spillere-fanen');
+
+    // Async cascade: season_players + event_players + match_events
+    (async function() {
+      try {
+        // 1. Update season_players
+        for (var u = 0; u < stale.length; u++) {
+          await sb.from('season_players')
+            .update({ player_name: stale[u].newName })
+            .eq('id', stale[u].rowId)
+            .eq('user_id', uid);
+        }
+
+        // 2. Cascade to event_players and match_events for this season
+        var evRes = await sb.from('events').select('id').eq('season_id', seasonId).eq('user_id', uid);
+        var evIds = (evRes.data || []).map(function(e) { return e.id; });
+        if (evIds.length > 0) {
+          for (var s = 0; s < stale.length; s++) {
+            await sb.from('event_players')
+              .update({ player_name: stale[s].newName })
+              .in('event_id', evIds)
+              .eq('player_id', stale[s].playerId)
+              .eq('user_id', uid);
+            await sb.from('match_events')
+              .update({ player_name: stale[s].newName })
+              .in('event_id', evIds)
+              .eq('player_id', stale[s].playerId)
+              .eq('user_id', uid);
+          }
+        }
+      } catch (err) {
+        console.warn('[season.js] reconcilePlayerNames cascade error:', err.message || err);
+      }
+    })();
   }
 
   async function importPlayersToSeason(seasonId, players) {
@@ -901,6 +1021,12 @@
     }
 
     try {
+      // Build player name lookup from season players
+      var nameMap = {};
+      for (var n = 0; n < seasonPlayers.length; n++) {
+        nameMap[seasonPlayers[n].player_id] = seasonPlayers[n].name;
+      }
+
       var rows = [];
       var playerIds = Object.keys(attendanceMap);
       for (var i = 0; i < playerIds.length; i++) {
@@ -910,7 +1036,8 @@
           season_id: seasonId,
           user_id: uid,
           player_id: pid,
-          attended: attendanceMap[pid]
+          attended: attendanceMap[pid],
+          player_name: nameMap[pid] || null
         };
         if (squadList) {
           row.in_squad = !!squadSet[pid];
@@ -2743,7 +2870,7 @@
         player_positions: positions
       });
 
-      // Sync player_name in match_events if name changed
+      // Sync player_name in match_events AND event_players if name changed
       if (ok && name !== sp.name && currentSeason) {
         try {
           var syncSb = getSb();
@@ -2752,14 +2879,38 @@
           var evRes = await syncSb.from('events').select('id').eq('season_id', currentSeason.id).eq('user_id', syncUid);
           var evIds = (evRes.data || []).map(function(e) { return e.id; });
           if (evIds.length > 0) {
+            // Sync match_events (goals/assists)
             await syncSb.from('match_events')
+              .update({ player_name: name })
+              .in('event_id', evIds)
+              .eq('player_id', sp.player_id)
+              .eq('user_id', syncUid);
+            // Sync event_players (attendance/minutes)
+            await syncSb.from('event_players')
               .update({ player_name: name })
               .in('event_id', evIds)
               .eq('player_id', sp.player_id)
               .eq('user_id', syncUid);
           }
         } catch (syncErr) {
-          console.warn('[season.js] match_events name sync:', syncErr.message || syncErr);
+          console.warn('[season.js] player_name sync:', syncErr.message || syncErr);
+        }
+
+        // Reverse sync: update core.js player (Spillere-fanen) if this is an imported player
+        if (sp.player_id && sp.player_id.indexOf('p_') === 0) {
+          var corePlayers = window.players || [];
+          for (var ci = 0; ci < corePlayers.length; ci++) {
+            if (corePlayers[ci].id === sp.player_id) {
+              corePlayers[ci].name = name;
+              corePlayers[ci].goalie = goalie;
+              corePlayers[ci].skill = skill;
+              // Persist to localStorage + Supabase
+              if (window.__BF_saveState) window.__BF_saveState();
+              // Defer publish to avoid mid-handler DOM replacement
+              setTimeout(function() { if (window.__BF_publishPlayers) window.__BF_publishPlayers(); }, 0);
+              break;
+            }
+          }
         }
       }
 
@@ -3837,6 +3988,12 @@
       // 2. Batch upsert minutes_played per player to event_players
       var playerIds = Object.keys(minutesMap);
       if (playerIds.length > 0) {
+        // Build name lookup from season players
+        var nameMap = {};
+        for (var n = 0; n < seasonPlayers.length; n++) {
+          nameMap[seasonPlayers[n].player_id] = seasonPlayers[n].name;
+        }
+
         var rows = [];
         for (var i = 0; i < playerIds.length; i++) {
           rows.push({
@@ -3846,7 +4003,8 @@
             player_id: playerIds[i],
             minutes_played: minutesMap[playerIds[i]],
             in_squad: true,
-            attended: true
+            attended: true,
+            player_name: nameMap[playerIds[i]] || null
           });
         }
         var epRes = await sb.from('event_players')
