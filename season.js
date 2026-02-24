@@ -313,7 +313,16 @@
       '.sn-import-cb { width:18px; height:18px; accent-color:var(--primary, #2563eb); cursor:pointer; }',
 
       // Responsive
-      '@media (max-width:480px) { .sn-form-row { flex-direction:column; gap:0; } .sn-actions { flex-direction:column; } }'
+      '@media (max-width:480px) { .sn-form-row { flex-direction:column; gap:0; } .sn-actions { flex-direction:column; } }',
+
+      // NFF disclaimer modal
+      '.sn-nff-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; }',
+      '.sn-nff-modal { background:var(--bg-card, #fff); border-radius:var(--radius-lg, 16px); max-width:440px; width:100%; padding:28px 24px; box-shadow:0 20px 60px rgba(0,0,0,0.2); }',
+      '.sn-nff-modal h3 { font-size:18px; font-weight:700; color:var(--text-800); margin:0 0 16px; }',
+      '.sn-nff-modal p { font-size:14px; line-height:1.6; color:var(--text-600); margin:0 0 12px; }',
+      '.sn-nff-modal ul { margin:0 0 16px; padding-left:20px; font-size:13px; line-height:1.7; color:var(--text-600); }',
+      '.sn-nff-modal .sn-nff-source { font-size:11px; color:var(--text-400); margin-bottom:20px; }',
+      '.sn-nff-accept { width:100%; padding:14px; border:none; border-radius:var(--radius-md, 12px); background:var(--primary, #2563eb); color:#fff; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }'
     ].join('\n');
     document.head.appendChild(style);
   })();
@@ -1556,6 +1565,17 @@
 
     root.innerHTML = html;
 
+    // Show NFF disclaimer overlay if stats tab and not yet accepted
+    if (dashTab === 'stats' && !hasAcceptedNffDisclaimer()) {
+      root.insertAdjacentHTML('beforeend', renderNffDisclaimer());
+      var acceptBtn = $('snNffAccept');
+      if (acceptBtn) acceptBtn.addEventListener('click', function() {
+        acceptNffDisclaimer();
+        var overlay = $('snNffOverlay');
+        if (overlay) overlay.remove();
+      });
+    }
+
     // Bind back button
     $('snBackFromDash').addEventListener('click', goToList);
 
@@ -1777,6 +1797,42 @@
   // =========================================================================
   //  DASHBOARD TAB: STATISTIKK
   // =========================================================================
+
+  // =========================================================================
+  //  NFF STATISTICS DISCLAIMER
+  // =========================================================================
+  function getNffDisclaimerKey() {
+    try { var uid = getUserId(); return 'sn_nff_stats_accepted_' + (uid || 'default'); }
+    catch(e) { return 'sn_nff_stats_accepted_default'; }
+  }
+
+  function hasAcceptedNffDisclaimer() {
+    try { return localStorage.getItem(getNffDisclaimerKey()) === 'true'; }
+    catch(e) { return false; }
+  }
+
+  function acceptNffDisclaimer() {
+    try { localStorage.setItem(getNffDisclaimerKey(), 'true'); }
+    catch(e) { /* silent */ }
+  }
+
+  function renderNffDisclaimer() {
+    return '<div class="sn-nff-overlay" id="snNffOverlay">' +
+      '<div class="sn-nff-modal">' +
+        '<h3>\u26BD Statistikk \u2013 viktig informasjon</h3>' +
+        '<p>Norges Fotballforbund (NFF) har klare retningslinjer for barnefotball (6\u201312 \u00e5r). Statistikken i denne appen er laget som et <b>internt trenerverkt\u00f8y</b> for \u00e5 sikre rettferdig spilletid og god oppf\u00f8lging.</p>' +
+        '<p>Ved \u00e5 bruke statistikkfunksjonen bekrefter du at:</p>' +
+        '<ul>' +
+          '<li>Statistikken brukes kun til intern planlegging</li>' +
+          '<li>Data skal <b>ikke</b> deles offentlig eller med spillere/foresatte som rangering</li>' +
+          '<li>Statistikken skal <b>ikke</b> brukes til \u00e5 rangere enkeltspillere opp mot hverandre</li>' +
+          '<li>Form\u00e5let er \u00e5 sikre lik spilletid og god spillerutvikling for alle</li>' +
+        '</ul>' +
+        '<div class="sn-nff-source">Kilde: NFF Handlingsplan barnefotball \u2013 Retningslinjer for aktivitet 6\u201312 \u00e5r</div>' +
+        '<button class="sn-nff-accept" id="snNffAccept">\u2713 Jeg har lest og forst\u00e5tt</button>' +
+      '</div>' +
+    '</div>';
+  }
 
   function renderStatsTab() {
     var stats = computeStats();
