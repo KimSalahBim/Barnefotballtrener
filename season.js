@@ -1621,7 +1621,7 @@
 
     // Delete season button
     html +=
-      '<div style="margin-top:32px; padding-top:16px; border-top:1px solid var(--border);">' +
+      '<div style="margin-top:32px; padding-top:16px; border-top:1px solid var(--border); margin-bottom:32px;">' +
         '<button class="sn-btn-danger" id="snDeleteSeason" style="width:100%;">' +
           '<i class="fas fa-trash" style="margin-right:6px;"></i>Slett sesong' +
         '</button>' +
@@ -1939,7 +1939,6 @@
       '<th>Tr</th>' +
       '<th>Ka</th>' +
       '<th>Min</th>' +
-      (stats.totalGoals > 0 ? '<th>\u26BD</th>' : '') +
       '<th>Oppm.</th>' +
     '</tr></thead>';
     html += '<tbody>';
@@ -1959,7 +1958,6 @@
         '<td>' + pl.trainingsAttended + '</td>' +
         '<td>' + pl.matchesAttended + '</td>' +
         '<td>' + (pl.minutesPlayed || 0) + '</td>' +
-        (stats.totalGoals > 0 ? '<td>' + (pl.goals > 0 ? pl.goals : '') + '</td>' : '') +
         '<td>' +
           '<div style="font-weight:600;">' + pct + '%</div>' +
           '<div class="sn-bar-wrap"><div class="sn-bar-fill" style="width:' + pct + '%; background:' + barColor + ';"></div></div>' +
