@@ -415,7 +415,8 @@
     }
 
     const totals = computeTotals(competition);
-    const leaderboard = sortedLeaderboard(totals, competition.participantNames || nameMap);
+    const mergedNames = Object.assign({}, competition.participantNames || {}, nameMap);
+    const leaderboard = sortedLeaderboard(totals, mergedNames);
 
     const n = competition.participantIds.length;
     const exercises = competition.exercises || [];
@@ -429,7 +430,7 @@
       .join('');
 
     const ex = exercises[activeIndex];
-    const nameById = competition.participantNames || nameMap;
+    const nameById = mergedNames;
 
     const ranking = Array.isArray(ex?.ranking) ? ex.ranking : Array(n).fill(null);
     const used = new Set(ranking.filter(Boolean));
@@ -610,7 +611,8 @@
     }
 
     const totals = computeTotals(comp);
-    const leaderboard = sortedLeaderboard(totals, comp.participantNames || nameMap);
+    const mergedNames = Object.assign({}, comp.participantNames || {}, nameMap);
+    const leaderboard = sortedLeaderboard(totals, mergedNames);
     const n = comp.participantIds.length;
 
     const exList = (comp.exercises || []).map((ex, exIdx) => {
@@ -618,7 +620,7 @@
       const rows = ranking.map((pid, i) => {
         if (!pid) return '';
         const pts = scoringPoints(comp.scoring, i, n);
-        const nm = (comp.participantNames || nameMap)[pid] || 'Ukjent';
+        const nm = mergedNames[pid] || 'Ukjent';
         return `<div class="comp-detail-row"><span>${i + 1}.</span> <span>${escapeHtml(nm)}</span> <span class="comp-detail-pts">${pts}p</span></div>`;
       }).join('') || `<div class="comp-muted">Ingen registreringer</div>`;
 

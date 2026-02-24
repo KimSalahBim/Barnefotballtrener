@@ -185,7 +185,7 @@ export default async function handler(req, res) {
               // Event players (attendance, minutes, goalkeeper)
               const { data: epData } = await supabaseAdmin
                 .from('event_players')
-                .select('id, event_id, season_id, player_id, attended, minutes_played, is_goalkeeper, absence_reason, in_squad')
+                .select('id, event_id, season_id, player_id, attended, minutes_played, is_goalkeeper, absence_reason, in_squad, player_name')
                 .eq('user_id', userId)
                 .in('event_id', eventIds);
               if (epData) exportData.app_data.event_players = epData;

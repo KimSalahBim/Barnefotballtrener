@@ -392,6 +392,17 @@
     }
 
     try {
+      // Slett sesongdata FØR laget (seasons.team_id er ikke FK, så ingen CASCADE)
+      // Barn av seasons (events, event_players, match_events, season_players, training_series)
+      // slettes automatisk via ON DELETE CASCADE fra seasons.
+      try {
+        var delSeasons = await sb.from('seasons').delete().eq('team_id', teamId).eq('user_id', uid);
+        if (delSeasons.error) console.warn('[core.js] deleteTeam seasons cleanup:', delSeasons.error.message);
+        else console.log('[core.js] Slettet sesonger for lag', teamId);
+      } catch (e) {
+        console.warn('[core.js] deleteTeam seasons cleanup exception:', e.message);
+      }
+
       // Spillere slettes automatisk via ON DELETE CASCADE
       var result = await sb.from('teams').delete().eq('id', teamId).eq('user_id', uid);
       if (result.error) {
@@ -1349,13 +1360,22 @@
 
           const goalie = window.confirm('Skal spilleren kunne stå i mål? (OK = ja, Avbryt = nei)');
 
+          const oldName = p.name;
           p.name = name;
           p.skill = skill;
           p.goalie = goalie;
 
           saveState();
+          publishPlayers();
           renderAll();
           showNotification('Spiller oppdatert', 'success');
+
+          // Dispatch rename event so season module can sync denormalized names
+          if (oldName !== name) {
+            window.dispatchEvent(new CustomEvent('player:renamed', {
+              detail: { playerId: p.id, newName: name, oldName: oldName }
+            }));
+          }
         });
       }
 
@@ -1610,13 +1630,14 @@
         kampdag: 'Kampdag',
         competitions: 'Konkurranse',
         liga: 'Liga',
-        workout: 'Treningsøkt'
+        workout: 'Treningsøkt',
+        sesong: 'Sesong'
       };
       const titleEl = document.getElementById('pageTitleText');
       if (titleEl && titleMap[tabId]) titleEl.textContent = titleMap[tabId];
 
       // STEG 1: Fjern active fra alle nav-knapper (bunnmeny + mer-items)
-      document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#bottomNav .bottom-nav-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.mer-item').forEach(b => b.classList.remove('active'));
 
       // STEG 2: Skjul alle tabs
@@ -1654,10 +1675,23 @@
       if (typeof renderSelections === 'function') renderSelections();
       if (typeof publishPlayers === 'function') publishPlayers();
 
-      // STEG 5: Lukk Mer-popup
+      // STEG 5: Toggle sesong-bunnmeny
+      var bottomNav = document.getElementById('bottomNav');
+      var seasonNav = document.getElementById('seasonNav');
+      if (tabId === 'sesong') {
+        if (bottomNav) bottomNav.style.display = 'none';
+        if (seasonNav) seasonNav.style.display = '';
+        // Notify season module to sync nav state
+        try { window.dispatchEvent(new Event('season:nav-sync')); } catch(_) {}
+      } else {
+        if (seasonNav) seasonNav.style.display = 'none';
+        if (bottomNav) bottomNav.style.display = '';
+      }
+
+      // STEG 6: Lukk Mer-popup
       closeMerPopup();
 
-      // STEG 6: Scroll til topp + blur (iOS/Safari fix)
+      // STEG 7: Scroll til topp + blur (iOS/Safari fix)
       try { if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur(); } catch (_) {}
 
       const scroller = document.scrollingElement || document.documentElement;
@@ -1760,7 +1794,7 @@
     }
 
     // Bunnmeny click handlers
-    document.querySelectorAll('.bottom-nav-btn').forEach(btn => {
+    document.querySelectorAll('#bottomNav .bottom-nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab');
         if (!tab) return;
@@ -1782,8 +1816,15 @@
       });
     });
 
+    // Season nav: Home button exits sesong
+    var seasonHome = document.getElementById('seasonNavHome');
+    if (seasonHome) seasonHome.addEventListener('click', function() { switchTab('players'); });
+
     // Expose for other modules if needed
     window.__BF_switchTab = switchTab;
+    window.__BF_getTeamId = function() { return state.currentTeamId; };
+    window.__BF_saveState = saveState;
+    window.__BF_publishPlayers = publishPlayers;
   }
 
   function setupSkillToggle() {

@@ -1,13 +1,19 @@
 // © 2026 Barnefotballtrener.no. All rights reserved.
-// Barnefotballtrener - kampdag.js
-// Kampdag: oppm\u00f8te -> start/benk -> bytteplan med roligere bytter og bedre spilletidsfordeling.
-// Bruker global variabel "window.players" (Array) som settes av core.js.
-
-console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
+// sesong-kampdag.js — Embedded bytteplan for sesong-modulen.
+// Kopi av kampdag.js tilpasset sesong. Alle algoritmer IDENTISKE.
 
 (function () {
   'use strict';
-  console.log('KAMPDAG.JS - INSIDE IIFE');
+  console.log('[sesong-kampdag] loaded');
+
+  // --- SESONG INJECTION STATE ---
+  let _skdPlayers = [];
+  let _skdContainer = null;
+  let _skdEventData = null;
+  let _skdCallbacks = {};
+  let _skdActive = false;
+  let _skdDocListeners = []; // track document-level listeners for cleanup
+
   // ------------------------------
   // Utils
   // ------------------------------
@@ -15,10 +21,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
   function getPlayersArray() {
-    const raw = window.players;
-    if (Array.isArray(raw)) return raw;
-    if (raw && Array.isArray(raw.players)) return raw.players;
-    return [];
+    return _skdPlayers;
   }
 
   function escapeHtml(str) {
@@ -250,100 +253,16 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     calm:  { mode: 'calm',  sticky: 'strong', swapSplitHalf: 5 },
   };
 
-  // ------------------------------
-  // Init
-  // ------------------------------
-  
-  // Register event listener IMMEDIATELY (not waiting for DOMContentLoaded)
-  console.log('[Kampdag] Script loaded - registering event listener');
-
-  // Reset kampdag when team changes
-  window.addEventListener('team:changed', () => {
-    console.log('[Kampdag] team:changed  -  resetting kampdag state');
-    try {
-      // Stop timer if running
-      if (kdTimerInterval || kdTimerStart) stopMatchTimer();
-      // Clear plan state
-      lastBest = null;
-      lastPresent = [];
-      lastPlanText = '';
-      lastFormation = null;
-      lastFormationKey = '';
-      lastUseFormation = false;
-      lastPositions = {};
-      kdSlotOverrides = {};
-      // Clear output areas
-      const lineupEl = $('kdLineup');
-      const planEl = $('kdPlan');
-      const metaEl = $('kdMeta');
-      const startBtn = $('kdStartMatch');
-      if (lineupEl) lineupEl.innerHTML = '';
-      if (planEl) planEl.innerHTML = '';
-      if (metaEl) metaEl.textContent = '';
-      if (startBtn) startBtn.style.display = 'none';
-    } catch (err) {
-      console.error('[Kampdag] Error in team:changed handler:', err);
-    }
-  });
-
-  window.addEventListener('players:updated', (e) => {
-    console.log('[Kampdag] players:updated event mottatt:', e.detail);
-    try {
-      // Sync selection: add new players, remove deleted ones, preserve user's deselections
-      const currentIds = new Set(getPlayersArray().map(p => p.id));
-      // Remove IDs that no longer exist
-      for (const id of kdSelected) {
-        if (!currentIds.has(id)) kdSelected.delete(id);
-      }
-      // Add new players (that weren't in previous set)
-      for (const id of currentIds) {
-        if (!kdSelected.has(id) && !kdPreviousPlayerIds.has(id)) {
-          kdSelected.add(id);
-        }
-      }
-      kdPreviousPlayerIds = currentIds;
-      renderKampdagPlayers();
-      updateKampdagCounts();
-      refreshKeeperUI();
-      if (kdFormationOn) { renderPositionList(); updateCoverage(); }
-      console.log('[Kampdag] Players re-rendered, count:', getPlayersArray().length);
-    } catch (err) {
-      console.error('[Kampdag] Error in players:updated handler:', err);
-    }
-  });
-  
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log('[Kampdag] DOMContentLoaded');
-    const root = $('kampdag');
-    if (!root) {
-      console.log('[Kampdag] Root element ikke funnet');
-      return;
-    }
-
-    bindKampdagUI();
-    
-    // Sjekk om spillere allerede er tilgjengelig
-    const players = getPlayersArray();
-    console.log('[Kampdag] Initial players:', players.length);
-    if (players.length > 0) {
-      kdSelected = new Set(players.map(p => p.id));
-      kdPreviousPlayerIds = new Set(players.map(p => p.id));
-    }
-    renderKampdagPlayers();
-    refreshKeeperUI();
-    updateKampdagCounts();
-  });
-
   function bindKampdagUI() {
-    const formatEl = $('kdFormat');
-    const minutesEl = $('kdMinutes');
-    const selectAllBtn = $('kdSelectAll');
-    const deselectAllBtn = $('kdDeselectAll');
-    const refreshBtn = $('kdRefresh');
-    const manualKeeperEl = $('kdManualKeeper');
-    const keeperCountEl = $('kdKeeperCount');
-    const genBtn = $('kdGenerate');
-    const copyBtn = $('kdCopy');
+    const formatEl = $('skdFormat');
+    const minutesEl = $('skdMinutes');
+    const selectAllBtn = $('skdSelectAll');
+    const deselectAllBtn = $('skdDeselectAll');
+    const refreshBtn = $('skdRefresh');
+    const manualKeeperEl = $('skdManualKeeper');
+    const keeperCountEl = $('skdKeeperCount');
+    const genBtn = $('skdGenerate');
+    const copyBtn = $('skdCopy');
 
     if (formatEl) formatEl.addEventListener('change', () => {
       // Auto-set match duration based on format (Norwegian youth football defaults)
@@ -400,8 +319,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     });
 
     for (let i = 1; i <= 4; i++) {
-      const sel = $(`kdKeeper${i}`);
-      const min = $(`kdKeeperMin${i}`);
+      const sel = $(`skdKeeper${i}`);
+      const min = $(`skdKeeperMin${i}`);
       if (sel) sel.addEventListener('change', updateKeeperSummary);
       if (min) min.addEventListener('input', updateKeeperSummary);
     }
@@ -409,21 +328,21 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     if (genBtn) genBtn.addEventListener('click', generateKampdagPlan);
     if (copyBtn) copyBtn.addEventListener('click', copyKampdagPlan);
 
-    const pdfBtn = $('kdExportPdf');
+    const pdfBtn = $('skdExportPdf');
     if (pdfBtn) pdfBtn.addEventListener('click', exportKampdagPdf);
 
-    const startBtn = $('kdStartMatch');
+    const startBtn = $('skdStartMatch');
     if (startBtn) startBtn.addEventListener('click', startMatchTimer);
 
-    const pauseBtn = $('kdTimerPause');
+    const pauseBtn = $('skdTimerPause');
     if (pauseBtn) pauseBtn.addEventListener('click', toggleTimerPause);
 
-    const stopBtn = $('kdTimerStop');
+    const stopBtn = $('skdTimerStop');
     if (stopBtn) stopBtn.addEventListener('click', stopMatchTimer);
 
     // Drag & drop event listeners for pitch view
-    const lineupEl = $('kdLineup');
-    const planEl = $('kdPlan');
+    const lineupEl = $('skdLineup');
+    const planEl = $('skdPlan');
     const ddTargets = [lineupEl, planEl].filter(Boolean);
     ddTargets.forEach(container => {
       container.addEventListener('mousedown', (e) => {
@@ -440,14 +359,29 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         else if (benchB) initSlotDragStart(parseInt(benchB.dataset.seg), null, true, benchB.dataset.pid, t.clientX, t.clientY);
       }, { passive: true });
     });
-    document.addEventListener('mousemove', (e) => { if (kdDragState) { handleSlotDragMove(e.clientX, e.clientY); e.preventDefault(); } }, { passive: false });
-    document.addEventListener('mouseup', (e) => { if (kdDragState) handleSlotDragEnd(e.clientX, e.clientY); });
-    document.addEventListener('touchmove', (e) => { if (!kdDragState) return; const t = e.touches[0]; if (handleSlotDragMove(t.clientX, t.clientY)) e.preventDefault(); }, { passive: false });
-    document.addEventListener('touchend', (e) => { if (kdDragState) handleSlotDragEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY); });
-    document.addEventListener('touchcancel', cleanupDragState);
+    // Remove any previously attached document listeners (prevents accumulation on re-init)
+    _skdDocListeners.forEach(function(dl) { document.removeEventListener(dl[0], dl[1], dl[2]); });
+    _skdDocListeners = [];
+    var _dlMM = function(e) { if (kdDragState) { handleSlotDragMove(e.clientX, e.clientY); e.preventDefault(); } };
+    var _dlMU = function(e) { if (kdDragState) handleSlotDragEnd(e.clientX, e.clientY); };
+    var _dlTM = function(e) { if (!kdDragState) return; const t = e.touches[0]; if (handleSlotDragMove(t.clientX, t.clientY)) e.preventDefault(); };
+    var _dlTE = function(e) { if (kdDragState) handleSlotDragEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY); };
+    var _dlTC = cleanupDragState;
+    document.addEventListener('mousemove', _dlMM, { passive: false });
+    document.addEventListener('mouseup', _dlMU);
+    document.addEventListener('touchmove', _dlTM, { passive: false });
+    document.addEventListener('touchend', _dlTE);
+    document.addEventListener('touchcancel', _dlTC);
+    _skdDocListeners = [
+      ['mousemove', _dlMM, { passive: false }],
+      ['mouseup', _dlMU, undefined],
+      ['touchmove', _dlTM, { passive: false }],
+      ['touchend', _dlTE, undefined],
+      ['touchcancel', _dlTC, undefined]
+    ];
 
     // Frequency buttons
-    const freqContainer = $('kdFreqOptions');
+    const freqContainer = $('skdFreqOptions');
     if (freqContainer) {
       freqContainer.querySelectorAll('.kd-freq-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -459,21 +393,21 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     }
 
     // Formation always on: hide toggle, show panel, init grid
-    const formToggle = $('kdFormationToggle');
+    const formToggle = $('skdFormationToggle');
     if (formToggle) {
       formToggle.checked = true;
       const toggleCard = formToggle.closest('.settings-card');
       if (toggleCard) toggleCard.style.display = 'none';
     }
     const initFmt = parseInt(formatEl?.value, 10) || 7;
-    const formPanel = $('kdFormationPanel');
+    const formPanel = $('skdFormationPanel');
     if (formPanel) formPanel.style.display = (initFmt !== 3) ? 'block' : 'none';
     if (initFmt !== 3) renderFormationGrid();
 
     // Formation changes when format changes (hide for 3-er)
     if (formatEl) formatEl.addEventListener('change', () => {
       const fmt = parseInt(formatEl.value, 10) || 7;
-      const fp = $('kdFormationPanel');
+      const fp = $('skdFormationPanel');
       if (fp) fp.style.display = (fmt !== 3) ? 'block' : 'none';
       if (fmt !== 3) renderFormationGrid();
     });
@@ -483,7 +417,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   // Render player selection
   // ------------------------------
   function renderKampdagPlayers() {
-    const container = $('kdPlayerSelection');
+    const container = $('skdPlayerSelection');
     if (!container) return;
 
     const list = getPlayersArray().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'nb'));
@@ -518,12 +452,12 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   function updateKampdagCounts() {
-    const countEl = $('kdPresentCount');
+    const countEl = $('skdPresentCount');
     if (countEl) countEl.textContent = String(kdSelected.size);
 
-    const info = $('kdAutoInfo');
-    const format = parseInt($('kdFormat')?.value, 10) || 7;
-    const minutes = clamp(parseInt($('kdMinutes')?.value, 10) || 48, 10, 200);
+    const info = $('skdAutoInfo');
+    const format = parseInt($('skdFormat')?.value, 10) || 7;
+    const minutes = clamp(parseInt($('skdMinutes')?.value, 10) || 48, 10, 200);
 
     const onField = format;
     if (info) {
@@ -539,14 +473,14 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
    * 70 min / 3 keepers -> 24, 23, 23 (largest remainder gets extra).
    */
   function autoFillKeeperMinutes() {
-    const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 0, 0, 4);
+    const kc = clamp(parseInt($('skdKeeperCount')?.value, 10) || 0, 0, 4);
     if (kc === 0) return;
-    const T = clamp(parseInt($('kdMinutes')?.value, 10) || 48, 10, 200);
+    const T = clamp(parseInt($('skdMinutes')?.value, 10) || 48, 10, 200);
     const base = Math.floor(T / kc);
     let remainder = T - base * kc;
 
     for (let i = 1; i <= kc; i++) {
-      const el = $(`kdKeeperMin${i}`);
+      const el = $(`skdKeeperMin${i}`);
       if (!el) continue;
       const extra = remainder > 0 ? 1 : 0;
       el.value = base + extra;
@@ -555,11 +489,11 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   function refreshKeeperUI() {
-    const format = parseInt($('kdFormat')?.value, 10) || 7;
+    const format = parseInt($('skdFormat')?.value, 10) || 7;
 
-    const manualEl = $('kdManualKeeper');
+    const manualEl = $('skdManualKeeper');
     const keeperCard = manualEl?.closest('.settings-card');
-    const panel = $('kdKeeperPanel');
+    const panel = $('skdKeeperPanel');
 
     if (format === 3) {
       if (keeperCard) keeperCard.style.display = 'none';
@@ -578,14 +512,14 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           lbl.style.display = 'none';
         }
       }
-      if ($('kdKeeperHint')) $('kdKeeperHint').textContent = 'Velg hvem som st\u00e5r i m\u00e5l og hvor lenge.';
+      if ($('skdKeeperHint')) $('skdKeeperHint').textContent = 'Velg hvem som st\u00e5r i m\u00e5l og hvor lenge.';
     }
 
     // Always show keeper panel for non-3-er formats
     if (panel) panel.style.display = 'block';
 
     // Enforce minimum 1 keeper
-    const kcEl = $('kdKeeperCount');
+    const kcEl = $('skdKeeperCount');
     if (kcEl && parseInt(kcEl.value, 10) < 1) {
       kcEl.value = '1';
       autoFillKeeperMinutes();
@@ -595,7 +529,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const opts = makeKeeperOptions(present);
 
     for (let i = 1; i <= 4; i++) {
-      const sel = $(`kdKeeper${i}`);
+      const sel = $(`skdKeeper${i}`);
       if (!sel) continue;
 
       const prev = sel.value;
@@ -610,7 +544,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const kc = clamp(parseInt(kcEl?.value, 10) || 1, 1, 4);
     for (let i = 1; i <= 4; i++) {
-      const row = document.querySelector(`.kd-keeper-row[data-row="${i}"]`);
+      const rowRoot = _skdActive && _skdContainer ? _skdContainer : document;
+      const row = rowRoot.querySelector(`.kd-keeper-row[data-row="${i}"]`);
       if (row) row.style.display = (i <= kc) ? 'flex' : 'none';
     }
 
@@ -627,18 +562,18 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   function updateKeeperSummary() {
-    const summary = $('kdKeeperSummary');
+    const summary = $('skdKeeperSummary');
     if (!summary) return;
 
-    const format = parseInt($('kdFormat')?.value, 10) || 7;
-    const T = clamp(parseInt($('kdMinutes')?.value, 10) || 48, 10, 200);
+    const format = parseInt($('skdFormat')?.value, 10) || 7;
+    const T = clamp(parseInt($('skdMinutes')?.value, 10) || 48, 10, 200);
 
     if (format === 3) {
       summary.textContent = '3-er: ingen keeper.';
       return;
     }
 
-    const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 1, 1, 4);
+    const kc = clamp(parseInt($('skdKeeperCount')?.value, 10) || 1, 1, 4);
     let sum = 0;
     let chosen = 0;
     const warnings = [];
@@ -647,8 +582,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const actualAlloc = [];
 
     for (let i = 1; i <= kc; i++) {
-      const pid = $(`kdKeeper${i}`)?.value || '';
-      const min = clamp(parseInt($(`kdKeeperMin${i}`)?.value, 10) || 0, 0, 999);
+      const pid = $(`skdKeeper${i}`)?.value || '';
+      const min = clamp(parseInt($(`skdKeeperMin${i}`)?.value, 10) || 0, 0, 999);
       if (pid) {
         chosen++;
         if (selectedPids.includes(pid)) warnings.push('\u26a0 Samme keeper valgt flere ganger');
@@ -667,7 +602,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     // Warn if keepers get no time
     for (let i = 0; i < kc; i++) {
-      if (actualAlloc[i] === 0 && (clamp(parseInt($(`kdKeeperMin${i + 1}`)?.value, 10) || 0, 0, 999) > 0)) {
+      if (actualAlloc[i] === 0 && (clamp(parseInt($(`skdKeeperMin${i + 1}`)?.value, 10) || 0, 0, 999) > 0)) {
         warnings.push(`\u26a0 Keeper ${i + 1} f\u00e5r ingen tid (total overstiger ${T} min)`);
       }
     }
@@ -692,9 +627,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   function renderFormationGrid() {
-    const grid = $('kdFormationGrid');
+    const grid = $('skdFormationGrid');
     if (!grid) return;
-    const format = parseInt($('kdFormat')?.value, 10) || 7;
+    const format = parseInt($('skdFormat')?.value, 10) || 7;
     const opts = FORMATIONS[format] || FORMATIONS[7];
 
     if (!kdFormationKey || !opts[kdFormationKey]) {
@@ -726,7 +661,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   function renderPositionList() {
-    const container = $('kdPositionList');
+    const container = $('skdPositionList');
     if (!container) return;
     const present = getPresentPlayers();
     const posMap = getPositionsMap();
@@ -745,7 +680,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   function updateCoverage() {
-    const el = $('kdCoverage');
+    const el = $('skdCoverage');
     if (!el || !kdFormation) { if (el) el.style.display = 'none'; return; }
 
     const present = getPresentPlayers();
@@ -949,32 +884,36 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
   }
 
-  function copySlotToNext(si) {
+  function copySlotToAll(si) {
     if (!lastBest || si >= lastBest.segments.length - 1 || !kdSlotOverrides[si]) return;
     const slots = getActiveSlots();
     if (!slots) return;
     const src = kdSlotOverrides[si];
-    const nextLineup = new Set(lastBest.segments[si + 1].lineup);
-    ensureSlotOverride(si + 1);
-    const tgt = kdSlotOverrides[si + 1];
-    // Copy field positions where player is still in next lineup
-    for (const [sk, pid] of Object.entries(src.slots)) {
-      const slot = slots.find(s => s.key === sk);
-      if (!slot || slot.zone === 'K') continue;
-      if (nextLineup.has(pid)) {
-        // Clear player from any other slot first
-        for (const [tk, tv] of Object.entries(tgt.slots)) { if (tv === pid && tk !== sk) tgt.slots[tk] = null; }
-        tgt.slots[sk] = pid;
+
+    // Iterate through ALL subsequent segments, propagating slot overrides
+    for (let ti = si + 1; ti < lastBest.segments.length; ti++) {
+      const targetLineup = new Set(lastBest.segments[ti].lineup);
+      ensureSlotOverride(ti);
+      const tgt = kdSlotOverrides[ti];
+      // Copy field positions where player is still in target lineup
+      for (const [sk, pid] of Object.entries(src.slots)) {
+        const slot = slots.find(s => s.key === sk);
+        if (!slot || slot.zone === 'K') continue;
+        if (targetLineup.has(pid)) {
+          // Clear player from any other slot first
+          for (const [tk, tv] of Object.entries(tgt.slots)) { if (tv === pid && tk !== sk) tgt.slots[tk] = null; }
+          tgt.slots[sk] = pid;
+        }
       }
-    }
-    // Fill empty slots with unplaced players
-    for (const [sk, sv] of Object.entries(tgt.slots)) {
-      if (!sv || !nextLineup.has(sv)) {
-        const unused = [...nextLineup].filter(p => !Object.values(tgt.slots).includes(p) && p !== lastBest.segments[si + 1].keeperId);
-        if (unused.length) tgt.slots[sk] = unused[0];
+      // Fill empty slots with unplaced players
+      for (const [sk, sv] of Object.entries(tgt.slots)) {
+        if (!sv || !targetLineup.has(sv)) {
+          const unused = [...targetLineup].filter(p => !Object.values(tgt.slots).includes(p) && p !== lastBest.segments[ti].keeperId);
+          if (unused.length) tgt.slots[sk] = unused[0];
+        }
       }
+      tgt.bench = lastPresent.filter(p => !lastBest.segments[ti].lineup.includes(p.id)).map(p => p.id);
     }
-    tgt.bench = lastPresent.filter(p => !lastBest.segments[si + 1].lineup.includes(p.id)).map(p => p.id);
     renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
   }
 
@@ -1156,11 +1095,11 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   function buildKeeperTimeline(T) {
-    const format = parseInt($('kdFormat')?.value, 10) || 7;
+    const format = parseInt($('skdFormat')?.value, 10) || 7;
 
     if (format === 3) return [];
 
-    const kc = clamp(parseInt($('kdKeeperCount')?.value, 10) || 1, 1, 4);
+    const kc = clamp(parseInt($('skdKeeperCount')?.value, 10) || 1, 1, 4);
 
     // Auto-pick: if a keeper dropdown is empty, try to find a goalie-tagged player
     function autoPickKeeper(excludeIds) {
@@ -1177,8 +1116,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const usedKeepers = new Set();
 
     for (let i = 1; i <= kc; i++) {
-      let pid = $(`kdKeeper${i}`)?.value || '';
-      const minsRaw = parseInt($(`kdKeeperMin${i}`)?.value, 10) || 0;
+      let pid = $(`skdKeeper${i}`)?.value || '';
+      const minsRaw = parseInt($(`skdKeeperMin${i}`)?.value, 10) || 0;
       const mins = clamp(minsRaw, 0, 999);
 
       if (mins <= 0) continue;
@@ -1855,13 +1794,13 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   function generateKampdagPlan() {
    try {
     const present = getPresentPlayers();
-    const format = parseInt($('kdFormat')?.value, 10) || 7;
-    const T = clamp(parseInt($('kdMinutes')?.value, 10) || 48, 10, 200);
+    const format = parseInt($('skdFormat')?.value, 10) || 7;
+    const T = clamp(parseInt($('skdMinutes')?.value, 10) || 48, 10, 200);
     const P = format;
 
-    const lineupEl = $('kdLineup');
-    const planEl = $('kdPlan');
-    const metaEl = $('kdMeta');
+    const lineupEl = $('skdLineup');
+    const planEl = $('skdPlan');
+    const metaEl = $('skdMeta');
 
     if (!present.length) {
       if (lineupEl) lineupEl.innerHTML = `<div class="small-text" style="opacity:0.8;">Velg oppm\u00f8te f\u00f8rst.</div>`;
@@ -2081,18 +2020,18 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     }
 
     // Show start match button
-    const startBtn = $('kdStartMatch');
+    const startBtn = $('skdStartMatch');
     if (startBtn) startBtn.style.display = '';
    } catch (err) {
     console.error('[kampdag] generateKampdagPlan feil:', err);
-    const lineupEl = $('kdLineup');
+    const lineupEl = $('skdLineup');
     if (lineupEl) lineupEl.innerHTML = '<div class="small-text" style="opacity:0.8;">En feil oppstod. Pr\u00f8v \u00e5 endre innstillinger og generer p\u00e5 nytt.</div>';
    }
   }
 
   function renderKampdagOutput(presentPlayers, best, P, T) {
-    const lineupEl = $('kdLineup');
-    const planEl = $('kdPlan');
+    const lineupEl = $('skdLineup');
+    const planEl = $('skdPlan');
     if (!lineupEl && !planEl) return;
 
     const idToName = {};
@@ -2215,7 +2154,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         lineupEl.innerHTML = `
           <div class="kd-dark-output">
             <h3 class="kd-dark-heading">Startoppstilling \u00b7 ${lastFormationKey}
-              ${hasAnyOverride ? `<button class="kd-reset-all-btn" id="kdResetAllSlots">\u21ba Tilbakestill alle</button>` : ''}
+              ${hasAnyOverride ? `<button class="kd-reset-all-btn" id="skdResetAllSlots">\u21ba Tilbakestill alle</button>` : ''}
             </h3>
             <div class="kd-pitch-card">
               <div class="kd-pitch-card-header">
@@ -2223,8 +2162,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
                   ${ov0 ? '<span class="kd-override-badge">\u270f\ufe0f Tilpasset</span>' : ''}
                 </div>
                 <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                  ${ov0 && best.segments.length > 1 ? `<button class="kd-copy-btn" data-action="kdcopy" data-seg="0">Kopier til alle</button>` : ''}
-                  ${ov0 ? `<button class="kd-reset-btn" data-action="kdreset" data-seg="0">\u21ba</button>` : ''}
+                  ${ov0 && best.segments.length > 1 ? `<button class="kd-copy-btn" data-action="skdcopy" data-seg="0">Kopier til alle</button>` : ''}
+                  ${ov0 ? `<button class="kd-reset-btn" data-action="skdreset" data-seg="0">\u21ba</button>` : ''}
                   
                 </div>
               </div>
@@ -2291,8 +2230,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
                 ${ov ? '<span class="kd-override-badge">\u270f\ufe0f Tilpasset</span>' : ''}
               </div>
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                ${ov && !isLast ? `<button class="kd-copy-btn" data-action="kdcopy" data-seg="${idx}">Kopier til alle</button>` : ''}
-                ${ov ? `<button class="kd-reset-btn" data-action="kdreset" data-seg="${idx}">\u21ba</button>` : ''}
+                ${ov && !isLast ? `<button class="kd-copy-btn" data-action="skdcopy" data-seg="${idx}">Kopier til alle</button>` : ''}
+                ${ov ? `<button class="kd-reset-btn" data-action="skdreset" data-seg="${idx}">\u21ba</button>` : ''}
                 
               </div>
             </div>
@@ -2314,13 +2253,13 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       }
 
       // Bind action buttons (delegation-safe, re-binds each render)
-      const resetAllBtn = document.getElementById('kdResetAllSlots');
+      const resetAllBtn = document.getElementById('skdResetAllSlots');
       if (resetAllBtn) resetAllBtn.addEventListener('click', resetAllSlotOverrides);
-      document.querySelectorAll('[data-action="kdreset"]').forEach(b => {
+      document.querySelectorAll('[data-action="skdreset"]').forEach(b => {
         b.addEventListener('click', (e) => { e.stopPropagation(); resetSlotOverride(parseInt(b.dataset.seg)); });
       });
-      document.querySelectorAll('[data-action="kdcopy"]').forEach(b => {
-        b.addEventListener('click', (e) => { e.stopPropagation(); copySlotToNext(parseInt(b.dataset.seg)); });
+      document.querySelectorAll('[data-action="skdcopy"]').forEach(b => {
+        b.addEventListener('click', (e) => { e.stopPropagation(); copySlotToAll(parseInt(b.dataset.seg)); });
       });
 
     } else {
@@ -2423,7 +2362,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const lines = [];
     const useFormation = kdFormationOn && kdFormation;
-    const format = parseInt($('kdFormat')?.value, 10) || 7;
+    const format = parseInt($('skdFormat')?.value, 10) || 7;
     const hasAnyOverride = Object.keys(kdSlotOverrides).length > 0;
 
     // Slot system only works when formation is active (maps players to zone slots).
@@ -2519,7 +2458,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(lastPlanText)
         .then(() => {
-          const metaEl = $('kdMeta');
+          const metaEl = $('skdMeta');
           if (metaEl) {
             const prev = metaEl.textContent;
             metaEl.textContent = 'Plan kopiert \u2705';
@@ -2542,7 +2481,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
-      const metaEl = $('kdMeta');
+      const metaEl = $('skdMeta');
       if (metaEl) {
         const prev = metaEl.textContent;
         metaEl.textContent = 'Plan kopiert \u2705';
@@ -2875,10 +2814,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     kdTimerIdToName = {};
     lastPresent.forEach(p => kdTimerIdToName[p.id] = p.name);
 
-    const wrap = $('kdTimerWrap');
+    const wrap = $('skdTimerWrap');
     if (wrap) wrap.style.display = '';
 
-    const pauseBtn = $('kdTimerPause');
+    const pauseBtn = $('skdTimerPause');
     if (pauseBtn) pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
 
     if (kdTimerInterval) clearInterval(kdTimerInterval);
@@ -2888,7 +2827,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 
   function toggleTimerPause() {
     if (!kdTimerStart) return;
-    const pauseBtn = $('kdTimerPause');
+    const pauseBtn = $('skdTimerPause');
     if (kdTimerPaused) {
       // Resume: adjust start time
       kdTimerStart = Date.now() - kdTimerPausedElapsed;
@@ -2909,7 +2848,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     kdTimerStart = null;
     kdTimerPaused = false;
     kdTimerPausedElapsed = 0;
-    const wrap = $('kdTimerWrap');
+    const wrap = $('skdTimerWrap');
     if (wrap) wrap.style.display = 'none';
   }
 
@@ -2922,14 +2861,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
     const ss = String(totalSec % 60).padStart(2, '0');
 
-    const clockEl = $('kdTimerClock');
+    const clockEl = $('skdTimerClock');
     if (clockEl) clockEl.textContent = `${mm}:${ss}`;
 
     // Find next sub time
     const subTimes = lastBest.times.filter(t => t > 0 && t < lastT);
     const nextSub = subTimes.find(t => t > elapsedMin);
-    const nextEl = $('kdTimerNext');
-    const subsEl = $('kdTimerSubs');
+    const nextEl = $('skdTimerNext');
+    const subsEl = $('skdTimerSubs');
 
     if (elapsedMin >= lastT) {
       // Match over
@@ -2942,7 +2881,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
         if (!kdTimerStart || kdTimerInterval) return; // user restarted
         kdTimerStart = null;
         kdTimerPausedElapsed = 0;
-        const wrap = $('kdTimerWrap');
+        const wrap = $('skdTimerWrap');
         if (wrap) wrap.style.display = 'none';
       }, 5000);
       return;
@@ -2981,35 +2920,217 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     }
   }
 
-  // === SESONG-INTEGRASJON: Prefill fra sesong-event ===
-  window.kampdagPrefill = function(opts) {
-    var formatEl = $('kdFormat');
-    var minutesEl = $('kdMinutes');
+  // ============================================================
+  // HTML Template (mirrors index.html #kampdag section with skd IDs)
+  // ============================================================
+  function buildSkdHtml(format, minutes, opponent, isHome) {
+    var title = opponent ? ('vs ' + escapeHtml(opponent)) : 'Bytteplan';
+    var fmtOpts = [3,5,7,9,11].map(function(f) {
+      return '<option value="' + f + '"' + (f === format ? ' selected' : '') + '>' + f + '-er' + (f === 3 ? ' (ingen keeper)' : '') + '</option>';
+    }).join('');
 
-    // 1. Sett format og trigger change-lyttere (auto-minutes + formasjon)
-    if (opts.format && formatEl) {
-      formatEl.value = opts.format;
-      formatEl.dispatchEvent(new Event('change'));
-    }
+    return '' +
+      '<div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">' +
+        '<button id="skdBackBtn" class="btn-secondary" style="padding:6px 10px; font-size:13px;"><i class="fas fa-arrow-left" style="margin-right:4px;"></i>Tilbake</button>' +
+        '<div style="font-weight:800; font-size:16px;">' + title + '</div>' +
+      '</div>' +
 
-    // 2. Overstyr minutter (etter format-change som auto-setter default)
-    if (opts.minutes && minutesEl) {
-      minutesEl.value = opts.minutes;
-      minutesEl.dispatchEvent(new Event('input'));
-    }
+      '<div class="settings-card">' +
+        '<div class="settings-row" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">' +
+          '<div style="flex:1; min-width:220px;">' +
+            '<label for="skdFormat" style="display:block; font-weight:700; margin-bottom:6px;">Format</label>' +
+            '<select id="skdFormat" class="input" style="width:100%;">' + fmtOpts + '</select>' +
+          '</div>' +
+          '<div style="flex:1; min-width:220px;">' +
+            '<label for="skdMinutes" style="display:block; font-weight:700; margin-bottom:6px;">Kampvarighet (min)</label>' +
+            '<input id="skdMinutes" type="number" class="input" value="' + minutes + '" min="10" max="200" style="width:100%;">' +
+          '</div>' +
+          '<div style="flex:1; min-width:220px;">' +
+            '<div style="font-weight:700; margin-bottom:6px;">Auto</div>' +
+            '<div id="skdAutoInfo" class="small-text" style="opacity:0.85;">Velg oppm\u00f8te f\u00f8rst.</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="settings-row" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px;">' +
+          '<div style="font-weight:700; font-size:13px; min-width:100px;">Byttemodus</div>' +
+          '<div id="skdFreqOptions" style="display:flex; gap:6px; flex:1;">' +
+            '<button type="button" class="btn-secondary kd-freq-btn kd-freq-active" data-freq="equal" style="flex:1; font-size:12px; padding:7px 4px;">\u2696\ufe0f Lik spilletid<br><span class="small-text" style="opacity:0.9;">Rettferdig</span></button>' +
+            '<button type="button" class="btn-secondary kd-freq-btn" data-freq="calm" style="flex:1; font-size:12px; padding:7px 4px;">\ud83e\uddd8 Rolig bytteplan<br><span class="small-text" style="opacity:1; color:var(--text-600);">F\u00e6rre bytter</span></button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">' +
+          '<button id="skdSelectAll" class="btn-secondary" type="button">Velg alle</button>' +
+          '<button id="skdDeselectAll" class="btn-secondary" type="button">Fjern alle</button>' +
+        '</div>' +
+      '</div>' +
 
-    // 3. Sett oppmøte (hvilke spillere som er med)
-    if (opts.playerIds && Array.isArray(opts.playerIds)) {
-      kdSelected = new Set(opts.playerIds);
+      '<div class="selection-header"><div class="selection-title">Tropp (<span id="skdPresentCount">0</span>)</div></div>' +
+      '<div id="skdPlayerSelection" class="player-selection"></div>' +
+
+      '<div class="settings-card" style="margin-top:8px; padding:8px 12px;">' +
+        '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
+          '<div><div style="font-weight:700; font-size:14px;">Formasjoner og roller</div>' +
+          '<div class="small-text" style="opacity:0.8; font-size:11px;">Vis posisjoner (F/M/A) i bytteplan, banevisning og PDF.</div></div>' +
+          '<label class="switch"><input id="skdFormationToggle" type="checkbox"><span class="slider"></span></label>' +
+        '</div>' +
+        '<div id="skdFormationPanel" style="display:none; margin-top:10px;">' +
+          '<div id="skdFormationGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>' +
+          '<div style="margin-top:12px;">' +
+            '<div style="font-weight:700; font-size:13px; margin-bottom:6px;">Posisjonspreferanse</div>' +
+            '<div class="small-text" style="opacity:0.8; margin-bottom:8px;">Sett posisjoner i Spillere-fanen (F/M/A).</div>' +
+            '<div id="skdPositionList" style="display:grid; grid-template-columns:1fr 1fr; gap:4px;"></div>' +
+          '</div>' +
+          '<div id="skdCoverage" style="margin-top:10px; padding:10px 12px; border-radius:10px; font-size:12px; display:none;"></div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="settings-card" style="margin-top:8px; padding:8px 12px;">' +
+        '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
+          '<div><div style="font-weight:700; font-size:14px;">Manuell keeper</div>' +
+          '<div id="skdKeeperHint" class="small-text" style="opacity:0.8; font-size:11px;">Velg hvem som st\u00e5r i m\u00e5l og hvor lenge.</div></div>' +
+          '<label class="switch"><input id="skdManualKeeper" type="checkbox"><span class="slider"></span></label>' +
+        '</div>' +
+        '<div id="skdKeeperPanel" style="display:none; margin-top:10px;">' +
+          '<div class="settings-row" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">' +
+            '<div style="min-width:240px;"><label for="skdKeeperCount" style="display:block; font-weight:700; margin-bottom:6px;">Antall keepere</label>' +
+            '<select id="skdKeeperCount" class="input" style="width:100%;"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>' +
+            '<div style="flex:1; min-width:240px;"><label style="display:block; font-weight:700; margin-bottom:6px;">Oppsummering</label>' +
+            '<div id="skdKeeperSummary" class="small-text" style="opacity:0.85;">\u2013</div></div>' +
+          '</div>' +
+          '<div class="kd-keeper-rows" style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">' +
+            '<div class="kd-keeper-row" data-row="1" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper1" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin1" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
+            '<div class="kd-keeper-row" data-row="2" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper2" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin2" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
+            '<div class="kd-keeper-row" data-row="3" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper3" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin3" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
+            '<div class="kd-keeper-row" data-row="4" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper4" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin4" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="settings-card" style="margin-top:14px;">' +
+        '<div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap;">' +
+          '<button id="skdGenerate" class="btn-primary" type="button"><i class="fas fa-wand-magic-sparkles"></i> Generer plan</button>' +
+          '<button id="skdCopy" class="btn-secondary" type="button"><i class="fas fa-copy"></i> Kopier plan</button>' +
+          '<button id="skdExportPdf" class="btn-secondary" type="button"><i class="fas fa-file-pdf"></i> Lagre som PDF</button>' +
+          '<button id="skdStartMatch" class="btn-secondary" type="button" style="display:none;"><i class="fas fa-play"></i> Start kamp</button>' +
+        '</div>' +
+        '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">' +
+          '<button id="skdSavePlan" class="btn-primary" type="button" style="display:none; background:#16a34a;"><i class="fas fa-save" style="margin-right:4px;"></i>Lagre spilletid til sesong</button>' +
+        '</div>' +
+        '<div id="skdMeta" class="small-text" style="margin-top:10px; opacity:0.85;"></div>' +
+      '</div>' +
+
+      '<div id="skdTimerWrap" style="display:none; position:sticky; top:0; z-index:50;">' +
+        '<div class="settings-card" style="margin-top:0; border-top-left-radius:0; border-top-right-radius:0; background:var(--card); border-bottom:2px solid var(--brand,#3b82f6);">' +
+          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+            '<div><div id="skdTimerClock" style="font-size:28px; font-weight:900; font-variant-numeric:tabular-nums;">00:00</div>' +
+            '<div id="skdTimerNext" class="small-text" style="opacity:0.85;">Neste bytte om --:--</div></div>' +
+            '<div style="display:flex; gap:8px;">' +
+              '<button id="skdTimerPause" class="btn-secondary" type="button" style="padding:8px 12px;"><i class="fas fa-pause"></i></button>' +
+              '<button id="skdTimerStop" class="btn-secondary" type="button" style="padding:8px 12px;"><i class="fas fa-stop"></i></button>' +
+            '</div>' +
+          '</div>' +
+          '<div id="skdTimerSubs" class="small-text" style="margin-top:8px; display:none;"></div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div id="skdLineup" class="results-container"></div>' +
+      '<div id="skdPlan" class="results-container"></div>';
+  }
+
+  // ============================================================
+  // Public API
+  // ============================================================
+  window.sesongKampdag = {
+    init: function(containerEl, players, opts) {
+      if (_skdActive) this.destroy();
+
+      _skdPlayers = players || [];
+      _skdContainer = containerEl;
+      _skdEventData = opts;
+      _skdCallbacks = { onSave: opts.onSave || null, onBack: opts.onBack || null };
+      _skdActive = true;
+
+      // Reset all state
+      kdSelected = new Set(_skdPlayers.map(function(p) { return p.id; }));
+      kdPreviousPlayerIds = new Set(kdSelected);
+      lastBest = null; lastPresent = []; lastPlanText = '';
+      lastFormation = null; lastFormationKey = ''; lastUseFormation = false; lastPositions = {};
+      kdSlotOverrides = {};
+      kdFormationOn = true; kdFrequency = 'equal';
+      if (kdTimerInterval) { clearInterval(kdTimerInterval); kdTimerInterval = null; }
+      kdTimerStart = null; kdTimerPaused = false; kdTimerPausedElapsed = 0;
+
+      // Inject HTML
+      containerEl.innerHTML = buildSkdHtml(opts.format || 7, opts.minutes || 60, opts.opponent || '', opts.isHome);
+
+      // Bind UI, render
+      bindKampdagUI();
       renderKampdagPlayers();
-    }
+      refreshKeeperUI();
+      updateKampdagCounts();
 
-    // 4. Oppdater avhengig UI
-    refreshKeeperUI();
-    updateKampdagCounts();
-    if (kdFormationOn) { renderPositionList(); updateCoverage(); }
+      // Back button
+      var backBtn = $('skdBackBtn');
+      if (backBtn) backBtn.addEventListener('click', function() {
+        if (_skdCallbacks.onBack) _skdCallbacks.onBack();
+      });
 
-    console.log('[Kampdag] Prefilled from sesong:', opts);
-    return true;
+      // Save button
+      var saveBtn = $('skdSavePlan');
+      if (saveBtn) saveBtn.addEventListener('click', async function() {
+        if (saveBtn.disabled || !lastBest || !_skdCallbacks.onSave) return;
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Lagrer...';
+        var useSlots = lastUseFormation && lastP !== 3;
+        var effMins = useSlots ? getEffectiveMinutes() : lastBest.minutes;
+        var minutesMap = {};
+        for (var pid in effMins) { minutesMap[pid] = Math.round(effMins[pid]); }
+        try {
+          await _skdCallbacks.onSave({
+            segments: lastBest.segments, times: lastBest.times,
+            minutes: lastBest.minutes, swaps: lastBest.swaps || [],
+            format: lastP, totalMinutes: lastT, playerCount: lastPresent.length
+          }, minutesMap);
+        } catch (saveErr) {
+          console.error('[sesong-kampdag] onSave error:', saveErr);
+          // Re-enable button if still in DOM (not destroyed by callback)
+          var retryBtn = $('skdSavePlan');
+          if (retryBtn) {
+            retryBtn.disabled = false;
+            retryBtn.innerHTML = '<i class="fas fa-save" style="margin-right:4px;"></i>Lagre spilletid til sesong';
+          }
+        }
+      });
+
+      // Show save button after generate
+      var genBtn2 = $('skdGenerate');
+      if (genBtn2) genBtn2.addEventListener('click', function() {
+        setTimeout(function() {
+          if (lastBest) { var sb = $('skdSavePlan'); if (sb) sb.style.display = ''; }
+        }, 50);
+      });
+
+      console.log('[sesong-kampdag] init:', _skdPlayers.length, 'players, format', opts.format);
+    },
+
+    destroy: function() {
+      if (kdTimerInterval) { clearInterval(kdTimerInterval); kdTimerInterval = null; }
+      kdTimerStart = null; kdTimerPaused = false; kdTimerPausedElapsed = 0;
+      cleanupDragState();
+      kdDragState = null;
+      kdSelected = new Set();
+      // Remove document-level listeners
+      _skdDocListeners.forEach(function(dl) { document.removeEventListener(dl[0], dl[1], dl[2]); });
+      _skdDocListeners = [];
+      _skdPlayers = []; _skdContainer = null; _skdEventData = null;
+      _skdCallbacks = {}; _skdActive = false;
+      lastBest = null; lastPresent = []; lastPlanText = '';
+      kdSlotOverrides = {};
+      kdFormationOn = true; kdFormation = null; kdFormationKey = '';
+      kdTimerEvents = null; kdTimerIdToName = {}; kdTimerVibrated = new Set();
+      console.log('[sesong-kampdag] destroyed');
+    },
+
+    isActive: function() { return _skdActive; }
   };
+
 })();

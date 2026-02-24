@@ -1363,6 +1363,20 @@
           <div id="woTemplates" class="wo-templates"></div>
         </div>
       </div>
+      </div> <!-- close workout tab -->
+
+      <!-- SESONG TAB -->
+      <div id="sesong" class="tab-content">
+        <div class="tab-header">
+          <h2><i class="fas fa-calendar-days"></i> Sesong</h2>
+          <p class="tab-description" id="snDescription">
+            Planlegg sesongen med kamper og treninger.
+          </p>
+        </div>
+        <div id="snRoot">
+          <!-- season.js renderer her -->
+        </div>
+      </div>
 
     </main>
   </div> <!-- /#mainApp -->
@@ -1387,9 +1401,28 @@
   </button>
 </nav>
 
+<nav class="bottom-nav" id="seasonNav" style="display:none;">
+  <button class="bottom-nav-btn" id="seasonNavHome" type="button">
+    <i class="fas fa-home"></i><span>Hjem</span>
+  </button>
+  <button class="bottom-nav-btn" data-stab="calendar" type="button">
+    <i class="fas fa-calendar-alt"></i><span>Kalender</span>
+  </button>
+  <button class="bottom-nav-btn" data-stab="roster" type="button">
+    <i class="fas fa-users"></i><span>Stall</span>
+  </button>
+  <button class="bottom-nav-btn" data-stab="stats" type="button">
+    <i class="fas fa-chart-bar"></i><span>Statistikk</span>
+  </button>
+</nav>
+
 <div class="mer-popup" id="merPopup" style="display:none;">
   <div class="mer-overlay" id="merOverlay"></div>
   <div class="mer-menu">
+    <button class="mer-item" data-tab="sesong">
+      <div class="mer-item-title">Sesong</div>
+      <div class="mer-item-desc">Kamper, treninger, oversikt</div>
+    </button>
     <button class="mer-item" data-tab="competitions">
       <div class="mer-item-title">Konkurranse</div>
       <div class="mer-item-desc">Mesternes mester</div>
@@ -1420,7 +1453,6 @@
 <script src="env.js"></script>
 <script src="config.js"></script>
 <script src="auth.js"></script>
-<script src="error-logger.js"></script>
 <script src="subscription.js"></script>
 
 <script src="auth-ui.js"></script>
@@ -1430,6 +1462,8 @@
 <script src="kampdag.js"></script>
 <script src="competitions.js"></script>
 <script src="workout.js"></script>
+<script src="season.js"></script>
+<script src="sesong-kampdag.js"></script>
 <script src="logout-fix.js"></script>
 
 </body>

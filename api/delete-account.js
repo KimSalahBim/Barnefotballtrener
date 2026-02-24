@@ -1,4 +1,4 @@
-// © 2026 Barnefotballtrener.no. All rights reserved.
+// Â© 2026 Barnefotballtrener.no. All rights reserved.
 // api/delete-account.js
 // GDPR Art. 17 - Right to Erasure ("Right to be Forgotten")
 // Allows users to permanently delete their account and all associated data
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
         }
 
         // NOTE: We do NOT delete the Stripe customer record
-        // Reason: Bokføringsloven requires keeping payment records for 7 years
+        // Reason: BokfÃ¸ringsloven requires keeping payment records for 7 years
         // Instead, we anonymize the customer metadata
         try {
           await stripe.customers.update(customerId, {
@@ -216,7 +216,69 @@ export default async function handler(req, res) {
       console.error('[delete-account] user_data database error:', udDbErr);
     }
 
-    // 4e) Delete teams from Supabase (CASCADE sletter spillere automatisk, men vi har allerede slettet dem)
+    // 4e) Delete season module data (children first, then parents)
+    // Order: match_events → event_players → events → training_series → season_players → seasons
+    // Must run BEFORE teams deletion because seasons.team_id → teams.id
+    try {
+      // Get event IDs for match_events deletion (match_events lacks season_id)
+      const { data: userEvents } = await supabaseAdmin
+        .from('events')
+        .select('id')
+        .eq('user_id', userId);
+      const eventIds = (userEvents || []).map(e => e.id);
+
+      // 1. match_events (deepest child, FK → events)
+      if (eventIds.length > 0) {
+        const { error: meErr } = await supabaseAdmin
+          .from('match_events')
+          .delete()
+          .in('event_id', eventIds)
+          .eq('user_id', userId);
+        if (meErr) console.error('[delete-account] match_events error:', meErr.message);
+      }
+
+      // 2. event_players (FK → events + seasons)
+      const { error: epErr } = await supabaseAdmin
+        .from('event_players')
+        .delete()
+        .eq('user_id', userId);
+      if (epErr) console.error('[delete-account] event_players error:', epErr.message);
+
+      // 3. events (FK → seasons)
+      const { error: evErr } = await supabaseAdmin
+        .from('events')
+        .delete()
+        .eq('user_id', userId);
+      if (evErr) console.error('[delete-account] events error:', evErr.message);
+
+      // 4. training_series (FK → seasons)
+      const { error: tsErr } = await supabaseAdmin
+        .from('training_series')
+        .delete()
+        .eq('user_id', userId);
+      if (tsErr) console.error('[delete-account] training_series error:', tsErr.message);
+
+      // 5. season_players (FK → seasons)
+      const { error: spErr } = await supabaseAdmin
+        .from('season_players')
+        .delete()
+        .eq('user_id', userId);
+      if (spErr) console.error('[delete-account] season_players error:', spErr.message);
+
+      // 6. seasons (parent, has FK → teams)
+      const { error: snErr } = await supabaseAdmin
+        .from('seasons')
+        .delete()
+        .eq('user_id', userId);
+      if (snErr) console.error('[delete-account] seasons error:', snErr.message);
+
+      deletionResults.steps_completed.push('Deleted season data (seasons, events, attendance, goals, roster, training series)');
+    } catch (seasonDbErr) {
+      console.error('[delete-account] Season module database error:', seasonDbErr);
+      deletionResults.errors.push('Database error during season data deletion');
+    }
+
+    // 4f) Delete teams from Supabase (CASCADE sletter spillere automatisk, men vi har allerede slettet dem)
     try {
       const { error: teamDelErr } = await supabaseAdmin
         .from('teams')
@@ -261,7 +323,7 @@ export default async function handler(req, res) {
     }
 
     // 6) Log deletion for audit trail (GDPR compliance requirement)
-    console.log('[delete-account] ✅ Account deleted:', {
+    console.log('[delete-account] âœ… Account deleted:', {
       user_id: userId,
       email: email,
       timestamp: new Date().toISOString(),
@@ -274,7 +336,7 @@ export default async function handler(req, res) {
       success: true,
       message: 'Your account has been permanently deleted.',
       details: deletionResults,
-      note: 'Payment records are retained for 7 years per Norwegian accounting law (bokføringsloven), but your personal information has been anonymized.',
+      note: 'Payment records are retained for 7 years per Norwegian accounting law (bokfÃ¸ringsloven), but your personal information has been anonymized.',
     });
 
   } catch (err) {
