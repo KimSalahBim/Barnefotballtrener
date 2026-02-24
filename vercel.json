@@ -58,6 +58,14 @@
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
     {
+      "source": "/kampdag-dragdrop.css",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/landing-visual.css",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
       "source": "/auth.js",
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
@@ -75,10 +83,6 @@
     },
     {
       "source": "/core.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
-    },
-    {
-      "source": "/app.js",
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
     {
@@ -115,10 +119,6 @@
     },
     {
       "source": "/sesong-kampdag.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
-    },
-    {
-      "source": "/error-logger.js",
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
     {

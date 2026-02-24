@@ -392,6 +392,17 @@
     }
 
     try {
+      // Slett sesongdata FØR laget (seasons.team_id er ikke FK, så ingen CASCADE)
+      // Barn av seasons (events, event_players, match_events, season_players, training_series)
+      // slettes automatisk via ON DELETE CASCADE fra seasons.
+      try {
+        var delSeasons = await sb.from('seasons').delete().eq('team_id', teamId).eq('user_id', uid);
+        if (delSeasons.error) console.warn('[core.js] deleteTeam seasons cleanup:', delSeasons.error.message);
+        else console.log('[core.js] Slettet sesonger for lag', teamId);
+      } catch (e) {
+        console.warn('[core.js] deleteTeam seasons cleanup exception:', e.message);
+      }
+
       // Spillere slettes automatisk via ON DELETE CASCADE
       var result = await sb.from('teams').delete().eq('id', teamId).eq('user_id', uid);
       if (result.error) {

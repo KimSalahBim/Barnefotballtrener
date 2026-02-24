@@ -426,27 +426,17 @@
         .eq('user_id', uid);
       if (spRes.error) console.warn('[season.js] player:renamed season_players sync:', spRes.error.message);
 
-      // 2. Get all event IDs across all user's seasons for cascade
-      var evRes = await sb.from('events')
-        .select('id')
+      // 2. Update event_players directly (player_id + user_id is sufficient, no .in() needed)
+      await sb.from('event_players')
+        .update({ player_name: newName })
+        .eq('player_id', playerId)
         .eq('user_id', uid);
-      var evIds = (evRes.data || []).map(function(ev) { return ev.id; });
 
-      if (evIds.length > 0) {
-        // 3. Update event_players (attendance/minutes snapshots)
-        await sb.from('event_players')
-          .update({ player_name: newName })
-          .in('event_id', evIds)
-          .eq('player_id', playerId)
-          .eq('user_id', uid);
-
-        // 4. Update match_events (goals/assists snapshots)
-        await sb.from('match_events')
-          .update({ player_name: newName })
-          .in('event_id', evIds)
-          .eq('player_id', playerId)
-          .eq('user_id', uid);
-      }
+      // 3. Update match_events directly
+      await sb.from('match_events')
+        .update({ player_name: newName })
+        .eq('player_id', playerId)
+        .eq('user_id', uid);
 
       // 5. Refresh local state if a season is loaded
       if (currentSeason) {
@@ -629,10 +619,8 @@
       if (r4.error) console.warn('[season.js] season_players cleanup:', r4.error.message);
 
       // 6. events (FK → seasons)
-      if (eventIds.length > 0) {
-        var r5 = await sb.from('events').delete().eq('season_id', id).eq('user_id', uid);
-        if (r5.error) console.warn('[season.js] events cleanup:', r5.error.message);
-      }
+      var r5 = await sb.from('events').delete().eq('season_id', id).eq('user_id', uid);
+      if (r5.error) console.warn('[season.js] events cleanup:', r5.error.message);
 
       // 7. Sesongen selv
       var res = await sb.from('seasons').delete().eq('id', id).eq('user_id', uid);
@@ -1044,6 +1032,8 @@
         }
         if (reasonMap && reasonMap[pid] && !attendanceMap[pid]) {
           row.absence_reason = reasonMap[pid];
+        } else {
+          row.absence_reason = null; // Clear stale reason on attend/no-reason
         }
         rows.push(row);
       }
@@ -1193,6 +1183,11 @@
         .eq('user_id', uid)
         .limit(5000);
       if (res.error) throw res.error;
+      // Guard: discard if season changed while loading (race condition on team-switch)
+      if (!currentSeason || currentSeason.id !== seasonId) {
+        console.log('[season.js] loadSeasonStats: season changed during load, discarding');
+        return;
+      }
       seasonStats = res.data || [];
     } catch (e) {
       console.error('[season.js] loadSeasonStats error:', e);
@@ -1222,6 +1217,11 @@
         .eq('user_id', uid)
         .limit(5000);
       if (res.error) throw res.error;
+      // Guard: discard if season changed while loading
+      if (!currentSeason || currentSeason.id !== seasonId) {
+        console.log('[season.js] loadSeasonGoals: season changed during load, discarding');
+        return;
+      }
       seasonGoals = res.data || [];
     } catch (e) {
       console.error('[season.js] loadSeasonGoals error:', e);
