@@ -3078,7 +3078,13 @@
         : presentCount + ' av ' + activePlayers.length + ' til stede';
 
       html +=
-        '<div class="sn-section">' + sectionTitle + '</div>' +
+        '<div class="sn-section" style="display:flex; align-items:center; justify-content:space-between;">' +
+          '<span>' + sectionTitle + '</span>' +
+          '<div style="display:flex; gap:6px;">' +
+            '<button class="btn-secondary" id="snTroppAll" style="font-size:11px; padding:4px 10px;">Velg alle</button>' +
+            '<button class="btn-secondary" id="snTroppNone" style="font-size:11px; padding:4px 10px;">Velg ingen</button>' +
+          '</div>' +
+        '</div>' +
         '<div class="settings-card" style="padding:0;">' +
           '<div class="sn-att-list">' + playerHtml + '</div>' +
           '<div class="sn-att-summary" id="snAttSummary">' + summaryText + '</div>' +
@@ -3428,6 +3434,38 @@
       });
     }
 
+    // Velg alle / Velg ingen buttons
+    var troppAllBtn = $('snTroppAll');
+    if (troppAllBtn) troppAllBtn.addEventListener('click', function() {
+      var items = root.querySelectorAll('.sn-att-item');
+      for (var ti = 0; ti < items.length; ti++) {
+        items[ti].classList.add('present');
+        items[ti].classList.remove('absent');
+        var pid = items[ti].getAttribute('data-pid');
+        var reasonRow = root.querySelector('.sn-att-reason[data-rpid="' + pid + '"]');
+        if (reasonRow) {
+          reasonRow.style.display = 'none';
+          var rBtns = reasonRow.querySelectorAll('.sn-reason-btn');
+          for (var rb = 0; rb < rBtns.length; rb++) rBtns[rb].classList.remove('active');
+        }
+      }
+      updateAttSummary();
+    });
+    var troppNoneBtn = $('snTroppNone');
+    if (troppNoneBtn) troppNoneBtn.addEventListener('click', function() {
+      var items = root.querySelectorAll('.sn-att-item');
+      for (var ti = 0; ti < items.length; ti++) {
+        items[ti].classList.remove('present');
+        items[ti].classList.add('absent');
+        var pid = items[ti].getAttribute('data-pid');
+        var reasonRow = root.querySelector('.sn-att-reason[data-rpid="' + pid + '"]');
+        if (reasonRow && reasonRow.style.display !== 'flex') {
+          reasonRow.style.display = 'flex';
+        }
+      }
+      updateAttSummary();
+    });
+
     // Reason buttons
     var reasonBtns = root.querySelectorAll('.sn-reason-btn');
     for (var ri = 0; ri < reasonBtns.length; ri++) {
@@ -3490,13 +3528,24 @@
 
     // --- MATCH RESULT HANDLERS ---
     // Add goal
+    // Helper: persist score inputs to ev object before re-render
+    function persistScoreToEvent() {
+      var sh = $('snScoreHome'), sa = $('snScoreAway');
+      if (sh && sh.value !== '') ev.result_home = parseInt(sh.value);
+      if (sa && sa.value !== '') ev.result_away = parseInt(sa.value);
+      if (editingEvent && editingEvent.id === ev.id) {
+        if (sh && sh.value !== '') editingEvent.result_home = parseInt(sh.value);
+        if (sa && sa.value !== '') editingEvent.result_away = parseInt(sa.value);
+      }
+    }
+
     var addGoalBtn = $('snAddGoal');
     if (addGoalBtn) addGoalBtn.addEventListener('click', async function() {
       var playerSel = $('snGoalPlayer');
       if (!playerSel) return;
       addGoalBtn.disabled = true;
       var ok = await addMatchEvent(ev.id, playerSel.value, playerSel.options[playerSel.selectedIndex].text, 'goal');
-      if (ok) { seasonGoals = []; await loadMatchGoals(ev.id); render(); }
+      if (ok) { persistScoreToEvent(); seasonGoals = []; await loadMatchGoals(ev.id); render(); }
       else { addGoalBtn.disabled = false; }
     });
 
@@ -3506,7 +3555,7 @@
       if (!playerSel) return;
       addAssistBtn.disabled = true;
       var ok = await addMatchEvent(ev.id, playerSel.value, playerSel.options[playerSel.selectedIndex].text, 'assist');
-      if (ok) { seasonGoals = []; await loadMatchGoals(ev.id); render(); }
+      if (ok) { persistScoreToEvent(); seasonGoals = []; await loadMatchGoals(ev.id); render(); }
       else { addAssistBtn.disabled = false; }
     });
 
@@ -3518,6 +3567,7 @@
           e.stopPropagation();
           var ok = await removeMatchGoal(gid);
           if (ok) {
+            persistScoreToEvent();
             seasonGoals = [];
             await loadMatchGoals(ev.id);
             render();
@@ -3537,7 +3587,7 @@
           var pName = btn.getAttribute('data-pname');
           var typ = btn.getAttribute('data-type') || 'goal';
           var ok = await addMatchEvent(ev.id, pid, pName, typ);
-          if (ok) { seasonGoals = []; await loadMatchGoals(ev.id); render(); }
+          if (ok) { persistScoreToEvent(); seasonGoals = []; await loadMatchGoals(ev.id); render(); }
           else { btn.disabled = false; }
         };
       })(dupGoalBtns[dg]));
