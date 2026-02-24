@@ -9,276 +9,95 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon32.png">
   <link rel="apple-touch-icon" href="appletouchicon.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link rel="stylesheet" href="cup.css">
-
-  <script>
-    // ── Auth-guard ────────────────────────────────────────────────────
-    // Kjøres synkront (inline) slik at beskyttet innhold ikke flasher.
-    // Sjekker Supabase-sesjon + abonnementsstatus.
-    // Redirecter til / (main-appen) hvis ikke autentisert / ikke aktiv tilgang.
-    (function () {
-      var SUPABASE_URL = "https://jxteosjxgrblasksfeyu.supabase.co";
-      var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4dGVvc2p4Z3JibGFza3NmZXl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTE1ODMsImV4cCI6MjA4NDc2NzU4M30.4VhLfxcX0PCkUeK9aYrTrfmTwESH9zOyx4sY61lIZ9w";
-      var AUTH_STORAGE_KEY_PREFIX = 'sb-jxteosjxgrblasksfeyu-auth-token';
-
-      // Viser spinner mens vi sjekker — unngår flash av innhold
-      document.documentElement.style.visibility = 'hidden';
-
-      function redirectToMain() {
-        window.location.replace('/');
-      }
-
-      // Rask sjekk: finnes det et gyldig auth-token i localStorage?
-      // Supabase lagrer token som JSON under nøkkel som starter med AUTH_STORAGE_KEY_PREFIX.
-      function getStoredSession() {
-        try {
-          for (var i = 0; i < localStorage.length; i++) {
-            var key = localStorage.key(i);
-            if (key && key.indexOf(AUTH_STORAGE_KEY_PREFIX) === 0) {
-              var raw = localStorage.getItem(key);
-              if (!raw) continue;
-              var parsed = JSON.parse(raw);
-              var session = parsed && (parsed.session || parsed);
-              if (session && session.access_token && session.expires_at) {
-                // Sjekk om token er utløpt
-                var expiresAt = Number(session.expires_at);
-                var nowSec = Math.floor(Date.now() / 1000);
-                if (expiresAt > nowSec + 10) return session;
-              }
-            }
-          }
-        } catch (e) {}
-        return null;
-      }
-
-      var stored = getStoredSession();
-      if (!stored) {
-        // Ingen lagret sesjon — gå til main-appen (håndterer login)
-        redirectToMain();
-        return;
-      }
-
-      // Sesjon funnet — vis siden (abonnementssjekk gjøres av main-appen ved retur)
-      // For fullt sikkert: verifiser mot /api/subscription-status asynkront
-      document.documentElement.style.visibility = 'visible';
-
-      // Bakgrunnssjekk (ikke-blokkerende): hvis subscription ikke er aktiv, redirect
-      (function asyncCheck() {
-        try {
-          var token = stored.access_token;
-          fetch('/api/subscription-status', {
-            method: 'GET',
-            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-            signal: (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) ? AbortSignal.timeout(5000) : undefined,
-          }).then(function (res) {
-            if (!res.ok) return;
-            return res.json();
-          }).then(function (data) {
-            if (!data) return;
-            var hasAccess = !!(data.active || data.trial || data.lifetime);
-            if (!hasAccess) redirectToMain();
-          }).catch(function () {
-            // Nettverksfeil / timeout — la brukeren bruke siden (offline-tolerant)
-          });
-        } catch (e) {}
-      })();
-    })();
-  </script>
 
   <style>
-    /* Minimal page chrome — rest is in cup.css */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: #f5f6fa;
-      color: #1e293b;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #0b1120;
+      color: #e2e8f0;
       min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .cup-page-header {
-      background: #0b5bd3;
-      color: #fff;
+    .coming-soon {
+      text-align: center;
+      max-width: 440px;
+      padding: 40px 24px;
+    }
+    .coming-soon .icon {
+      font-size: 56px;
+      margin-bottom: 20px;
+    }
+    .coming-soon h1 {
+      font-size: 24px;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+    .coming-soon p {
+      font-size: 15px;
+      color: #94a3b8;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .coming-soon .features {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+    .coming-soon .feat {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
       padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .cup-page-header a {
-      color: rgba(255,255,255,0.85);
-      text-decoration: none;
       font-size: 14px;
-      display: flex;
+    }
+    .coming-soon .feat i {
+      color: #3b82f6;
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .back-btn {
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
-    }
-    .cup-page-header a:hover { color: #fff; }
-    .cup-page-title {
-      font-size: 18px;
+      gap: 8px;
+      background: linear-gradient(135deg, #0b5bd3, #19b0ff);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-size: 15px;
       font-weight: 700;
-      flex: 1;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.2s;
     }
-    .cup-page-beta {
-      font-size: 11px;
-      background: rgba(255,255,255,0.2);
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-weight: 600;
-    }
+    .back-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
 
-  <!-- Page header -->
-  <header class="cup-page-header">
-    <a href="/" title="Tilbake til appen"><i class="fas fa-arrow-left"></i></a>
-    <span class="cup-page-title"><i class="fas fa-trophy"></i> Cup-planlegger</span>
-    <span class="cup-page-beta">BETA</span>
-  </header>
+  <div class="coming-soon">
+    <div class="icon">🏆</div>
+    <h1>Cup-planlegger kommer!</h1>
+    <p>Vi jobber med en cupmodul som gjør det enkelt å planlegge turneringer for barnefotball.</p>
 
-  <!-- Cup selector bar -->
-  <div class="cup-selector-bar">
-    <select id="cupSelector" class="cup-input cup-select cup-selector-select" title="Velg cup"></select>
-    <button id="cupNewBtn" class="cup-btn cup-btn-sm cup-btn-primary" type="button"><i class="fas fa-plus"></i> Ny cup</button>
+    <div class="features">
+      <div class="feat"><i class="fas fa-sitemap"></i> Automatisk kampoppsett og puljeinndeling</div>
+      <div class="feat"><i class="fas fa-futbol"></i> Rettferdig bytteplan for hver kamp</div>
+      <div class="feat"><i class="fas fa-table"></i> Live tabeller og resultater</div>
+      <div class="feat"><i class="fas fa-calendar-day"></i> Flerdagers cup med banedeling</div>
+    </div>
+
+    <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Tilbake til appen</a>
   </div>
 
-  <!-- Main cup container -->
-  <div class="cup-main" style="max-width: 900px; margin: 0 auto; padding: 16px;">
-
-    <!-- Step navigation -->
-    <nav class="cup-steps" style="display:flex; gap:4px; margin-bottom:16px;">
-      <button class="cup-step is-active" data-step="setup" type="button">
-        <i class="fas fa-cog"></i> Oppsett
-      </button>
-      <button class="cup-step" data-step="schedule" type="button">
-        <i class="fas fa-calendar-alt"></i> Kampprogram
-      </button>
-      <button class="cup-step" data-step="results" type="button">
-        <i class="fas fa-list-ol"></i> Resultater
-      </button>
-    </nav>
-
-    <!-- ========== STEP 1: Setup ========== -->
-    <section id="cupSetup" class="cup-section is-active">
-
-      <!-- Cup info -->
-      <div class="cup-card" style="margin-bottom: 16px;">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div class="cup-field">
-            <label class="cup-label" for="cupName">Cupnavn</label>
-            <input class="cup-input" type="text" id="cupName" placeholder="F.eks. Steinkjer Cup 2026">
-          </div>
-          <div class="cup-field">
-            <label class="cup-label" for="cupVenue">Sted</label>
-            <input class="cup-input" type="text" id="cupVenue" placeholder="F.eks. Guldbergaunet">
-          </div>
-        </div>
-      </div>
-
-      <!-- Days -->
-      <div class="cup-card" style="margin-bottom: 16px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-          <h2 class="cup-card-title"><i class="fas fa-calendar-day"></i> Dager</h2>
-          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupAddDay"><i class="fas fa-plus"></i> Legg til dag</button>
-        </div>
-        <div id="cupDays"></div>
-      </div>
-
-      <!-- Pitches -->
-      <div class="cup-card" style="margin-bottom: 16px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-          <h2 class="cup-card-title"><i class="fas fa-map-marker-alt"></i> Baner</h2>
-          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupAddPitch"><i class="fas fa-plus"></i> Legg til bane</button>
-        </div>
-        <div id="cupPitches"></div>
-      </div>
-
-      <!-- Classes -->
-      <div class="cup-card" style="margin-bottom: 16px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-          <h2 class="cup-card-title"><i class="fas fa-futbol"></i> Klasser</h2>
-          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupAddClass"><i class="fas fa-plus"></i> Legg til klasse</button>
-        </div>
-        <div id="cupClasses"></div>
-      </div>
-
-      <!-- Feasibility check -->
-      <div class="cup-card" style="margin-bottom: 16px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-          <button class="cup-btn cup-btn-secondary" id="cupCheckBtn" type="button">
-            <i class="fas fa-calculator"></i> Sjekk gjennomførbarhet
-          </button>
-        </div>
-        <div id="cupFeasibility"></div>
-      </div>
-
-      <!-- Generate -->
-      <div style="text-align:center; padding: 10px 0;">
-        <button class="cup-btn cup-btn-primary cup-btn-lg" id="cupGenerateBtn" type="button">
-          <i class="fas fa-play"></i> Generer kampprogram
-        </button>
-      </div>
-
-      <!-- Danger zone -->
-      <div style="text-align:center; padding: 16px 0; border-top: 1px solid rgba(0,0,0,0.06); margin-top: 16px;">
-        <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupDeleteBtn" type="button" style="color: #dc2626; font-size: 12px;">
-          <i class="fas fa-trash-alt"></i> Slett denne cupen
-        </button>
-      </div>
-    </section>
-
-    <!-- ========== STEP 2: Schedule ========== -->
-    <section id="cupSchedule" class="cup-section">
-
-      <!-- Warnings -->
-      <div id="cupWarnings"></div>
-
-      <!-- View toggle + actions -->
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-        <div style="display:flex; gap:4px; align-items:center;">
-          <button class="cup-view-btn is-active" data-view="pitch" type="button"><i class="fas fa-map-marker-alt"></i> Per bane</button>
-          <button class="cup-view-btn" data-view="team" type="button"><i class="fas fa-users"></i> Per lag</button>
-          <button class="cup-view-btn" data-view="time" type="button"><i class="fas fa-clock"></i> Tidslinje</button>
-          <select id="cupClassFilter" class="cup-input cup-input-sm cup-select" style="margin-left:8px; min-width:120px;" title="Filtrer etter klasse">
-            <option value="">Alle klasser</option>
-          </select>
-        </div>
-        <div style="display:flex; gap:4px;">
-          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupOptimizeBtn" type="button" title="Optimaliser plassering">
-            <i class="fas fa-magic"></i> Optimaliser
-          </button>
-          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupRegenerateBtn" type="button" title="Generer nytt kampprogram (ny seed)">
-            <i class="fas fa-sync-alt"></i> Ny trekning
-          </button>
-          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupExportCsvBtn" type="button" title="Last ned CSV">
-            <i class="fas fa-file-csv"></i> CSV
-          </button>
-          <button class="cup-btn cup-btn-ghost cup-btn-sm" id="cupPrintBtn" type="button" title="Skriv ut">
-            <i class="fas fa-print"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Grid -->
-      <div id="cupGrid"></div>
-    </section>
-
-    <!-- ========== STEP 3: Results ========== -->
-    <section id="cupResults" class="cup-section">
-      <div style="margin-bottom:12px;">
-        <label class="cup-label" for="cupResultClass">Velg klasse</label>
-        <select class="cup-input" id="cupResultClass" style="max-width:300px;"></select>
-      </div>
-
-      <div id="cupMatchResults"></div>
-      <div id="cupStandings"></div>
-    </section>
-
-  </div><!-- /.cup-main -->
-
-  <!-- Toast -->
-  <div id="cupToast" class="cup-toast"></div>
-
-  <!-- Scripts -->
-  <script src="cup-scheduler.js"></script>
-  <script src="cup.js"></script>
 </body>
 </html>
