@@ -169,8 +169,9 @@
 
       // Dashboard
       '.sn-dash-header { display:flex; align-items:center; gap:10px; margin-bottom:4px; }',
-      '.sn-back { background:none; border:none; font-size:20px; cursor:pointer; padding:4px 8px; color:var(--text-600); border-radius:var(--radius-sm); }',
-      '.sn-back:hover { background:var(--bg); }',
+      '.sn-back { display:inline-flex; align-items:center; gap:4px; background:none; border:none; font-size:15px; font-weight:600; cursor:pointer; padding:6px 12px 6px 6px; color:var(--primary, #2563eb); border-radius:var(--radius-md); font-family:inherit; white-space:nowrap; }',
+      '.sn-back:hover { background:var(--bg-hover, #f1f5f9); }',
+      '.sn-back i { font-size:12px; }',
       '.sn-dash-title { font-size:20px; font-weight:700; color:var(--text-800); }',
       '.sn-dash-meta { font-size:13px; color:var(--text-500); margin-bottom:16px; margin-left:38px; }',
       '.sn-actions { display:flex; gap:8px; margin-bottom:20px; }',
@@ -220,13 +221,6 @@
       // Delete button
       '.sn-btn-danger { background:var(--error-dim); color:var(--error); border:1.5px solid var(--error); border-radius:var(--radius-md); padding:11px 16px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:background 0.15s; }',
       '.sn-btn-danger:hover { background:var(--error); color:#fff; }',
-
-      // Dashboard tabs
-      '.sn-tabs { display:flex; gap:0; margin:12px 0 4px; border-bottom:2px solid var(--border); }',
-      '.sn-tab { flex:1; padding:10px 8px; border:none; background:none; font-size:14px; font-weight:600; color:var(--text-400); cursor:pointer; font-family:inherit; position:relative; transition:color 0.15s; }',
-      '.sn-tab.active { color:var(--primary, #2563eb); }',
-      '.sn-tab.active::after { content:""; position:absolute; bottom:-2px; left:0; right:0; height:2px; background:var(--primary, #2563eb); border-radius:2px 2px 0 0; }',
-      '.sn-tab:hover:not(.active) { color:var(--text-600); }',
 
       // Roster
       '.sn-roster-item { display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); }',
@@ -394,6 +388,51 @@
     _snInitialized = false;
     // players:updated follows immediately after team:changed
   });
+
+  // Sync season nav when tab becomes active (dispatched from core.js switchTab)
+  window.addEventListener('season:nav-sync', function() { updateSeasonNav(); });
+
+  // =========================================================================
+  //  SEASON BOTTOM NAV: wire tab buttons
+  // =========================================================================
+
+  (function wireSeasonNav() {
+    var nav = document.getElementById('seasonNav');
+    if (!nav) {
+      // DOM not ready yet, defer
+      document.addEventListener('DOMContentLoaded', wireSeasonNav);
+      return;
+    }
+    var tabBtns = nav.querySelectorAll('.bottom-nav-btn[data-stab]');
+    for (var i = 0; i < tabBtns.length; i++) {
+      tabBtns[i].addEventListener('click', (function(btn) {
+        return async function() {
+          var stab = btn.getAttribute('data-stab');
+          if (!currentSeason) {
+            // No season open – jump to list (or already there)
+            if (snView !== 'list') { snView = 'list'; render(); }
+            return;
+          }
+          // If in a sub-view, navigate back to dashboard first
+          dashTab = stab;
+          snView = 'dashboard';
+          if (stab === 'stats') {
+            var needStats = seasonStats.length === 0;
+            var needGoals = seasonGoals.length === 0;
+            if (needStats || needGoals) {
+              var loads = [];
+              if (needStats) loads.push(loadSeasonStats(currentSeason.id));
+              if (needGoals) loads.push(loadSeasonGoals(currentSeason.id));
+              await Promise.all(loads);
+              if (dashTab !== stab) return; // user changed tab while loading
+            }
+          }
+          render();
+          try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (_) { window.scrollTo(0, 0); }
+        };
+      })(tabBtns[i]));
+    }
+  })();
 
   // =========================================================================
   //  SUPABASE CRUD
@@ -1095,7 +1134,9 @@
         minutesPlayed: 0,
         totalEvents: 0,
         goals: 0,
-        assists: 0
+        assists: 0,
+        relevantMatches: 0,    // matches where player was in squad (or no tropp used)
+        relevantTrainings: 0   // trainings where attendance was registered for player
       };
     }
 
@@ -1105,7 +1146,22 @@
       eventTypeMap[events[e].id] = events[e].type;
     }
 
-    // Attendance
+    // Per-player relevant event counting (for fair denominator)
+    for (var r = 0; r < seasonStats.length; r++) {
+      var rrow = seasonStats[r];
+      if (!playerMap[rrow.player_id]) continue;
+      var rType = eventTypeMap[rrow.event_id];
+      if (!rType) continue;
+      if (rType === 'match' || rType === 'cup_match') {
+        // Skip matches where player was explicitly NOT in squad (two-team scenario)
+        if (rrow.in_squad === false) continue;
+        playerMap[rrow.player_id].relevantMatches++;
+      } else if (rType === 'training') {
+        playerMap[rrow.player_id].relevantTrainings++;
+      }
+    }
+
+    // Attendance (only attended=true rows count)
     for (var j = 0; j < seasonStats.length; j++) {
       var row = seasonStats[j];
       if (!playerMap[row.player_id]) continue;
@@ -1113,6 +1169,7 @@
 
       var evType = eventTypeMap[row.event_id];
       if (!evType) continue; // Skip orphan rows for deleted events
+      if ((evType === 'match' || evType === 'cup_match') && row.in_squad === false) continue; // two-team: skip matches player was not in squad for
       if (evType === 'match' || evType === 'cup_match') {
         playerMap[row.player_id].matchesAttended++;
       } else if (evType === 'training') {
@@ -1187,9 +1244,48 @@
     };
   }
 
+  // =========================================================================
+  //  SEASON BOTTOM NAV: sync active state
+  // =========================================================================
+
+  function updateSeasonNav() {
+    var nav = document.getElementById('seasonNav');
+    if (!nav) return;
+
+    var btns = nav.querySelectorAll('.bottom-nav-btn[data-stab]');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+
+    // Map current view to parent tab
+    var activeTab = null;
+    if (snView === 'dashboard') {
+      activeTab = dashTab;
+    } else if (snView === 'event-detail' || snView === 'create-event' || snView === 'edit-event' || snView === 'embedded-kampdag' || snView === 'create-series') {
+      activeTab = 'calendar';
+    } else if (snView === 'roster-import' || snView === 'roster-add-manual') {
+      activeTab = 'roster';
+    } else if (snView === 'roster-edit-player' || snView === 'player-stats') {
+      activeTab = dashTab; // came from roster or stats tab
+    }
+    // list, create-season, edit-season → no tab active
+
+    if (activeTab) {
+      var btn = nav.querySelector('.bottom-nav-btn[data-stab="' + activeTab + '"]');
+      if (btn) btn.classList.add('active');
+    }
+  }
+
   function render() {
     var root = $('snRoot');
     if (!root) return;
+
+    // Clean up embedded kampdag if navigating away from it
+    if (snView !== 'embedded-kampdag' && window.sesongKampdag && window.sesongKampdag.isActive()) {
+      window.sesongKampdag.destroy();
+      embeddedKampdagEvent = null;
+      embeddedKampdagTropp = null;
+    }
+
+    updateSeasonNav();
 
     switch (snView) {
       case 'list':           renderSeasonList(root);   break;
@@ -1274,7 +1370,7 @@
     root.innerHTML =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
-          '<button class="sn-back" id="snBackFromCreate">\u2190</button>' +
+          '<button class="sn-back" id="snBackFromCreate"><i class="fas fa-chevron-left"></i> Avbryt</button>' +
           '<span class="sn-dash-title">Ny sesong</span>' +
         '</div>' +
         '<div class="sn-form">' +
@@ -1354,7 +1450,7 @@
     root.innerHTML =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
-          '<button class="sn-back" id="snBackFromEditSeason">\u2190</button>' +
+          '<button class="sn-back" id="snBackFromEditSeason"><i class="fas fa-chevron-left"></i> Tilbake</button>' +
           '<span class="sn-dash-title">Rediger sesong</span>' +
         '</div>' +
         '<div class="sn-form">' +
@@ -1439,21 +1535,14 @@
     var metaParts = [formatLabel(s.format)];
     if (range) metaParts.push(range);
 
-    var rosterCount = seasonPlayers.filter(function(p) { return p.active; }).length;
-
     var html =
-      '<div class="settings-card" style="margin-bottom:0; border-radius:var(--radius-lg) var(--radius-lg) 0 0; padding-bottom:0;">' +
+      '<div class="settings-card" style="margin-bottom:12px;">' +
         '<div class="sn-dash-header">' +
-          '<button class="sn-back" id="snBackFromDash">\u2190</button>' +
-          '<span class="sn-dash-title">' + escapeHtml(s.name) + '</span>' +
-          '<button class="sn-back" id="snEditSeason" title="Rediger sesong" style="margin-left:auto; font-size:16px;"><i class="fas fa-pen"></i></button>' +
+          '<button class="sn-back" id="snBackFromDash"><i class="fas fa-chevron-left"></i> Sesonger</button>' +
+          '<button style="background:none; border:none; font-size:16px; color:var(--text-400); cursor:pointer; padding:6px 8px; margin-left:auto; border-radius:var(--radius-sm);" id="snEditSeason" title="Rediger sesong"><i class="fas fa-pen"></i></button>' +
         '</div>' +
+        '<div class="sn-dash-title" style="font-size:22px; font-weight:700; margin:4px 0 2px;">' + escapeHtml(s.name) + '</div>' +
         '<div class="sn-dash-meta">' + escapeHtml(metaParts.join(' \u00B7 ')) + '</div>' +
-        '<div class="sn-tabs">' +
-          '<button class="sn-tab' + (dashTab === 'calendar' ? ' active' : '') + '" data-dtab="calendar"><i class="fas fa-calendar-alt" style="margin-right:4px;"></i>Kalender</button>' +
-          '<button class="sn-tab' + (dashTab === 'roster' ? ' active' : '') + '" data-dtab="roster"><i class="fas fa-users" style="margin-right:4px;"></i>Stall' + (rosterCount > 0 ? ' <span class="sn-roster-count">(' + rosterCount + ')</span>' : '') + '</button>' +
-          '<button class="sn-tab' + (dashTab === 'stats' ? ' active' : '') + '" data-dtab="stats"><i class="fas fa-chart-bar" style="margin-right:4px;"></i>Statistikk</button>' +
-        '</div>' +
       '</div>';
 
     // Tab content
@@ -1466,29 +1555,6 @@
     }
 
     root.innerHTML = html;
-
-    // Bind tab clicks
-    var tabs = root.querySelectorAll('.sn-tab');
-    for (var t = 0; t < tabs.length; t++) {
-      tabs[t].addEventListener('click', async function() {
-        var newTab = this.getAttribute('data-dtab');
-        dashTab = newTab;
-        if (newTab === 'stats') {
-          // Reload if switching to stats OR if caches were invalidated
-          var needStats = seasonStats.length === 0;
-          var needGoals = seasonGoals.length === 0;
-          if (needStats || needGoals) {
-            var loads = [];
-            if (needStats) loads.push(loadSeasonStats(currentSeason.id));
-            if (needGoals) loads.push(loadSeasonGoals(currentSeason.id));
-            await Promise.all(loads);
-            // Guard: if user switched tab while loading, don't overwrite
-            if (dashTab !== newTab) return;
-          }
-        }
-        render();
-      });
-    }
 
     // Bind back button
     $('snBackFromDash').addEventListener('click', goToList);
@@ -1517,7 +1583,7 @@
   function renderCalendarTab() {
     var s = currentSeason;
     var html =
-      '<div class="settings-card" style="margin-top:0; border-radius:0 0 var(--radius-lg) var(--radius-lg); padding-top:12px;">' +
+      '<div class="settings-card" style="padding-top:12px;">' +
         '<div class="sn-actions">' +
           '<button class="btn-primary" id="snAddMatch"><i class="fas fa-futbol" style="margin-right:5px;"></i>Legg til kamp</button>' +
           '<button class="btn-secondary" id="snAddTraining"><i class="fas fa-dumbbell" style="margin-right:5px;"></i>Legg til trening</button>' +
@@ -1631,7 +1697,7 @@
     var active = seasonPlayers.filter(function(p) { return p.active; });
 
     var html =
-      '<div class="settings-card" style="margin-top:0; border-radius:0 0 var(--radius-lg) var(--radius-lg); padding-top:12px;">' +
+      '<div class="settings-card" style="padding-top:12px;">' +
         '<div class="sn-actions">' +
           '<button class="btn-primary" id="snImportPlayers" style="flex:1;"><i class="fas fa-download" style="margin-right:5px;"></i>Importer fra Spillere</button>' +
           '<button class="btn-secondary" id="snAddManualPlayer" style="flex:0 0 auto;"><i class="fas fa-plus"></i></button>' +
@@ -1718,7 +1784,7 @@
     var barnefotball = isBarnefotball();
 
     var html =
-      '<div class="settings-card" style="margin-top:0; border-radius:0 0 var(--radius-lg) var(--radius-lg); padding-top:16px;">';
+      '<div class="settings-card" style="padding-top:16px;">';
 
     // Summary cards row 1: Activity
     html += '<div class="sn-stats-cards">';
@@ -1872,6 +1938,7 @@
       '<th>Spiller</th>' +
       '<th>Tr</th>' +
       '<th>Ka</th>' +
+      '<th>Min</th>' +
       (stats.totalGoals > 0 ? '<th>\u26BD</th>' : '') +
       '<th>Oppm.</th>' +
     '</tr></thead>';
@@ -1879,7 +1946,7 @@
 
     for (var i = 0; i < p.length; i++) {
       var pl = p[i];
-      var totalPossible = stats.totalTrainings + stats.totalMatches;
+      var totalPossible = pl.relevantTrainings + pl.relevantMatches;
       var pct = totalPossible > 0 ? Math.round((pl.totalEvents / totalPossible) * 100) : 0;
 
       var barColor;
@@ -1891,6 +1958,7 @@
         '<td class="sn-pname">' + escapeHtml(pl.player.name) + '</td>' +
         '<td>' + pl.trainingsAttended + '</td>' +
         '<td>' + pl.matchesAttended + '</td>' +
+        '<td>' + (pl.minutesPlayed || 0) + '</td>' +
         (stats.totalGoals > 0 ? '<td>' + (pl.goals > 0 ? pl.goals : '') + '</td>' : '') +
         '<td>' +
           '<div style="font-weight:600;">' + pct + '%</div>' +
@@ -1930,15 +1998,15 @@
 
     var stats = computeStats();
     var ps = stats.players.find(function(x) { return x.player.id === sp.id; });
-    if (!ps) ps = { matchesAttended: 0, trainingsAttended: 0, minutesPlayed: 0, totalEvents: 0, goals: 0, assists: 0 };
+    if (!ps) ps = { matchesAttended: 0, trainingsAttended: 0, minutesPlayed: 0, totalEvents: 0, goals: 0, assists: 0, relevantMatches: 0, relevantTrainings: 0 };
 
-    var totalPossible = stats.totalTrainings + stats.totalMatches;
+    var totalPossible = ps.relevantTrainings + ps.relevantMatches;
     var pct = totalPossible > 0 ? Math.round((ps.totalEvents / totalPossible) * 100) : 0;
 
     var html =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
-          '<button class="sn-back" id="snBackFromPlayerStats">\u2190</button>' +
+          '<button class="sn-back" id="snBackFromPlayerStats"><i class="fas fa-chevron-left"></i> ' + (dashTab === 'roster' ? 'Stall' : 'Statistikk') + '</button>' +
           '<span class="sn-dash-title">' + escapeHtml(sp.name) + '</span>' +
         '</div>';
 
@@ -1954,37 +2022,40 @@
     html += '<div class="sn-stats-cards">';
     html +=
       '<div class="sn-stat-card">' +
-        '<div class="sn-stat-num">' + ps.trainingsAttended + '<span style="font-size:14px; color:var(--text-400);">/' + stats.totalTrainings + '</span></div>' +
+        '<div class="sn-stat-num">' + ps.trainingsAttended + '<span style="font-size:14px; color:var(--text-400);">/' + ps.relevantTrainings + '</span></div>' +
         '<div class="sn-stat-label">Treninger</div>' +
       '</div>';
     html +=
       '<div class="sn-stat-card">' +
-        '<div class="sn-stat-num">' + ps.matchesAttended + '<span style="font-size:14px; color:var(--text-400);">/' + stats.totalMatches + '</span></div>' +
+        '<div class="sn-stat-num">' + ps.matchesAttended + '<span style="font-size:14px; color:var(--text-400);">/' + ps.relevantMatches + '</span></div>' +
         '<div class="sn-stat-label">Kamper</div>' +
       '</div>';
     html += '</div>';
 
-    // Stats cards - row 2: performance
+    // Stats cards - row 2: attendance + minutes
     html += '<div class="sn-stats-cards" style="margin-top:8px;">';
     html +=
       '<div class="sn-stat-card">' +
         '<div class="sn-stat-num">' + pct + '%</div>' +
         '<div class="sn-stat-label">Oppm\u00f8te</div>' +
       '</div>';
+    html +=
+      '<div class="sn-stat-card">' +
+        '<div class="sn-stat-num">' + (ps.minutesPlayed || 0) + '</div>' +
+        '<div class="sn-stat-label">Spilletid (min)</div>' +
+      '</div>';
+    html += '</div>';
+
+    // Stats cards - row 3: goals + assists (only if any exist)
     if (ps.goals > 0 || ps.assists > 0) {
+      html += '<div class="sn-stats-cards" style="margin-top:8px;">';
       html +=
         '<div class="sn-stat-card">' +
           '<div class="sn-stat-num">' + ps.goals + (ps.assists > 0 ? '<span style="font-size:14px; color:var(--text-400);"> + ' + ps.assists + 'a</span>' : '') + '</div>' +
           '<div class="sn-stat-label">M\u00e5l' + (ps.assists > 0 ? ' + assist' : '') + '</div>' +
         '</div>';
-    } else {
-      html +=
-        '<div class="sn-stat-card">' +
-          '<div class="sn-stat-num">' + (ps.minutesPlayed || 0) + '</div>' +
-          '<div class="sn-stat-label">Spilletid (min)</div>' +
-        '</div>';
+      html += '</div>';
     }
-    html += '</div>';
 
     // Event-by-event history
     html += '<div class="sn-section">Hendelseslogg</div>';
@@ -2043,10 +2114,18 @@
           if (parts.length > 0) goalBadge = '<div style="font-size:12px; white-space:nowrap;">' + parts.join(' ') + '</div>';
         }
 
-        // Match score
+        // Match score (our perspective)
         var scoreText = '';
         if ((ev.type === 'match' || ev.type === 'cup_match') && ev.status === 'completed' && ev.result_home !== null && ev.result_home !== undefined) {
-          scoreText = '<div style="font-size:13px; font-weight:700; color:var(--text-500);">' + ev.result_home + '\u2013' + ev.result_away + '</div>';
+          var ourScore = ev.is_home ? ev.result_home : ev.result_away;
+          var theirScore = ev.is_home ? ev.result_away : ev.result_home;
+          scoreText = '<div style="font-size:13px; font-weight:700; color:var(--text-500);">' + ourScore + '\u2013' + theirScore + '</div>';
+        }
+
+        // Per-event minutes badge
+        var minutesBadge = '';
+        if (attended && row.minutes_played && row.minutes_played > 0) {
+          minutesBadge = '<div style="font-size:11px; color:var(--text-400); white-space:nowrap;">' + row.minutes_played + 'min</div>';
         }
 
         html +=
@@ -2056,6 +2135,7 @@
               '<div style="font-weight:600; font-size:14px;">' + escapeHtml(evTitle) + '</div>' +
               '<div style="font-size:12px; color:var(--text-400);">' + formatDateLong(ev.start_time) + (attended ? '' : reasonText) + '</div>' +
             '</div>' +
+            minutesBadge +
             goalBadge +
             scoreText +
             '<div style="font-size:12px; color:var(--text-400);">' + typeIcon(ev.type) + '</div>' +
@@ -2098,7 +2178,7 @@
       root.innerHTML =
         '<div class="settings-card">' +
           '<div class="sn-dash-header">' +
-            '<button class="sn-back" id="snBackFromImport">\u2190</button>' +
+            '<button class="sn-back" id="snBackFromImport"><i class="fas fa-chevron-left"></i> Stall</button>' +
             '<span class="sn-dash-title">Importer spillere</span>' +
           '</div>' +
           '<div class="sn-roster-empty" style="padding:24px;">' +
@@ -2122,7 +2202,7 @@
     var html =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
-          '<button class="sn-back" id="snBackFromImport">\u2190</button>' +
+          '<button class="sn-back" id="snBackFromImport"><i class="fas fa-chevron-left"></i> Stall</button>' +
           '<span class="sn-dash-title">Importer spillere</span>' +
         '</div>' +
         '<div style="padding:4px 0 12px; color:var(--text-400); font-size:13px;">' +
@@ -2221,7 +2301,7 @@
     var html =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
-          '<button class="sn-back" id="snBackFromManual">\u2190</button>' +
+          '<button class="sn-back" id="snBackFromManual"><i class="fas fa-chevron-left"></i> Stall</button>' +
           '<span class="sn-dash-title">Legg til spiller</span>' +
         '</div>' +
         '<div class="sn-form">' +
@@ -2333,7 +2413,7 @@
     var html =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
-          '<button class="sn-back" id="snBackFromSeries">\u2190</button>' +
+          '<button class="sn-back" id="snBackFromSeries"><i class="fas fa-chevron-left"></i> Kalender</button>' +
           '<span class="sn-dash-title">Opprett treningsserie</span>' +
         '</div>' +
         '<div class="sn-form">' +
@@ -2505,7 +2585,7 @@
     var html =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
-          '<button class="sn-back" id="snBackFromEdit">\u2190</button>' +
+          '<button class="sn-back" id="snBackFromEdit"><i class="fas fa-chevron-left"></i> Tilbake</button>' +
           '<span class="sn-dash-title">Rediger spiller</span>' +
         '</div>' +
         '<div class="sn-form">' +
@@ -2710,7 +2790,7 @@
     var html =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
-          '<button class="sn-back" id="snBackFromEvent">\u2190</button>' +
+          '<button class="sn-back" id="snBackFromEvent"><i class="fas fa-chevron-left"></i> Tilbake</button>' +
           '<span class="sn-dash-title">' + title + '</span>' +
         '</div>' +
         '<div class="sn-form">' +
@@ -2888,7 +2968,7 @@
     var html =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
-          '<button class="sn-back" id="snBackFromDetail">\u2190</button>' +
+          '<button class="sn-back" id="snBackFromDetail"><i class="fas fa-chevron-left"></i> Kalender</button>' +
           '<span class="sn-dash-title">' + typeIcon(ev.type) + ' ' + escapeHtml(title) + '</span>' +
         '</div>' +
         '<div style="margin-top:12px;">';

@@ -1617,7 +1617,7 @@
       if (titleEl && titleMap[tabId]) titleEl.textContent = titleMap[tabId];
 
       // STEG 1: Fjern active fra alle nav-knapper (bunnmeny + mer-items)
-      document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#bottomNav .bottom-nav-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.mer-item').forEach(b => b.classList.remove('active'));
 
       // STEG 2: Skjul alle tabs
@@ -1655,10 +1655,23 @@
       if (typeof renderSelections === 'function') renderSelections();
       if (typeof publishPlayers === 'function') publishPlayers();
 
-      // STEG 5: Lukk Mer-popup
+      // STEG 5: Toggle sesong-bunnmeny
+      var bottomNav = document.getElementById('bottomNav');
+      var seasonNav = document.getElementById('seasonNav');
+      if (tabId === 'sesong') {
+        if (bottomNav) bottomNav.style.display = 'none';
+        if (seasonNav) seasonNav.style.display = '';
+        // Notify season module to sync nav state
+        try { window.dispatchEvent(new Event('season:nav-sync')); } catch(_) {}
+      } else {
+        if (seasonNav) seasonNav.style.display = 'none';
+        if (bottomNav) bottomNav.style.display = '';
+      }
+
+      // STEG 6: Lukk Mer-popup
       closeMerPopup();
 
-      // STEG 6: Scroll til topp + blur (iOS/Safari fix)
+      // STEG 7: Scroll til topp + blur (iOS/Safari fix)
       try { if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur(); } catch (_) {}
 
       const scroller = document.scrollingElement || document.documentElement;
@@ -1761,7 +1774,7 @@
     }
 
     // Bunnmeny click handlers
-    document.querySelectorAll('.bottom-nav-btn').forEach(btn => {
+    document.querySelectorAll('#bottomNav .bottom-nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab');
         if (!tab) return;
@@ -1782,6 +1795,10 @@
         if (t) switchTab(t);
       });
     });
+
+    // Season nav: Home button exits sesong
+    var seasonHome = document.getElementById('seasonNavHome');
+    if (seasonHome) seasonHome.addEventListener('click', function() { switchTab('players'); });
 
     // Expose for other modules if needed
     window.__BF_switchTab = switchTab;
