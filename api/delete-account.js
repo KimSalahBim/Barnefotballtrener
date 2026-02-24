@@ -216,33 +216,66 @@ export default async function handler(req, res) {
       console.error('[delete-account] user_data database error:', udDbErr);
     }
 
-    // 4e) Delete season module data (GDPR: contains children's names and activity data)
-    // Order: child tables first to respect foreign key constraints
-    const seasonTables = [
-      'match_events',      // goals/assists per child
-      'event_players',     // attendance/minutes per child
-      'training_series',   // series metadata
-      'events',            // matches/trainings
-      'season_players',    // children's names and skills
-      'seasons',           // season metadata
-    ];
-    for (const table of seasonTables) {
-      try {
-        const { error: stErr } = await supabaseAdmin
-          .from(table)
-          .delete()
-          .eq('user_id', userId);
+    // 4e) Delete season module data (children first, then parents)
+    // Order: match_events → event_players → events → training_series → season_players → seasons
+    // Must run BEFORE teams deletion because seasons.team_id → teams.id
+    try {
+      // Get event IDs for match_events deletion (match_events lacks season_id)
+      const { data: userEvents } = await supabaseAdmin
+        .from('events')
+        .select('id')
+        .eq('user_id', userId);
+      const eventIds = (userEvents || []).map(e => e.id);
 
-        if (stErr) {
-          console.error(`[delete-account] Failed to delete ${table}:`, stErr);
-          deletionResults.errors.push(`Could not delete ${table}`);
-        } else {
-          deletionResults.steps_completed.push(`Deleted ${table} from database`);
-        }
-      } catch (stDbErr) {
-        console.error(`[delete-account] ${table} database error:`, stDbErr);
-        deletionResults.errors.push(`Database error during ${table} deletion`);
+      // 1. match_events (deepest child, FK → events)
+      if (eventIds.length > 0) {
+        const { error: meErr } = await supabaseAdmin
+          .from('match_events')
+          .delete()
+          .in('event_id', eventIds)
+          .eq('user_id', userId);
+        if (meErr) console.error('[delete-account] match_events error:', meErr.message);
       }
+
+      // 2. event_players (FK → events + seasons)
+      const { error: epErr } = await supabaseAdmin
+        .from('event_players')
+        .delete()
+        .eq('user_id', userId);
+      if (epErr) console.error('[delete-account] event_players error:', epErr.message);
+
+      // 3. events (FK → seasons)
+      const { error: evErr } = await supabaseAdmin
+        .from('events')
+        .delete()
+        .eq('user_id', userId);
+      if (evErr) console.error('[delete-account] events error:', evErr.message);
+
+      // 4. training_series (FK → seasons)
+      const { error: tsErr } = await supabaseAdmin
+        .from('training_series')
+        .delete()
+        .eq('user_id', userId);
+      if (tsErr) console.error('[delete-account] training_series error:', tsErr.message);
+
+      // 5. season_players (FK → seasons)
+      const { error: spErr } = await supabaseAdmin
+        .from('season_players')
+        .delete()
+        .eq('user_id', userId);
+      if (spErr) console.error('[delete-account] season_players error:', spErr.message);
+
+      // 6. seasons (parent, has FK → teams)
+      const { error: snErr } = await supabaseAdmin
+        .from('seasons')
+        .delete()
+        .eq('user_id', userId);
+      if (snErr) console.error('[delete-account] seasons error:', snErr.message);
+
+      deletionResults.steps_completed.push('Deleted season data (seasons, events, attendance, goals, roster, training series)');
+    } catch (seasonDbErr) {
+      console.error('[delete-account] Season module database error:', seasonDbErr);
+      deletionResults.errors.push('Database error during season data deletion');
     }
 
     // 4f) Delete teams from Supabase (CASCADE sletter spillere automatisk, men vi har allerede slettet dem)

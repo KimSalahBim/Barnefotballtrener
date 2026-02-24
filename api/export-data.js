@@ -131,7 +131,7 @@ export default async function handler(req, res) {
       console.error('[export-data] user_data fetch error:', udErr);
     }
 
-    // 2e) Fetch error logs from Supabase
+    // 2c) Fetch error logs from Supabase
     try {
       const { data: errorData, error: errorErr } = await supabaseAdmin
         .from('error_logs')
@@ -147,24 +147,71 @@ export default async function handler(req, res) {
       console.error('[export-data] Error logs fetch error:', errLogErr);
     }
 
-    // 2f) Fetch season module data (seasons, events, players, attendance, goals)
+    // 2e) Fetch season module data (seasons, events, attendance, goals, roster, training series)
     try {
-      const seasonTables = ['seasons', 'events', 'season_players', 'event_players', 'match_events', 'training_series'];
-      exportData.app_data.season_data = {};
-      for (const table of seasonTables) {
-        const { data: tData, error: tError } = await supabaseAdmin
-          .from(table)
-          .select('*')
-          .eq('user_id', userId)
-          .limit(10000);
+      const { data: seasonsData, error: seasonsErr } = await supabaseAdmin
+        .from('seasons')
+        .select('id, team_id, name, format, start_date, end_date, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
-        if (!tError && tData) {
-          exportData.app_data.season_data[table] = tData;
+      if (!seasonsErr && seasonsData) {
+        exportData.app_data.seasons = seasonsData;
+
+        const seasonIds = seasonsData.map(s => s.id);
+
+        if (seasonIds.length > 0) {
+          // Season players (roster per season)
+          const { data: spData } = await supabaseAdmin
+            .from('season_players')
+            .select('id, season_id, player_id, player_name, player_skill, player_goalie, player_positions, active')
+            .eq('user_id', userId)
+            .in('season_id', seasonIds);
+          if (spData) exportData.app_data.season_players = spData;
+
+          // Events (matches, trainings)
+          const { data: evData } = await supabaseAdmin
+            .from('events')
+            .select('id, season_id, type, title, start_time, duration_minutes, location, opponent, is_home, format, notes, status, result_home, result_away, plan_json, plan_confirmed, created_at')
+            .eq('user_id', userId)
+            .in('season_id', seasonIds)
+            .order('start_time', { ascending: false });
+          if (evData) {
+            exportData.app_data.events = evData;
+
+            const eventIds = evData.map(e => e.id);
+
+            if (eventIds.length > 0) {
+              // Event players (attendance, minutes, goalkeeper)
+              const { data: epData } = await supabaseAdmin
+                .from('event_players')
+                .select('id, event_id, season_id, player_id, attended, minutes_played, is_goalkeeper, absence_reason, in_squad')
+                .eq('user_id', userId)
+                .in('event_id', eventIds);
+              if (epData) exportData.app_data.event_players = epData;
+
+              // Match events (goals, assists)
+              const { data: meData } = await supabaseAdmin
+                .from('match_events')
+                .select('id, event_id, player_id, player_name, type, created_at')
+                .eq('user_id', userId)
+                .in('event_id', eventIds);
+              if (meData) exportData.app_data.match_events = meData;
+            }
+          }
+
+          // Training series
+          const { data: tsData } = await supabaseAdmin
+            .from('training_series')
+            .select('id, season_id, title, day_of_week, start_time, duration_minutes, location, start_date, end_date')
+            .eq('user_id', userId)
+            .in('season_id', seasonIds);
+          if (tsData) exportData.app_data.training_series = tsData;
         }
       }
     } catch (seasonErr) {
       console.error('[export-data] Season data fetch error:', seasonErr);
-      exportData.app_data.season_data_error = 'Could not fetch season data';
+      exportData.app_data.seasons_error = 'Could not fetch season data';
     }
 
     // 3) Fetch Stripe subscription data (if customer exists)
