@@ -1917,9 +1917,18 @@
       return html;
     }
 
-    // Top scorers
-    if (stats.topScorers.length > 0) {
-      html += '<div class="sn-section">Toppscorere</div>';
+    // Combined goals & assists table
+    var scorersAndAssisters = stats.players.filter(function(p) { return p.goals > 0 || p.assists > 0; });
+    scorersAndAssisters.sort(function(a, b) {
+      var totalA = a.goals + a.assists;
+      var totalB = b.goals + b.assists;
+      if (totalB !== totalA) return totalB - totalA;
+      if (b.goals !== a.goals) return b.goals - a.goals;
+      return a.player.name.localeCompare(b.player.name);
+    });
+
+    if (scorersAndAssisters.length > 0) {
+      html += '<div class="sn-section">M\u00e5l og m\u00e5lgivende</div>';
 
       if (barnefotball) {
         html +=
@@ -1930,53 +1939,24 @@
       }
 
       html += '<div class="settings-card" style="padding:0;">';
-      for (var ts = 0; ts < stats.topScorers.length; ts++) {
-        var sc = stats.topScorers[ts];
+      for (var sc_i = 0; sc_i < scorersAndAssisters.length; sc_i++) {
+        var sc = scorersAndAssisters[sc_i];
         html +=
           '<div class="sn-roster-item sn-player-stat-row" data-spid="' + escapeHtml(sc.player.id) + '">' +
-            '<div style="font-size:16px; width:24px; text-align:center;">\u26BD</div>' +
             '<div style="flex:1;">' +
               '<div style="font-weight:600;">' + escapeHtml(sc.player.name) + '</div>' +
             '</div>' +
             '<div style="display:flex; gap:10px; align-items:center;">' +
-              '<div style="text-align:center;">' +
-                '<div style="font-weight:700; font-size:16px;">' + sc.goals + '</div>' +
-                '<div style="font-size:10px; color:var(--text-400);">m\u00e5l</div>' +
-              '</div>' +
+              (sc.goals > 0
+                ? '<div style="text-align:center;">' +
+                    '<div style="font-weight:700; font-size:16px;">' + sc.goals + '</div>' +
+                    '<div style="font-size:10px; color:var(--text-400);">m\u00e5l</div>' +
+                  '</div>'
+                : '') +
               (sc.assists > 0
                 ? '<div style="text-align:center;">' +
                     '<div style="font-weight:700; font-size:16px; color:var(--text-600);">' + sc.assists + '</div>' +
                     '<div style="font-size:10px; color:var(--text-400);">assist</div>' +
-                  '</div>'
-                : '') +
-            '</div>' +
-            '<div class="sn-event-arrow">\u203A</div>' +
-          '</div>';
-      }
-      html += '</div>';
-    }
-
-    // Top assisters
-    if (stats.topAssisters.length > 0) {
-      html += '<div class="sn-section">M\u00e5lgivende</div>';
-      html += '<div class="settings-card" style="padding:0;">';
-      for (var ta = 0; ta < stats.topAssisters.length; ta++) {
-        var as = stats.topAssisters[ta];
-        html +=
-          '<div class="sn-roster-item sn-player-stat-row" data-spid="' + escapeHtml(as.player.id) + '">' +
-            '<div style="font-size:14px; width:24px; text-align:center; font-weight:800; color:var(--primary, #2563eb);">A</div>' +
-            '<div style="flex:1;">' +
-              '<div style="font-weight:600;">' + escapeHtml(as.player.name) + '</div>' +
-            '</div>' +
-            '<div style="display:flex; gap:10px; align-items:center;">' +
-              '<div style="text-align:center;">' +
-                '<div style="font-weight:700; font-size:16px;">' + as.assists + '</div>' +
-                '<div style="font-size:10px; color:var(--text-400);">assist</div>' +
-              '</div>' +
-              (as.goals > 0
-                ? '<div style="text-align:center;">' +
-                    '<div style="font-weight:700; font-size:16px; color:var(--text-600);">' + as.goals + '</div>' +
-                    '<div style="font-size:10px; color:var(--text-400);">m\u00e5l</div>' +
                   '</div>'
                 : '') +
             '</div>' +
@@ -2762,6 +2742,26 @@
         player_skill: skill,
         player_positions: positions
       });
+
+      // Sync player_name in match_events if name changed
+      if (ok && name !== sp.name && currentSeason) {
+        try {
+          var syncSb = getSb();
+          var syncUid = getUserId();
+          // Get all event IDs for this season
+          var evRes = await syncSb.from('events').select('id').eq('season_id', currentSeason.id).eq('user_id', syncUid);
+          var evIds = (evRes.data || []).map(function(e) { return e.id; });
+          if (evIds.length > 0) {
+            await syncSb.from('match_events')
+              .update({ player_name: name })
+              .in('event_id', evIds)
+              .eq('player_id', sp.player_id)
+              .eq('user_id', syncUid);
+          }
+        } catch (syncErr) {
+          console.warn('[season.js] match_events name sync:', syncErr.message || syncErr);
+        }
+      }
 
       if (ok) {
         notify('Spiller oppdatert.', 'success');
