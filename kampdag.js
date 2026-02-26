@@ -458,24 +458,36 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       });
     }
 
-    // Formation always on: hide toggle, show panel, init grid
+    // Formation always on: hide toggle switch, show panel for non-3v3
     const formToggle = $('kdFormationToggle');
+    const formCard = formToggle?.closest('.settings-card');
     if (formToggle) {
       formToggle.checked = true;
-      const toggleCard = formToggle.closest('.settings-card');
-      if (toggleCard) toggleCard.style.display = 'none';
+      const switchLabel = formToggle.closest('.switch');
+      if (switchLabel) switchLabel.style.display = 'none';
     }
     const initFmt = parseInt(formatEl?.value, 10) || 7;
     const formPanel = $('kdFormationPanel');
-    if (formPanel) formPanel.style.display = (initFmt !== 3) ? 'block' : 'none';
-    if (initFmt !== 3) renderFormationGrid();
+    if (initFmt === 3) {
+      if (formCard) formCard.style.display = 'none';
+    } else {
+      if (formCard) formCard.style.display = '';
+      if (formPanel) formPanel.style.display = 'block';
+      renderFormationGrid();
+    }
 
-    // Formation changes when format changes (hide for 3-er)
+    // Formation changes when format changes (hide entire card for 3-er)
     if (formatEl) formatEl.addEventListener('change', () => {
       const fmt = parseInt(formatEl.value, 10) || 7;
       const fp = $('kdFormationPanel');
-      if (fp) fp.style.display = (fmt !== 3) ? 'block' : 'none';
-      if (fmt !== 3) renderFormationGrid();
+      const fc = $('kdFormationToggle')?.closest('.settings-card');
+      if (fmt === 3) {
+        if (fc) fc.style.display = 'none';
+      } else {
+        if (fc) fc.style.display = '';
+        if (fp) fp.style.display = 'block';
+        renderFormationGrid();
+      }
     });
   }
 
