@@ -1630,16 +1630,29 @@
     }
 
     const groups = Array.isArray(cached) ? cached : [];
+    const hasMultiple = groups.length > 1;
+
     groupsOut.innerHTML = `
       <div class="wo-groups-compact">
+        ${hasMultiple ? '<div class="grpdd-hint small-text" style="opacity:0.6; margin-bottom:4px; text-align:center; font-size:11px;"><i class="fas fa-hand-pointer" style="margin-right:3px;"></i> Hold inne for \u00e5 bytte/flytte</div>' : ''}
         ${groups.map((g, idx) => `
-          <div class="wo-group-card">
-            <div class="wo-group-title">${groups.length === 1 ? 'Deltakere' : `Gruppe ${idx + 1}`} <span style="opacity:0.7;">(${g.length})</span></div>
-            <div class="wo-group-names">${g.map(p => `<span class="wo-group-name">${escapeHtml(p.name)}${p.goalie ? ' 🧤' : ''}</span>`).join('')}</div>
+          <div class="wo-group-card grpdd-group" data-grpdd-gi="${idx}">
+            <div class="wo-group-title grpdd-group" data-grpdd-gi="${idx}">${groups.length === 1 ? 'Deltakere' : `Gruppe ${idx + 1}`} <span style="opacity:0.7;">(${g.length})</span></div>
+            <div class="wo-group-names">${g.map((p, pi) => `<span class="wo-group-name grpdd-player" data-grpdd-gi="${idx}" data-grpdd-pi="${pi}">${escapeHtml(p.name)}${p.goalie ? ' 🧤' : ''}</span>`).join('')}</div>
           </div>
         `).join('')}
       </div>
     `;
+
+    // Attach shared drag-drop (only for multi-group)
+    if (hasMultiple && window.GroupDragDrop && window.GroupDragDrop.enable) {
+      window.GroupDragDrop.enable(groupsOut, groups, function (updatedGroups) {
+        state.groupsCache.set(outKey, updatedGroups);
+        renderGroupsOut(blockId, track);
+      }, {
+        notify: typeof window.showNotification === 'function' ? window.showNotification : function () {}
+      });
+    }
   }
 
   // -------------------------
