@@ -1002,7 +1002,8 @@
     },
     liga: null,
     teams: [],
-    currentTeamId: null
+    currentTeamId: null,
+    currentGroups: null   // cached for drag-drop editing
   };
 
   // Expose for other modules (kampdag.js)
@@ -2088,16 +2089,48 @@
     const el = $('groupingResults');
     if (!el) return;
 
-    el.innerHTML = groups.map((g, i) => {
-      return `
-        <div class="results-card">
-          <h3>Gruppe ${i + 1} <span class="small-text" style="opacity:0.8;">(${g.length} spillere)</span></h3>
+    // Deep copy into state for drag-drop mutations
+    state.currentGroups = groups.map(g => g.map(p => ({ ...p })));
+
+    renderGroupsFromState();
+  }
+
+  function renderGroupsFromState() {
+    const el = $('groupingResults');
+    if (!el || !state.currentGroups) return;
+
+    const groups = state.currentGroups;
+
+    el.innerHTML = `
+      <div class="grpdd-hint small-text" style="opacity:0.7; margin-bottom:8px; text-align:center;">
+        <i class="fas fa-hand-pointer" style="margin-right:4px;"></i>
+        Hold inne en spiller for å dra til en annen (bytt) eller til en gruppe (flytt).
+      </div>
+      ${groups.map((g, gi) => `
+        <div class="results-card grpdd-group" data-grpdd-gi="${gi}">
+          <h3 class="grpdd-group" data-grpdd-gi="${gi}">
+            Gruppe ${gi + 1} <span class="small-text" style="opacity:0.8;">(${g.length} spillere)</span>
+          </h3>
           <div class="results-list">
-            ${g.map(p => `<div class="result-item">${escapeHtml(p.name)} ${p.goalie ? ' 🧤' : ''}</div>`).join('')}
+            ${g.map((p, pi) => `
+              <div class="result-item grpdd-player"
+                   data-grpdd-gi="${gi}"
+                   data-grpdd-pi="${pi}">
+                <span class="grpdd-grip"><i class="fas fa-grip-vertical"></i></span>
+                <span class="grpdd-name">${escapeHtml(p.name)}${p.goalie ? ' 🧤' : ''}</span>
+              </div>
+            `).join('')}
           </div>
         </div>
-      `;
-    }).join('');
+      `).join('')}
+    `;
+
+    // Attach shared drag-drop behavior
+    if (window.GroupDragDrop && window.GroupDragDrop.enable) {
+      window.GroupDragDrop.enable(el, groups, function () {
+        renderGroupsFromState();
+      }, { notify: showNotification });
+    }
   }
 
   function setupLigaUI() {
