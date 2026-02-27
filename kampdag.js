@@ -500,16 +500,19 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const list = getPlayersArray().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'nb'));
 
-    container.innerHTML = list.map(p => {
+    const _pcColors = ['#93c5fd','#a5b4fc','#f9a8d4','#fcd34d','#6ee7b7','#fca5a5','#67e8f9','#c4b5fd','#f0abfc','#5eead4','#fdba74','#bef264','#fb7185','#7dd3fc','#d8b4fe','#86efac','#fed7aa','#99f6e4'];
+
+    container.innerHTML = list.map((p, i) => {
       const checked = kdSelected.has(p.id) ? 'checked' : '';
       return `
-        <label class="player-checkbox">
+        <label class="player-checkbox" style="--pc-color:${_pcColors[i % _pcColors.length]}">
           <input type="checkbox" data-id="${escapeHtml(p.id)}" ${checked}>
-          <span class="checkmark"></span>
-          <div class="player-details">
+          <div class="pc-avatar">${escapeHtml((p.name || '?').charAt(0).toUpperCase())}</div>
+          <div class="pc-info">
             <div class="player-name">${escapeHtml(p.name)}</div>
-            <div class="player-meta">${p.goalie ? '\ud83e\udde4 Keeper' : '\u26bd Utespiller'}</div>
+            ${p.goalie ? '<span class="pc-keeper">\ud83e\udde4 Keeper</span>' : ''}
           </div>
+          <div class="pc-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </label>
       `;
     }).join('');
