@@ -21,6 +21,7 @@
   var editingSeasonPlayer = null; // season player object when editing
   var embeddedKampdagEvent = null; // event for embedded kampdag
   var embeddedKampdagTropp = null; // tropp players for embedded kampdag
+  var subTeamFilter = null; // null = all, 1-5 = specific sub-team (for roster/stats tabs)
 
   // =========================================================================
   //  HELPERS
@@ -110,6 +111,30 @@
     if (type === 'match' || type === 'cup_match') return '\u26BD';
     if (type === 'training') return '\uD83C\uDFBD';
     return '\uD83D\uDCC5';
+  }
+
+  // Sub-team helpers
+  var SUB_TEAM_COLORS = ['#3b82f6', '#ea580c', '#059669', '#7c3aed', '#ec4899'];
+
+  function getSubTeamNames(season) {
+    if (!season) return [];
+    var count = season.sub_team_count || 1;
+    if (count <= 1) return [];
+    var names = season.sub_team_names || [];
+    var result = [];
+    for (var i = 0; i < count; i++) {
+      result.push(names[i] || ('Lag ' + String.fromCharCode(65 + i)));
+    }
+    return result;
+  }
+
+  function getSubTeamName(season, idx) {
+    var names = getSubTeamNames(season);
+    return names[idx - 1] || ('Lag ' + String.fromCharCode(64 + idx));
+  }
+
+  function getSubTeamColor(idx) {
+    return SUB_TEAM_COLORS[(idx - 1) % SUB_TEAM_COLORS.length] || '#64748b';
   }
 
   // Build a local date string for input[type=date]
@@ -323,7 +348,49 @@
       '.sn-nff-modal p { font-size:14px; line-height:1.6; color:var(--text-600); margin:0 0 12px; }',
       '.sn-nff-modal ul { margin:0 0 16px; padding-left:20px; font-size:13px; line-height:1.7; color:var(--text-600); }',
       '.sn-nff-modal .sn-nff-source { font-size:11px; color:var(--text-400); margin-bottom:20px; }',
-      '.sn-nff-accept { width:100%; padding:14px; border:none; border-radius:var(--radius-md, 12px); background:var(--primary, #2563eb); color:#fff; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }'
+      '.sn-nff-accept { width:100%; padding:14px; border:none; border-radius:var(--radius-md, 12px); background:var(--primary, #2563eb); color:#fff; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }',
+
+      // Sub-team: count toggle
+      '.sn-count-toggle { display:flex; gap:0; }',
+      '.sn-count-btn { flex:1; padding:11px 4px; border:2px solid var(--border); background:var(--bg-input, #fff); font-family:inherit; font-size:15px; font-weight:600; color:var(--text-500); cursor:pointer; transition:all 0.15s; text-align:center; }',
+      '.sn-count-btn:first-child { border-radius:var(--radius-md) 0 0 var(--radius-md); }',
+      '.sn-count-btn:last-child { border-radius:0 var(--radius-md) var(--radius-md) 0; }',
+      '.sn-count-btn + .sn-count-btn { border-left:none; }',
+      '.sn-count-btn.active { background:var(--primary-dim); border-color:var(--primary); color:var(--primary); }',
+
+      // Sub-team: mode cards
+      '.sn-mode-card { border:2px solid var(--border); border-radius:var(--radius-lg); padding:14px; margin-bottom:8px; cursor:pointer; transition:all 0.2s; display:flex; gap:12px; align-items:flex-start; }',
+      '.sn-mode-card:hover { border-color:var(--text-300); }',
+      '.sn-mode-card.selected { border-color:var(--primary); background:rgba(37,99,235,0.03); }',
+      '.sn-mode-check { width:22px; height:22px; border:2px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s; margin-top:2px; font-size:10px; color:transparent; }',
+      '.sn-mode-card.selected .sn-mode-check { border-color:var(--primary); background:var(--primary); color:#fff; }',
+      '.sn-mode-title { font-size:15px; font-weight:700; margin-bottom:2px; }',
+      '.sn-mode-desc { font-size:13px; color:var(--text-500); line-height:1.5; }',
+
+      // Sub-team: filter tabs (roster + stats)
+      '.sn-filter-tabs { display:flex; gap:0; margin-bottom:12px; border-radius:var(--radius-md); overflow:hidden; border:2px solid var(--border); }',
+      '.sn-filter-tab { flex:1; padding:9px 4px; background:var(--bg-input, #fff); border:none; font-family:inherit; font-size:11.5px; font-weight:600; color:var(--text-400); cursor:pointer; text-align:center; border-right:1px solid var(--border); transition:all 0.15s; white-space:nowrap; }',
+      '.sn-filter-tab:last-child { border-right:none; }',
+      '.sn-filter-tab.active { background:var(--primary-dim); color:var(--primary); }',
+
+      // Sub-team: player badges with colors
+      '.sn-st-badge { display:inline-block; padding:2px 8px; border-radius:var(--radius-full, 999px); font-size:11px; font-weight:700; }',
+      '.sn-st-1 { background:rgba(37,99,235,0.12); color:#1d4ed8; }',
+      '.sn-st-2 { background:rgba(234,88,12,0.12); color:#c2410c; }',
+      '.sn-st-3 { background:rgba(16,185,129,0.12); color:#047857; }',
+      '.sn-st-4 { background:rgba(147,51,234,0.12); color:#7c3aed; }',
+      '.sn-st-5 { background:rgba(236,72,153,0.12); color:#be185d; }',
+
+      // Sub-team: conditional section
+      '.sn-cond-section { overflow:hidden; transition:max-height 0.3s, opacity 0.3s; }',
+      '.sn-cond-section.hidden { max-height:0; opacity:0; margin:0; padding:0; border:none; pointer-events:none; }',
+
+      // Sub-team: name input rows
+      '.sn-name-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }',
+      '.sn-color-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }',
+      '.sn-name-input { flex:1; padding:9px 12px; border:2px solid var(--border); border-radius:var(--radius-md); font-size:14px; font-family:inherit; color:var(--text-800); background:var(--bg-input, #fff); }',
+      '.sn-name-input:focus { border-color:var(--primary); outline:none; }',
+      '.sn-hint { font-size:12px; color:var(--text-400); margin-top:4px; line-height:1.4; }'
     ].join('\n');
     document.head.appendChild(style);
   })();
@@ -552,7 +619,10 @@
         name: data.name.trim(),
         format: parseInt(data.format) || 7,
         start_date: data.start_date || null,
-        end_date: data.end_date || null
+        end_date: data.end_date || null,
+        sub_team_count: parseInt(data.sub_team_count) || 1,
+        sub_team_mode: data.sub_team_mode || 'fixed',
+        sub_team_names: data.sub_team_names || null
       };
       var res = await sb.from('seasons').insert(row).select().single();
       if (res.error) throw res.error;
@@ -672,7 +742,8 @@
         opponent: (data.opponent || '').trim() || null,
         is_home: (data.type === 'match' || data.type === 'cup_match') ? (data.is_home !== false) : null,
         format: data.format ? parseInt(data.format) : null,
-        notes: (data.notes || '').trim() || null
+        notes: (data.notes || '').trim() || null,
+        sub_team: data.sub_team ? parseInt(data.sub_team) : null
       };
       var res = await sb.from('events').insert(row).select().single();
       if (res.error) throw res.error;
@@ -744,7 +815,8 @@
           skill: row.player_skill || 3,
           goalie: !!row.player_goalie,
           positions: row.player_positions || ['F','M','A'],
-          active: row.active !== false
+          active: row.active !== false,
+          sub_team: row.sub_team || null
         };
       });
 
@@ -1473,7 +1545,7 @@
         '<div class="sn-season-card" data-sid="' + s.id + '">' +
           '<div class="sn-card-top">' +
             '<span class="sn-card-name">' + escapeHtml(s.name) + '</span>' +
-            '<span class="sn-badge sn-badge-format">' + formatLabel(s.format) + '</span>' +
+            '<span class="sn-badge sn-badge-format">' + formatLabel(s.format) + ((s.sub_team_count || 1) > 1 ? ' \u00B7 ' + s.sub_team_count + ' lag' : '') + '</span>' +
           '</div>' +
           '<div class="sn-card-meta">' + escapeHtml(meta.join(' \u00B7 ')) + '</div>' +
         '</div>';
@@ -1534,6 +1606,43 @@
               '<input type="date" id="snEndDate">' +
             '</div>' +
           '</div>' +
+
+          // Sub-team count
+          '<div style="border-top:2px solid var(--border);margin-top:18px;padding-top:16px;">' +
+            '<div class="form-group">' +
+              '<label>Antall lag i seriespillet</label>' +
+              '<div class="sn-count-toggle" id="snSubTeamCount">' +
+                '<button type="button" class="sn-count-btn active" data-val="1">1</button>' +
+                '<button type="button" class="sn-count-btn" data-val="2">2</button>' +
+                '<button type="button" class="sn-count-btn" data-val="3">3</button>' +
+                '<button type="button" class="sn-count-btn" data-val="4">4</button>' +
+                '<button type="button" class="sn-count-btn" data-val="5">5</button>' +
+              '</div>' +
+              '<div class="sn-hint">Velg 1 om alle spillerne spiller p\u00e5 samme lag</div>' +
+            '</div>' +
+          '</div>' +
+
+          // Mode selection (hidden when count=1)
+          '<div class="sn-cond-section hidden" id="snModeSection">' +
+            '<div class="form-group" style="margin-bottom:10px;">' +
+              '<label>Lagoppsett</label>' +
+            '</div>' +
+            '<div class="sn-mode-card selected" id="snModeFixed" data-mode="fixed">' +
+              '<div class="sn-mode-check">\u2713</div>' +
+              '<div>' +
+                '<div class="sn-mode-title">Faste lag</div>' +
+                '<div class="sn-mode-desc">Spillerne fordeles p\u00e5 lag og f\u00f8lger dem som hovedregel gjennom sesongen.</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="sn-mode-card" id="snModeRotate" data-mode="rotate">' +
+              '<div class="sn-mode-check">\u2713</div>' +
+              '<div>' +
+                '<div class="sn-mode-title">Rullering</div>' +
+                '<div class="sn-mode-desc">Ny rettferdig fordeling per kamprunde. Alle spiller med alle over sesongen.</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
           '<div class="sn-form-buttons">' +
             '<button class="btn-secondary" id="snCancelCreate">Avbryt</button>' +
             '<button class="btn-primary" id="snSaveSeason">Opprett</button>' +
@@ -1543,6 +1652,30 @@
 
     $('snBackFromCreate').addEventListener('click', goToList);
     $('snCancelCreate').addEventListener('click', goToList);
+
+    // Sub-team count toggle
+    var countToggle = $('snSubTeamCount');
+    if (countToggle) countToggle.addEventListener('click', function(e) {
+      var btn = e.target.closest('.sn-count-btn');
+      if (!btn) return;
+      this.querySelectorAll('.sn-count-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var val = parseInt(btn.getAttribute('data-val'));
+      var sec = $('snModeSection');
+      if (sec) {
+        if (val > 1) sec.classList.remove('hidden');
+        else sec.classList.add('hidden');
+      }
+    });
+
+    // Mode card selection
+    var modeCards = root.querySelectorAll('.sn-mode-card');
+    for (var m = 0; m < modeCards.length; m++) {
+      modeCards[m].addEventListener('click', function() {
+        for (var j = 0; j < modeCards.length; j++) { modeCards[j].classList.remove('selected'); }
+        this.classList.add('selected');
+      });
+    }
 
     $('snSaveSeason').addEventListener('click', async function() {
       var name = ($('snSeasonName').value || '').trim();
@@ -1555,11 +1688,20 @@
       btn.disabled = true;
       btn.textContent = 'Oppretter\u2026';
 
+      // Read sub-team settings
+      var countEl = root.querySelector('.sn-count-btn.active');
+      var subTeamCount = countEl ? parseInt(countEl.getAttribute('data-val')) : 1;
+      var modeEl = root.querySelector('.sn-mode-card.selected');
+      var subTeamMode = (modeEl && subTeamCount > 1) ? (modeEl.getAttribute('data-mode') || 'fixed') : 'fixed';
+
       var season = await createSeason({
         name: name,
         format: $('snSeasonFormat').value,
         start_date: $('snStartDate').value || null,
-        end_date: $('snEndDate').value || null
+        end_date: $('snEndDate').value || null,
+        sub_team_count: subTeamCount,
+        sub_team_mode: subTeamMode,
+        sub_team_names: null
       });
 
       if (season) {
@@ -1582,6 +1724,26 @@
   function renderEditSeason(root) {
     if (!currentSeason) { goToList(); return; }
     var s = currentSeason;
+    var stCount = s.sub_team_count || 1;
+    var stMode = s.sub_team_mode || 'fixed';
+    var stNames = getSubTeamNames(s);
+
+    var countBtns = '';
+    for (var c = 1; c <= 5; c++) {
+      countBtns += '<button type="button" class="sn-count-btn' + (stCount === c ? ' active' : '') + '" data-val="' + c + '">' + c + '</button>';
+    }
+
+    // Team name inputs (only shown when count > 1)
+    var nameInputs = '';
+    if (stCount > 1) {
+      for (var n = 0; n < stCount; n++) {
+        nameInputs +=
+          '<div class="sn-name-row">' +
+            '<div class="sn-color-dot" style="background:' + getSubTeamColor(n + 1) + ';"></div>' +
+            '<input class="sn-name-input" type="text" id="snTeamName' + n + '" value="' + escapeHtml(stNames[n] || '') + '" placeholder="Lag ' + String.fromCharCode(65 + n) + '" maxlength="30">' +
+          '</div>';
+      }
+    }
 
     root.innerHTML =
       '<div class="settings-card">' +
@@ -1614,6 +1776,45 @@
               '<input type="date" id="snEditEndDate" value="' + (s.end_date || '') + '">' +
             '</div>' +
           '</div>' +
+
+          // Sub-team count
+          '<div style="border-top:2px solid var(--border);margin-top:18px;padding-top:16px;">' +
+            '<div class="form-group">' +
+              '<label>Antall lag</label>' +
+              '<div class="sn-count-toggle" id="snEditSubTeamCount">' + countBtns + '</div>' +
+            '</div>' +
+          '</div>' +
+
+          // Mode selection (hidden when count=1)
+          '<div class="sn-cond-section' + (stCount <= 1 ? ' hidden' : '') + '" id="snEditModeSection">' +
+            '<div class="form-group" style="margin-bottom:10px;">' +
+              '<label>Lagoppsett</label>' +
+            '</div>' +
+            '<div class="sn-mode-card' + (stMode === 'fixed' ? ' selected' : '') + '" data-mode="fixed">' +
+              '<div class="sn-mode-check">\u2713</div>' +
+              '<div>' +
+                '<div class="sn-mode-title">Faste lag</div>' +
+                '<div class="sn-mode-desc">Spillerne fordeles p\u00e5 lag og f\u00f8lger dem gjennom sesongen.</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="sn-mode-card' + (stMode === 'rotate' ? ' selected' : '') + '" data-mode="rotate">' +
+              '<div class="sn-mode-check">\u2713</div>' +
+              '<div>' +
+                '<div class="sn-mode-title">Rullering</div>' +
+                '<div class="sn-mode-desc">Ny rettferdig fordeling per kamprunde.</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+          // Team names (hidden when count=1)
+          '<div class="sn-cond-section' + (stCount <= 1 ? ' hidden' : '') + '" id="snEditNamesSection" style="border-top:2px solid var(--border);margin-top:14px;padding-top:16px;">' +
+            '<div class="form-group">' +
+              '<label>Lagnavn</label>' +
+              '<div class="sn-hint" style="margin-bottom:8px;">Valgfritt. Brukes i stall, kamper og statistikk.</div>' +
+              '<div id="snTeamNameInputs">' + nameInputs + '</div>' +
+            '</div>' +
+          '</div>' +
+
           '<div class="sn-form-buttons">' +
             '<button class="btn-secondary" id="snCancelEditSeason">Avbryt</button>' +
             '<button class="btn-primary" id="snSaveEditSeason">Lagre</button>' +
@@ -1623,6 +1824,43 @@
 
     $('snBackFromEditSeason').addEventListener('click', goToDashboard);
     $('snCancelEditSeason').addEventListener('click', goToDashboard);
+
+    // Count toggle
+    var editCountToggle = $('snEditSubTeamCount');
+    if (editCountToggle) editCountToggle.addEventListener('click', function(e) {
+      var btn = e.target.closest('.sn-count-btn');
+      if (!btn) return;
+      this.querySelectorAll('.sn-count-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var val = parseInt(btn.getAttribute('data-val'));
+      var modeSec = $('snEditModeSection');
+      var namesSec = $('snEditNamesSection');
+      if (modeSec) { if (val > 1) modeSec.classList.remove('hidden'); else modeSec.classList.add('hidden'); }
+      if (namesSec) { if (val > 1) namesSec.classList.remove('hidden'); else namesSec.classList.add('hidden'); }
+      // Rebuild name inputs
+      var container = $('snTeamNameInputs');
+      if (container && val > 1) {
+        var html = '';
+        for (var i = 0; i < val; i++) {
+          var existing = stNames[i] || '';
+          html +=
+            '<div class="sn-name-row">' +
+              '<div class="sn-color-dot" style="background:' + getSubTeamColor(i + 1) + ';"></div>' +
+              '<input class="sn-name-input" type="text" id="snTeamName' + i + '" value="' + escapeHtml(existing) + '" placeholder="Lag ' + String.fromCharCode(65 + i) + '" maxlength="30">' +
+            '</div>';
+        }
+        container.innerHTML = html;
+      }
+    });
+
+    // Mode cards
+    var editModeCards = root.querySelectorAll('.sn-mode-card');
+    for (var mc = 0; mc < editModeCards.length; mc++) {
+      editModeCards[mc].addEventListener('click', function() {
+        for (var j = 0; j < editModeCards.length; j++) editModeCards[j].classList.remove('selected');
+        this.classList.add('selected');
+      });
+    }
 
     $('snSaveEditSeason').addEventListener('click', async function() {
       var name = ($('snEditSeasonName').value || '').trim();
@@ -1635,11 +1873,32 @@
       btn.disabled = true;
       btn.textContent = 'Lagrer\u2026';
 
+      // Read sub-team settings
+      var countEl = root.querySelector('#snEditSubTeamCount .sn-count-btn.active');
+      var newCount = countEl ? parseInt(countEl.getAttribute('data-val')) : 1;
+      var modeEl = root.querySelector('.sn-mode-card.selected');
+      var newMode = (modeEl && newCount > 1) ? (modeEl.getAttribute('data-mode') || 'fixed') : 'fixed';
+
+      // Read team names
+      var teamNames = null;
+      if (newCount > 1) {
+        teamNames = [];
+        for (var tn = 0; tn < newCount; tn++) {
+          var inp = $('snTeamName' + tn);
+          teamNames.push(inp ? (inp.value || '').trim() : '');
+        }
+        // Only save if at least one name is non-empty
+        if (teamNames.every(function(n) { return !n; })) teamNames = null;
+      }
+
       var fields = {
         name: name,
         format: parseInt($('snEditSeasonFormat').value) || s.format,
         start_date: $('snEditStartDate').value || null,
-        end_date: $('snEditEndDate').value || null
+        end_date: $('snEditEndDate').value || null,
+        sub_team_count: newCount,
+        sub_team_mode: newMode,
+        sub_team_names: teamNames
       };
 
       var updated = await updateSeason(s.id, fields);
@@ -1670,6 +1929,10 @@
     var range = formatDateRange(s.start_date, s.end_date);
     var metaParts = [formatLabel(s.format)];
     if (range) metaParts.push(range);
+    if ((s.sub_team_count || 1) > 1) {
+      var stLabel = (s.sub_team_count || 1) + ' lag (' + (s.sub_team_mode === 'rotate' ? 'rullering' : 'fast') + ')';
+      metaParts.push(stLabel);
+    }
 
     var html =
       '<div class="settings-card" style="margin-bottom:12px;">' +
@@ -1842,6 +2105,8 @@
 
   function renderRosterTab() {
     var active = seasonPlayers.filter(function(p) { return p.active; });
+    var stCount = (currentSeason && currentSeason.sub_team_count) || 1;
+    var hasSubTeams = stCount > 1 && (currentSeason.sub_team_mode === 'fixed');
 
     var html =
       '<div class="settings-card" style="padding-top:12px;">' +
@@ -1851,26 +2116,65 @@
         '</div>' +
       '</div>';
 
-    if (active.length === 0) {
+    // Filter tabs (only for fixed sub-teams)
+    if (hasSubTeams) {
+      var stNames = getSubTeamNames(currentSeason);
+      html += '<div class="sn-filter-tabs" id="snRosterFilterTabs">';
+      html += '<button class="sn-filter-tab' + (subTeamFilter === null ? ' active' : '') + '" data-stf="all" style="flex:1.2;">Alle (' + active.length + ')</button>';
+      for (var ft = 0; ft < stCount; ft++) {
+        var ftIdx = ft + 1;
+        var ftCount = active.filter(function(p) { return p.sub_team === ftIdx; }).length;
+        html += '<button class="sn-filter-tab' + (subTeamFilter === ftIdx ? ' active' : '') + '" data-stf="' + ftIdx + '" style="color:' + getSubTeamColor(ftIdx) + ';">' + escapeHtml(stNames[ft] || String.fromCharCode(65 + ft)) + ' (' + ftCount + ')</button>';
+      }
+      var unassignedCount = active.filter(function(p) { return !p.sub_team; }).length;
+      if (unassignedCount > 0) {
+        html += '<button class="sn-filter-tab' + (subTeamFilter === 0 ? ' active' : '') + '" data-stf="0" style="color:var(--text-400);">? (' + unassignedCount + ')</button>';
+      }
+      html += '</div>';
+    }
+
+    // Filter players
+    var displayed = active;
+    if (hasSubTeams && subTeamFilter !== null) {
+      if (subTeamFilter === 0) {
+        displayed = active.filter(function(p) { return !p.sub_team; });
+      } else {
+        displayed = active.filter(function(p) { return p.sub_team === subTeamFilter; });
+      }
+    }
+
+    if (displayed.length === 0 && active.length === 0) {
       html +=
         '<div class="sn-roster-empty">' +
-          '<div style="font-size:36px; margin-bottom:12px;">👥</div>' +
+          '<div style="font-size:36px; margin-bottom:12px;">\uD83D\uDC65</div>' +
           '<div style="font-weight:600; margin-bottom:6px;">Ingen spillere i sesongen</div>' +
           '<div>Importer spillere fra Spillere-fanen for \u00e5 komme i gang.</div>' +
         '</div>';
+    } else if (displayed.length === 0) {
+      html +=
+        '<div class="sn-roster-empty">' +
+          '<div style="font-size:36px; margin-bottom:12px;">\uD83D\uDD0D</div>' +
+          '<div>Ingen spillere i denne gruppen.</div>' +
+        '</div>';
     } else {
-      html += '<div class="sn-section">Spillere (' + active.length + ')</div>';
+      html += '<div class="sn-section">Spillere (' + displayed.length + ')</div>';
       html += '<div class="settings-card" style="padding:0;">';
 
-      for (var i = 0; i < active.length; i++) {
-        var p = active[i];
+      for (var i = 0; i < displayed.length; i++) {
+        var p = displayed[i];
         var posLabels = (p.positions || []).join('/');
+        var stBadge = '';
+        if (hasSubTeams && p.sub_team) {
+          stBadge = '<span class="sn-st-badge sn-st-' + p.sub_team + '">' + escapeHtml(getSubTeamName(currentSeason, p.sub_team)) + '</span>';
+        } else if (hasSubTeams && !p.sub_team) {
+          stBadge = '<span class="sn-st-badge" style="background:var(--border);color:var(--text-400);">Ikke fordelt</span>';
+        }
         html +=
           '<div class="sn-roster-item" data-spid="' + p.id + '" style="cursor:pointer;">' +
             '<div class="sn-roster-name">' + escapeHtml(p.name) + '</div>' +
             '<div class="sn-roster-badges">' +
-              (p.goalie ? '<span class="sn-badge sn-badge-keeper">Kan stå i mål</span>' : '') +
-              '<span class="sn-badge sn-badge-pos">' + escapeHtml(posLabels) + '</span>' +
+              stBadge +
+              (p.goalie ? '<span class="sn-badge sn-badge-keeper">Kan st\u00e5 i m\u00e5l</span>' : '') +
               '<span class="sn-badge sn-badge-skill">' + p.skill + '</span>' +
             '</div>' +
             '<div class="sn-event-arrow">\u203A</div>' +
@@ -1884,6 +2188,20 @@
   }
 
   function bindRosterHandlers(root) {
+    // Sub-team filter tabs
+    var filterTabs = $('snRosterFilterTabs');
+    if (filterTabs) filterTabs.addEventListener('click', function(e) {
+      var tab = e.target.closest('.sn-filter-tab');
+      if (!tab) return;
+      var val = tab.getAttribute('data-stf');
+      if (val === 'all') {
+        subTeamFilter = null;
+      } else {
+        subTeamFilter = parseInt(val);
+      }
+      render();
+    });
+
     var importBtn = $('snImportPlayers');
     if (importBtn) importBtn.addEventListener('click', function() {
       snView = 'roster-import';
@@ -2960,6 +3278,12 @@
       if (time) meta += ', kl. ' + time;
       if (ev.location) meta += ' \u00B7 ' + ev.location;
 
+      // Sub-team badge for events
+      var stEvBadge = '';
+      if (ev.sub_team && currentSeason && (currentSeason.sub_team_count || 1) > 1) {
+        stEvBadge = ' <span class="sn-st-badge sn-st-' + ev.sub_team + '" style="font-size:10px;padding:1px 6px;">' + escapeHtml(getSubTeamName(currentSeason, ev.sub_team)) + '</span>';
+      }
+
       var regBadge = registeredEventIds[ev.id]
         ? '<div class="sn-att-badge" title="Oppm\u00f8te registrert">\u2713</div>'
         : '';
@@ -2978,7 +3302,7 @@
           '<div class="sn-event-icon">' + typeIcon(ev.type) + '</div>' +
           '<div class="sn-event-info">' +
             '<div class="sn-event-title">' + escapeHtml(title) + '</div>' +
-            '<div class="sn-event-meta">' + escapeHtml(meta) + '</div>' +
+            '<div class="sn-event-meta">' + escapeHtml(meta) + stEvBadge + '</div>' +
           '</div>' +
           scoreBadge +
           regBadge +
@@ -3026,6 +3350,25 @@
 
     var title = isEdit ? 'Rediger hendelse' : 'Ny hendelse';
 
+    // Build sub-team dropdown if season has fixed sub-teams
+    var stCount = (currentSeason && currentSeason.sub_team_count) || 1;
+    var hasFixedSubTeams = stCount > 1 && ((currentSeason && currentSeason.sub_team_mode) || 'fixed') === 'fixed';
+    var subTeamSelect = '';
+    if (hasFixedSubTeams) {
+      var stNames = getSubTeamNames(currentSeason);
+      var opts = '';
+      for (var st = 0; st < stCount; st++) {
+        var stIdx = st + 1;
+        opts += '<option value="' + stIdx + '"' + (ev.sub_team === stIdx ? ' selected' : '') + '>' + escapeHtml(stNames[st]) + '</option>';
+      }
+      subTeamSelect =
+        '<div class="form-group" id="snSubTeamGroup" style="' + (isMatch ? '' : 'display:none;') + '">' +
+          '<label for="snSubTeam">Lag</label>' +
+          '<select id="snSubTeam">' + opts + '</select>' +
+          '<div class="sn-hint">Troppen foreslås fra dette laget. Du kan justere etterpå.</div>' +
+        '</div>';
+    }
+
     var html =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
@@ -3054,6 +3397,7 @@
               '</div>' +
             '</div>' +
           '</div>' +
+          subTeamSelect +
           '<div class="form-group">' +
             '<label for="snTitle">Tittel <span style="font-weight:400;color:var(--text-400);">(valgfritt)</span></label>' +
             '<input type="text" id="snTitle" placeholder="Vises i hendelseslisten" maxlength="80" autocomplete="off" value="' + escapeHtml(ev.title || '') + '">' +
@@ -3093,6 +3437,9 @@
     $('snEventType').addEventListener('change', function() {
       var isM = (this.value === 'match' || this.value === 'cup_match');
       $('snMatchFields').style.display = isM ? '' : 'none';
+      // Show/hide sub-team dropdown
+      var stGroup = $('snSubTeamGroup');
+      if (stGroup) stGroup.style.display = isM ? '' : 'none';
       // Auto-set duration based on type (only for new events)
       if (!isEdit) {
         var durEl = $('snDuration');
@@ -3149,7 +3496,8 @@
         location: $('snLocation').value || null,
         opponent: isMatchNow ? ($('snOpponent').value || null) : null,
         is_home: isMatchNow ? isHomeVal : null,
-        notes: $('snNotes').value || null
+        notes: $('snNotes').value || null,
+        sub_team: (isMatchNow && $('snSubTeam')) ? parseInt($('snSubTeam').value) : null
       };
 
       var result;
@@ -3222,6 +3570,9 @@
     if (isMatch) html += detailRow('Hjemme/Borte', ev.is_home ? 'Hjemme' : 'Borte');
     if (ev.location) html += detailRow('Sted', ev.location);
     if (ev.format) html += detailRow('Format', formatLabel(ev.format));
+    if (ev.sub_team && currentSeason && (currentSeason.sub_team_count || 1) > 1) {
+      html += detailRow('Lag', '<span class="sn-st-badge sn-st-' + ev.sub_team + '">' + escapeHtml(getSubTeamName(currentSeason, ev.sub_team)) + '</span>');
+    }
     if (ev.notes) html += detailRow('Notat', ev.notes);
 
     html += '</div>';
@@ -4131,6 +4482,7 @@
     matchGoals = [];
     editingEvent = null;
     editingSeasonPlayer = null;
+    subTeamFilter = null;
     currentSeason = s;
     dashTab = 'calendar';
     await Promise.all([loadEvents(seasonId), loadSeasonPlayers(seasonId), loadRegisteredEventIds(seasonId)]);
