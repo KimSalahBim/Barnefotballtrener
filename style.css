@@ -741,48 +741,147 @@ body {
 }
 
 /* Player Selection */
+/* ================================================
+   A1 PLAYER SELECTION — "Soft & Rounded" design
+   ================================================ */
 .player-selection {
     background: var(--bg-card);
     border-radius: 15px;
-    padding: 25px 30px;
+    padding: 8px 20px 20px;
     margin-bottom: 20px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    max-height: 400px;
+    max-height: 420px;
     overflow-y: auto;
-    /* Desktop: grid layout */
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
 }
 
-/* Desktop compact player cards in selection grid */
+/* --- Individual player card --- */
 .player-selection .player-checkbox {
-    margin: 0;
-    padding: 8px 10px;
-    border-radius: 10px;
-    gap: 6px;
+    display: flex;
     align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 2px solid #ede9fe;
+    background: #fff;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.18s ease;
+    overflow: visible;
+}
+.player-selection .player-checkbox:hover {
+    border-color: #c4b5fd;
+    background: #faf8ff;
 }
 
+/* Hide native checkbox */
+.player-selection .player-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+/* Remove old checkmark span (backward compat) */
+.player-selection .player-checkbox .checkmark {
+    display: none !important;
+}
+
+/* --- Avatar circle --- */
+.player-selection .pc-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 12px;
+    background: #f1f0fb;
+    color: #c4c0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 15px;
+    flex-shrink: 0;
+    transition: all 0.18s ease;
+}
+
+/* --- Player info --- */
+.player-selection .pc-info {
+    min-width: 0;
+    flex: 1;
+}
 .player-selection .player-name {
-    font-size: 13px;
+    font-weight: 700 !important;
+    font-size: 13.5px;
     line-height: 1.2;
+    color: #7c7a9c !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color 0.15s ease;
+}
+.player-selection .pc-keeper {
+    display: inline-block;
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 99px;
+    background: #f5f3ff;
+    color: #c4c0e0;
+    transition: all 0.15s ease;
 }
 
-.player-selection .player-meta {
-    font-size: 11px;
-    opacity: 0.85;
-    line-height: 1.1;
-}
-
-.player-selection .checkmark {
+/* --- Floating check badge --- */
+.player-selection .pc-check {
+    position: absolute;
+    top: -6px;
+    right: -6px;
     width: 20px;
     height: 20px;
-    min-width: 20px;
-    border-radius: 6px;
+    border-radius: 10px;
+    background: #818cf8;
+    border: 2px solid var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.18s ease;
+    box-shadow: 0 2px 6px rgba(129,140,248,0.3);
+    pointer-events: none;
+}
+
+/* Hide old player-meta (backward compat) */
+.player-selection .player-meta {
+    display: none;
+}
+
+/* ================================================
+   CHECKED STATE — uses :has(:checked)
+   ================================================ */
+.player-selection .player-checkbox:has(:checked) {
+    border-color: #818cf8;
+    background: #faf8ff;
+    box-shadow: 0 2px 12px rgba(129,140,248,0.12);
+}
+.player-selection .player-checkbox:has(:checked) .pc-avatar {
+    background: var(--pc-color, #a5b4fc);
+    color: #312e81;
+}
+.player-selection .player-checkbox:has(:checked) .player-name {
+    color: #1e1b4b !important;
+}
+.player-selection .player-checkbox:has(:checked) .pc-keeper {
+    background: #fef3c7;
+    color: #a16207;
+}
+.player-selection .player-checkbox:has(:checked) .pc-check {
+    opacity: 1;
+    transform: scale(1);
 }
 
 /* Desktop: force 4-column grid (above 640px) */
@@ -811,6 +910,51 @@ body {
 .selection-actions {
     display: flex;
     gap: 10px;
+}
+
+/* ── A1 styles for workout exercise-B pick list ── */
+.wo-pick-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px 6px 0 0;
+}
+.wo-pick-list .player-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 12px;
+    border: 1.5px solid #ede9fe;
+    background: #fff;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.18s ease;
+    overflow: visible;
+}
+.wo-pick-list .player-checkbox:hover { border-color: #c4b5fd; background: #faf8ff; }
+.wo-pick-list .player-checkbox input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.wo-pick-list .player-checkbox .checkmark { display: none !important; }
+.wo-pick-list .pc-avatar { width: 28px; height: 28px; min-width: 28px; border-radius: 9px; background: #f1f0fb; color: #c4c0e0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; transition: all 0.18s ease; }
+.wo-pick-list .pc-info { min-width: 0; flex: 1; }
+.wo-pick-list .player-name { font-weight: 700 !important; font-size: 12px; color: #7c7a9c !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.15s; }
+.wo-pick-list .pc-keeper { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 99px; background: #f5f3ff; color: #c4c0e0; transition: all 0.15s; }
+.wo-pick-list .player-meta { display: none; }
+.wo-pick-list .pc-check { position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 9px; background: #818cf8; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(0.5); transition: all 0.18s ease; box-shadow: 0 2px 6px rgba(129,140,248,0.3); pointer-events: none; }
+.wo-pick-list .player-checkbox:has(:checked) { border-color: #818cf8; background: #faf8ff; box-shadow: 0 2px 8px rgba(129,140,248,0.1); }
+.wo-pick-list .player-checkbox:has(:checked) .pc-avatar { background: var(--pc-color, #a5b4fc); color: #312e81; }
+.wo-pick-list .player-checkbox:has(:checked) .player-name { color: #1e1b4b !important; }
+.wo-pick-list .player-checkbox:has(:checked) .pc-keeper { background: #fef3c7; color: #a16207; }
+.wo-pick-list .player-checkbox:has(:checked) .pc-check { opacity: 1; transform: scale(1); }
+
+/* Tiny screens: 2 columns */
+@media (max-width: 380px) {
+  .player-selection {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .wo-pick-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
 
 .player-checkbox-item {
@@ -1715,57 +1859,65 @@ body {
    Endrer kun layout - ikke funksjon
 -------------------------------------------- */
 @media (max-width: 640px) {
-  /* Selve boksen som inneholder spillerlista */
+  /* ── A1 Mobil: spillervalg ── */
   .player-selection {
-    padding: 10px 10px;
-    max-height: 280px;
+    padding: 8px 12px 12px !important;
+    max-height: 320px !important;
     overflow-y: auto;
-    scrollbar-width: none;      /* Firefox */
+    scrollbar-width: none;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
   }
   .player-selection::-webkit-scrollbar {
     width: 0;
     height: 0;
   }
-
-  /* Gjor innholdet til grid med 3 kolonner */
-  .player-selection {
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 6px;
-  }
-
-  /* Hvert spiller-kort i lista (label.player-checkbox) */
   .player-selection .player-checkbox {
-    margin: 0;
-    padding: 6px 6px;
-    border-radius: 10px;
-    gap: 4px;
-    align-items: center;
+    padding: 6px 5px !important;
+    border-radius: 11px !important;
+    gap: 5px !important;
+    border-width: 1.5px !important;
   }
-
-  /* Kompakt checkbox */
-  .player-selection .checkmark {
-    width: 18px;
-    height: 18px;
-    min-width: 18px;
-    border-radius: 5px;
+  .player-selection .pc-avatar {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    border-radius: 8px !important;
+    font-size: 11px !important;
   }
-
-  /* Kompakt typografi */
   .player-selection .player-name {
-    font-size: 12px;
-    line-height: 1.15;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 12px !important;
   }
-  .player-selection .player-meta {
-    font-size: 10px;
-    opacity: 0.85;
-    line-height: 1.1;
+  .player-selection .pc-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+  }
+  .player-selection .pc-keeper {
+    flex-shrink: 0 !important;
+    width: 14px !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    font-size: 10px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    color: inherit !important;
+    line-height: 1 !important;
+  }
+  .player-selection .pc-check {
+    width: 16px !important;
+    height: 16px !important;
+    top: -4px !important;
+    right: -4px !important;
+  }
+  .player-selection .pc-check svg {
+    width: 10px !important;
+    height: 10px !important;
   }
 
-  /* Legacy-klasse (beholdt for sikkerhet) */
+  /* Legacy (beholdt for sikkerhet) */
   .player-checkbox-item {
     margin: 0;
     padding: 6px 6px;
@@ -2363,8 +2515,8 @@ body.gated #mainApp {
 
   /* --- PLAYER SELECTION CONTAINER --- */
   .player-selection {
-    padding: 10px 12px !important;
-    border-radius: 12px !important;
+    padding: 8px 12px 12px !important;
+    border-radius: 14px !important;
     margin-bottom: 10px !important;
   }
   .selection-header {
@@ -2375,16 +2527,13 @@ body.gated #mainApp {
     font-size: 15px !important;
   }
 
-  /* --- PLAYER CARDS (spillerliste) --- */
-  .player-checkbox-item {
-    padding: 6px 6px !important;
-    border-radius: 10px !important;
-    margin-bottom: 2px !important;
-  }
-  .player-checkbox-item .player-name,
+  /* --- PLAYER CARDS (A1 compact) — text-level only --- */
   .player-name {
     font-size: 12px !important;
     margin-bottom: 1px !important;
+  }
+  .pc-keeper {
+    font-size: 9px !important;
   }
   .player-meta {
     font-size: 10px !important;
@@ -2424,18 +2573,29 @@ body.gated #mainApp {
   .comp-list--players {
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;
-    gap: 4px !important;
-    max-height: 240px !important;
+    gap: 6px !important;
+    max-height: 280px !important;
   }
   .comp-check {
-    padding: 4px 6px !important;
-    border-radius: 10px !important;
-    gap: 4px !important;
+    padding: 7px 8px !important;
+    border-radius: 12px !important;
+    gap: 7px !important;
+    border-width: 1.5px !important;
+  }
+  .comp-check .pc-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
     font-size: 12px !important;
   }
-  .comp-check input {
+  .comp-check .player-name {
+    font-size: 12px !important;
+  }
+  .comp-check .pc-check {
     width: 16px !important;
     height: 16px !important;
+    top: -4px !important;
+    right: -4px !important;
   }
   .comp-input,
   .comp-select {
