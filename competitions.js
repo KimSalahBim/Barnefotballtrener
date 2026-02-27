@@ -321,12 +321,19 @@
       </div>
     ` : '';
 
+    const _pcColors = ['#93c5fd','#a5b4fc','#f9a8d4','#fcd34d','#6ee7b7','#fca5a5','#67e8f9','#c4b5fd','#f0abfc','#5eead4','#fdba74','#bef264','#fb7185','#7dd3fc','#d8b4fe','#86efac','#fed7aa','#99f6e4'];
     const list = players
+      .slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'nb'))
       .map(
-        (p) => `
-      <label class="comp-check">
+        (p, i) => `
+      <label class="comp-check" style="--pc-color:${_pcColors[i % _pcColors.length]}">
         <input type="checkbox" data-comp-player="${escapeHtml(p.id)}">
-        <span>${escapeHtml(p.name)}</span>
+        <div class="pc-avatar">${escapeHtml((p.name || '?').charAt(0).toUpperCase())}</div>
+        <div class="pc-info">
+          <div class="player-name">${escapeHtml(p.name)}</div>
+          ${p.goalie ? '<span class="pc-keeper">🧤 Keeper</span>' : ''}
+        </div>
+        <div class="pc-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
       </label>`
       )
       .join('');

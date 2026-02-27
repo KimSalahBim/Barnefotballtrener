@@ -392,36 +392,24 @@
       });
     }
 
-    // Formation always on: hide toggle switch, show panel for non-3v3
+    // Formation always on: hide toggle, show panel, init grid
     const formToggle = $('skdFormationToggle');
-    const formCard = formToggle?.closest('.settings-card');
     if (formToggle) {
       formToggle.checked = true;
-      const switchLabel = formToggle.closest('.switch');
-      if (switchLabel) switchLabel.style.display = 'none';
+      const toggleCard = formToggle.closest('.settings-card');
+      if (toggleCard) toggleCard.style.display = 'none';
     }
     const initFmt = parseInt(formatEl?.value, 10) || 7;
     const formPanel = $('skdFormationPanel');
-    if (initFmt === 3) {
-      if (formCard) formCard.style.display = 'none';
-    } else {
-      if (formCard) formCard.style.display = '';
-      if (formPanel) formPanel.style.display = 'block';
-      renderFormationGrid();
-    }
+    if (formPanel) formPanel.style.display = (initFmt !== 3) ? 'block' : 'none';
+    if (initFmt !== 3) renderFormationGrid();
 
-    // Formation changes when format changes (hide entire card for 3-er)
+    // Formation changes when format changes (hide for 3-er)
     if (formatEl) formatEl.addEventListener('change', () => {
       const fmt = parseInt(formatEl.value, 10) || 7;
       const fp = $('skdFormationPanel');
-      const fc = $('skdFormationToggle')?.closest('.settings-card');
-      if (fmt === 3) {
-        if (fc) fc.style.display = 'none';
-      } else {
-        if (fc) fc.style.display = '';
-        if (fp) fp.style.display = 'block';
-        renderFormationGrid();
-      }
+      if (fp) fp.style.display = (fmt !== 3) ? 'block' : 'none';
+      if (fmt !== 3) renderFormationGrid();
     });
   }
 
@@ -433,17 +421,19 @@
     if (!container) return;
 
     const list = getPlayersArray().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'nb'));
+    const _pcColors = ['#93c5fd','#a5b4fc','#f9a8d4','#fcd34d','#6ee7b7','#fca5a5','#67e8f9','#c4b5fd','#f0abfc','#5eead4','#fdba74','#bef264','#fb7185','#7dd3fc','#d8b4fe','#86efac','#fed7aa','#99f6e4'];
 
-    container.innerHTML = list.map(p => {
+    container.innerHTML = list.map((p, i) => {
       const checked = kdSelected.has(p.id) ? 'checked' : '';
       return `
-        <label class="player-checkbox">
+        <label class="player-checkbox" style="--pc-color:${_pcColors[i % _pcColors.length]}">
           <input type="checkbox" data-id="${escapeHtml(p.id)}" ${checked}>
-          <span class="checkmark"></span>
-          <div class="player-details">
+          <div class="pc-avatar">${escapeHtml((p.name || '?').charAt(0).toUpperCase())}</div>
+          <div class="pc-info">
             <div class="player-name">${escapeHtml(p.name)}</div>
-            <div class="player-meta">${p.goalie ? '\ud83e\udde4 Keeper' : '\u26bd Utespiller'}</div>
+            ${p.goalie ? '<span class="pc-keeper">\ud83e\udde4 Keeper</span>' : ''}
           </div>
+          <div class="pc-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </label>
       `;
     }).join('');

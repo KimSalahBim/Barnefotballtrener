@@ -1,0 +1,3630 @@
+/* Fotball Trener App - Premium Design med ekte logoer */
+:root {
+  /* Primær */
+  --primary: #2563EB;
+  --primary-light: #3B82F6;
+  --primary-dim: rgba(37, 99, 235, 0.10);
+  --primary-glow: rgba(37, 99, 235, 0.25);
+
+  /* Bakgrunner – lys modus */
+  --bg: #F1F5F9;
+  --bg-card: #FFFFFF;
+  --bg-input: #FFFFFF;
+
+  /* Bakgrunner – mørke seksjoner (kampdag bane/spilletid) */
+  --bg-dark: #0F172A;
+  --bg-dark-card: #1A2332;
+  --bg-dark-input: #111827;
+
+  /* Tekst – lys modus */
+  --text-900: #0F172A;
+  --text-800: #1E293B;
+  --text-700: #334155;
+  --text-600: #475569;
+  --text-500: #64748B;
+  --text-400: #94A3B8;
+  --muted: #94A3B8;
+  --text-300: #CBD5E1;
+  --text-200: #E2E8F0;
+
+  /* Tekst – mørke seksjoner */
+  --text-white: #F8FAFC;
+  --text-white-dim: rgba(248, 250, 252, 0.6);
+
+  /* Semantiske */
+  --success: #059669;
+  --success-dim: rgba(5, 150, 105, 0.10);
+  --warning: #D97706;
+  --warning-dim: rgba(217, 119, 6, 0.10);
+  --error: #DC2626;
+  --error-dim: rgba(220, 38, 38, 0.10);
+
+  /* Bane */
+  --grass: #1B5E20;
+  --grass-alt: #2D6A2E;
+
+  /* Border */
+  --border: #E2E8F0;
+  --border-dark: rgba(255, 255, 255, 0.08);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+
+  /* Legacy-kompatibilitet (brukes av pricing.css som ikke er migrert ennå) */
+  --egge-blue: #0b5bd3;
+  --egge-light-blue: #3b82f6;
+  --gray-50: #F8FAFC;
+  --gray-200: #E2E8F0;
+  --gray-300: #CBD5E1;
+  --gray-400: #94A3B8;
+  --gray-500: #64748B;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1E293B;
+  --gray-900: #0F172A;
+}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 0;
+  padding-bottom: 80px;
+  color: var(--text-800);
+}
+/* Login Screen */
+#passwordProtection {
+    position: fixed;
+    inset: 0;
+
+    /* Pre-login viewport wrapper (do NOT scroll the page; scroll inside the card) */
+    overflow: hidden;
+
+    background: linear-gradient(to bottom, #1f5da3, #1a4b82);
+    z-index: 1000;
+
+    /* Safe-area friendly padding (iOS notch/home indicator) */
+    padding: 20px;
+    padding-top: calc(20px + env(safe-area-inset-top));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+
+    /* Robust viewport sizing */
+    min-height: 100vh;
+    min-height: 100svh;
+    height: 100dvh;
+
+    /* Center the card without affecting app routing/scroll */
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+
+    /* Helps gesture handling on mobile */
+    touch-action: pan-y;
+}
+
+
+/* Ensure the pre-login card stays centered and readable on all screens */
+#passwordProtection .password-box {
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    box-sizing: border-box;
+
+    /* Critical: allow scrolling INSIDE the card (Chrome/Safari/iOS) */
+    max-height: calc(100vh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(100svh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.login-container {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.login-logo {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 30px auto;
+    filter: drop-shadow(0 10px 20px rgba(2, 6, 23, 0.15));
+}
+
+@media (max-width: 640px) {
+    .login-logo {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .login-container, .password-box {
+        padding: 30px 20px;
+        max-width: 90vw;
+        box-sizing: border-box;
+    }
+    
+    .login-input, .login-btn, .btn-google {
+        box-sizing: border-box;
+    }
+}
+
+.login-logo .club-badge {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    color: white;
+    font-size: 32px;
+    font-weight: bold;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.login-logo h1 {
+    color: var(--text-800);
+    font-size: 28px;
+    margin-bottom: 8px;
+}
+
+.login-logo p {
+    color: var(--text-600);
+    font-size: 16px;
+}
+
+.login-input {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 16px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(25,118,210,0.1);
+}
+
+.login-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(13,71,161,0.3);
+}
+
+.error-message {
+    color: var(--error);
+    margin-top: 15px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Main App Container */
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    animation: fadeIn 0.5s ease;
+    width: 100%;
+    /* min-height: 100vh;
+  min-height: 100dvh; /* bedre på mobil (adressefelt) */ FJERNET - Dette forårsaket at container tok for mye plass */
+    opacity: 1;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Header */
+.app-header {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 20px 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+#logoContainer {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.club-logo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-image {
+    width: 55px;
+    height: 55px;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: 2px solid white;
+}
+
+.club-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.club-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-800);
+    line-height: 1.2;
+}
+
+.club-sport {
+    font-size: 14px;
+    color: var(--text-600);
+    font-weight: 500;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-700);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 13px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-secondary:hover {
+    background: var(--bg);
+    border-color: var(--text-300);
+    transform: translateY(-1px);
+}
+
+/* Ghost Button */
+.btn-ghost {
+    background: transparent;
+    color: var(--text-500);
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 13px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-ghost:hover {
+    background: var(--bg);
+    color: var(--text-700);
+}
+
+/* Tab Content - EKSPLISITT TILNÆRMING */
+.tab-content {
+    /* Default: ALLE tabs er fullstendig skjult og tar INGEN plass */
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    left: -99999px !important;
+    top: -99999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+}
+
+.tab-content.active {
+    /* Kun active tab vises og tar plass */
+    display: block !important;
+    visibility: visible !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    pointer-events: auto !important;
+    animation: fadeInContent 0.4s ease;
+}
+
+@keyframes fadeInContent {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tab Headers */
+.tab-header {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 25px 30px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+.tab-header h2 {
+    color: var(--text-800);
+    font-size: 24px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tab-description {
+    color: var(--text-600);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+/* Player Form */
+.player-form {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 25px 30px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+.form-row {
+    display: flex;
+    gap: 20px;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-700);
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+.checkbox-group {
+    flex: 0 0 auto;
+    min-width: auto;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-700);
+    padding: 12px 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* Primary Button */
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 13px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-primary:hover {
+    filter: brightness(0.98);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+    transform: translateY(-1px);
+}
+
+/* Danger Button */
+.btn-danger {
+    background: var(--error);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 13px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-danger:hover {
+    filter: brightness(0.98);
+    box-shadow: 0 8px 18px rgba(220, 38, 38, 0.18);
+    transform: translateY(-1px);
+}
+
+/* Stats */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: var(--text-600);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+/* Actions */
+.actions-container {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+/* Player List */
+.player-list {
+    background: var(--bg-card);
+    border-radius: 15px;
+    padding: 25px 30px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.player-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+.player-item:hover {
+    background: var(--bg-card);
+    transform: translateX(5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+.player-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 18px;
+    margin-right: 15px;
+    position: relative;
+}
+
+.goalie-badge {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 2px 4px;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.player-info {
+    flex: 1;
+}
+/* Position preference buttons (F/M/A) on player cards */
+.player-positions {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+.pos-btn {
+  width: 28px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-400);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.pos-btn:hover { border-color: var(--text-300); }
+.pos-btn.pos-f-on { border: 1.5px solid rgba(34,197,94,0.3); background: rgba(34,197,94,0.1); color: #16a34a; }
+.pos-btn.pos-m-on { border: 1.5px solid rgba(59,130,246,0.3); background: rgba(59,130,246,0.1); color: #2563eb; }
+.pos-btn.pos-a-on { border: 1.5px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.1); color: #dc2626; }
+
+.player-name {
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 5px;
+    color: var(--text-800);
+}
+
+.player-meta {
+    display: flex;
+    gap: 10px;
+}
+
+.position-indicator {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.player-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn-edit,
+.action-btn-delete {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn-edit {
+    background: rgba(25,118,210,0.1);
+    color: var(--primary-light);
+}
+
+.action-btn-edit:hover {
+    background: rgba(25,118,210,0.2);
+    transform: scale(1.1);
+}
+
+.action-btn-delete {
+    background: rgba(211,47,47,0.1);
+    color: var(--error);
+}
+
+.action-btn-delete:hover {
+    background: rgba(211,47,47,0.2);
+    transform: scale(1.1);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-500);
+}
+
+.empty-state i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.small-text {
+    font-size: 13px;
+    color: var(--text-500);
+}
+
+/* Player Selection */
+/* ================================================
+   A1 PLAYER SELECTION — "Soft & Rounded" design
+   ================================================ */
+.player-selection {
+    background: var(--bg-card);
+    border-radius: 15px;
+    padding: 8px 20px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    max-height: 420px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+/* --- Individual player card --- */
+.player-selection .player-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 2px solid #ede9fe;
+    background: #fff;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.18s ease;
+    overflow: visible;
+}
+.player-selection .player-checkbox:hover {
+    border-color: #c4b5fd;
+    background: #faf8ff;
+}
+
+/* Hide native checkbox */
+.player-selection .player-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+/* Remove old checkmark span (backward compat) */
+.player-selection .player-checkbox .checkmark {
+    display: none !important;
+}
+
+/* --- Avatar circle --- */
+.player-selection .pc-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 12px;
+    background: #f1f0fb;
+    color: #c4c0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 15px;
+    flex-shrink: 0;
+    transition: all 0.18s ease;
+}
+
+/* --- Player info --- */
+.player-selection .pc-info {
+    min-width: 0;
+    flex: 1;
+}
+.player-selection .player-name {
+    font-weight: 700 !important;
+    font-size: 13.5px;
+    line-height: 1.2;
+    color: #7c7a9c !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.15s ease;
+}
+.player-selection .pc-keeper {
+    display: inline-block;
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 99px;
+    background: #f5f3ff;
+    color: #c4c0e0;
+    transition: all 0.15s ease;
+}
+
+/* --- Floating check badge --- */
+.player-selection .pc-check {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background: #818cf8;
+    border: 2px solid var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.18s ease;
+    box-shadow: 0 2px 6px rgba(129,140,248,0.3);
+    pointer-events: none;
+}
+
+/* Hide old player-meta (backward compat) */
+.player-selection .player-meta {
+    display: none;
+}
+
+/* ================================================
+   CHECKED STATE — uses :has(:checked)
+   ================================================ */
+.player-selection .player-checkbox:has(:checked) {
+    border-color: #818cf8;
+    background: #faf8ff;
+    box-shadow: 0 2px 12px rgba(129,140,248,0.12);
+}
+.player-selection .player-checkbox:has(:checked) .pc-avatar {
+    background: var(--pc-color, #a5b4fc);
+    color: #312e81;
+}
+.player-selection .player-checkbox:has(:checked) .player-name {
+    color: #1e1b4b !important;
+}
+.player-selection .player-checkbox:has(:checked) .pc-keeper {
+    background: #fef3c7;
+    color: #a16207;
+}
+.player-selection .player-checkbox:has(:checked) .pc-check {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Desktop: force 4-column grid (above 640px) */
+@media (min-width: 641px) {
+  .player-selection {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+}
+
+.selection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 0 5px;
+}
+
+.selection-title {
+    font-weight: 700;
+    color: var(--text-800);
+    font-size: 18px;
+}
+
+.selection-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* ── A1 styles for workout exercise-B pick list ── */
+.wo-pick-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px 6px 0 0;
+}
+.wo-pick-list .player-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 12px;
+    border: 1.5px solid #ede9fe;
+    background: #fff;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.18s ease;
+    overflow: visible;
+}
+.wo-pick-list .player-checkbox:hover { border-color: #c4b5fd; background: #faf8ff; }
+.wo-pick-list .player-checkbox input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.wo-pick-list .player-checkbox .checkmark { display: none !important; }
+.wo-pick-list .pc-avatar { width: 28px; height: 28px; min-width: 28px; border-radius: 9px; background: #f1f0fb; color: #c4c0e0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; transition: all 0.18s ease; }
+.wo-pick-list .pc-info { min-width: 0; flex: 1; }
+.wo-pick-list .player-name { font-weight: 700 !important; font-size: 12px; color: #7c7a9c !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.15s; }
+.wo-pick-list .pc-keeper { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 99px; background: #f5f3ff; color: #c4c0e0; transition: all 0.15s; }
+.wo-pick-list .player-meta { display: none; }
+.wo-pick-list .pc-check { position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 9px; background: #818cf8; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(0.5); transition: all 0.18s ease; box-shadow: 0 2px 6px rgba(129,140,248,0.3); pointer-events: none; }
+.wo-pick-list .player-checkbox:has(:checked) { border-color: #818cf8; background: #faf8ff; box-shadow: 0 2px 8px rgba(129,140,248,0.1); }
+.wo-pick-list .player-checkbox:has(:checked) .pc-avatar { background: var(--pc-color, #a5b4fc); color: #312e81; }
+.wo-pick-list .player-checkbox:has(:checked) .player-name { color: #1e1b4b !important; }
+.wo-pick-list .player-checkbox:has(:checked) .pc-keeper { background: #fef3c7; color: #a16207; }
+.wo-pick-list .player-checkbox:has(:checked) .pc-check { opacity: 1; transform: scale(1); }
+
+/* Tiny screens: 2 columns */
+@media (max-width: 380px) {
+  .player-selection {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .wo-pick-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+.player-checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.player-checkbox-item:hover {
+    background: var(--bg-card);
+    transform: translateX(3px);
+}
+
+.player-checkbox-item.selected {
+    border-color: var(--primary-light);
+    background: rgba(25,118,210,0.05);
+}
+
+.player-checkbox-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 15px;
+    cursor: pointer;
+}
+
+.player-checkbox-info {
+    flex: 1;
+}
+
+.player-checkbox-name {
+    font-weight: 700;
+    color: var(--text-800);
+    margin-bottom: 3px;
+}
+
+.player-checkbox-details {
+    display: flex;
+    gap: 10px;
+}
+
+.player-role {
+    font-size: 12px;
+    color: var(--text-600);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Group Settings */
+.group-settings {
+    background: var(--bg-card);
+    border-radius: 15px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .settings-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+}
+
+.settings-label {
+    font-weight: 600;
+    color: var(--text-700);
+    min-width: 180px;
+    font-size: 15px;
+}
+
+@media (max-width: 768px) {
+    .settings-label {
+        min-width: auto;
+    }
+}
+
+.number-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.number-input {
+    width: 70px;
+    padding: 8px 10px;
+    text-align: center;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-900);
+    background: var(--bg-card);
+    font-family: 'Outfit', sans-serif;
+}
+
+.number-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-600);
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.number-btn:hover {
+    background: var(--bg);
+    border-color: var(--text-300);
+    transform: translateY(-1px);
+}
+
+/* Results Container */
+.results-container {
+    background: var(--bg-card);
+    border-radius: 15px;
+    padding: 25px 30px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.teams-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.team-card {
+    border: 2px solid var(--border);
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+}
+
+.team-card:hover {
+    transform: translateY(-3px);
+}
+
+.team-header {
+    padding: 15px 20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.team-header h4 {
+    color: var(--text-800);
+    font-size: 18px;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.team-stats {
+    display: flex;
+    gap: 15px;
+}
+
+.stat {
+    font-size: 12px;
+    color: var(--text-600);
+    font-weight: 500;
+}
+
+.team-players {
+    padding: 15px 20px;
+}
+
+.team-player {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.team-player:last-child {
+    border-bottom: none;
+}
+
+.player-icon {
+    margin-right: 10px;
+    font-size: 14px;
+}
+
+.player-name {
+    font-weight: 600;
+    color: var(--text-700);
+}
+
+/* Liga */
+.liga-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.liga-table th,
+.liga-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    font-size: 14px;
+}
+
+.liga-table th {
+    background: var(--bg);
+    color: var(--text-700);
+    font-weight: 700;
+}
+
+.liga-table td:nth-child(2) {
+    text-align: left;
+    font-weight: 700;
+}
+
+/* Match items */
+.match-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    margin-bottom: 10px;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.match-item.played {
+    background: rgba(16,185,129,0.06);
+    border-color: rgba(16,185,129,0.25);
+}
+
+.match-teams {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+}
+
+.match-teams .vs {
+    opacity: 0.6;
+    font-weight: 600;
+}
+
+.match-score {
+    font-weight: 800;
+    color: var(--text-800);
+}
+
+/* Small buttons (original) */
+.btn-small {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text-700);
+    transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+    background: var(--bg);
+}
+
+/* Notifications */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 15px;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    z-index: 2000;
+    max-width: 350px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.notification.success {
+    background: var(--success);
+}
+
+.notification.error {
+    background: var(--error);
+}
+
+.notification.info {
+    background: var(--primary);
+}
+
+.notification.warning {
+    background: var(--warning);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--text-300);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-400);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    .app-header {
+        padding: 15px 20px;
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    #logoContainer {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    
+    
+    /* Safari iOS zoomer inn ved font-size < 16px på input-fokus */
+    .input,
+    input.input,
+    select.input {
+        font-size: 16px !important;
+    }
+
+    .tab-header,
+    .player-form,
+    .player-list-container,
+    .player-selection-container,
+    .group-settings,
+    .results-container,
+    .matches-container,
+    .table-container {
+        padding: 20px;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+    }
+    
+    .player-stats {
+        gap: 15px;
+    }
+    
+    .player-item {
+        padding: 12px;
+    }
+    
+    .player-avatar {
+        width: 45px;
+        height: 45px;
+        font-size: 16px;
+        margin-right: 12px;
+    }
+    
+    .logo-image {
+        width: 45px;
+        height: 45px;
+    }
+}
+
+@media (max-width: 480px) {
+    
+    .list-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-secondary,
+    .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .match-result {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .result-input {
+        width: 50px;
+    }
+}
+
+/* =========================================================
+   PATCH: NY INDEX (password-box, settings-card, ikonknapper)
+   + PATCH: KAMPDAG (moderne layout)
+   + PATCH: Toggle switch (nivå av/på)
+   (Legges nederst for å ikke endre eksisterende funksjonalitet)
+   ========================================================= */
+
+/* Login (ny struktur i index.html) */
+.password-box {
+    background: var(--bg-card);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    animation: slideUp 0.5s ease;
+}
+
+.password-header {
+    margin-bottom: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.password-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 38px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: white;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    margin-bottom: 12px;
+}
+
+.password-header h1 {
+    font-size: 24px;
+    margin-bottom: 6px;
+    color: var(--text-800);
+}
+
+.password-header p {
+    color: var(--text-600);
+    font-size: 15px;
+}
+
+/* Header ikoner */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.icon-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-700);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+    background: var(--bg-card);
+    border-color: var(--text-300);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+.icon-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Kortelement som brukes flere steder i ny index */
+.settings-card {
+    background: var(--bg-card);
+    border-radius: 15px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+@media (max-width: 768px) {
+    .settings-card {
+        padding: 18px 18px;
+    }
+}
+
+/* Standard input-klasse brukt i Kampdag */
+.input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    background: var(--bg-card);
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(25,118,210,0.15);
+}
+
+/* Toggle switch (nivå av/på) */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 30px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--text-300);
+    transition: 0.2s;
+    border-radius: 999px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 24px;
+    width: 24px;
+    left: 3px;
+    top: 3px;
+    background: var(--bg-card);
+    transition: 0.2s;
+    border-radius: 999px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+}
+
+.switch input:checked + .slider {
+    background: var(--primary-light);
+}
+
+.switch input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+/* Kampdag output */
+.kampdag-block {
+    background: var(--bg-card);
+    border-radius: 15px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.kampdag-block h4 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: var(--text-800);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kampdag-subtitle {
+    font-size: 13px;
+    color: var(--text-600);
+    font-weight: 600;
+    margin: 10px 0 6px;
+}
+
+.kampdag-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.kampdag-list li {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg);
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-800);
+}
+
+/* Bytteplan kort */
+.kampdag-event {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    background: var(--bg-card);
+}
+
+.kampdag-event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(25,118,210,0.10) 0%, rgba(25,118,210,0.04) 100%);
+    border-bottom: 1px solid var(--border);
+}
+
+.kampdag-keeper {
+    font-size: 13px;
+    color: var(--text-700);
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(25,118,210,0.10);
+    border: 1px solid rgba(25,118,210,0.20);
+}
+
+.kampdag-event-body {
+    padding: 12px 14px;
+    color: var(--text-800);
+}
+
+.kampdag-change {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg);
+    margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+    .kampdag-change {
+        flex-direction: column;
+        gap: 6px;
+    }
+}
+
+/* Keeper-panel finpuss */
+.kd-keeper-rows .kd-keeper-row select,
+.kd-keeper-rows .kd-keeper-row input {
+    border-radius: 12px;
+}
+
+.kd-keeper-rows .kd-keeper-row input[type="number"] {
+    text-align: center;
+}
+
+/* Sørg for at .btn-small ser ok ut sammen med resten */
+.btn-small {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-700);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+    background: var(--bg-card);
+    border-color: var(--text-300);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+}
+
+.btn-small:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+:root{
+  --primary-green:#456C4B;
+  --primary-orange:#E88B2C;
+  --primary-dark:#153F30;
+  --primary-ink:#07292A;
+  --primary-sand:#E2DE95;
+}
+
+.app-title{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.app-logo{
+  width:80px;
+  height:80px;
+  border-radius:16px;
+  object-fit:cover;
+  box-shadow:0 6px 18px rgba(7,41,42,0.18);
+}
+
+.app-name{
+  font-weight:800;
+  letter-spacing:0.2px;
+  font-size:24px;
+}
+/* =========================================================
+   Mobile: kompakt toppmeny uten scroll (grid 2 rader)
+   Viser alle faner samtidig, plassbesparende
+   ========================================================= */
+@media (max-width: 640px) {
+  :root{
+    --bft-orange: #F28C1B;
+    --bft-orange-2: #FFB000;
+    --bft-green: #2E7D32;
+    --bft-text: #0f172a;
+  }
+
+  /* Fjern body padding for full bredde */
+  body {
+    padding: 0;
+  }
+
+  /* Header: full bredde, kompakt for å unngå overflow */
+  .app-header {
+    border-radius: 0;
+    margin-bottom: 0;
+    padding: 10px 8px;
+    overflow: hidden;
+  }
+
+  /* Logo: mindre på mobil */
+  .app-logo {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+  }
+  
+  /* Tittel: mye mindre for å få plass til knapper */
+  .app-name {
+    font-size: 16px !important;
+  }
+
+  /* Header knapper: må få plass */
+  .header-right {
+    flex-shrink: 0;
+  }
+
+  /* Main content: ingen padding fra container */
+  .app-container {
+    padding: 0;
+  }
+
+  /* Tab content: legg til litt padding inne i innholdet */
+  .tab-content {
+    padding: 12px 10px;
+  }
+
+  /* Alle kort og input-felt: max bredde */
+  .settings-card,
+  .tab-header,
+  .player-form,
+  .results-container,
+  .stats-container,
+  .actions-container {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Form-group: fjern min-width på mobil */
+  .form-group {
+    min-width: 0 !important;
+    flex: 1 1 100%;
+  }
+
+  /* Form-row: strekk hele bredden */
+  .form-row {
+    width: 100%;
+    gap: 12px;
+  }
+
+  /* Input-felt skal ikke gå utenfor */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  select,
+  textarea,
+  .form-group input,
+  .form-group select,
+  .input,
+  .team-name-input {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Team name rows i Liga-fanen */
+  .team-name-row,
+  #ligaTeamNames,
+  #ligaTeamNames > div {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Tab-header: mindre padding og margin */
+  .tab-header {
+    padding: 14px 12px !important;
+    margin-bottom: 10px !important;
+    border-radius: 14px !important;
+  }
+
+  .tab-header h2 {
+    font-size: 20px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .tab-description {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Settings card: enda mindre */
+  .settings-card {
+    padding: 10px 12px !important;
+    margin-bottom: 8px !important;
+    border-radius: 14px !important;
+  }
+
+  /* raden inni */
+  .settings-card .settings-row {
+    gap: 8px !important;
+  }
+
+  /* overskriften "Bruk ferdighetsnivå" */
+  .settings-card .settings-row > div:first-child > div:first-child {
+    font-size: 14px !important;
+    line-height: 1.15 !important;
+  }
+
+  /* hint-teksten */
+  #skillToggleHint {
+    font-size: 11.5px !important;
+    line-height: 1.2 !important;
+    margin-top: 2px !important;
+  }
+
+  /* Knappene: mindre font, BEHOLD ikoner */
+
+  /* Alle 6 faner er nå symmetriske i 3x2 grid */
+
+  /* Ikoner mindre */
+
+  /* Aktiv fane: logofarger - KUN PÅ MOBIL */
+  
+  /* Sikre at ikoner også er hvite på aktiv knapp */
+
+
+  /* Litt mindre luft i toppen */
+  .top-bar{ margin-bottom: 10px; }
+}
+/* --------------------------------------------
+   MOBIL: spiller-velger i 3 kolonner (Training/Kamp/Kampdag)
+   Endrer kun layout - ikke funksjon
+-------------------------------------------- */
+@media (max-width: 640px) {
+  /* ── A1 Mobil: spillervalg ── */
+  .player-selection {
+    padding: 8px 12px 12px !important;
+    max-height: 320px !important;
+    overflow-y: auto;
+    scrollbar-width: none;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  .player-selection::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+  .player-selection .player-checkbox {
+    padding: 6px 5px !important;
+    border-radius: 11px !important;
+    gap: 5px !important;
+    border-width: 1.5px !important;
+  }
+  .player-selection .pc-avatar {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    border-radius: 8px !important;
+    font-size: 11px !important;
+  }
+  .player-selection .player-name {
+    font-size: 12px !important;
+  }
+  .player-selection .pc-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+  }
+  .player-selection .pc-keeper {
+    flex-shrink: 0 !important;
+    width: 14px !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    font-size: 10px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    color: inherit !important;
+    line-height: 1 !important;
+  }
+  .player-selection .pc-check {
+    width: 16px !important;
+    height: 16px !important;
+    top: -4px !important;
+    right: -4px !important;
+  }
+  .player-selection .pc-check svg {
+    width: 10px !important;
+    height: 10px !important;
+  }
+
+  /* Legacy (beholdt for sikkerhet) */
+  .player-checkbox-item {
+    margin: 0;
+    padding: 6px 6px;
+    border-radius: 10px;
+  }
+  .player-checkbox-item .player-name {
+    font-size: 12px;
+    line-height: 1.15;
+  }
+  .player-checkbox-item .player-position {
+    font-size: 10px;
+    opacity: 0.85;
+  }
+
+  /* ── Spillere-fanen: ryddig 1-kolonne liste ── */
+  .player-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    padding: 8px !important;
+  }
+  .player-card {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px !important;
+    overflow: hidden;
+  }
+  .player-card .player-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .player-card .player-name {
+    font-size: 14px !important;
+    font-weight: 700;
+    margin: 0 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .player-card .player-tags {
+    display: flex;
+    gap: 4px;
+    margin-top: 2px;
+  }
+  .player-card .player-tags .tag {
+    font-size: 11px !important;
+    padding: 1px 5px !important;
+    border-radius: 4px;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+  .player-card .icon-btn {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .player-card .player-positions {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .player-card .pos-btn {
+    width: 26px; height: 24px; border-radius: 5px;
+    border: 1.5px solid var(--border);
+    background: var(--bg); color: var(--text-400);
+    font-size: 10px; font-weight: 800; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0; transition: all 0.12s;
+  }
+  .player-card .pos-btn.pos-f-on { background: rgba(34,197,94,0.12); color: #16a34a; border-color: rgba(34,197,94,0.35); }
+  .player-card .pos-btn.pos-m-on { background: rgba(59,130,246,0.12); color: #2563eb; border-color: rgba(59,130,246,0.35); }
+  .player-card .pos-btn.pos-a-on { background: rgba(239,68,68,0.12); color: #dc2626; border-color: rgba(239,68,68,0.35); }
+}
+.selection-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.selection-actions{
+  display:flex;
+  gap:10px;
+}
+
+.btn-small{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,0.08);
+  background: var(--bg-card);
+  font-weight:700;
+  font-size:14px;
+}
+/* --- Modal (Abonnement) --- */
+.hidden { display: none !important; }
+
+.bf-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.bf-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(4px);
+}
+
+.bf-modal__panel {
+  position: relative;
+  width: min(560px, 92vw);
+  border-radius: 18px;
+  background: var(--bg-card);
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  overflow: hidden;
+}
+
+.bf-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 10px 16px;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+
+.bf-modal__header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.bf-modal__body {
+  padding: 14px 16px;
+}
+
+.bf-modal__footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(0,0,0,.06);
+  flex-wrap: wrap;
+}
+
+.bf-subcard {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.03);
+}
+
+.bf-subrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+/* Lås scrolling når bruker ikke har tilgang (login/pricing)
+   Viktig: vi låser kun bakgrunn (body/html), men lar selve login-/landing-overlayet (#passwordProtection)
+   være scroll-container. Ikke bruk touch-action:none eller body{position:fixed} her – det stopper
+   scrolling inne i overlay på mobil (særlig i iOS Safari). */
+
+html.lock-scroll,
+body.lock-scroll,
+html.gated,
+body.gated {
+  overflow: hidden !important;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+/* Ikke blokker touch/pan globalt */
+body.lock-scroll,
+body.gated {
+  touch-action: auto;
+  position: static;
+  width: auto;
+  left: auto;
+  top: auto;
+}
+
+/* Skjul appen når gated (hindrer “scroll inn i appen”) */
+body.gated #mainApp {
+  display: none !important;
+}
+/* ========================================
+   LIGA MOBILE FIX - Fjern tomt felt øverst
+   ======================================== */
+@media (max-width: 640px) {
+  /* Fjern all top-luft fra Liga på mobil */
+  #liga.tab-content {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  /* Første element i Liga skal starte helt øverst */
+  #liga > .tab-header {
+    margin-top: 0 !important;
+  }
+
+  /* Hvis det er noe annet enn tab-header først */
+  #liga > .settings-card:first-child {
+    margin-top: 0 !important;
+  }
+}
+
+
+/* =========================
+   Bygg din treningsøkt (workout)
+   ========================= */
+.wo-hidden { display: none !important; }
+
+.wo-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.wo-block {
+  border: 1px solid #e6e9ef;
+  border-radius: 14px;
+  padding: 10px;
+  background: var(--bg-card);
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+}
+.wo-block-parallel {
+  border-left: 4px solid var(--warning);
+  background: var(--warning-dim);
+}
+
+.wo-block-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wo-block-title {
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.wo-block-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.wo-subcard {
+  border: 1px solid #eef1f6;
+  border-radius: 14px;
+  padding: 8px;
+  background: #fafbfe;
+  margin-top: 8px;
+}
+
+.wo-subtitle {
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.wo-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.wo-field {
+  flex: 1;
+  min-width: 170px;
+}
+
+.wo-minutes {
+  max-width: 120px;
+  min-width: 100px;
+}
+
+.wo-label {
+  display: block;
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.wo-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.wo-inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wo-groupsout {
+  margin-top: 10px;
+}
+
+.wo-groups-wrap {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .wo-groups-wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wo-parallel-pick {
+  border: 1px dashed #d7dbe4;
+  border-radius: 14px;
+  padding: 10px;
+  margin-top: 10px;
+  background: var(--bg-card);
+}
+
+.wo-parallel-pick-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wo-pick-list {
+  max-height: 280px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.wo-pick-item {
+  margin-top: 8px;
+}
+
+.wo-templates {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wo-template-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid #e6e9ef;
+  border-radius: 16px;
+  padding: 12px;
+  background: var(--bg-card);
+}
+
+.wo-template-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+
+/* Workout: hint under share/import buttons */
+.wo-hint{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.35;}
+.wo-export-detail-label {
+  display:flex; align-items:center; gap:7px;
+  font-size:13px; color:var(--text-600, #4b5563);
+  cursor:pointer; margin-top:6px;
+  -webkit-tap-highlight-color:transparent;
+}
+.wo-export-detail-label input[type="checkbox"] {
+  width:18px; height:18px; accent-color:var(--primary, #0b5bd3);
+  cursor:pointer; flex-shrink:0;
+}
+.wo-export-detail-label span { line-height:1.3; }
+
+/* Workout: meta fields (dato, tittel, total) */
+.wo-meta-card { text-align:left; padding:14px 16px; }
+.wo-meta-fields { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+.wo-meta-field { flex:1; min-width:140px; }
+.wo-meta-field-wide { flex:2; min-width:200px; }
+.wo-meta-field .input { width:100%; padding:7px 10px; font-size:16px; border-radius:10px; -webkit-appearance:none; appearance:none; }
+.wo-meta-field input[type="date"] { text-align:left; min-height:0; }
+.wo-meta-total { min-width:100px; text-align:right; }
+@media (max-width: 600px) {
+  .wo-meta-card { padding:12px 14px; }
+  .wo-meta-fields { flex-direction:column; gap:8px; }
+  .wo-meta-field, .wo-meta-field-wide { width:100%; }
+  .wo-meta-total { text-align:center; margin-top:2px; }
+}
+
+/* Workout: compact group display */
+.wo-groups-compact { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.wo-group-card { background:#f6f8fc; border:1px solid #e6e9ef; border-left:4px solid rgba(11,91,211,0.35); border-radius:10px; padding:8px 10px; }
+
+/* Workout: Exercise bank - select row with info button */
+.wo-select-row { display:flex; gap:6px; align-items:center; }
+.wo-select-row select { flex:1; min-width:0; }
+.wo-info-expand {
+  width:100%; margin-top:6px; padding:7px 10px;
+  border-radius:8px; cursor:pointer;
+  border:1.5px solid var(--line, #e6e9ef);
+  background: var(--bg-card); color:#6b7a8d;
+  font-size:13px; font-weight:600;
+  display:flex; align-items:center; justify-content:space-between;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-appearance:none; appearance:none;
+  font-family:inherit; line-height:1;
+}
+.wo-info-expand:hover {
+  border-color:rgba(11,91,211,0.3);
+  color:var(--primary, #0b5bd3);
+}
+.wo-info-expand-active {
+  border-color:rgba(11,91,211,0.25);
+  background:rgba(11,91,211,0.04);
+  color:var(--primary, #0b5bd3);
+}
+.wo-info-expand-text {
+  display:flex; align-items:center; gap:6px;
+}
+.wo-info-expand-icon { font-size:15px; }
+.wo-info-expand-chevron {
+  font-size:11px; transition:transform 0.2s ease;
+}
+.wo-info-expand-active .wo-info-expand-chevron {
+  transform:rotate(180deg);
+}
+
+/* Workout: Info panel */
+.wo-info-panel { overflow:hidden; transition: max-height 0.3s ease; }
+.wo-info-panel.wo-hidden { display:none; }
+.wo-info-content {
+  padding:10px 14px 14px;
+  margin:0 0 8px;
+  background:#f6f8fc;
+  border:1px solid #e6e9ef;
+  border-radius:12px;
+}
+.wo-info-desc { font-size:14px; line-height:1.55; color:#1a2333; margin:0 0 10px; }
+.wo-info-tags { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; }
+.wo-info-tag {
+  font-size:11px; font-weight:500;
+  padding:3px 7px; border-radius:6px;
+  background:#e8edf4; color:#556070;
+}
+.wo-info-svg {
+  background:#3d8b37; border-radius:10px; padding:8px;
+  margin-bottom:12px; display:flex; justify-content:center;
+}
+.wo-info-section {
+  font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.04em;
+  color:#556070; margin:10px 0 5px;
+}
+.wo-info-text { font-size:13px; line-height:1.5; margin:0 0 4px; color:#374151; }
+.wo-info-steps {
+  list-style:none; counter-reset:wo-step; padding:0; margin:0 0 4px;
+}
+.wo-info-steps li {
+  counter-increment:wo-step;
+  font-size:13px; padding:3px 0 3px 26px;
+  position:relative; line-height:1.5; color:#374151;
+}
+.wo-info-steps li::before {
+  content:counter(wo-step);
+  position:absolute; left:0; top:3px;
+  width:18px; height:18px; border-radius:50%;
+  background:rgba(11,91,211,0.1); color:var(--primary, #0b5bd3);
+  font-size:11px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+}
+.wo-info-coaching {
+  list-style:none; padding:0; margin:0 0 4px;
+}
+.wo-info-coaching li {
+  font-size:13px; padding:2px 0 2px 18px;
+  position:relative; line-height:1.5; color:#374151;
+}
+.wo-info-coaching li::before {
+  content:'💡'; position:absolute; left:0; font-size:10px; top:3px;
+}
+.wo-info-variation {
+  font-size:13px; color:#556070; font-style:italic;
+  margin:2px 0; line-height:1.5;
+}
+
+/* Workout: Info panel mobile */
+@media (max-width: 600px) {
+  .wo-info-content { padding:8px 10px 12px; }
+  .wo-info-desc { font-size:13px; }
+  .wo-info-expand { font-size:12px; padding:6px 8px; }
+}
+.wo-group-title { font-weight:800; font-size:12px; margin-bottom:4px; color:#1a2333; }
+.wo-group-names { display:flex; flex-wrap:wrap; gap:4px; }
+.wo-group-name {
+  background: var(--bg-card);
+  border: 1px solid #e6e9ef;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ========================================
+   GLOBAL COMPACT MOBILE OVERRIDES
+   Reduserer høyde på alle elementer app-wide
+   ======================================== */
+@media (max-width: 768px) {
+
+  /* --- GLOBAL INPUTS & SELECTS --- */
+  .input,
+  select.input,
+  input.input,
+  textarea.input {
+    padding: 8px 10px !important;
+    font-size: 16px !important;
+    border-radius: 10px !important;
+    border-width: 1.5px !important;
+  }
+  textarea.input { min-height: 36px; }
+
+  /* --- TAB HEADER (alle tabs) --- */
+  .tab-header {
+    padding: 10px 14px !important;
+    margin-bottom: 8px !important;
+  }
+  .tab-header h2 {
+    font-size: 16px !important;
+    margin-bottom: 1px !important;
+  }
+  .tab-header p {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* --- SETTINGS-CARD (alle containere) --- */
+  .settings-card {
+    padding: 10px 12px !important;
+    margin-bottom: 8px !important;
+    border-radius: 14px !important;
+  }
+
+  /* --- STAT-CARDS (Spillere/Målvakter/Aktive) --- */
+  .stat-card {
+    padding: 8px 6px !important;
+    border-radius: 10px !important;
+  }
+  .stat-value {
+    font-size: 20px !important;
+    margin-bottom: 1px !important;
+  }
+  .stat-label {
+    font-size: 11px !important;
+  }
+  .stats-container {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+  .actions-container {
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+  }
+  .actions-container .btn-secondary,
+  .actions-container .btn-danger {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+  }
+
+  /* --- PLAYER SELECTION CONTAINER --- */
+  .player-selection {
+    padding: 8px 12px 12px !important;
+    border-radius: 14px !important;
+    margin-bottom: 10px !important;
+  }
+  .selection-header {
+    margin-bottom: 8px !important;
+    padding: 0 !important;
+  }
+  .selection-title {
+    font-size: 15px !important;
+  }
+
+  /* --- PLAYER CARDS (A1 compact) — text-level only --- */
+  .player-name {
+    font-size: 12px !important;
+    margin-bottom: 1px !important;
+  }
+  .pc-keeper {
+    font-size: 9px !important;
+  }
+  .player-meta {
+    font-size: 10px !important;
+    gap: 4px !important;
+  }
+  .position-indicator {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+  }
+
+  /* --- BUTTONS --- */
+  .btn-primary {
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+    border-radius: 12px !important;
+  }
+  .btn-secondary {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    border-radius: 10px !important;
+  }
+  .btn-small {
+    padding: 5px 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* --- SECTIONS: reduce margins & gaps --- */
+  .settings-row {
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+  .results-container {
+    margin-bottom: 10px !important;
+  }
+
+  /* --- COMPETITIONS: 3-column player list --- */
+  .comp-list--players {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    max-height: 280px !important;
+  }
+  .comp-check {
+    padding: 7px 8px !important;
+    border-radius: 12px !important;
+    gap: 7px !important;
+    border-width: 1.5px !important;
+  }
+  .comp-check .pc-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    font-size: 12px !important;
+  }
+  .comp-check .player-name {
+    font-size: 12px !important;
+  }
+  .comp-check .pc-check {
+    width: 16px !important;
+    height: 16px !important;
+    top: -4px !important;
+    right: -4px !important;
+  }
+  .comp-input,
+  .comp-select {
+    min-height: 36px !important;
+    padding: 7px 10px !important;
+    font-size: 16px !important;
+  }
+  .comp-exercises {
+    gap: 6px !important;
+  }
+
+  /* --- KAMPDAG: compact buttons --- */
+  .kampdag-settings .btn-secondary,
+  .kampdag-panel .btn-secondary {
+    padding: 7px 12px !important;
+    font-size: 13px !important;
+  }
+
+  /* --- LIGA: inputs/selects --- */
+  #liga .input,
+  #liga select {
+    padding: 7px 10px !important;
+  }
+
+  /* --- NUMBER INPUTS (Antall lag/grupper/runder +/- buttons) --- */
+  .number-input input,
+  .number-input,
+  input[type="number"] {
+    padding: 6px 8px !important;
+    font-size: 16px !important;
+  }
+
+  /* --- SKILL TOGGLE CARD (Spillere-tab) --- */
+  #players .settings-card {
+    padding: 8px 12px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* --- TAB DESCRIPTION --- */
+  .tab-description {
+    font-size: 13px !important;
+    line-height: 1.3 !important;
+    margin-top: 2px !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* --- PLAYER FORM (Legg til spiller) --- */
+  .player-form {
+    padding: 10px 12px !important;
+    margin-bottom: 10px !important;
+    border-radius: 12px !important;
+  }
+  .form-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    align-items: end !important;
+  }
+  .form-group {
+    min-width: 0 !important;
+  }
+  .form-group label {
+    margin-bottom: 3px !important;
+    font-size: 12px !important;
+  }
+  .form-group label small {
+    display: none !important;
+  }
+  .form-group input,
+  .form-group select {
+    padding: 8px 10px !important;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+    border-width: 1.5px !important;
+  }
+  .form-group.checkbox-group {
+    display: flex;
+    align-items: center;
+  }
+  .form-group .checkbox-label {
+    padding: 6px 0 !important;
+    gap: 6px !important;
+    font-size: 13px !important;
+  }
+  .form-group .checkbox-label input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .form-group .btn-primary {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    width: 100%;
+  }
+
+  /* --- PLAYER LIST CONTAINER --- */
+  .player-list-container {
+    padding: 10px 12px !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* --- LIGA: tighter spacing --- */
+  #liga .settings-card {
+    padding: 10px 12px !important;
+  }
+  #liga label {
+    font-size: 13px !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* ── GLOBAL COMPACT: inputs, labels, buttons across all tabs ── */
+  .input {
+    padding: 8px 10px !important;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+    border-width: 1.5px !important;
+  }
+  .settings-label {
+    font-size: 13px !important;
+    min-width: 0 !important;
+  }
+  .number-control {
+    gap: 6px !important;
+  }
+  .number-input {
+    width: 55px !important;
+    padding: 6px !important;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+  }
+  .number-btn {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+  }
+  .btn-primary,
+  .btn-secondary {
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    border-radius: 10px !important;
+  }
+  .btn-danger {
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    border-radius: 10px !important;
+  }
+  .small-text {
+    font-size: 11px !important;
+  }
+  .checkbox-label {
+    font-size: 13px !important;
+    padding: 4px 0 !important;
+    gap: 6px !important;
+  }
+
+  /* ── KAMPDAG: compact layout ── */
+  #kampdag .settings-card label,
+  #kampdag .settings-card div[style*="font-weight:700"],
+  #kampdag .settings-card div[style*="font-weight:800"] {
+    font-size: 13px !important;
+    margin-bottom: 2px !important;
+  }
+  #kampdag .settings-card div[style*="min-width:220px"],
+  #kampdag .settings-card div[style*="min-width:240px"] {
+    min-width: 0 !important;
+    flex: 1 1 45% !important;
+  }
+  #kampdag .settings-card {
+    margin-top: 6px !important;
+  }
+  #kampdag .settings-row {
+    gap: 6px !important;
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+  }
+  #kampdag .btn-secondary {
+    flex: 1 1 auto !important;
+    text-align: center;
+  }
+  #kampdag .kd-card {
+    padding: 10px !important;
+    border-radius: 10px !important;
+  }
+  #kampdag .kd-card h4 {
+    font-size: 13px !important;
+    margin-bottom: 4px !important;
+  }
+  #kampdag #kdKeeperPanel {
+    margin-top: 6px !important;
+  }
+  #kampdag .kd-keeper-rows {
+    gap: 6px !important;
+    margin-top: 6px !important;
+  }
+  #kampdag .kd-keeper-row {
+    gap: 6px !important;
+  }
+  #kampdag .kd-keeper-row select,
+  #kampdag .kd-keeper-row input {
+    min-width: 0 !important;
+  }
+  #kampdag .selection-header {
+    margin-top: 6px !important;
+    margin-bottom: 2px !important;
+  }
+  #kampdag .selection-title {
+    font-size: 14px !important;
+  }
+
+  /* ── KONKURRANSER: compact ── */
+  #competitions .settings-card {
+    padding: 10px 12px !important;
+  }
+  #competitions .tab-description {
+    font-size: 12px !important;
+  }
+
+  /* ── LIGA: compact controls ── */
+  #liga .settings-row {
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+  }
+  #liga .settings-label {
+    font-size: 13px !important;
+    min-width: 0 !important;
+    margin-bottom: 2px !important;
+  }
+  #liga .team-names {
+    margin-bottom: 6px !important;
+  }
+  #liga .team-names label {
+    font-size: 12px !important;
+    margin-bottom: 1px !important;
+  }
+  #liga .team-names input {
+    padding: 6px 10px !important;
+    font-size: 16px !important;
+    margin-bottom: 4px !important;
+  }
+  .liga-matches h3 {
+    font-size: 14px !important;
+    margin: 6px 0 3px !important;
+  }
+  .liga-match-row {
+    margin-bottom: 4px !important;
+  }
+  .results-container h3 {
+    font-size: 15px !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* ── WORKOUT (Bygg din treningsøkt): compact ── */
+  .wo-blocks {
+    gap: 8px !important;
+    margin-top: 8px !important;
+  }
+  .wo-block {
+    padding: 8px !important;
+    border-radius: 10px !important;
+  }
+  .wo-block-header {
+    gap: 4px !important;
+  }
+  .wo-block-title {
+    font-size: 13px !important;
+  }
+  .wo-subcard {
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+    margin-top: 6px !important;
+  }
+  .wo-field {
+    min-width: 0 !important;
+  }
+  .wo-label {
+    font-size: 12px !important;
+    margin-bottom: 2px !important;
+  }
+  .wo-input {
+    padding: 5px 8px !important;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+  }
+  .wo-inline {
+    gap: 6px !important;
+  }
+  .wo-minutes {
+    max-width: 90px !important;
+    min-width: 70px !important;
+  }
+  .wo-groups-settings label {
+    font-size: 12px !important;
+  }
+  .wo-groups-settings select,
+  .wo-groups-settings input {
+    padding: 5px 8px !important;
+    font-size: 16px !important;
+  }
+  .wo-group-actions {
+    gap: 4px !important;
+  }
+  .wo-group-actions button {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+  .wo-groupsout {
+    margin-top: 6px !important;
+  }
+  .wo-meta-card {
+    padding: 10px 12px !important;
+  }
+  .wo-meta-field {
+    min-width: 100px !important;
+  }
+  .wo-meta-field-wide {
+    min-width: 140px !important;
+  }
+  .wo-parallel-pick {
+    padding: 8px !important;
+    border-radius: 10px !important;
+  }
+
+  /* ── LIGA: compact match rows ── */
+  .liga-match-row {
+    margin-bottom: 6px !important;
+  }
+  .liga-matches h3 {
+    font-size: 14px !important;
+    margin: 8px 0 4px !important;
+  }
+  .results-container {
+    padding: 10px 12px !important;
+  }
+
+  /* ── RESULTS: compact group/team cards ── */
+  .results-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .results-card h3 {
+    font-size: 14px !important;
+    margin: 0 0 4px 0 !important;
+  }
+  .results-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+  }
+  .result-item {
+    font-size: 12px;
+    padding: 3px 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── GROUP CARDS (kampdag output, treningsgrupper, laginndeling) ── */
+  .group-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .group-name {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .group-stats {
+    font-size: 11px;
+    opacity: 0.7;
+  }
+  .group-players {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+  }
+  .group-player {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    padding: 3px 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .group-player .player-name {
+    font-size: 12px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .group-player .player-icon {
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .group-player .player-skill {
+    font-size: 11px;
+    opacity: 0.7;
+  }
+
+  /* ── KONKURRANSER: compact exercises ── */
+  #competitions h4 {
+    font-size: 14px !important;
+    margin-bottom: 4px !important;
+  }
+  #competitions .comp-exercises label {
+    font-size: 13px !important;
+    margin-bottom: 2px !important;
+  }
+  #competitions .comp-exercises input {
+    padding: 7px 10px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* ========================
+   Gruppeinndeling modus-velger
+   ======================== */
+.grouping-mode-selector {
+  display: flex;
+  gap: 6px;
+}
+
+.grouping-mode-btn {
+  flex: 1;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--bg);
+  color: var(--text-600);
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  line-height: 1.25;
+}
+
+.grouping-mode-btn:hover {
+  transform: translateY(-1px);
+}
+
+.grouping-mode-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ========================
+   Shared group drag & drop (grouping-dragdrop.js)
+   ======================== */
+.grpdd-player {
+  cursor: grab;
+  transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.grpdd-player:active { cursor: grabbing; }
+
+.grpdd-grip {
+  color: var(--text-600, #6b7a8d);
+  opacity: 0.35;
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+.grpdd-player:hover .grpdd-grip { opacity: 0.7; }
+
+/* Source player being dragged */
+.grpdd-dragging {
+  opacity: 0.2 !important;
+  transform: scale(0.95);
+}
+
+/* Target player — swap */
+.grpdd-drop-swap {
+  box-shadow: 0 0 0 2px var(--primary, #0b5bd3), 0 4px 12px rgba(59,130,246,0.2) !important;
+  transform: scale(1.04);
+  background: rgba(59,130,246,0.06) !important;
+}
+
+/* Target group — move */
+.grpdd-drop-move {
+  box-shadow: 0 0 0 2px #22c55e, 0 4px 12px rgba(34,197,94,0.15) !important;
+  background: rgba(34,197,94,0.04) !important;
+}
+
+/* Touch ghost */
+.grpdd-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: var(--primary, #0b5bd3);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3);
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  will-change: left, top;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grpdd-hint { font-size: 12px; }
+
+/* Result-item with grip icon needs flex layout */
+.result-item.grpdd-player {
+  display: flex;
+  align-items: center;
+}
+.grpdd-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Workout compact: make chips draggable-friendly */
+.wo-group-name.grpdd-player {
+  cursor: grab;
+  -webkit-touch-callout: none;
+}
+.wo-group-name.grpdd-player:active { cursor: grabbing; }
+
+/* ── Mobil: hindre horisontal scroll ──
+   Sikkerhetsnett mot horisontal overflow på smale skjermer. */
+html, body {
+  overflow-x: hidden;
+}
+
+/* ===== TEAM SWITCHER ===== */
+.team-switcher-wrapper {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.team-switcher-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 20px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  width: 100%;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-700);
+}
+
+.team-switcher-btn:hover {
+  background: var(--bg);
+  border-color: var(--text-300);
+}
+
+.team-switcher-btn.open {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+.team-color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.team-switcher-name {
+  flex: 1;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-800);
+}
+
+.team-switcher-count {
+  font-size: 13px;
+  color: var(--text-400);
+  font-weight: 400;
+}
+
+.team-switcher-arrow {
+  color: var(--text-400);
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.team-switcher-btn.open .team-switcher-arrow {
+  transform: rotate(180deg);
+}
+
+.team-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+  border: 1px solid var(--border);
+  z-index: 100;
+  overflow: hidden;
+  display: none;
+  animation: teamDropdownFade 0.15s ease-out;
+}
+
+.team-dropdown.show {
+  display: block;
+}
+
+@keyframes teamDropdownFade {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.team-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--border);
+}
+
+.team-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.team-dropdown-item:hover {
+  background: var(--bg);
+}
+
+.team-dropdown-item.active {
+  background: #e8f0fe;
+}
+
+.team-dropdown-item.active .team-item-name {
+  color: var(--primary);
+}
+
+.team-item-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-700);
+}
+
+.team-item-check {
+  color: var(--primary);
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+
+.team-item-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.team-item-edit,
+.team-item-delete {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-400);
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.team-item-edit:hover {
+  background: var(--bg);
+  color: var(--text-700);
+}
+
+.team-item-delete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.team-dropdown-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: background 0.15s;
+  color: var(--primary-light);
+  font-weight: 500;
+  font-size: 14px;
+  border-top: 2px solid var(--border);
+}
+
+.team-dropdown-add:hover {
+  background: #e8f0fe;
+}
+
+.team-dropdown-add i {
+  font-size: 13px;
+  width: 14px;
+  text-align: center;
+}
+
+/* Team modal */
+.team-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: teamModalFade 0.15s;
+}
+
+@keyframes teamModalFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.team-modal-box {
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 32px;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  animation: teamModalSlide 0.2s ease-out;
+}
+
+@keyframes teamModalSlide {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.team-modal-box h3 {
+  font-size: 18px;
+  color: var(--text-800);
+  margin-bottom: 6px;
+}
+
+.team-modal-desc {
+  color: var(--text-500);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.team-modal-box label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-700);
+  margin-bottom: 6px;
+}
+
+.team-modal-box input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.team-modal-box input:focus {
+  border-color: var(--primary-light);
+}
+
+.team-color-picker {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 24px;
+}
+
+.team-color-option {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: all 0.15s;
+}
+
+.team-color-option:hover {
+  transform: scale(1.15);
+}
+
+.team-color-option.selected {
+  border-color: var(--text-800);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--text-300);
+}
+
+.team-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.team-modal-cancel {
+  background: transparent;
+  color: var(--text-500);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 13px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+}
+
+.team-modal-create {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 13px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Mobile team switcher */
+@media (max-width: 600px) {
+  .team-switcher-btn {
+    padding: 9px 14px;
+  }
+  .team-switcher-name {
+    font-size: 14px;
+  }
+  .team-modal-box {
+    padding: 24px;
+    margin: 0 12px;
+  }
+}
+
+/* Desktop: Kampdag player selection in 2 columns */
+@media (min-width: 769px) {
+  #kdPlayerSelection {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+  }
+}
+
+/* Desktop: Kampdag preferences row compact */
+@media (min-width: 769px) {
+  #kdFreqOptions {
+    max-width: 360px;
+  }
+}
+
+
+/* ===== BUNNMENY (Steg 2) ===== */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  padding: 6px 0;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  z-index: 1000;
+}
+
+.bottom-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 12px;
+  min-width: 56px;
+  color: var(--text-500, #64748b);
+  font-family: 'Outfit', sans-serif;
+  transition: color 0.15s;
+}
+
+.bottom-nav-btn i {
+  font-size: 18px;
+  opacity: 0.75;
+}
+
+.bottom-nav-btn span {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.bottom-nav-btn.active {
+  color: var(--primary);
+}
+
+.bottom-nav-btn.active i {
+  opacity: 1;
+}
+
+.bottom-nav-btn.active span {
+  font-weight: 700;
+}
+
+/* Mer-popup */
+/* .mer-popup er en ren display:none/block wrapper.
+   IKKE gi den position:fixed/z-index – det skaper en stacking context
+   som fanger barna (.mer-overlay z-999, .mer-menu z-1001) og hindrer
+   .mer-menu fra å ligge over .bottom-nav (z-1000). */
+.mer-popup {
+  /* Ingen posisjonering – barna bruker egne position:fixed */
+}
+
+.mer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+}
+
+.mer-menu {
+  position: fixed;
+  bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  right: 16px;
+  max-width: 420px;
+  margin: 0 auto;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 1001;
+}
+
+.mer-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 16px 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Outfit', sans-serif;
+  border-bottom: 1px solid var(--border);
+}
+
+.mer-item:last-child {
+  border-bottom: none;
+}
+
+.mer-item:hover {
+  background: var(--bg);
+}
+
+.mer-item.active {
+  background: var(--primary-dim);
+}
+
+.mer-item-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-800);
+}
+
+.mer-item.active .mer-item-title {
+  color: var(--primary);
+}
+
+.mer-item-desc {
+  font-size: 12px;
+  color: var(--text-400);
+}
+
+/* Sidetittel */
+.page-title {
+  padding: 16px 0 8px 0;
+}
+
+.page-title h1 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-900);
+  margin: 0;
+}
+
+
+.team-modal-create:hover {
+  filter: brightness(0.98);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+  transform: translateY(-1px);
+}
+
+.team-modal-cancel:hover {
+  background: var(--bg);
+  color: var(--text-700);
+}

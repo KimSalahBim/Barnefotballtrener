@@ -153,29 +153,40 @@
 }
 
 .comp-list--players {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   margin-top: 10px;
   max-height: 360px;
   overflow: auto;
-  padding-right: 6px;
+  padding: 6px 8px 0 0;
 }
 
 .comp-check {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid var(--comp-border);
-  background: rgba(255,255,255,0.9);
+  border: 2px solid #ede9fe;
+  background: #fff;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.18s ease;
+  overflow: visible;
 }
-
-.comp-check input {
-  width: 20px;
-  height: 20px;
-}
+.comp-check:hover { border-color: #c4b5fd; background: #faf8ff; }
+.comp-check input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.comp-check .pc-avatar { width: 34px; height: 34px; min-width: 34px; border-radius: 11px; background: #f1f0fb; color: #c4c0e0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; transition: all 0.18s ease; }
+.comp-check .pc-info { min-width: 0; flex: 1; }
+.comp-check .player-name { font-weight: 700 !important; font-size: 13px; color: #7c7a9c !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.15s; }
+.comp-check .pc-keeper { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; background: #f5f3ff; color: #c4c0e0; margin-top: 2px; transition: all 0.15s; }
+.comp-check .pc-check { position: absolute; top: -5px; right: -5px; width: 19px; height: 19px; border-radius: 10px; background: #818cf8; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(0.5); transition: all 0.18s ease; box-shadow: 0 2px 6px rgba(129,140,248,0.3); pointer-events: none; }
+.comp-check:has(:checked) { border-color: #818cf8; background: #faf8ff; box-shadow: 0 2px 10px rgba(129,140,248,0.12); }
+.comp-check:has(:checked) .pc-avatar { background: var(--pc-color, #a5b4fc); color: #312e81; }
+.comp-check:has(:checked) .player-name { color: #1e1b4b !important; }
+.comp-check:has(:checked) .pc-keeper { background: #fef3c7; color: #a16207; }
+.comp-check:has(:checked) .pc-check { opacity: 1; transform: scale(1); }
 
 .comp-radio {
   display: flex;
@@ -496,16 +507,29 @@
     font-size: 12px;
   }
   .comp-check {
-    gap: 8px !important;
-    padding: 6px 8px !important;
-    font-size: 13px;
+    gap: 7px !important;
+    padding: 7px 8px !important;
+    border-radius: 12px !important;
+    border-width: 1.5px !important;
   }
-  .comp-check input {
-    width: 18px !important;
-    height: 18px !important;
+  .comp-check .pc-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    font-size: 12px !important;
+  }
+  .comp-check .player-name {
+    font-size: 12px !important;
+  }
+  .comp-check .pc-check {
+    width: 16px !important;
+    height: 16px !important;
+    top: -4px !important;
+    right: -4px !important;
   }
   .comp-list--players {
-    gap: 4px !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
     margin-top: 6px !important;
   }
 }
