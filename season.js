@@ -575,10 +575,10 @@
       '.sn-balance-seg { transition:width 0.3s; }',
       '.sn-assign-row { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); }',
       '.sn-assign-row:last-child { border-bottom:none; }',
-      '.sn-assign-name { flex:1; min-width:0; display:flex; align-items:baseline; gap:4px; overflow:hidden; }',
-      '.sn-assign-name .sn-pname { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }',
-      '.sn-assign-name .sn-assign-meta { flex-shrink:0; font-size:11px; color:var(--text-400); }',
-      '.sn-assign-select { flex:0 0 auto; padding:8px 10px; border:2px solid var(--border); border-radius:var(--radius-sm, 8px); font-size:13px; font-family:inherit; font-weight:600; color:var(--text-700); background:var(--bg-input, #fff); cursor:pointer; min-width:80px; max-width:110px; }',
+      '.sn-assign-name { flex:1 1 0%; min-width:60px; overflow:hidden; }',
+      '.sn-assign-name .sn-pname { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }',
+      '.sn-assign-name .sn-assign-meta { font-size:11px; color:var(--text-400); margin-right:2px; }',
+      '.sn-assign-select { flex:0 0 100px; width:100px; padding:8px 10px; border:2px solid var(--border); border-radius:var(--radius-sm, 8px); font-size:13px; font-family:inherit; font-weight:600; color:var(--text-700); background:var(--bg-input, #fff); cursor:pointer; -webkit-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath d=\'M6 8L1 3h10z\' fill=\'%23666\'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; }',
       '.sn-assign-select:focus { border-color:var(--primary); outline:none; }',
       '.sn-assign-set-1 { border-color:#3b82f6; color:#1d4ed8; background:rgba(37,99,235,0.04); }',
       '.sn-assign-set-2 { border-color:#ea580c; color:#c2410c; background:rgba(234,88,12,0.04); }',
@@ -3002,9 +3002,10 @@
       html +=
         '<div class="sn-assign-row">' +
           '<div class="sn-assign-name">' +
-            '<span class="sn-pname">' + escapeHtml(mp.name) + '</span>' +
-            (mp.goalie ? '<span class="sn-assign-meta">\uD83E\uDDE4</span>' : '') +
-            '<span class="sn-assign-meta">' + mp.skill + '</span>' +
+            '<span class="sn-pname">' + escapeHtml(mp.name) +
+              (mp.goalie ? ' <span class="sn-assign-meta">\uD83E\uDDE4</span>' : '') +
+              ' <span class="sn-assign-meta">' + mp.skill + '</span>' +
+            '</span>' +
           '</div>' +
           '<select class="sn-assign-select' + selectClass + '" data-apid="' + escapeHtml(mp.player_id) + '">' + optionsHtml + '</select>' +
         '</div>';
