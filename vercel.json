@@ -1,6 +1,26 @@
 {
   "rewrites": [
     {
+      "source": "/bytteplan",
+      "destination": "/bytteplan.html"
+    },
+    {
+      "source": "/spilletid",
+      "destination": "/spilletid.html"
+    },
+    {
+      "source": "/kampdag",
+      "destination": "/kampdag-seo.html"
+    },
+    {
+      "source": "/treningsgrupper",
+      "destination": "/treningsgrupper.html"
+    },
+    {
+      "source": "/sesong",
+      "destination": "/sesong.html"
+    },
+    {
       "source": "/stats/api/:match*",
       "destination": "https://api-gateway.umami.dev/api/:match*"
     },
@@ -18,7 +38,7 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://accounts.google.com https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://api.stripe.com https://accounts.google.com https://cdn.jsdelivr.net https://cloud.umami.is https://api-gateway.umami.dev; frame-src https://js.stripe.com https://accounts.google.com; base-uri 'self'; form-action 'self' https://accounts.google.com" }
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://api.stripe.com https://accounts.google.com https://cdn.jsdelivr.net https://cloud.umami.is https://api-gateway.umami.dev; frame-src https://js.stripe.com https://accounts.google.com; base-uri 'self'; form-action 'self' https://accounts.google.com" }
       ]
     },
     {
@@ -63,6 +83,30 @@
     },
     {
       "source": "/landing-visual.css",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/seo-common.css",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/bytteplan.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/spilletid.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/kampdag-seo.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/treningsgrupper.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/sesong.html",
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
     {
@@ -111,6 +155,10 @@
     },
     {
       "source": "/grouping.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/grouping-dragdrop.js",
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
     {

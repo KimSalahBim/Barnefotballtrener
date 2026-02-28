@@ -573,11 +573,12 @@
       '.sn-counter-chip { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:var(--radius-full, 999px); font-size:12px; font-weight:600; background:var(--bg); }',
       '.sn-balance-bar { display:flex; gap:0; height:8px; border-radius:4px; overflow:hidden; margin:8px 0 4px; }',
       '.sn-balance-seg { transition:width 0.3s; }',
-      '.sn-assign-row { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); }',
+      '.sn-assign-row { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--border-light, #f1f5f9); }',
       '.sn-assign-row:last-child { border-bottom:none; }',
-      '.sn-assign-name { flex:1; font-weight:600; font-size:14px; min-width:0; }',
-      '.sn-assign-name small { font-weight:400; color:var(--text-400); font-size:12px; }',
-      '.sn-assign-select { padding:6px 10px; border:2px solid var(--border); border-radius:var(--radius-sm, 8px); font-size:12px; font-family:inherit; font-weight:600; color:var(--text-700); background:var(--bg-input, #fff); cursor:pointer; min-width:90px; }',
+      '.sn-assign-name { flex:1; min-width:0; display:flex; align-items:baseline; gap:4px; overflow:hidden; }',
+      '.sn-assign-name .sn-pname { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }',
+      '.sn-assign-name .sn-assign-meta { flex-shrink:0; font-size:11px; color:var(--text-400); }',
+      '.sn-assign-select { flex:0 0 auto; padding:8px 10px; border:2px solid var(--border); border-radius:var(--radius-sm, 8px); font-size:13px; font-family:inherit; font-weight:600; color:var(--text-700); background:var(--bg-input, #fff); cursor:pointer; min-width:80px; max-width:110px; }',
       '.sn-assign-select:focus { border-color:var(--primary); outline:none; }',
       '.sn-assign-set-1 { border-color:#3b82f6; color:#1d4ed8; background:rgba(37,99,235,0.04); }',
       '.sn-assign-set-2 { border-color:#ea580c; color:#c2410c; background:rgba(234,88,12,0.04); }',
@@ -3000,9 +3001,10 @@
 
       html +=
         '<div class="sn-assign-row">' +
-          '<div class="sn-assign-name">' + escapeHtml(mp.name) +
-            (mp.goalie ? ' <small>\uD83E\uDDE4</small>' : '') +
-            ' <small>' + mp.skill + '</small>' +
+          '<div class="sn-assign-name">' +
+            '<span class="sn-pname">' + escapeHtml(mp.name) + '</span>' +
+            (mp.goalie ? '<span class="sn-assign-meta">\uD83E\uDDE4</span>' : '') +
+            '<span class="sn-assign-meta">' + mp.skill + '</span>' +
           '</div>' +
           '<select class="sn-assign-select' + selectClass + '" data-apid="' + escapeHtml(mp.player_id) + '">' + optionsHtml + '</select>' +
         '</div>';
@@ -5207,27 +5209,29 @@
 
     var title = isEdit ? 'Rediger hendelse' : 'Ny hendelse';
 
-    // Build sub-team dropdown if season has fixed sub-teams
+    // Build sub-team dropdown if season has multiple sub-teams
     var stCount = (currentSeason && currentSeason.sub_team_count) || 1;
-    var hasFixedSubTeams = stCount > 1 && ((currentSeason && currentSeason.sub_team_mode) || 'fixed') === 'fixed';
+    var hasSubTeams = stCount > 1;
+    var isRotate = hasSubTeams && ((currentSeason && currentSeason.sub_team_mode) || 'fixed') === 'rotate';
     var subTeamSelect = '';
-    if (hasFixedSubTeams) {
+    if (hasSubTeams) {
       var stNames = getSubTeamNames(currentSeason);
       var opts = '';
+      if (isRotate) {
+        opts += '<option value="0"' + (!ev.sub_team ? ' selected' : '') + '>Alle lag</option>';
+      }
       for (var st = 0; st < stCount; st++) {
         var stIdx = st + 1;
         opts += '<option value="' + stIdx + '"' + (ev.sub_team === stIdx ? ' selected' : '') + '>' + escapeHtml(stNames[st]) + '</option>';
       }
+      var hint = isRotate
+        ? 'Valgfritt. Troppen kan justeres i kampdetalj.'
+        : 'Troppen foresl\u00e5s fra dette laget.';
       subTeamSelect =
         '<div class="form-group" id="snSubTeamGroup" style="' + (isMatch ? '' : 'display:none;') + '">' +
           '<label for="snSubTeam">Lag</label>' +
           '<select id="snSubTeam">' + opts + '</select>' +
-          '<div class="sn-hint">Troppen foresl\u00e5s fra dette laget. Du kan justere etterp\u00e5.</div>' +
-        '</div>';
-    } else if (stCount > 1 && currentSeason && currentSeason.sub_team_mode === 'rotate') {
-      subTeamSelect =
-        '<div class="form-group" id="snSubTeamGroup" style="' + (isMatch ? '' : 'display:none;') + '">' +
-          '<div class="sn-hint" style="margin-top:0;"><i class="fas fa-random" style="margin-right:4px;color:var(--primary);"></i>Rullering: lagfordeling settes i kampdetalj etter tropp er valgt.</div>' +
+          '<div class="sn-hint">' + hint + '</div>' +
         '</div>';
     }
 
@@ -5359,7 +5363,7 @@
         opponent: isMatchNow ? ($('snOpponent').value || null) : null,
         is_home: isMatchNow ? isHomeVal : null,
         notes: $('snNotes').value || null,
-        sub_team: (isMatchNow && $('snSubTeam')) ? parseInt($('snSubTeam').value) : null
+        sub_team: (isMatchNow && $('snSubTeam') && parseInt($('snSubTeam').value)) ? parseInt($('snSubTeam').value) : null
       };
 
       var result;
