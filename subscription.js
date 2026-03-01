@@ -646,7 +646,7 @@ if (cancelBtn && !cancelBtn.__bound) {
           "• Slette din bruker og alle data\n" +
           "• Kansellere alle aktive abonnementer\n" +
           "• Ikke kunne angres\n\n" +
-          "Betalingshistorikk beholdes i 7 år (lovkrav)\n\n" +
+          "Betalingshistorikk beholdes i 5 år (bokføringsloven § 13)\n\n" +
           "Er du sikker?"
         );
 
@@ -695,7 +695,7 @@ if (cancelBtn && !cancelBtn.__bound) {
             "• Bruker og påloggingsinformasjon\n" +
             "• Abonnementer kansellert\n" +
             "• App-data fjernet\n\n" +
-            "Betalingshistorikk beholdes i 7 år per norsk lov (bokføringsloven).\n\n" +
+            "Betalingshistorikk beholdes i 5 år per norsk lov (bokføringsloven § 13).\n\n" +
             "Du vil nå bli logget ut."
           );
 

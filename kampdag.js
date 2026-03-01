@@ -321,6 +321,35 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     }
 
     bindKampdagUI();
+
+    // Pre-set format and minutes from onboarding age class (if available)
+    try {
+      const ageClass = localStorage.getItem('bf_ob_ageclass');
+      if (ageClass) {
+        const ageNum = parseInt(String(ageClass).replace(/[^0-9]/g, ''), 10);
+        const nffMap = {
+          6:  { format: '3',  minutes: 20 },
+          7:  { format: '3',  minutes: 20 },
+          8:  { format: '5',  minutes: 30 },
+          9:  { format: '5',  minutes: 40 },
+          10: { format: '5',  minutes: 40 },
+          11: { format: '7',  minutes: 50 },
+          12: { format: '9',  minutes: 60 },
+          13: { format: '11', minutes: 60 }
+        };
+        const nff = nffMap[ageNum];
+        if (nff) {
+          const formatEl = $('kdFormat');
+          const minutesEl = $('kdMinutes');
+          if (formatEl && formatEl.value === '7' && minutesEl && minutesEl.value === '60') {
+            // Only override if user hasn't changed defaults
+            formatEl.value = nff.format;
+            minutesEl.value = nff.minutes;
+            console.log('[Kampdag] Pre-set from onboarding:', ageClass, '->', nff.format + 'er', nff.minutes + 'min');
+          }
+        }
+      }
+    } catch (_) {}
     
     // Sjekk om spillere allerede er tilgjengelig
     const players = getPlayersArray();

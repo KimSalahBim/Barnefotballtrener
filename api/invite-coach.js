@@ -16,8 +16,14 @@ const supabaseAdmin = createClient(
 const MAX_EDITORS_PER_TEAM = 4;
 
 export default async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS — restrict to production and preview domains
+  const allowedOrigins = [
+    'https://barnefotballtrener.no',
+    'https://www.barnefotballtrener.no',
+  ];
+  const origin = req.headers.origin || '';
+  const isAllowed = allowedOrigins.includes(origin) || origin.endsWith('.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', isAllowed ? origin : allowedOrigins[0]);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -70,31 +76,17 @@ export default async function handler(req, res) {
     const { data: foundUsers, error: lookupErr } = await supabaseAdmin
       .rpc('get_user_id_by_email', { lookup_email: normalizedEmail });
 
-    // Fallback: direct query on auth.users if RPC doesn't exist
+    // Fallback: if RPC doesn't exist or fails, return clear error
     let invitedUserId = null;
     if (lookupErr || !foundUsers || foundUsers.length === 0) {
-      // Use admin API to search
-      const { data: { users }, error: listErr } = await supabaseAdmin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
-
-      if (listErr) {
-        console.error('[invite-coach] listUsers error:', listErr);
-        return res.status(500).json({ error: 'Kunne ikke søke etter brukere' });
+      // If RPC failed (not just empty result), log for debugging
+      if (lookupErr) {
+        console.error('[invite-coach] get_user_id_by_email RPC error:', lookupErr);
       }
 
-      const invitedUser = (users || []).find(function (u) {
-        return u.email && u.email.toLowerCase() === normalizedEmail;
+      return res.status(404).json({
+        error: 'Ingen bruker med denne e-postadressen. Treneren må opprette konto på barnefotballtrener.no først.',
       });
-
-      if (!invitedUser) {
-        return res.status(404).json({
-          error: 'Ingen bruker med denne e-postadressen. Treneren må opprette konto på barnefotballtrener.no først.',
-        });
-      }
-
-      invitedUserId = invitedUser.id;
     } else {
       invitedUserId = foundUsers[0].id;
     }

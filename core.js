@@ -1447,6 +1447,16 @@
       }
     } catch (e) {
       console.warn('[core.js] loadPlayersFromSupabase feilet:', e.message);
+    } finally {
+      // Always check onboarding, even if Supabase was unavailable or team changed.
+      // Early returns inside try{} skip code after catch{}, but finally{} always runs.
+      try {
+        if (typeof window.__BF_checkOnboarding === 'function') {
+          window.__BF_checkOnboarding();
+        }
+      } catch (obErr) {
+        console.warn('[core.js] Onboarding check feilet:', obErr.message);
+      }
     }
   }
 
@@ -1543,6 +1553,20 @@
     if (!container) return;
 
     const sorted = [...state.players].sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+
+    // Empty state: guide user to add players
+    if (sorted.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="text-align:center; padding:40px 20px; color:var(--text-400, #94a3b8);">
+          <div style="font-size:36px; margin-bottom:12px;">⚽</div>
+          <div style="font-size:15px; font-weight:600; color:var(--text-700, #334155); margin-bottom:6px;">Ingen spillere enn\u00e5</div>
+          <div style="font-size:13px; line-height:1.5; max-width:280px; margin:0 auto;">
+            Legg til spillerne dine i skjemaet over.\u00a0Kun fornavn anbefales for barnas personvern.
+          </div>
+        </div>`;
+      return;
+    }
+
     container.innerHTML = sorted.map(p => {
       const pos = p.positions || ['F','M','A'];
       return `
@@ -2099,6 +2123,48 @@
     window.__BF_isSharedTeam = function() { return isSharedTeam(); };
     window.__BF_saveState = saveState;
     window.__BF_publishPlayers = publishPlayers;
+
+    // Onboarding wizard bridge API (used by onboarding.js)
+    window.__BF_onboarding = {
+      getCurrentTeamName: function() {
+        var team = state.teams.find(function(t) { return t.id === state.currentTeamId; });
+        return team ? team.name : '';
+      },
+      renameCurrentTeam: async function(newName) {
+        var team = state.teams.find(function(t) { return t.id === state.currentTeamId; });
+        if (!team) return;
+        var sb = getSupabaseClient();
+        var uid = getUserId();
+        if (sb && uid) {
+          try {
+            await sb.from('teams').update({ name: newName }).eq('id', team.id).eq('user_id', uid);
+          } catch (e) {
+            console.warn('[core.js] onboarding renameTeam failed:', e.message);
+          }
+        }
+        team.name = newName;
+        renderTeamSwitcher();
+      },
+      bulkAddPlayers: function(names) {
+        if (!Array.isArray(names) || names.length === 0) return;
+        for (var i = 0; i < names.length; i++) {
+          var name = String(names[i] || '').trim();
+          if (!name || name.length > 50) continue;
+          state.players.push({
+            id: uuid(),
+            name: name,
+            skill: 3,
+            goalie: false,
+            active: true,
+            positions: ['F','M','A']
+          });
+        }
+        state.selection.grouping = new Set(state.players.map(function(p) { return p.id; }));
+        saveState();
+        renderAll();
+        publishPlayers();
+      }
+    };
   }
 
   function setupSkillToggle() {

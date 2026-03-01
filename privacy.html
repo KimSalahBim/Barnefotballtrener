@@ -11,7 +11,7 @@
   <main class="legal">
     <h1>PersonvernerklÃ¦ring</h1>
 
-    <p><strong>Sist oppdatert:</strong> 24. februar 2026</p>
+    <p><strong>Sist oppdatert:</strong> 1. mars 2026</p>
 
     <h2>1. Behandlingsansvarlig</h2>
     <p>
@@ -34,6 +34,8 @@
       Betaling hÃ¥ndteres av <strong>Stripe</strong> som selvstendig databehandler.
       Vi mottar tekniske opplysninger som Stripe customer-id, subscription-id, status og periodedatoer.
       Vi lagrer aldri kortnummer eller fullstendige betalingsopplysninger.
+      Ved kjÃ¸p lagres din IP-adresse i Stripe som dokumentasjon pÃ¥ samtykke til
+      umiddelbar levering (jf. forbrukeravtaleloven Â§ 22).
     </p>
     <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b).</p>
 
@@ -53,6 +55,8 @@
       Som trener er du medansvarlig for spillerdataene du registrerer (GDPR art. 26).
       SÃ¸rg for at dette er i trÃ¥d med din klubbs personvernrutiner og at foresatte er
       informert om at barnas fornavn brukes i et digitalt treningsverktÃ¸y.
+      Dersom laget deles med medtrenere (se seksjon 2.8), vil disse ogsÃ¥ ha tilgang
+      til spillerdataene. Foresatte bÃ¸r informeres om dette.
     </p>
     <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) â€“ nÃ¸dvendig for appens kjernefunksjonalitet.</p>
 
@@ -105,6 +109,39 @@
     </p>
     <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) â€“ sikkerhet og drift.</p>
 
+    <h3>2.8 Lagdeling med medtrenere</h3>
+    <p>
+      Lageier kan invitere medtrenere til Ã¥ dele tilgang til et lag via e-postadresse.
+      NÃ¥r en invitasjon aksepteres, fÃ¥r medtreneren (editor) tilgang til lagets spillerdata,
+      oppmÃ¸te, bytteplaner, sesongdata og treningsÃ¸kter.
+    </p>
+    <p>
+      For Ã¥ muliggjÃ¸re dette lagrer vi:
+    </p>
+    <ul>
+      <li><strong>Lagtilhørighet:</strong> hvilke brukere som er tilknyttet hvilke lag, med rolle (eier/editor) og status.</li>
+      <li><strong>Invitasjonsdata:</strong> hvem som inviterte hvem, tidspunkt for invitasjon.</li>
+    </ul>
+    <p>
+      Lageier kan nÃ¥r som helst fjerne en editor. Editors kan nÃ¥r som helst forlate et delt lag.
+      NÃ¥r en editor fjernes eller forlater laget, mister de umiddelbart tilgang til lagdata.
+      Lagdata forblir hos lageier.
+    </p>
+    <p>
+      Ved sletting av konto overfÃ¸res eierskap til eldste aktive editor dersom laget har
+      medtrenere. Lag uten medtrenere slettes permanent.
+    </p>
+    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) â€" nÃ¸dvendig for samarbeidsfunksjonalitet.</p>
+
+    <h3>2.9 KontaktforespÃ¸rsler</h3>
+    <p>
+      Dersom du sender oss en forespÃ¸rsel (for eksempel om klubbtilgang), lagrer vi navn,
+      e-postadresse, eventuelt telefonnummer, klubbnavn og meldingsinnhold. Disse opplysningene
+      brukes kun til Ã¥ behandle henvendelsen din og slettes nÃ¥r forespÃ¸rselen er besvart,
+      eller ved kontosletting.
+    </p>
+    <p>Behandlingsgrunnlag: avtale (GDPR art. 6 nr. 1 bokstav b) / berettiget interesse (GDPR art. 6 nr. 1 bokstav f).</p>
+
     <h2>3. Databehandlere og tredjeparter</h2>
     <table style="width:100%; border-collapse:collapse; margin:10px 0;">
       <tr style="border-bottom:1px solid #ddd;">
@@ -150,6 +187,8 @@
       <li>Sesongdata (oppmÃ¸te, spilletid, kampresultater, mÃ¥l, bytteplaner): lagres sÃ¥ lenge sesongen eller kontoen eksisterer. Slettes nÃ¥r treneren sletter sesongen eller kontoen.</li>
       <li>Feillogger: anonymiseres ved kontosletting. Anonymiserte logger kan oppbevares for driftsformÃ¥l.</li>
       <li>Betalingsdata i Stripe: lagres i trÃ¥d med Stripes retningslinjer og norske regnskapskrav (5 Ã¥r).</li>
+      <li>Lagdeling (medtrenere): lagres sÃ¥ lenge tilknytningen eksisterer. Fjernes nÃ¥r editor forlater laget, eier fjerner editor, eller kontoen slettes.</li>
+      <li>KontaktforespÃ¸rsler: lagres til forespÃ¸rselen er besvart, eller slettes ved kontosletting.</li>
       <li>Appinnhold (lagoppsett, treningsÃ¸kter, konkurransedata, ligaer): lagres i Supabase sÃ¥ lenge kontoen eksisterer og fjernes ved kontosletting. En lokal kopi i nettleseren fungerer som hurtigbuffer og kan slettes uten at data gÃ¥r tapt.</li>
       <li>Tekniske logger (Vercel): slettes automatisk etter kort tid (typisk 30 dager).</li>
     </ul>
@@ -191,7 +230,9 @@
       bruker ingen cookies og lagrer ingen IP-adresser. Statistikken viser kun aggregerte tall som
       antall sidevisninger, nettlesertype og land. Ingen data kan knyttes til enkeltbrukere.
     </p>
-    <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) â€“ forbedring av tjenesten.</p>
+    <p>Behandlingsgrunnlag: berettiget interesse (GDPR art. 6 nr. 1 bokstav f) â€“ forbedring av tjenesten.
+      Umami bruker ingen informasjonskapsler og lagrer ingen IP-adresser. Statistikken er fullstendig
+      anonym og krever derfor ikke samtykke etter ekomloven § 2-7b.</p>
 
     <h2>9. Kontakt</h2>
     <p>
@@ -199,7 +240,7 @@
       <a href="mailto:support@barnefotballtrener.no">support@barnefotballtrener.no</a>.
     </p>
 
-    <p><em>Sist oppdatert: 24. februar 2026</em></p>
+    <p><em>Sist oppdatert: 1. mars 2026</em></p>
 
     <p><a href="/">Tilbake</a></p>
   </main>

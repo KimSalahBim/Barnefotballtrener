@@ -86,30 +86,7 @@
   <link rel="stylesheet" href="landing-visual.css">
   <link rel="stylesheet" href="competitions.css">
   <link rel="stylesheet" href="core-ui.css">
-
-  <!-- Sentry Error Monitoring (EU data residency) -->
-  <script
-    src="https://js-de.sentry-cdn.com/73d3b2c907e31d6c93f9fe15ec5db93a.min.js"
-    crossorigin="anonymous"
-  ></script>
-  <script>
-    Sentry.onLoad(function () {
-      Sentry.init({
-        environment: window.__BF_IS_DEBUG_HOST ? 'development' : 'production',
-        release: 'barnefotballtrener@1.0.0',
-        ignoreErrors: [
-          'ResizeObserver loop',
-          'Non-Error promise rejection captured',
-          'Load failed',
-          'Failed to fetch'
-        ],
-        beforeSend: function (event) {
-          if (window.__BF_IS_DEBUG_HOST) return null;
-          return event;
-        }
-      });
-    });
-  </script>
+  <link rel="stylesheet" href="onboarding.css">
 
   <!-- Umami Analytics (personvernvennlig, ingen cookies) -->
   <script data-cfasync="false" defer src="/stats/script.js" data-website-id="bfd1e6d5-042b-4b8f-bd05-ee5aa7f70f5e"></script>
@@ -782,6 +759,11 @@
       <!-- GDPR Art. 17: Right to Erasure -->
       <button id="deleteAccountBtn" class="btn-danger" type="button" title="Slett konto permanent (GDPR Art. 17)" style="margin-top: 20px; width: 100%;">
         <i class="fas fa-trash"></i> Slett konto permanent
+      </button>
+
+      <!-- Re-run onboarding wizard -->
+      <button id="rerunOnboardingBtn" class="btn-secondary" type="button" style="margin-top: 8px; width: 100%; font-size: 13px; opacity: 0.8;">
+        <i class="fas fa-wand-magic-sparkles"></i> Kjør veiviseren på nytt
       </button>
 
       <button class="btn-primary" type="button" data-close="subscriptionModal" style="margin-top: 10px;">
@@ -1490,6 +1472,7 @@
 <script src="season.js"></script>
 <script src="sesong-kampdag.js"></script>
 <script src="logout-fix.js"></script>
+<script src="onboarding.js"></script>
 
 </body>
 </html>
