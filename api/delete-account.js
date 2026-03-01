@@ -147,6 +147,127 @@ export default async function handler(req, res) {
       deletionResults.errors.push('Stripe processing error');
     }
 
+    // 3b) Handle team_members / ownership transfer
+    // Teams with other active members get transferred, NOT deleted.
+    // Only solo-owned teams (no other members) get deleted.
+    let soloTeamIds = [];
+    try {
+      // Find all teams owned by this user
+      const { data: ownedTeams } = await supabaseAdmin
+        .from('teams')
+        .select('id')
+        .eq('user_id', userId);
+
+      const allOwnedIds = (ownedTeams || []).map(t => t.id);
+
+      for (const teamId of allOwnedIds) {
+        // Check for other active members (editors)
+        const { data: otherMembers } = await supabaseAdmin
+          .from('team_members')
+          .select('id, user_id, created_at')
+          .eq('team_id', teamId)
+          .eq('status', 'active')
+          .neq('user_id', userId)
+          .order('created_at', { ascending: true })
+          .limit(1);
+
+        if (otherMembers && otherMembers.length > 0) {
+          // Transfer ownership to oldest editor
+          const newOwnerId = otherMembers[0].user_id;
+
+          // Update team owner
+          await supabaseAdmin
+            .from('teams')
+            .update({ user_id: newOwnerId })
+            .eq('id', teamId);
+
+          // Promote editor to owner role
+          await supabaseAdmin
+            .from('team_members')
+            .update({ role: 'owner' })
+            .eq('team_id', teamId)
+            .eq('user_id', newOwnerId);
+
+          // Update all data ownership for this team
+          // This ensures the new owner's user_id is on all data
+          const tables = ['players', 'user_data', 'seasons'];
+          for (const table of tables) {
+            await supabaseAdmin
+              .from(table)
+              .update({ user_id: newOwnerId })
+              .eq('user_id', userId)
+              .eq('team_id', teamId);
+          }
+
+          // Update season-linked data (events, season_players, event_players, training_series, match_events)
+          const { data: teamSeasons } = await supabaseAdmin
+            .from('seasons')
+            .select('id')
+            .eq('team_id', teamId);
+
+          const seasonIds = (teamSeasons || []).map(s => s.id);
+          if (seasonIds.length > 0) {
+            for (const table of ['events', 'season_players', 'event_players', 'training_series']) {
+              await supabaseAdmin
+                .from(table)
+                .update({ user_id: newOwnerId })
+                .in('season_id', seasonIds)
+                .eq('user_id', userId);
+            }
+
+            // match_events: need event_ids
+            const { data: teamEvents } = await supabaseAdmin
+              .from('events')
+              .select('id')
+              .in('season_id', seasonIds);
+
+            const eventIds = (teamEvents || []).map(e => e.id);
+            if (eventIds.length > 0) {
+              await supabaseAdmin
+                .from('match_events')
+                .update({ user_id: newOwnerId })
+                .in('event_id', eventIds)
+                .eq('user_id', userId);
+            }
+          }
+
+          deletionResults.steps_completed.push(
+            'Transferred team ' + teamId + ' to new owner'
+          );
+        } else {
+          // No other members — mark for deletion
+          soloTeamIds.push(teamId);
+        }
+      }
+
+      // Delete ALL team_members rows for this user (both owned and editor memberships)
+      await supabaseAdmin
+        .from('team_members')
+        .delete()
+        .eq('user_id', userId);
+
+      // Also delete pending invitations sent by this user
+      await supabaseAdmin
+        .from('team_members')
+        .delete()
+        .eq('invited_by', userId)
+        .eq('status', 'pending');
+
+      deletionResults.steps_completed.push(
+        'Handled team_members (' + soloTeamIds.length + ' solo teams to delete, ' +
+        (allOwnedIds.length - soloTeamIds.length) + ' transferred)'
+      );
+    } catch (tmErr) {
+      console.error('[delete-account] team_members error:', tmErr);
+      deletionResults.errors.push('team_members handling error');
+      // If this fails, fall back to deleting everything (old behavior)
+      const { data: fallbackTeams } = await supabaseAdmin
+        .from('teams')
+        .select('id')
+        .eq('user_id', userId);
+      soloTeamIds = (fallbackTeams || []).map(t => t.id);
+    }
+
     // 4) Delete trial data from Supabase
     try {
       const { error: deleteErr } = await supabaseAdmin
