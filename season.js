@@ -28,6 +28,7 @@
   // =========================================================================
   function getTeamId() { return window.__BF_getTeamId ? window.__BF_getTeamId() : (window._bftTeamId || null); }
   function getUserId() { return window.authService ? window.authService.getUserId() : null; }
+  function getOwnerUid() { return window.__BF_getOwnerUid ? window.__BF_getOwnerUid() : getUserId(); }
   function getSb() {
     var sb = window.supabase || window.supabaseClient;
     return (sb && sb.from) ? sb : null;
@@ -650,6 +651,7 @@
 
   window.addEventListener('players:updated', function() {
     var tid = getTeamId();
+    console.log('[season.js] players:updated - tid:', tid, '_snInitialized:', _snInitialized);
     if (tid && tid !== 'default') {
       if (!_snInitialized) {
         _snInitialized = true;
@@ -707,7 +709,7 @@
     if (!playerId || !newName) return;
 
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid) return;
 
     try {
@@ -795,8 +797,9 @@
   async function loadSeasons() {
     var sb = getSb();
     var tid = getTeamId();
-    var uid = getUserId();
-    if (!sb || !tid || !uid) { seasons = []; render(); return; }
+    var uid = getOwnerUid();
+    console.log('[season.js] loadSeasons called - tid:', tid, 'uid:', uid, 'sb:', !!sb);
+    if (!sb || !tid || !uid) { console.warn('[season.js] loadSeasons ABORT - missing:', {sb:!!sb,tid:tid,uid:uid}); seasons = []; render(); return; }
 
     try {
       var res = await sb.from('seasons')
@@ -807,6 +810,7 @@
 
       if (res.error) throw res.error;
       seasons = res.data || [];
+      console.log('[season.js] loadSeasons got', seasons.length, 'seasons');
 
       // Fetch event counts per season in one query
       if (seasons.length > 0) {
@@ -837,7 +841,7 @@
   async function createSeason(data) {
     var sb = getSb();
     var tid = getTeamId();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !tid || !uid) { notify('Kunne ikke koble til databasen.', 'error'); return null; }
 
     try {
@@ -866,7 +870,7 @@
 
   async function updateSeason(id, fields) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid) { notify('Kunne ikke koble til databasen.', 'error'); return null; }
 
     try {
@@ -888,7 +892,7 @@
 
   async function deleteSeason(id) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid) return false;
 
     try {
@@ -937,7 +941,7 @@
   async function duplicateSeason(sourceSeason) {
     var sb = getSb();
     var tid = getTeamId();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !tid || !uid) { notify('Kunne ikke koble til databasen.', 'error'); return null; }
 
     try {
@@ -997,7 +1001,7 @@
 
   async function loadEvents(seasonId) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !seasonId || !uid) { events = []; return; }
 
     try {
@@ -1017,7 +1021,7 @@
 
   async function createEvent(seasonId, data) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid) { notify('Kunne ikke koble til databasen.', 'error'); return null; }
 
     try {
@@ -1048,7 +1052,7 @@
 
   async function updateEvent(id, fields) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid) { notify('Kunne ikke koble til databasen.', 'error'); return null; }
 
     try {
@@ -1065,7 +1069,7 @@
 
   async function deleteEvent(id) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid) return false;
 
     try {
@@ -1086,7 +1090,7 @@
 
   async function loadSeasonPlayers(seasonId) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid || !seasonId) { seasonPlayers = []; return; }
 
     try {
@@ -1177,7 +1181,7 @@
 
   async function importPlayersToSeason(seasonId, players) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid || !seasonId || !players.length) return false;
 
     try {
@@ -1210,7 +1214,7 @@
 
   async function removeSeasonPlayer(rowId) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid) return false;
 
     try {
@@ -1226,7 +1230,7 @@
 
   async function updateSeasonPlayer(rowId, fields) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid) return false;
 
     try {
@@ -1269,7 +1273,7 @@
 
   async function createTrainingSeries(seasonId, data) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid || !seasonId) return false;
 
     try {
@@ -1341,7 +1345,7 @@
 
   async function loadEventAttendance(eventId) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid || !eventId) { eventAttendance = []; return; }
 
     try {
@@ -1363,7 +1367,7 @@
     // squadList = ['player_id', ...] or null (for matches)
     // subTeamMap = { player_id: subTeamIdx } or null (rotation mode)
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid || !eventId || !seasonId) return false;
 
     var squadSet = {};
@@ -1422,7 +1426,7 @@
 
   async function loadRegisteredEventIds(seasonId) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     registeredEventIds = {};
     if (!sb || !uid || !seasonId) return;
 
@@ -1449,7 +1453,7 @@
 
   async function loadMatchGoals(eventId) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     matchGoals = [];
     if (!sb || !uid || !eventId) return;
 
@@ -1469,7 +1473,7 @@
 
   async function saveMatchResult(eventId, resultHome, resultAway, status) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid || !eventId) return false;
 
     try {
@@ -1492,7 +1496,7 @@
 
   async function addMatchEvent(eventId, playerId, playerName, eventType) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid || !eventId) return false;
 
     try {
@@ -1516,7 +1520,7 @@
 
   async function removeMatchGoal(goalId) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid || !goalId) return false;
 
     try {
@@ -1544,7 +1548,7 @@
 
   async function loadSeasonStats(seasonId) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid || !seasonId) { seasonStats = []; return; }
 
     try {
@@ -1570,7 +1574,7 @@
 
   async function loadSeasonGoals(seasonId) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     seasonGoals = [];
     if (!sb || !uid || !seasonId) return;
 
@@ -2300,7 +2304,7 @@
         var oldMode = s.sub_team_mode || 'fixed';
         if (newCount < oldCount || (newCount <= 1 && oldCount > 1) || (newMode !== oldMode)) {
           var sb = getSb();
-          var uid = getUserId();
+          var uid = getOwnerUid();
           if (sb && uid) {
             // Nullify sub_team values: all if going to 1 or mode change, else only above new count
             var cleanupThreshold = (newCount <= 1 || newMode !== oldMode) ? 0 : newCount;
@@ -2844,7 +2848,7 @@
 
   async function saveSubTeamAssignments(assignments) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid || !currentSeason) { notify('Feil: mangler tilkobling.', 'error'); return false; }
 
     try {
@@ -3133,7 +3137,7 @@
   //  NFF STATISTICS DISCLAIMER
   // =========================================================================
   function getNffDisclaimerKey() {
-    try { var uid = getUserId(); return 'sn_nff_stats_accepted_' + (uid || 'default'); }
+    try { var uid = getOwnerUid(); return 'sn_nff_stats_accepted_' + (uid || 'default'); }
     catch(e) { return 'sn_nff_stats_accepted_default'; }
   }
 
@@ -5079,7 +5083,7 @@
       }
 
       var sb = getSb();
-      var uid = getUserId();
+      var uid = getOwnerUid();
       var sid = currentSeason.id;
       if (!sb || !uid || !sid) { notify('Feil: mangler tilkobling.', 'error'); btn.disabled = false; btn.textContent = 'Pr\u00f8v igjen'; return; }
 
@@ -5942,7 +5946,7 @@
         confirmBtn.disabled = true;
         confirmBtn.textContent = 'Bekrefter\u2026';
         var sb = getSb();
-        var uid = getUserId();
+        var uid = getOwnerUid();
         if (sb && uid) {
           var res = await sb.from('events')
             .update({ plan_confirmed: true })
@@ -5964,7 +5968,7 @@
     if (unconfirmLink) {
       unconfirmLink.addEventListener('click', async function() {
         var sb = getSb();
-        var uid = getUserId();
+        var uid = getOwnerUid();
         if (sb && uid) {
           var res = await sb.from('events')
             .update({ plan_confirmed: false })
@@ -6267,7 +6271,7 @@
       reopenBtn.textContent = 'Gjenåpner\u2026';
 
       var sb = getSb();
-      var uid = getUserId();
+      var uid = getOwnerUid();
       if (sb && uid) {
         // Reset status and plan_confirmed so coach can redo everything
         var res = await sb.from('events')
@@ -6362,7 +6366,7 @@
 
   async function saveKampdagToSesong(ev, planJson, minutesMap) {
     var sb = getSb();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     if (!sb || !uid) { notify('Ikke innlogget.', 'error'); return; }
 
     try {
