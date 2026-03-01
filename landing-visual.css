@@ -297,6 +297,22 @@
   margin: 0;
 }
 
+.lp-feat-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bf-primary, #0b5bd3);
+  text-decoration: none;
+}
+.lp-feat-link:hover {
+  text-decoration: underline;
+}
+
+.landing-footer-seo {
+  margin-bottom: 8px;
+}
+
 /* -------------------------------------------
    SCREENSHOT PLACEHOLDER
    ------------------------------------------- */
