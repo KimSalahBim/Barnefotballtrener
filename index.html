@@ -87,6 +87,30 @@
   <link rel="stylesheet" href="competitions.css">
   <link rel="stylesheet" href="core-ui.css">
 
+  <!-- Sentry Error Monitoring (EU data residency) -->
+  <script
+    src="https://js-de.sentry-cdn.com/73d3b2c907e31d6c93f9fe15ec5db93a.min.js"
+    crossorigin="anonymous"
+  ></script>
+  <script>
+    Sentry.onLoad(function () {
+      Sentry.init({
+        environment: window.__BF_IS_DEBUG_HOST ? 'development' : 'production',
+        release: 'barnefotballtrener@1.0.0',
+        ignoreErrors: [
+          'ResizeObserver loop',
+          'Non-Error promise rejection captured',
+          'Load failed',
+          'Failed to fetch'
+        ],
+        beforeSend: function (event) {
+          if (window.__BF_IS_DEBUG_HOST) return null;
+          return event;
+        }
+      });
+    });
+  </script>
+
   <!-- Umami Analytics (personvernvennlig, ingen cookies) -->
   <script data-cfasync="false" defer src="/stats/script.js" data-website-id="bfd1e6d5-042b-4b8f-bd05-ee5aa7f70f5e"></script>
 </head>
@@ -310,7 +334,6 @@
             <div>
               <strong>Kampdag med lik spilletid</strong>
               <p>Algoritmen beregner rettferdig spilletid og lager en komplett bytteplan automatisk.</p>
-              <a href="/kampdag" style="font-size:0.85em;font-weight:600;color:var(--primary);text-decoration:none;">Les mer →</a>
             </div>
           </div>
           <div class="lp-feat">
@@ -318,7 +341,6 @@
             <div>
               <strong>Treningsgrupper</strong>
               <p>Del spillerne inn i jevne eller differensierte grupper basert på ferdighetsnivå.</p>
-              <a href="/treningsgrupper" style="font-size:0.85em;font-weight:600;color:var(--primary);text-decoration:none;">Les mer →</a>
             </div>
           </div>
           <div class="lp-feat">
@@ -333,7 +355,6 @@
             <div>
               <strong>Formasjoner og roller</strong>
               <p>Sett posisjoner (F/M/A) og se spillerne plassert på banen i riktig sone.</p>
-              <a href="/bytteplan" style="font-size:0.85em;font-weight:600;color:var(--primary);text-decoration:none;">Les mer →</a>
             </div>
           </div>
           <div class="lp-feat">
@@ -1442,15 +1463,7 @@
 
 <!-- Footer (legal links) -->
 <footer style="text-align: center; padding: 20px; color: #666; font-size: 0.9em; border-top: 1px solid #eee; margin-top: 40px;">
-  <p style="margin-bottom: 12px;">
-    <a href="/bytteplan" style="color: #0b5bd3; text-decoration: none; margin: 0 8px;">Bytteplan</a> |
-    <a href="/spilletid" style="color: #0b5bd3; text-decoration: none; margin: 0 8px;">Spilletid</a> |
-    <a href="/kampdag" style="color: #0b5bd3; text-decoration: none; margin: 0 8px;">Kampdag</a> |
-    <a href="/treningsgrupper" style="color: #0b5bd3; text-decoration: none; margin: 0 8px;">Treningsgrupper</a> |
-    <a href="/sesong" style="color: #0b5bd3; text-decoration: none; margin: 0 8px;">Sesong</a>
-  </p>
   <p>
-    <a href="/privacy.html" ...
     <a href="/privacy.html" style="color: #0b5bd3; text-decoration: none; margin: 0 10px;">Personvernerklæring</a> |
     <a href="/terms.html" style="color: #0b5bd3; text-decoration: none; margin: 0 10px;">Vilkår for bruk</a> |
     <a href="mailto:support@barnefotballtrener.no" style="color: #0b5bd3; text-decoration: none; margin: 0 10px;">Kontakt</a>
