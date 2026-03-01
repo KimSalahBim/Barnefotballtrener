@@ -77,12 +77,24 @@
     return null;
   }
 
+  // Returnerer eierens user_id for nåværende lag (for INSERT-operasjoner)
+  function getOwnerUid() {
+    var team = state.teams.find(function(t) { return t.id === state.currentTeamId; });
+    return (team && team._owner_uid) ? team._owner_uid : getUserId();
+  }
+
+  // Er nåværende lag et delt lag (bruker er editor, ikke eier)?
+  function isSharedTeam() {
+    var team = state.teams.find(function(t) { return t.id === state.currentTeamId; });
+    return !!(team && team._isShared);
+  }
+
   // Session flag: skip positions in Supabase calls if column doesn't exist yet
   let _positionsColumnMissing = false;
 
   async function supabaseLoadPlayers(teamIdOverride, userIdOverride) {
     const sb = getSupabaseClient();
-    const uid = userIdOverride || getUserId();
+    const uid = userIdOverride || getOwnerUid();
     const tid = teamIdOverride || state.currentTeamId;
     if (!sb || !uid || !tid) return null;
 
@@ -120,7 +132,7 @@
 
   async function supabaseSavePlayers(players, teamIdOverride, userIdOverride) {
     const sb = getSupabaseClient();
-    const uid = userIdOverride || getUserId();
+    const uid = userIdOverride || getOwnerUid();
     const tid = teamIdOverride || state.currentTeamId;
     if (!sb || !uid || !tid) return;
 
@@ -176,7 +188,7 @@
   // Slett enkeltspiller direkte fra Supabase (kalles ved brukersletting)
   async function supabaseDeletePlayer(playerId) {
     const sb = getSupabaseClient();
-    const uid = getUserId();
+    const uid = getOwnerUid();
     const tid = state.currentTeamId;
     if (!sb || !uid || !playerId || !tid) return;
 
@@ -190,7 +202,7 @@
   // Full erstatning: slett alle + upsert nye. Brukes ved import og clearAll.
   async function supabaseReplaceAllPlayers(players) {
     const sb = getSupabaseClient();
-    const uid = getUserId();
+    const uid = getOwnerUid();
     const tid = state.currentTeamId;
     if (!sb || !uid || !tid) return;
 
@@ -231,7 +243,7 @@
   function debouncedSupabaseSave() {
     clearTimeout(_supabaseSaveTimer);
     // Snapshot nåværende kontekst for å unngå at team-bytte sender til feil lag
-    var uidSnap = getUserId();
+    var uidSnap = getOwnerUid();
     var tidSnap = state.currentTeamId;
     var playersSnap = (state.players || []).map(function(p) { return { id: p.id, name: p.name, skill: p.skill, goalie: p.goalie, active: p.active, positions: (p.positions || ['F','M','A']).slice() }; });
     _supabaseSaveTimer = setTimeout(function() {
@@ -249,7 +261,7 @@
 
   async function supabaseLoadAllUserData() {
     var sb = getSupabaseClient();
-    var uid = getUserId();
+    var uid = getOwnerUid();
     var tid = state.currentTeamId;
     if (!sb || !uid || uid === 'anon' || !tid || tid === 'default') return null;
 
@@ -271,12 +283,15 @@
     }
   }
 
+  var _personalCloudKeys = { settings: true, workout_draft_v1: true };
+
   function debouncedCloudSync(key, jsonData) {
     clearTimeout(_cloudSyncTimers[key]);
     // Snapshot kontekst for å unngå feil-lag sync ved team-bytte
     var dataSnap = typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData);
     var tidSnap = state.currentTeamId;
-    var uidSnap = getUserId();
+    // Personlige nøkler bruker ekte bruker-uid, delte nøkler bruker eierens uid
+    var uidSnap = _personalCloudKeys[key] ? getUserId() : getOwnerUid();
     _cloudSyncTimers[key] = setTimeout(function() {
       if (!uidSnap || uidSnap === 'anon' || !tidSnap || tidSnap === 'default') return;
       try {
@@ -332,9 +347,10 @@
     if (!sb || !uid) return [];
 
     try {
+      // 1. Egne lag
       var result = await sb
         .from('teams')
-        .select('id, name, color, created_at')
+        .select('id, name, color, created_at, user_id')
         .eq('user_id', uid)
         .order('created_at', { ascending: true });
 
@@ -342,7 +358,41 @@
         console.warn('[core.js] loadTeams feilet:', result.error.message);
         return null;
       }
-      return result.data || [];
+
+      var ownTeams = (result.data || []).map(function(t) {
+        t._isOwned = true;
+        t._isShared = false;
+        t._owner_uid = t.user_id;
+        return t;
+      });
+
+      // 2. Delte lag (der bruker er editor med aktiv status)
+      var memberResult = await sb.from('team_members')
+        .select('team_id, role')
+        .eq('user_id', uid)
+        .eq('status', 'active')
+        .neq('role', 'owner');
+
+      var sharedTeams = [];
+      var sharedTeamIds = (memberResult.data || []).map(function(m) { return m.team_id; });
+
+      if (sharedTeamIds.length > 0) {
+        var sharedResult = await sb.from('teams')
+          .select('id, name, color, created_at, user_id')
+          .in('id', sharedTeamIds);
+
+        if (!sharedResult.error && sharedResult.data) {
+          sharedTeams = sharedResult.data.map(function(t) {
+            t._isOwned = false;
+            t._isShared = true;
+            t._owner_uid = t.user_id;
+            return t;
+          });
+        }
+      }
+
+      console.log('[core.js] loadTeams: ' + ownTeams.length + ' egne, ' + sharedTeams.length + ' delte');
+      return ownTeams.concat(sharedTeams);
     } catch (e) {
       console.warn('[core.js] loadTeams exception:', e.message);
       return null;
@@ -354,8 +404,9 @@
     var uid = getUserId();
     if (!sb || !uid) return null;
 
-    if (state.teams.length >= MAX_TEAMS) {
-      showNotification('Du kan ha maks ' + MAX_TEAMS + ' lag.', 'warning');
+    var ownedCount = state.teams.filter(function(t) { return t._isOwned !== false; }).length;
+    if (ownedCount >= MAX_TEAMS) {
+      showNotification('Du kan ha maks ' + MAX_TEAMS + ' egne lag.', 'warning');
       return null;
     }
 
@@ -373,6 +424,20 @@
         showNotification('Kunne ikke opprette lag.', 'error');
         return null;
       }
+
+      // Opprett team_members owner-rad
+      await sb.from('team_members').insert({
+        team_id: team.id,
+        user_id: uid,
+        role: 'owner',
+        status: 'active'
+      });
+
+      // Sett metadata for team-objektet
+      team._isOwned = true;
+      team._isShared = false;
+      team._owner_uid = uid;
+
       console.log('[core.js] Opprettet lag:', team.name);
       return team;
     } catch (e) {
@@ -413,6 +478,11 @@
       // Slett user_data for dette laget
       try {
         await sb.from('user_data').delete().eq('user_id', uid).eq('team_id', teamId);
+      } catch (_) {}
+
+      // Slett team_members for dette laget
+      try {
+        await sb.from('team_members').delete().eq('team_id', teamId);
       } catch (_) {}
 
       // Fjern localStorage-data for dette laget
@@ -628,36 +698,63 @@
     var team = state.teams.find(function(t) { return t.id === state.currentTeamId; });
     if (!team) return;
 
-    // Teller spillere per lag fra Supabase-cache i state
     var playerCount = state.players.length;
+    var sharedLabel = team._isShared ? ' · Delt' : '';
 
     var html = '<button class="team-switcher-btn" id="teamSwitcherBtn" type="button">' +
       '<span class="team-color-dot" style="background:' + escapeHtml(team.color) + '"></span>' +
-      '<span class="team-switcher-name">' + escapeHtml(team.name) + '</span>' +
+      '<span class="team-switcher-name">' + escapeHtml(team.name) + sharedLabel + '</span>' +
       '<span class="team-switcher-count">' + playerCount + ' spillere</span>' +
       '<span class="team-switcher-arrow"><i class="fas fa-chevron-down"></i></span>' +
       '</button>';
 
     html += '<div class="team-dropdown" id="teamDropdown">';
-    state.teams.forEach(function(t) {
+
+    // Mine lag
+    var ownTeams = state.teams.filter(function(t) { return !t._isShared; });
+    var sharedTeams = state.teams.filter(function(t) { return t._isShared; });
+
+    if (sharedTeams.length > 0) {
+      html += '<div class="team-dropdown-section">Mine lag</div>';
+    }
+
+    ownTeams.forEach(function(t) {
       var isActive = t.id === state.currentTeamId;
       html += '<div class="team-dropdown-item' + (isActive ? ' active' : '') + '" data-team-id="' + t.id + '">' +
         '<span class="team-color-dot" style="background:' + escapeHtml(t.color) + '"></span>' +
         '<span class="team-item-name">' + escapeHtml(t.name) + '</span>' +
         '<span class="team-item-actions">' +
+          '<button class="team-item-invite" data-team-id="' + t.id + '" title="Inviter trener"><i class="fas fa-user-plus"></i></button>' +
           '<button class="team-item-edit" data-team-id="' + t.id + '" title="Rediger"><i class="fas fa-pen"></i></button>' +
-          (state.teams.length > 1 ? '<button class="team-item-delete" data-team-id="' + t.id + '" title="Slett"><i class="fas fa-trash"></i></button>' : '') +
+          (ownTeams.length > 1 ? '<button class="team-item-delete" data-team-id="' + t.id + '" title="Slett"><i class="fas fa-trash"></i></button>' : '') +
         '</span>' +
         '<span class="team-item-check">' + (isActive ? '<i class="fas fa-check"></i>' : '') + '</span>' +
         '</div>';
     });
 
-    if (state.teams.length < MAX_TEAMS) {
+    var ownedCount = ownTeams.length;
+    if (ownedCount < MAX_TEAMS) {
       html += '<div class="team-dropdown-add" id="teamDropdownAdd">' +
         '<i class="fas fa-plus"></i>' +
         '<span>Opprett nytt lag</span>' +
-        '<span style="margin-left:auto;font-size:12px;color:var(--text-400)">' + state.teams.length + ' av ' + MAX_TEAMS + '</span>' +
+        '<span style="margin-left:auto;font-size:12px;color:var(--text-400)">' + ownedCount + ' av ' + MAX_TEAMS + '</span>' +
         '</div>';
+    }
+
+    // Delte lag
+    if (sharedTeams.length > 0) {
+      html += '<div class="team-dropdown-section">Delte lag</div>';
+      sharedTeams.forEach(function(t) {
+        var isActive = t.id === state.currentTeamId;
+        html += '<div class="team-dropdown-item' + (isActive ? ' active' : '') + '" data-team-id="' + t.id + '">' +
+          '<span class="team-color-dot" style="background:' + escapeHtml(t.color) + '"></span>' +
+          '<span class="team-item-name">' + escapeHtml(t.name) + '</span>' +
+          '<span class="team-item-actions">' +
+            '<button class="team-item-leave" data-team-id="' + t.id + '" title="Forlat lag"><i class="fas fa-sign-out-alt"></i></button>' +
+          '</span>' +
+          '<span class="team-item-check">' + (isActive ? '<i class="fas fa-check"></i>' : '') + '</span>' +
+          '</div>';
+      });
     }
 
     html += '</div>';
@@ -673,6 +770,18 @@
         btn.classList.toggle('open');
       });
     }
+
+    // Invite buttons
+    container.querySelectorAll('.team-item-invite').forEach(function(invBtn) {
+      invBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var tid = invBtn.getAttribute('data-team-id');
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.remove('show');
+        if (btn) btn.classList.remove('open');
+        showInviteModal(tid);
+      });
+    });
 
     // Edit buttons
     container.querySelectorAll('.team-item-edit').forEach(function(editBtn) {
@@ -698,10 +807,22 @@
       });
     });
 
+    // Leave buttons (delte lag)
+    container.querySelectorAll('.team-item-leave').forEach(function(leaveBtn) {
+      leaveBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var tid = leaveBtn.getAttribute('data-team-id');
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.remove('show');
+        if (btn) btn.classList.remove('open');
+        confirmLeaveTeam(tid);
+      });
+    });
+
     container.querySelectorAll('.team-dropdown-item').forEach(function(item) {
       item.addEventListener('click', function(e) {
-        // Ikke bytt lag hvis bruker klikket edit/delete
-        if (e.target.closest('.team-item-edit') || e.target.closest('.team-item-delete')) return;
+        // Ikke bytt lag hvis bruker klikket edit/delete/invite
+        if (e.target.closest('.team-item-edit') || e.target.closest('.team-item-delete') || e.target.closest('.team-item-invite')) return;
         var tid = item.getAttribute('data-team-id');
         if (tid && tid !== state.currentTeamId) {
           switchTeam(tid);
@@ -745,6 +866,7 @@
 
     var usedColors = state.teams.map(function(t) { return t.color; });
     var defaultColor = TEAM_COLORS.find(function(c) { return usedColors.indexOf(c) === -1; }) || TEAM_COLORS[0];
+    var ownedCount = state.teams.filter(function(t) { return t._isOwned !== false; }).length;
 
     var modal = document.createElement('div');
     modal.id = 'newTeamModal';
@@ -821,7 +943,14 @@
     var team = state.teams.find(function(t) { return t.id === teamId; });
     if (!team) return;
 
-    if (state.teams.length <= 1) {
+    // Delte lag: bruk "forlat" i stedet
+    if (team._isShared) {
+      confirmLeaveTeam(teamId);
+      return;
+    }
+
+    var ownTeams = state.teams.filter(function(t) { return !t._isShared; });
+    if (ownTeams.length <= 1) {
       showNotification('Du kan ikke slette ditt siste lag.', 'warning');
       return;
     }
@@ -850,6 +979,12 @@
   function showEditTeamModal(teamId) {
     var team = state.teams.find(function(t) { return t.id === teamId; });
     if (!team) return;
+
+    // Kun eier kan redigere lag
+    if (team._isShared) {
+      showNotification('Bare lageier kan redigere laget.', 'warning');
+      return;
+    }
 
     var existing = $('editTeamModal');
     if (existing) existing.remove();
@@ -936,6 +1071,138 @@
   window.deleteCurrentTeam = function() {
     confirmDeleteTeam(state.currentTeamId);
   };
+
+  // Forlat delt lag
+  function confirmLeaveTeam(teamId) {
+    var team = state.teams.find(function(t) { return t.id === teamId; });
+    if (!team || !team._isShared) return;
+
+    if (!confirm('Vil du forlate "' + team.name + '"?\n\nDu mister tilgang til laget, men data forblir intakt.')) {
+      return;
+    }
+
+    (async function() {
+      var sb = getSupabaseClient();
+      var uid = getUserId();
+      if (!sb || !uid) return;
+
+      try {
+        var res = await sb.from('team_members').delete()
+          .eq('team_id', teamId)
+          .eq('user_id', uid);
+
+        if (res.error) {
+          console.warn('[core.js] leaveTeam feilet:', res.error.message);
+          showNotification('Kunne ikke forlate laget.', 'error');
+          return;
+        }
+
+        state.teams = state.teams.filter(function(t) { return t.id !== teamId; });
+        if (teamId === state.currentTeamId && state.teams.length > 0) {
+          await switchTeam(state.teams[0].id);
+        } else {
+          renderTeamSwitcher();
+        }
+        showNotification('Du har forlatt "' + team.name + '".', 'success');
+      } catch (e) {
+        console.warn('[core.js] leaveTeam exception:', e.message);
+      }
+    })();
+  }
+
+  // Inviter trener-modal
+  function showInviteModal(teamId) {
+    var team = state.teams.find(function(t) { return t.id === teamId; });
+    if (!team || team._isShared) return;
+
+    var existing = $('inviteModal');
+    if (existing) existing.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'inviteModal';
+    modal.className = 'team-modal-overlay';
+    modal.innerHTML =
+      '<div class="team-modal-box">' +
+        '<h3>Inviter trener</h3>' +
+        '<p style="font-size:13px;color:var(--text-400);margin:0 0 14px">Treneren må ha en konto på barnefotballtrener.no. Skriv inn e-postadressen de brukte ved registrering.</p>' +
+        '<label for="inviteEmailInput">E-post</label>' +
+        '<input type="email" id="inviteEmailInput" placeholder="trener@eksempel.no" autocomplete="email">' +
+        '<div id="inviteError" style="color:var(--error);font-size:13px;margin-top:6px;display:none"></div>' +
+        '<div class="team-modal-actions">' +
+          '<button class="team-modal-cancel" type="button">Avbryt</button>' +
+          '<button class="team-modal-create" type="button" id="inviteSendBtn">Send invitasjon</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.team-modal-cancel').addEventListener('click', function() {
+      modal.remove();
+    });
+
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) modal.remove();
+    });
+
+    var sendBtn = $('inviteSendBtn');
+    sendBtn.addEventListener('click', async function() {
+      var emailInput = $('inviteEmailInput');
+      var errorDiv = $('inviteError');
+      var email = (emailInput.value || '').trim().toLowerCase();
+
+      errorDiv.style.display = 'none';
+
+      if (!email || !email.includes('@')) {
+        emailInput.style.borderColor = 'var(--error)';
+        emailInput.focus();
+        return;
+      }
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sender...';
+
+      try {
+        var sb = getSupabaseClient();
+        if (!sb) throw new Error('Ikke innlogget');
+
+        var session = await sb.auth.getSession();
+        var token = session.data.session ? session.data.session.access_token : null;
+        if (!token) throw new Error('Ingen sesjon');
+
+        var response = await fetch('/api/invite-coach', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token,
+          },
+          body: JSON.stringify({ team_id: teamId, email: email }),
+        });
+
+        var result = await response.json();
+
+        if (!response.ok) {
+          errorDiv.textContent = result.error || 'Noe gikk galt';
+          errorDiv.style.display = 'block';
+          sendBtn.disabled = false;
+          sendBtn.textContent = 'Send invitasjon';
+          return;
+        }
+
+        modal.remove();
+        showNotification('Invitasjon sendt til ' + email + '. Treneren ser invitasjonen neste gang de logger inn.', 'success');
+      } catch (e) {
+        errorDiv.textContent = e.message || 'Noe gikk galt';
+        errorDiv.style.display = 'block';
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send invitasjon';
+      }
+    });
+
+    setTimeout(function() {
+      var input = $('inviteEmailInput');
+      if (input) input.focus();
+    }, 100);
+  }
 
 
   async function migrateLocalToSupabase(teamIdOverride, userIdOverride) {
@@ -1192,8 +1459,8 @@
       if (state.currentTeamId !== tid) return;
 
       if (rows.length === 0) {
-        // Cloud er tom → bootstrap: push lokal data opp
-        bootstrapCloudFromLocal();
+        // Cloud er tom → bootstrap: push lokal data opp (bare for egne lag)
+        if (!isSharedTeam()) bootstrapCloudFromLocal();
         return;
       }
 
@@ -1824,6 +2091,8 @@
     // Expose for other modules if needed
     window.__BF_switchTab = switchTab;
     window.__BF_getTeamId = function() { return state.currentTeamId; };
+    window.__BF_getOwnerUid = function() { return getOwnerUid(); };
+    window.__BF_isSharedTeam = function() { return isSharedTeam(); };
     window.__BF_saveState = saveState;
     window.__BF_publishPlayers = publishPlayers;
   }
@@ -2486,6 +2755,100 @@
   };
 
   // ------------------------------
+  // ------------------------------
+  // Invitasjoner (trenerdeling)
+  // ------------------------------
+  async function checkPendingInvitations() {
+    var sb = getSupabaseClient();
+    var uid = getUserId();
+    if (!sb || !uid) return;
+
+    try {
+      // Hent ventende invitasjoner med lagnavn
+      var res = await sb.from('team_members')
+        .select('id, team_id, role, created_at')
+        .eq('user_id', uid)
+        .eq('status', 'pending');
+
+      if (res.error || !res.data || res.data.length === 0) return;
+
+      // Hent lagnavn for invitasjonene
+      var teamIds = res.data.map(function(m) { return m.team_id; });
+      var teamsRes = await sb.from('teams')
+        .select('id, name, color')
+        .in('id', teamIds);
+
+      var teamMap = {};
+      if (teamsRes.data) {
+        teamsRes.data.forEach(function(t) { teamMap[t.id] = t; });
+      }
+
+      // Vis banner for hver invitasjon
+      res.data.forEach(function(inv) {
+        var team = teamMap[inv.team_id];
+        if (team) showInvitationBanner(inv.id, team);
+      });
+    } catch (e) {
+      console.warn('[core.js] checkPendingInvitations feilet:', e.message);
+    }
+  }
+
+  function showInvitationBanner(membershipId, team) {
+    // Fjern eksisterende banner for dette medlemskapet
+    var existingBanner = document.getElementById('invBanner_' + membershipId);
+    if (existingBanner) existingBanner.remove();
+
+    var banner = document.createElement('div');
+    banner.id = 'invBanner_' + membershipId;
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:300;background:var(--primary);color:white;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    banner.innerHTML =
+      '<span><strong>Invitasjon:</strong> Du er invitert til <strong>' + escapeHtml(team.name) + '</strong></span>' +
+      '<span style="display:flex;gap:8px;">' +
+        '<button id="invAccept_' + membershipId + '" style="background:white;color:var(--primary);border:none;padding:6px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;">Aksepter</button>' +
+        '<button id="invDecline_' + membershipId + '" style="background:transparent;color:white;border:1px solid rgba(255,255,255,0.5);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;">Avslå</button>' +
+      '</span>';
+
+    document.body.appendChild(banner);
+
+    document.getElementById('invAccept_' + membershipId).addEventListener('click', async function() {
+      var sb = getSupabaseClient();
+      if (!sb) return;
+
+      var res = await sb.from('team_members')
+        .update({ status: 'active' })
+        .eq('id', membershipId);
+
+      if (res.error) {
+        showNotification('Kunne ikke akseptere invitasjonen.', 'error');
+        return;
+      }
+
+      banner.remove();
+      showNotification('Du er nå med på ' + team.name + '!', 'success');
+
+      // Oppdater lag-listen
+      var teams = await loadTeams();
+      if (teams) {
+        state.teams = teams;
+        renderTeamSwitcher();
+      }
+    });
+
+    document.getElementById('invDecline_' + membershipId).addEventListener('click', async function() {
+      var sb = getSupabaseClient();
+      if (!sb) return;
+
+      var res = await sb.from('team_members')
+        .delete()
+        .eq('id', membershipId);
+
+      banner.remove();
+      if (!res.error) {
+        showNotification('Invitasjon avslått.', 'info');
+      }
+    });
+  }
+
   // initApp (called by auth.js / auth-ui.js)
   // ------------------------------
   window.initApp = function initApp() {
@@ -2552,6 +2915,9 @@
 
       // Asynkron: last øvrig data fra cloud (settings, liga, etc)
       loadCloudUserData();
+
+      // Asynkron: sjekk ventende invitasjoner
+      checkPendingInvitations();
 
       console.log('[core.js] initApp FERDIG');
     })();
