@@ -316,7 +316,7 @@
   // ------------------------------
   // Team management (Supabase)
   // ------------------------------
-  const MAX_TEAMS = 3;
+  const MAX_TEAMS = 6;
   const TEAM_COLORS = ['#1976d2', '#d32f2f', '#2e7d32', '#f57c00', '#7b1fa2', '#00838f'];
 
   function generateTeamId() {
