@@ -1394,15 +1394,19 @@
   async function loadPlayersFromSupabase() {
     try {
       // Snapshot kontekst for å detektere team-bytte under async operasjoner
-      var uidSnap = getUserId();
+      var uidSnap = getOwnerUid();
+      var realUid = getUserId();
       var tidSnap = state.currentTeamId;
       var playersKeySnap = k('players');
+      var shared = isSharedTeam();
 
-      // Prøv migrering først (engangs, hvis localStorage har data og Supabase er tom)
-      await migrateLocalToSupabase(tidSnap, uidSnap);
+      // Delte lag: hopp over lokal migrering (data tilhører eier)
+      if (!shared) {
+        await migrateLocalToSupabase(tidSnap, uidSnap);
+      }
 
       // Hvis team/user endret mens vi ventet, avbryt
-      if (getUserId() !== uidSnap || state.currentTeamId !== tidSnap) return;
+      if (getUserId() !== realUid || state.currentTeamId !== tidSnap) return;
 
       // Hvis bruker allerede har redigert, ikke overskriv med server-data
       if (state._localEdited) {
@@ -1417,12 +1421,12 @@
       }
 
       // Hvis team/user endret mens vi ventet, avbryt
-      if (getUserId() !== uidSnap || state.currentTeamId !== tidSnap) return;
+      if (getUserId() !== realUid || state.currentTeamId !== tidSnap) return;
 
       // Sjekk igjen etter async-operasjonen (bruker kan ha redigert mens vi ventet)
       if (state._localEdited) return;
 
-      if (sbPlayers.length === 0 && state.players.length > 0) {
+      if (sbPlayers.length === 0 && state.players.length > 0 && !shared) {
         console.log('[core.js] Supabase tom, syncer', state.players.length, 'spillere opp');
         await supabaseSavePlayers(state.players, tidSnap, uidSnap);
         return;
@@ -1430,7 +1434,7 @@
 
       if (sbPlayers.length > 0) {
         // Siste sjekk før vi overskriver state
-        if (getUserId() !== uidSnap || state.currentTeamId !== tidSnap) return;
+        if (getUserId() !== realUid || state.currentTeamId !== tidSnap) return;
 
         state.players = normalizePlayers(sbPlayers);
         safeSet(playersKeySnap, JSON.stringify(state.players));
