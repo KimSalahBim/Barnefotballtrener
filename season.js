@@ -124,15 +124,16 @@
 
   // NFF aldersklasse → format, varighet, barnefotball-status
   var NFF_AGE_RULES = {
-    6:  { format: 3,  minutes: 20, barnefotball: true,  label: '3er, 2\u00d710 min' },
-    7:  { format: 3,  minutes: 20, barnefotball: true,  label: '3er, 2\u00d710 min' },
-    8:  { format: 5,  minutes: 30, barnefotball: true,  label: '5er, 2\u00d715 min' },
-    9:  { format: 5,  minutes: 40, barnefotball: true,  label: '5er, 2\u00d720 min' },
-    10: { format: 5,  minutes: 40, barnefotball: true,  label: '5er, 2\u00d720 min' },
-    11: { format: 7,  minutes: 50, barnefotball: true,  label: '7er, 2\u00d725 min' },
-    12: { format: 9,  minutes: 60, barnefotball: true,  label: '9er, 2\u00d730 min' },
-    13: { format: 11, minutes: 60, barnefotball: false, label: '11er, 2\u00d730 min' }
-  };
+  6:  { format: 3,  minutes: 40, barnefotball: true,  label: '3er, 2×20 min' },
+  7:  { format: 3,  minutes: 40, barnefotball: true,  label: '3er, 2×20 min' },
+  8:  { format: 5,  minutes: 50, barnefotball: true,  label: '5er, 2×25 min' },
+  9:  { format: 5,  minutes: 50, barnefotball: true,  label: '5er, 2×25 min' },
+  10: { format: 7,  minutes: 60, barnefotball: true,  label: '7er, 2×30 min' },
+  11: { format: 7,  minutes: 60, barnefotball: true,  label: '7er, 2×30 min' },
+  12: { format: 9,  minutes: 70, barnefotball: true,  label: '9er, 2×35 min' },
+  13: { format: 9,  minutes: 70, barnefotball: true,  label: '9er, 2×35 min' },
+  14: { format: 11, minutes: 70, barnefotball: false, label: '11er, 2×35 min' }
+};
 
   // Parse age from age_class string: 'G10' → 10, 'J7' → 7
   function parseAgeFromClass(ageClass) {
@@ -145,7 +146,7 @@
   function getNffRule(ageClass) {
     var age = parseAgeFromClass(ageClass);
     if (!age) return null;
-    return NFF_AGE_RULES[age] || (age >= 14 ? { format: 11, minutes: 70 + (age >= 16 ? 10 : 0), barnefotball: false, label: '11er' } : null);
+    return NFF_AGE_RULES[age] || (age >= 14 ? { format: 11, minutes: age >= 15 ? 80 : 70, barnefotball: false, label: '11er' } : null);
   }
 
   function getSubTeamNames(season) {
