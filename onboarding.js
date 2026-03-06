@@ -1,7 +1,7 @@
 // © 2026 Barnefotballtrener.no. All rights reserved.
-// onboarding.js — First-time user onboarding wizard (v6)
+// onboarding.js — First-time user onboarding wizard (v5)
 // ================================================
-// 3-step wizard: (1) Team + age class (2) Tips: how to add players (3) Demo substitution plan
+// 3-step wizard: (1) Team + age class (2) Bulk add players (3) Demo substitution plan
 // Triggered from core.js after loadPlayersFromSupabase via window.__BF_checkOnboarding().
 // Saves via window.__BF_onboarding bridge API exposed by core.js.
 
@@ -12,14 +12,14 @@
   //  NFF age rules (self-contained subset)
   // ══════════════════════════════════════════════════════════════
   var NFF_RULES = {
-    6:  { format: 3,  minutes: 20, label: '3er, 2\u00d710 min' },
-    7:  { format: 3,  minutes: 20, label: '3er, 2\u00d710 min' },
-    8:  { format: 5,  minutes: 30, label: '5er, 2\u00d715 min' },
-    9:  { format: 5,  minutes: 40, label: '5er, 2\u00d720 min' },
-    10: { format: 5,  minutes: 40, label: '5er, 2\u00d720 min' },
-    11: { format: 7,  minutes: 50, label: '7er, 2\u00d725 min' },
-    12: { format: 9,  minutes: 60, label: '9er, 2\u00d730 min' },
-    13: { format: 11, minutes: 60, label: '11er, 2\u00d730 min' }
+    6:  { format: 3,  minutes: 40, label: '3er, 2\u00d720 min' },
+    7:  { format: 3,  minutes: 40, label: '3er, 2\u00d720 min' },
+    8:  { format: 5,  minutes: 50, label: '5er, 2\u00d725 min' },
+    9:  { format: 5,  minutes: 50, label: '5er, 2\u00d725 min' },
+    10: { format: 7,  minutes: 60, label: '7er, 2\u00d730 min' },
+    11: { format: 7,  minutes: 60, label: '7er, 2\u00d730 min' },
+    12: { format: 9,  minutes: 70, label: '9er, 2\u00d735 min' },
+    13: { format: 9,  minutes: 70, label: '9er, 2\u00d735 min' }
   };
 
   var AGE_OPTIONS = [
@@ -27,7 +27,7 @@
     'J6','J7','J8','J9','J10','J11','J12','J13'
   ];
 
-  // Example names for the demo plan
+  // Example names for the "skip player input" path
   var EXAMPLE_NAMES = [
     'Emma', 'Ola', 'Sofia', 'Liam', 'Nora',
     'Jakob', 'Ingrid', 'Lucas', 'Hedda', 'Oscar',
@@ -89,6 +89,32 @@
         window._bftCloud.save('onboarding_events', JSON.stringify(_events));
       }
     } catch (_) {}
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Name parser (Spond, Excel, numbered lists, bullets)
+  // ══════════════════════════════════════════════════════════════
+  function parseNames(text) {
+    if (!text || !text.trim()) return [];
+    var raw = String(text).split(/[\n\r,;\t]+/);
+    var names = [];
+    var seen = {};
+    for (var i = 0; i < raw.length; i++) {
+      var n = raw[i].trim();
+      n = n.replace(/^\d+[.\)\-\s]+/, '').trim();
+      n = n.replace(/^[\-\*\u2022\u2013\u2014]\s*/, '').trim();
+      if (!n || n.length < 2 || n.length > 50) continue;
+      // Skip junk from multi-column paste (Spond, Excel)
+      if (n.indexOf('@') !== -1) continue;          // email
+      if (/^\+?\d[\d\s\-]{6,}$/.test(n)) continue;  // phone number
+      if (/^https?:\/\//.test(n)) continue;           // URL
+      if (/^\d{4}[\-\/]\d{2}/.test(n)) continue;     // date (2024-01-15)
+      var key = n.toLowerCase();
+      if (seen[key]) continue;
+      seen[key] = true;
+      names.push(n);
+    }
+    return names;
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -154,7 +180,7 @@
         minutesPlayed[onField[k]] += periodLen;
       }
 
-      var keeperIdx = -1;
+      var keeperIdx = -1; // -1 = no keeper (3er format has none)
       if (format > 3) {
         for (var kc = 0; kc < N; kc++) {
           var candidate = keeperOrder[(keeperCursor + kc) % N];
@@ -203,6 +229,7 @@
   //  Confetti burst (canvas)
   // ══════════════════════════════════════════════════════════════
   function fireConfetti(originX, originY) {
+    // Respect prefers-reduced-motion
     try {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     } catch (_) {}
@@ -269,7 +296,10 @@
   var step = 1;
   var data = {
     teamName: '',
-    ageClass: ''
+    ageClass: '',
+    playerNames: [],
+    rawPlayerText: '',
+    usedExamples: false   // true when user chose "vis demo med eksempler"
   };
   var overlayEl = null;
   var busy = false;
@@ -311,8 +341,10 @@
     if (btn) {
       btn.addEventListener('click', function () {
         window.__BF_resetOnboarding();
+        // Close subscription modal
         var modal = document.getElementById('subscriptionModal');
         if (modal) modal.classList.add('hidden');
+        // Open wizard immediately
         setTimeout(openWizard, 200);
       });
     }
@@ -337,7 +369,10 @@
     data = {
       teamName: '',
       ageClass: '',
-      isRerun: existingPlayers
+      playerNames: [],
+      rawPlayerText: '',
+      usedExamples: false,
+      isRerun: existingPlayers  // true = team already has players, protect existing data
     };
     busy = false;
     _events = [];
@@ -352,25 +387,24 @@
     document.body.classList.add('ob-open');
     document.addEventListener('keydown', onEscKey);
 
-    // Backdrop click = soft close
+    // Backdrop click = soft close (dismiss, don't mark done)
     overlayEl.addEventListener('click', function (e) {
       if (e.target === overlayEl) softClose();
     });
 
     // iOS: prevent body scroll-through behind modal
+    // overflow:hidden on body is unreliable on iOS Safari
     overlayEl.addEventListener('touchmove', function (e) {
-      var scrollArea = overlayEl.querySelector('.ob-card-scroll');
-      if (scrollArea && scrollArea.contains(e.target)) return;
-      // Also allow touch on footer buttons
-      var footer = overlayEl.querySelector('.ob-footer');
-      if (footer && footer.contains(e.target)) return;
+      // Allow scroll inside the card, block on backdrop
+      var card = overlayEl.querySelector('.ob-card');
+      if (card && card.contains(e.target)) return;
       e.preventDefault();
     }, { passive: false });
 
     trackEvent('opened');
     renderStep();
 
-    // Focus trap
+    // Focus trap: keep Tab cycling inside the dialog
     overlayEl.addEventListener('keydown', function (e) {
       if (e.key !== 'Tab') return;
       var card = overlayEl.querySelector('.ob-card');
@@ -399,32 +433,41 @@
     if (e.key === 'Escape') softClose();
   }
 
+  // Soft close: dismiss without marking done (user can come back)
   function softClose() {
-    if (busy) return;
+    if (busy) return; // Don't dismiss while save is in progress
     trackEvent('skipped', { step: step });
     flushEvents();
 
+    // Increment skip counter
     var skips = parseInt(safeLS('get', 'bf_onboarding_skips') || '0', 10);
     skips++;
     safeLS('set', 'bf_onboarding_skips', String(skips));
+
+    // After 3 skips, mark done permanently
     if (skips >= 3) markDone();
 
     teardown();
   }
 
+  // Hard close: wizard completed successfully
   function completeClose(callback) {
     trackEvent('completed', {
+      players: data.playerNames.length,
+      examples: data.usedExamples,
       ageClass: data.ageClass
     });
     flushEvents();
 
     markDone();
 
+    // Cloud sync completion
     try {
       if (window._bftCloud && window._bftCloud.save) {
         window._bftCloud.save('onboarding', JSON.stringify({
           completed: true,
           ageClass: data.ageClass || null,
+          usedExamples: data.usedExamples,
           ts: new Date().toISOString()
         }));
       }
@@ -433,6 +476,7 @@
     teardown(callback);
   }
 
+  // Shared teardown: animate out and clean up DOM
   function teardown(callback) {
     if (!overlayEl) return;
     document.removeEventListener('keydown', onEscKey);
@@ -470,8 +514,8 @@
     else if (step === 2) renderStep2();
     else if (step === 3) renderStep3();
 
-    var scrollArea = overlayEl.querySelector('.ob-card-scroll');
-    if (scrollArea) scrollArea.scrollTop = 0;
+    var card = overlayEl.querySelector('.ob-card');
+    if (card) card.scrollTop = 0;
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -485,6 +529,7 @@
       return '<option value="' + c + '"' + (data.ageClass === c ? ' selected' : '') + '>' + c + '</option>';
     }).join('');
 
+    // Re-run: pre-fill team name from current team, show as context
     var currentTeamName = '';
     if (data.isRerun) {
       try {
@@ -499,7 +544,7 @@
       : 'Fortell oss litt om laget ditt, s\u00e5 setter vi opp alt for deg.';
 
     var teamNameField = data.isRerun
-      ? ''
+      ? '' // Skip team name on re-run
       : '<div class="ob-field">' +
           '<label class="ob-label" for="obTeamName">Hva heter laget?</label>' +
           '<input type="text" id="obTeamName" class="ob-input" placeholder="F.eks. Steinkjer G10" maxlength="40" value="' + esc(data.teamName) + '" autocomplete="off">' +
@@ -507,26 +552,24 @@
 
     overlayEl.innerHTML =
       '<div class="ob-card">' +
-        '<div class="ob-card-scroll">' +
-          progressHTML(1) +
-          '<div class="ob-header">' +
-            '<div class="ob-emoji">\u26BD</div>' +
-            '<h2 class="ob-title" id="obTitle">' + titleText + '</h2>' +
-            '<p class="ob-subtitle">' + subtitleText + '</p>' +
-          '</div>' +
-          '<div class="ob-body"><div class="ob-step-inner">' +
-            teamNameField +
-            '<div class="ob-field">' +
-              '<label class="ob-label" for="obAgeClass">Aldersklasse</label>' +
-              '<select id="obAgeClass" class="ob-select">' +
-                '<option value="">Velg aldersklasse</option>' +
-                '<optgroup label="Gutter">' + gutterOpts + '</optgroup>' +
-                '<optgroup label="Jenter">' + jenteOpts + '</optgroup>' +
-              '</select>' +
-              '<div id="obFormatHint" class="ob-format-hint"></div>' +
-            '</div>' +
-          '</div></div>' +
+        progressHTML(1) +
+        '<div class="ob-header">' +
+          '<div class="ob-emoji">\u26BD</div>' +
+          '<h2 class="ob-title" id="obTitle">' + titleText + '</h2>' +
+          '<p class="ob-subtitle">' + subtitleText + '</p>' +
         '</div>' +
+        '<div class="ob-body"><div class="ob-step-inner">' +
+          teamNameField +
+          '<div class="ob-field">' +
+            '<label class="ob-label" for="obAgeClass">Aldersklasse</label>' +
+            '<select id="obAgeClass" class="ob-select">' +
+              '<option value="">Velg aldersklasse</option>' +
+              '<optgroup label="Gutter">' + gutterOpts + '</optgroup>' +
+              '<optgroup label="Jenter">' + jenteOpts + '</optgroup>' +
+            '</select>' +
+            '<div id="obFormatHint" class="ob-format-hint"></div>' +
+          '</div>' +
+        '</div></div>' +
         '<div class="ob-footer">' +
           '<button type="button" class="ob-btn ob-btn-skip" id="obSkip">Ikke n\u00e5</button>' +
           '<button type="button" class="ob-btn ob-btn-primary" id="obNext">Neste \u2192</button>' +
@@ -560,6 +603,7 @@
       updateHint();
     }
 
+    // Auto-detect age class from team name
     if (nameInput) {
       nameInput.addEventListener('input', function () {
         nameInput.classList.remove('ob-error');
@@ -577,8 +621,10 @@
       });
     }
 
+    // "Ikke nå" = soft close (wizard will return next login)
     $('obSkip').addEventListener('click', function () { softClose(); });
 
+    // Next: validate fields
     $('obNext').addEventListener('click', function () {
       var name = (nameInput ? nameInput.value : '').trim();
       var age = select ? select.value : '';
@@ -599,94 +645,140 @@
       data.teamName = name;
       data.ageClass = age;
       trackEvent('step1', { ageClass: age, isRerun: !!data.isRerun });
-      step = data.isRerun ? 3 : 2;
+      step = data.isRerun ? 3 : 2; // Skip player entry on re-run
       renderStep();
     });
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  STEP 2: Tips — how to add players (guidance, not data entry)
+  //  STEP 2: Bulk add players (with example path)
   // ══════════════════════════════════════════════════════════════
   function renderStep2() {
+    var textareaVal = data.rawPlayerText
+      || (data.playerNames.length > 0 && !data.usedExamples ? data.playerNames.join('\n') : '');
+
     overlayEl.innerHTML =
       '<div class="ob-card">' +
-        '<div class="ob-card-scroll">' +
-          progressHTML(2) +
-          '<div class="ob-header">' +
-            '<div class="ob-emoji">\uD83D\uDCCB</div>' +
-            '<h2 class="ob-title" id="obTitle">Slik legger du til spillere</h2>' +
-            '<p class="ob-subtitle">N\u00e5r wizarden er ferdig, g\u00e5r du til <strong>Spillere</strong>-fanen for \u00e5 legge inn troppen.</p>' +
-          '</div>' +
-          '<div class="ob-body"><div class="ob-step-inner">' +
-
-            '<div class="ob-tip-card">' +
-              '<div class="ob-tip-icon">\u2B50</div>' +
-              '<div class="ob-tip-content">' +
-                '<div class="ob-tip-title">Sett ferdighetsniv\u00e5 p\u00e5 hver spiller</div>' +
-                '<div class="ob-tip-text">Gi hver spiller et niv\u00e5 fra 1\u20136. Dette brukes til \u00e5 lage jevne treningsgrupper og rettferdige lag n\u00e5r dere deler opp.</div>' +
-              '</div>' +
-            '</div>' +
-
-            '<div class="ob-tip-card">' +
-              '<div class="ob-tip-icon">\uD83E\uDDE4</div>' +
-              '<div class="ob-tip-content">' +
-                '<div class="ob-tip-title">Marker hvem som kan st\u00e5 i m\u00e5l</div>' +
-                '<div class="ob-tip-text">Bytteplanen roterer keeper automatisk mellom de som er markert som m\u00e5lvakt.</div>' +
-              '</div>' +
-            '</div>' +
-
-            '<div class="ob-tip-card">' +
-              '<div class="ob-tip-icon">\uD83D\uDD12</div>' +
-              '<div class="ob-tip-content">' +
-                '<div class="ob-tip-title">Bruk kun fornavn</div>' +
-                '<div class="ob-tip-text">For barnas personvern anbefaler vi kun fornavn. Etternavn er ikke n\u00f8dvendig.</div>' +
-              '</div>' +
-            '</div>' +
-
-            '<div class="ob-tip-card">' +
-              '<div class="ob-tip-icon">\uD83D\uDCE5</div>' +
-              '<div class="ob-tip-content">' +
-                '<div class="ob-tip-title">Importer fra fil</div>' +
-                '<div class="ob-tip-text">Har du spillerliste i en annen app? Du kan importere fra JSON-fil, eller legge dem til \u00e9n og \u00e9n.</div>' +
-              '</div>' +
-            '</div>' +
-
-          '</div></div>' +
+        progressHTML(2) +
+        '<div class="ob-header">' +
+          '<div class="ob-emoji">\uD83D\uDCCB</div>' +
+          '<h2 class="ob-title" id="obTitle">Legg til spillere</h2>' +
+          '<p class="ob-subtitle">Skriv ett fornavn per linje. Vi anbefaler kun fornavn for barnas personvern.</p>' +
         '</div>' +
+        '<div class="ob-body"><div class="ob-step-inner">' +
+          '<div class="ob-field">' +
+            '<label class="ob-label">' + esc(data.teamName) + ' (' + esc(data.ageClass) + ')</label>' +
+            '<textarea id="obPlayers" class="ob-textarea" placeholder="Emma\nOla\nSofia\nLiam\nNora\nJakob\nIngrid\nLucas\nHedda\nOscar">' + esc(textareaVal) + '</textarea>' +
+            '<div id="obPlayerCount" class="ob-player-count"></div>' +
+            '<div class="ob-hint">Tips: Du kan lime inn fra Spond, Excel eller notater</div>' +
+            '<div class="ob-hint ob-hint-desktop">Hurtigtast: ' +
+              (navigator.platform && /Mac/.test(navigator.platform) ? '\u2318' : 'Ctrl') +
+              '+Enter for \u00e5 g\u00e5 videre</div>' +
+          '</div>' +
+          '<div class="ob-example-link">' +
+            '<button type="button" class="ob-btn-link" id="obUseExamples">Har ikke lista klar? Vis demo med eksempelspillere \u2192</button>' +
+          '</div>' +
+        '</div></div>' +
         '<div class="ob-footer">' +
           '<button type="button" class="ob-btn ob-btn-back" id="obBack">\u2190 Tilbake</button>' +
-          '<button type="button" class="ob-btn ob-btn-primary" id="obNext">Se demo \u2192</button>' +
+          '<button type="button" class="ob-btn ob-btn-primary" id="obNext">Se bytteplan \u2192</button>' +
         '</div>' +
       '</div>';
 
+    var textarea = $('obPlayers');
+    var countEl = $('obPlayerCount');
+    var nextBtn = $('obNext');
+
+    function updateCount() {
+      if (!textarea || !countEl) return;
+      var names = parseNames(textarea.value);
+      var count = names.length;
+      countEl.classList.remove('ob-count-error');
+      textarea.classList.remove('ob-error');
+      if (count === 0) {
+        countEl.innerHTML = '';
+      } else {
+        countEl.innerHTML = '<strong>' + count + '</strong> spiller' + (count === 1 ? '' : 'e') + ' funnet';
+      }
+      if (nextBtn) {
+        nextBtn.textContent = count > 0 ? 'Se bytteplan (' + count + ') \u2192' : 'Se bytteplan \u2192';
+      }
+    }
+
+    if (textarea) {
+      textarea.addEventListener('input', updateCount);
+      updateCount();
+      setTimeout(function () {
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
+      }, 180);
+      textarea.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          nextBtn.click();
+        }
+      });
+    }
+
+    // "Vis demo med eksempler" button
+    $('obUseExamples').addEventListener('click', function () {
+      data.usedExamples = true;
+      data.rawPlayerText = '';
+      // Pick correct number of example names for the format
+      var rule = getRule(data.ageClass);
+      var count = rule ? Math.min(rule.format + 3, EXAMPLE_NAMES.length) : EXAMPLE_NAMES.length;
+      data.playerNames = EXAMPLE_NAMES.slice(0, count);
+      trackEvent('step2_examples', { count: count });
+      step = 3;
+      renderStep();
+    });
+
     $('obBack').addEventListener('click', function () {
+      if (textarea) data.rawPlayerText = textarea.value;
       step = 1;
       renderStep();
     });
 
-    $('obNext').addEventListener('click', function () {
-      trackEvent('step2_tips');
+    nextBtn.addEventListener('click', function () {
+      var raw = textarea ? textarea.value : '';
+      var names = parseNames(raw);
+      if (names.length < 3) {
+        if (textarea) textarea.classList.add('ob-error');
+        if (countEl) {
+          countEl.innerHTML = 'Legg til minst 3 spillere for \u00e5 se bytteplan';
+          countEl.classList.add('ob-count-error');
+        }
+        if (textarea) textarea.focus();
+        return;
+      }
+      if (names.length > 30) {
+        if (countEl) {
+          countEl.innerHTML = 'Maks 30 spillere om gangen';
+          countEl.classList.add('ob-count-error');
+        }
+        return;
+      }
+      data.usedExamples = false;
+      data.rawPlayerText = raw;
+      data.playerNames = names;
+      trackEvent('step2', { count: names.length });
       step = 3;
       renderStep();
     });
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  STEP 3: Demo substitution plan (always example players)
+  //  STEP 3: Demo substitution plan (the WOW moment)
   // ══════════════════════════════════════════════════════════════
   function renderStep3() {
-    var demoNames;
-    if (data.isRerun) {
+    // Re-run: use existing player names for demo
+    var demoNames = data.playerNames;
+    if (data.isRerun && demoNames.length === 0) {
       var existing = window.players || [];
       demoNames = existing.map(function (p) { return p.name; });
       if (demoNames.length === 0) {
-        var ruleR = getRule(data.ageClass);
-        demoNames = EXAMPLE_NAMES.slice(0, ruleR ? ruleR.format + 3 : 10);
+        demoNames = EXAMPLE_NAMES.slice(0, getRule(data.ageClass) ? getRule(data.ageClass).format + 3 : 10);
       }
-    } else {
-      var ruleN = getRule(data.ageClass);
-      var count = ruleN ? Math.min(ruleN.format + 3, EXAMPLE_NAMES.length) : EXAMPLE_NAMES.length;
-      demoNames = EXAMPLE_NAMES.slice(0, count);
     }
 
     var plan = generateDemoPlan(demoNames, data.ageClass, data.teamName || 'lag');
@@ -775,43 +867,47 @@
       fairnessText = '\u2705 Jevn spilletid: ' + plan.minMinutes + '\u2013' + plan.maxMinutes + ' min per spiller';
     }
 
-    // Example notice (always shown for first-run)
+    // Example players notice
     var exampleNotice = '';
-    if (!data.isRerun) {
+    if (data.usedExamples) {
       exampleNotice =
         '<div class="ob-example-notice">' +
-          '\uD83D\uDCA1 Dette er eksempelspillere. Legg til dine egne i <strong>Spillere</strong>-fanen etterp\u00e5.' +
+          '\uD83D\uDCA1 Dette er eksempelspillere. Legg til dine egne spillere i appen etterpå.' +
         '</div>';
     }
 
-    var subtitleText = 'Automatisk bytteplan for ' + esc(data.teamName || 'laget') + ' (' + plan.label + ')';
+    // Subtitle
+    var subtitleText = 'Automatisk bytteplan for ' + esc(data.teamName) + ' (' + plan.label + ')';
+
+    // Button text changes if using examples
+    var finishLabel = data.usedExamples
+      ? '\uD83D\uDE80 Sett opp laget'
+      : '\uD83D\uDE80 Start appen';
 
     overlayEl.innerHTML =
       '<div class="ob-card">' +
-        '<div class="ob-card-scroll">' +
-          progressHTML(3) +
-          '<div class="ob-header">' +
-            '<div class="ob-emoji">\u2728</div>' +
-            '<h2 class="ob-title" id="obTitle">Slik fungerer det!</h2>' +
-            '<p class="ob-subtitle">' + subtitleText + '</p>' +
-          '</div>' +
-          '<div class="ob-body ob-body-step3"><div class="ob-step-inner">' +
-            exampleNotice +
-            '<div class="ob-demo-wrap">' +
-              '<div class="ob-demo-header">\u26BD Bytteplan \u00B7 ' + plan.format + 'er \u00B7 ' + plan.totalMinutes + ' min</div>' +
-              periodsHtml +
-              '<div class="ob-demo-footer">' + fairnessText + '</div>' +
-            '</div>' +
-            legendHtml +
-            '<div class="ob-bars-section">' +
-              '<div class="ob-label" style="margin:16px 0 8px;">Spilletid per spiller</div>' +
-              barsHtml +
-            '</div>' +
-          '</div></div>' +
+        progressHTML(3) +
+        '<div class="ob-header">' +
+          '<div class="ob-emoji">\u2728</div>' +
+          '<h2 class="ob-title" id="obTitle">Slik fungerer det!</h2>' +
+          '<p class="ob-subtitle">' + subtitleText + '</p>' +
         '</div>' +
-        '<div class="ob-footer">' +
+        '<div class="ob-body ob-body-step3"><div class="ob-step-inner">' +
+          exampleNotice +
+          '<div class="ob-demo-wrap">' +
+            '<div class="ob-demo-header">\u26BD Bytteplan \u00B7 ' + plan.format + 'er \u00B7 ' + plan.totalMinutes + ' min</div>' +
+            periodsHtml +
+            '<div class="ob-demo-footer">' + fairnessText + '</div>' +
+          '</div>' +
+          legendHtml +
+          '<div class="ob-bars-section">' +
+            '<div class="ob-label" style="margin:16px 0 8px;">Spilletid per spiller</div>' +
+            barsHtml +
+          '</div>' +
+        '</div></div>' +
+        '<div class="ob-footer ob-footer-sticky">' +
           '<button type="button" class="ob-btn ob-btn-back" id="obBack">\u2190 Tilbake</button>' +
-          '<button type="button" class="ob-btn ob-btn-primary" id="obFinish">\uD83D\uDE80 Start appen</button>' +
+          '<button type="button" class="ob-btn ob-btn-primary" id="obFinish">' + finishLabel + '</button>' +
         '</div>' +
       '</div>';
 
@@ -830,6 +926,7 @@
       renderStep();
     });
 
+    // Finish
     $('obFinish').addEventListener('click', async function () {
       if (busy) return;
       busy = true;
@@ -847,16 +944,27 @@
         } catch (_) {}
 
         var msg;
+        var shouldSwitchToKampdag = false;
+
         if (data.isRerun) {
+          // Re-run: only age class was updated
           msg = 'Aldersklasse oppdatert til ' + data.ageClass + '! Kampdag-innstillinger er justert.';
+          shouldSwitchToKampdag = true;
+        } else if (data.usedExamples) {
+          msg = data.teamName + ' er opprettet! Legg til spillerne dine i spillerlisten.';
         } else {
-          msg = data.teamName + ' er opprettet! G\u00e5 til Spillere for \u00e5 legge til troppen din.';
+          msg = data.teamName + ' er klart! G\u00e5 til Kampdag for \u00e5 lage din f\u00f8rste bytteplan \u26BD';
+          shouldSwitchToKampdag = data.playerNames.length >= 3;
         }
 
         completeClose(function () {
-          if (data.isRerun && typeof window.__BF_switchTab === 'function') {
+          // Switch to Kampdag tab if user added real players (they've seen the demo, now do it for real)
+          if (shouldSwitchToKampdag && typeof window.__BF_switchTab === 'function') {
             window.__BF_switchTab('kampdag');
 
+            // Kampdag DOMContentLoaded ran BEFORE wizard saved age class to localStorage,
+            // so format/minutes are still at HTML defaults. Set them directly now.
+            // Order matters: format change handler sets generic minutes, so we override after.
             var rule = getRule(data.ageClass);
             if (rule) {
               var fmtEl = document.getElementById('kdFormat');
@@ -864,10 +972,12 @@
               if (fmtEl) {
                 fmtEl.value = String(rule.format);
                 fmtEl.dispatchEvent(new Event('change', { bubbles: true }));
+                // ↑ triggers kampdag handler which sets generic minutes + refreshes keeper UI
               }
               if (minEl) {
                 minEl.value = String(rule.minutes);
                 minEl.dispatchEvent(new Event('input', { bubbles: true }));
+                // ↑ overrides with correct NFF age-specific minutes + updates keeper allocation
               }
             }
           }
@@ -879,7 +989,7 @@
         console.error('[onboarding] Apply failed:', e);
         busy = false;
         btn.disabled = false;
-        btn.innerHTML = '\uD83D\uDE80 Start appen';
+        btn.innerHTML = data.usedExamples ? '\uD83D\uDE80 Sett opp laget' : '\uD83D\uDE80 Start appen';
 
         var errMsg = (e && e.message === 'timeout')
           ? 'Nettverket er tregt. Pr\u00f8v igjen.'
@@ -906,23 +1016,30 @@
   // ══════════════════════════════════════════════════════════════
   //  Apply wizard data via core.js bridge
   // ══════════════════════════════════════════════════════════════
-  var _applyGen = 0;
+  var _applyGen = 0; // generation counter: prevents stale promises from duplicating work
 
   async function applyWizardData() {
     var gen = ++_applyGen;
     var bridge = window.__BF_onboarding;
     if (!bridge) throw new Error('Bridge API not available');
 
+    // Re-run: don't touch existing team name or players
     if (!data.isRerun) {
-      // 1. Rename team
+      // 1. Rename team (async, can be slow on mobile)
       if (data.teamName) {
         await bridge.renameCurrentTeam(data.teamName);
       }
+
+      // Bail if a newer attempt was started (timeout + retry scenario)
       if (gen !== _applyGen) return;
-      // No bulk player add — user adds players via Spillere tab with proper skill levels
+
+      // 2. Add players (only if user provided real names, not examples)
+      if (!data.usedExamples && data.playerNames.length > 0) {
+        bridge.bulkAddPlayers(data.playerNames);
+      }
     }
 
-    // 2. Store age class for kampdag/season defaults
+    // 3. Store age class for kampdag/season defaults (always useful)
     if (data.ageClass) {
       safeLS('set', 'bf_ob_ageclass', data.ageClass);
       try {

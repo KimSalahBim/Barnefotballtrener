@@ -328,14 +328,14 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       if (ageClass) {
         const ageNum = parseInt(String(ageClass).replace(/[^0-9]/g, ''), 10);
         const nffMap = {
-          6:  { format: '3',  minutes: 20 },
-          7:  { format: '3',  minutes: 20 },
-          8:  { format: '5',  minutes: 30 },
-          9:  { format: '5',  minutes: 40 },
-          10: { format: '5',  minutes: 40 },
-          11: { format: '7',  minutes: 50 },
-          12: { format: '9',  minutes: 60 },
-          13: { format: '11', minutes: 60 }
+          6:  { format: '3',  minutes: 40 },
+          7:  { format: '3',  minutes: 40 },
+          8:  { format: '5',  minutes: 50 },
+          9:  { format: '5',  minutes: 50 },
+          10: { format: '7',  minutes: 60 },
+          11: { format: '7',  minutes: 60 },
+          12: { format: '9',  minutes: 70 },
+          13: { format: '9',  minutes: 70 }
         };
         const nff = nffMap[ageNum];
         if (nff) {
