@@ -84,7 +84,7 @@ export default async function handler(req, res) {
       app_data: {
         teams: [], // Fylles fra Supabase under
         players: [], // Fylles fra Supabase under
-        note: 'Settings and training data are stored locally in your browser. Use the "Export" button in the app to download this data.',
+        note: 'Some settings are stored locally in your browser. Use the "Export" button in the app to download additional data.',
       },
     };
 
@@ -214,6 +214,21 @@ export default async function handler(req, res) {
       exportData.app_data.seasons_error = 'Could not fetch season data';
     }
 
+    // 2f) Fetch workouts (treningsøkter og maler)
+    try {
+      const { data: woData, error: woErr } = await supabaseAdmin
+        .from('workouts')
+        .select('id, team_id, season_id, event_id, title, workout_date, duration_minutes, age_group, theme, blocks, is_template, source, created_at, updated_at')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false });
+
+      if (!woErr && woData) {
+        exportData.app_data.workouts = woData;
+      }
+    } catch (woErr) {
+      console.error('[export-data] Workouts fetch error:', woErr);
+    }
+
     // 3) Fetch Stripe subscription data (if customer exists)
     try {
       const normalizedEmail = normalizeEmail(email);
@@ -308,92 +323,6 @@ export default async function handler(req, res) {
       }
     } catch (dbErr) {
       console.error('[export-data] Database fetch error:', dbErr);
-    }
-
-    // 4b) Fetch team_members data (GDPR Art. 20 - lagdeling)
-    try {
-      const { data: tmData, error: tmErr } = await supabaseAdmin
-        .from('team_members')
-        .select('id, team_id, user_id, role, status, invited_by, created_at')
-        .or(`user_id.eq.${userId},invited_by.eq.${userId}`);
-
-      if (!tmErr && tmData) {
-        exportData.app_data.team_members = tmData;
-      }
-    } catch (tmFetchErr) {
-      console.error('[export-data] team_members fetch error:', tmFetchErr);
-    }
-
-    // 4c) Fetch subscriptions data from Supabase
-    try {
-      const { data: subData, error: subErr } = await supabaseAdmin
-        .from('subscriptions')
-        .select('id, status, plan_type, trial_ends_at, expires_at, created_at, updated_at')
-        .eq('user_id', userId);
-
-      if (!subErr && subData) {
-        exportData.app_data.subscriptions = subData;
-      }
-    } catch (subFetchErr) {
-      console.error('[export-data] subscriptions fetch error:', subFetchErr);
-    }
-
-    // 4d) Fetch club_members data
-    try {
-      const { data: cmData, error: cmErr } = await supabaseAdmin
-        .from('club_members')
-        .select('id, club_id, joined_at')
-        .eq('user_id', userId);
-
-      if (!cmErr && cmData) {
-        exportData.app_data.club_members = cmData;
-      }
-    } catch (cmFetchErr) {
-      console.error('[export-data] club_members fetch error:', cmFetchErr);
-    }
-
-    // 4e) Fetch contact_requests (matched by email, no user_id FK)
-    try {
-      if (email) {
-        const { data: crData, error: crErr } = await supabaseAdmin
-          .from('contact_requests')
-          .select('id, type, name, email, phone, club_name, message, status, created_at')
-          .ilike('email', email);
-
-        if (!crErr && crData && crData.length > 0) {
-          exportData.app_data.contact_requests = crData;
-        }
-      }
-    } catch (crFetchErr) {
-      console.error('[export-data] contact_requests fetch error:', crFetchErr);
-    }
-
-    // 4f) Fetch shared team data (teams where user is editor, not owner)
-    try {
-      const { data: sharedMemberships } = await supabaseAdmin
-        .from('team_members')
-        .select('team_id')
-        .eq('user_id', userId)
-        .eq('role', 'editor')
-        .eq('status', 'active');
-
-      if (sharedMemberships && sharedMemberships.length > 0) {
-        const sharedTeamIds = sharedMemberships.map(m => m.team_id);
-
-        const { data: sharedTeams } = await supabaseAdmin
-          .from('teams')
-          .select('id, name, color, created_at')
-          .in('id', sharedTeamIds);
-
-        if (sharedTeams && sharedTeams.length > 0) {
-          exportData.app_data.shared_teams = {
-            note: 'Teams where you are an editor (not owner). Data belongs to the team owner.',
-            teams: sharedTeams,
-          };
-        }
-      }
-    } catch (sharedErr) {
-      console.error('[export-data] shared teams fetch error:', sharedErr);
     }
 
     // 5) Return as downloadable JSON

@@ -123,12 +123,10 @@ export default async function handler(req, res) {
         }
 
         // NOTE: We do NOT delete the Stripe customer record
-        // Reason: BokfÃ¸ringsloven Â§ 13 requires keeping payment records for 5 years
+        // Reason: BokfÃ¸ringsloven requires keeping payment records for 7 years
         // Instead, we anonymize the customer metadata
         try {
           await stripe.customers.update(customerId, {
-            name: 'Slettet bruker',
-            email: `deleted_${Date.now()}@anonymized.invalid`,
             metadata: {
               supabase_user_id: `DELETED_${Date.now()}`,
               deletion_timestamp: new Date().toISOString(),
@@ -136,7 +134,7 @@ export default async function handler(req, res) {
             },
             description: 'Account deleted per GDPR Art. 17',
           });
-          deletionResults.steps_completed.push('Anonymized Stripe customer (name, email, metadata)');
+          deletionResults.steps_completed.push('Anonymized Stripe customer metadata');
         } catch (updateErr) {
           console.error('[delete-account] Failed to anonymize customer:', updateErr);
           deletionResults.errors.push('Could not anonymize Stripe customer');
@@ -192,7 +190,7 @@ export default async function handler(req, res) {
 
           // Update all data ownership for this team
           // This ensures the new owner's user_id is on all data
-          const tables = ['players', 'user_data', 'seasons'];
+          const tables = ['players', 'user_data', 'seasons', 'workouts'];
           for (const table of tables) {
             await supabaseAdmin
               .from(table)
@@ -401,6 +399,22 @@ export default async function handler(req, res) {
       deletionResults.errors.push('Database error during season data deletion');
     }
 
+    // 4g) Delete workouts (treningsøkter og maler)
+    try {
+      const { error: woDelErr } = await supabaseAdmin
+        .from('workouts')
+        .delete()
+        .eq('user_id', userId);
+
+      if (woDelErr) {
+        console.error('[delete-account] workouts error:', woDelErr.message);
+      } else {
+        deletionResults.steps_completed.push('Deleted workouts from database');
+      }
+    } catch (woDbErr) {
+      console.error('[delete-account] Workouts database error:', woDbErr);
+    }
+
     // 4f) Delete teams from Supabase (CASCADE sletter spillere automatisk, men vi har allerede slettet dem)
     try {
       const { error: teamDelErr } = await supabaseAdmin
@@ -415,56 +429,6 @@ export default async function handler(req, res) {
       }
     } catch (teamDbErr) {
       console.error('[delete-account] Team database error:', teamDbErr);
-    }
-
-    // 4g) Delete subscriptions from Supabase (GDPR Art. 17 - was previously missed)
-    try {
-      const { error: subDelErr } = await supabaseAdmin
-        .from('subscriptions')
-        .delete()
-        .eq('user_id', userId);
-
-      if (subDelErr) {
-        console.error('[delete-account] Failed to delete subscriptions:', subDelErr);
-      } else {
-        deletionResults.steps_completed.push('Deleted subscriptions from database');
-      }
-    } catch (subDbErr) {
-      console.error('[delete-account] Subscriptions database error:', subDbErr);
-    }
-
-    // 4h) Delete club_members from Supabase
-    try {
-      const { error: cmDelErr } = await supabaseAdmin
-        .from('club_members')
-        .delete()
-        .eq('user_id', userId);
-
-      if (cmDelErr) {
-        console.error('[delete-account] Failed to delete club_members:', cmDelErr);
-      } else {
-        deletionResults.steps_completed.push('Deleted club_members from database');
-      }
-    } catch (cmDbErr) {
-      console.error('[delete-account] club_members database error:', cmDbErr);
-    }
-
-    // 4i) Delete contact_requests from Supabase (best-effort: no user_id FK, match by email)
-    try {
-      if (email) {
-        const { error: crDelErr } = await supabaseAdmin
-          .from('contact_requests')
-          .delete()
-          .ilike('email', email);
-
-        if (crDelErr) {
-          console.error('[delete-account] Failed to delete contact_requests:', crDelErr);
-        } else {
-          deletionResults.steps_completed.push('Deleted contact_requests from database');
-        }
-      }
-    } catch (crDbErr) {
-      console.error('[delete-account] contact_requests database error:', crDbErr);
     }
 
     // 5) Delete Supabase Auth user (THIS MUST BE LAST - deletes the session token!)
@@ -509,7 +473,7 @@ export default async function handler(req, res) {
       success: true,
       message: 'Your account has been permanently deleted.',
       details: deletionResults,
-      note: 'Payment records are retained for 5 years per Norwegian accounting law (bokfÃ¸ringsloven Â§ 13), but your personal information has been anonymized.',
+      note: 'Payment records are retained for 7 years per Norwegian accounting law (bokfÃ¸ringsloven), but your personal information has been anonymized.',
     });
 
   } catch (err) {
