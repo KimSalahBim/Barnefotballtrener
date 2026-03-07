@@ -996,6 +996,232 @@
       ]}
     },
 
+    // ═══════════════════════════════
+    // 🆕 TIER 2: UTVIDET DEKNING (egenprodusert innhold)
+    // ═══════════════════════════════
+
+    // --- 2 mot 2 (+keeper) ---
+    {
+      key: '2v2', label: '2 mot 2', defaultMin: 12, category: 'spill_m_motstand',
+      ages: ['8-9', '10-12', '13-16'], players: '8-16',
+      equipment: 'Småmål eller store mål med keeper, vester, baller, kjegler',
+      nffCategory: 'spille_med_og_mot', themes: ['samarbeidsspill', 'forsvarsspill', '1v1_duell'], nffPhases: ['angrep_avslutning', 'forsvar_vinne_ball'],
+      learningGoals: ['Samarbeid i angrep: når drible, når spille?', 'Forsvar: fordel ansvar — én presser, én sikrer', 'Kommuniser med makker om hvem som gjør hva'],
+      intensity: 'high', hasOpposition: true,
+      playerCount: { min: 8, max: 16 }, equipmentTags: ['smaamaal', 'maal', 'vester', 'ball', 'kjegler'],
+      description: 'To mot to på liten bane med mål. Mellomtingen mellom 1v1 og lagspill — her må du samarbeide med én makker for å løse situasjonen. Trener både angrep og forsvar i par.',
+      setup: 'Bane 15x20m med mål (småmål eller stort med keeper) i hver ende. Par stiller opp bak hvert mål.',
+      steps: [
+        'Trener spiller ball inn til det ene paret.',
+        'Paret angriper mot det andre parets mål.',
+        'Forsvarende par prøver å vinne ball og kontre.',
+        'Spill til mål, ball ut, eller 30 sek. Nye par inn.',
+        'Hold poeng per par over flere runder.'
+      ],
+      coaching: [
+        'Angrep: én fører ball, den andre tilbyr seg i rom',
+        'Forsvar: én presser ballfører, den andre sikrer bak',
+        'Snakk sammen! «Jeg tar ball, du sikrer»',
+        'Bruk bredden — ikke stå oppå hverandre'
+      ],
+      variations: [
+        'Med keeper: 2v2+K, større mål',
+        '2v2 med jokere på sidene (3v2 i angrep)'
+      ],
+      diagram: { width:200, height:160, field:'none', elements:[
+        {type:'goal',x:70,y:5,w:60,h:12},{type:'goal',x:70,y:143,w:60,h:12},
+        {type:'player',x:75,y:70,team:'a',label:''},{type:'player',x:130,y:55,team:'a',label:''},
+        {type:'ball',x:83,y:66},
+        {type:'player',x:90,y:95,team:'b',label:''},{type:'player',x:140,y:85,team:'b',label:''},
+        {type:'arrow',from:[80,65],to:[125,50],style:'pass'}
+      ]}
+    },
+
+    // --- 1v1 med porter ---
+    {
+      key: '1v1_gates', label: '1 mot 1 med porter', defaultMin: 10, category: 'spill_m_motstand',
+      ages: ['8-9', '10-12'], players: '6-16',
+      equipment: 'Kjegler (mange), baller',
+      nffCategory: 'spille_med_og_mot', themes: ['1v1_duell', 'foering_dribling'], nffPhases: ['angrep_fremover', 'forsvar_vinne_ball'],
+      learningGoals: ['Angriper: les forsvareren og velg hvilken port du angriper', 'Bruk finter og retningsforandring for å åpne porter', 'Forsvarer: steng den nærmeste porten, tving til side'],
+      intensity: 'high', hasOpposition: true,
+      playerCount: { min: 6, max: 16 }, equipmentTags: ['kjegler', 'ball'],
+      description: 'Duelltrening der angriperen scorer ved å føre ball gjennom én av flere kjegleporter. Forsvareren må lese angriperen og stenge porter. Trener retningsforandring og valgtaking.',
+      setup: 'Firkant 12x12m. 3-4 kjegleporter (1m brede) spredt langs én side. Angriper starter med ball fra motsatt side.',
+      steps: [
+        'Angriper fører ball mot portene.',
+        'Forsvarer starter ved portene og prøver å stenge veien.',
+        'Angriper scorer ved å føre ball gjennom en åpen port.',
+        'Forsvarer scorer ved å vinne ball eller tvinge angriper ut av banen.',
+        'Bytt roller etter 3 forsøk. Tell poeng.'
+      ],
+      coaching: [
+        'Angriper: løft blikket! Se hvilken port som er åpen',
+        'Bruk finter for å trekke forsvareren til én side',
+        'Forsvarer: stå sentralt, reager på angriperens valg',
+        'Tempo! Ikke nøl — ta en avgjørelse og gjennomfør'
+      ],
+      variations: [
+        'Flere porter = lettere for angriper',
+        'To forsvarere = vanskeligere, krever mer finter'
+      ],
+      diagram: { width:200, height:160, field:'none', elements:[
+        {type:'cone',x:40,y:15},{type:'cone',x:55,y:15},
+        {type:'cone',x:90,y:15},{type:'cone',x:105,y:15},
+        {type:'cone',x:140,y:15},{type:'cone',x:155,y:15},
+        {type:'player',x:100,y:130,team:'a',label:'A'},{type:'ball',x:108,y:126},
+        {type:'player',x:100,y:50,team:'b',label:'F'},
+        {type:'arrow',from:[100,125],to:[100,60],style:'run'}
+      ]}
+    },
+
+    // --- Retningsspill ---
+    {
+      key: 'possession_dir', label: 'Retningsspill', defaultMin: 15, category: 'smalagsspill',
+      ages: ['10-12', '13-16'], players: '8-16',
+      equipment: 'Vester, baller, kjegler til bane og endesoner',
+      nffCategory: 'smalagsspill', themes: ['spillforstaelse', 'spilloppbygging'], nffPhases: ['angrep_fremover', 'forsvar_vinne_ball'],
+      learningGoals: ['Bygg opp spillet kontrollert mot endesonen', 'Gjør deg spillbar foran ballfører med riktig vinkel', 'Ved balltap: omstill raskt og press'],
+      intensity: 'high', hasOpposition: true,
+      playerCount: { min: 8, max: 16 }, equipmentTags: ['vester', 'ball', 'kjegler'],
+      description: 'Ballbesittelse med retning: score ved å spille ballen kontrollert inn i motstanderens endesone. Trener spilloppbygging, romforståelse og tålmodighet i oppspillsfasen.',
+      setup: 'Bane 30x20m med 3m dype endesoner i begge ender. To lag med vester. Ingen mål — score ved å motta ball i kontroll inne i endesonen.',
+      steps: [
+        'Laget med ball bygger opp spillet og prøver å spille en medspiller inn i motstanderens endesone.',
+        'Scoring: en spiller mottar ball med kontroll inne i endesonen (foten på ballen).',
+        'Ved ballvinning: det andre laget angriper andre veien.',
+        'Spill 3-4 min perioder, hvile, bytt.'
+      ],
+      coaching: [
+        'Tålmodighet! Ikke slå lange baller i panikk',
+        'Gjør deg spillbar: ut av pasningsskygge, åpen kropp',
+        'Spill bakover eller sideveis for å finne åpning fremover',
+        'Ved balltap: press umiddelbart, ikke vent!'
+      ],
+      variations: [
+        'Touchbegrensning (maks 3 touch) for raskere spill',
+        'Joker: én nøytral spiller alltid med angripende lag'
+      ],
+      diagram: { width:240, height:150, field:'none', elements:[
+        {type:'cone',x:10,y:10},{type:'cone',x:10,y:140},{type:'cone',x:230,y:10},{type:'cone',x:230,y:140},
+        {type:'cone',x:35,y:10},{type:'cone',x:35,y:140},{type:'cone',x:205,y:10},{type:'cone',x:205,y:140},
+        {type:'player',x:70,y:50,team:'a',label:''},{type:'player',x:70,y:110,team:'a',label:''},
+        {type:'player',x:120,y:75,team:'a',label:''},{type:'ball',x:128,y:71},
+        {type:'player',x:150,y:45,team:'b',label:''},{type:'player',x:150,y:115,team:'b',label:''},
+        {type:'player',x:180,y:75,team:'b',label:''},
+        {type:'arrow',from:[128,71],to:[60,45],style:'pass'}
+      ]}
+    },
+
+    // --- Blokker og redd ---
+    {
+      key: 'block_shot', label: 'Blokker og redd', defaultMin: 10, category: 'spill_m_motstand',
+      ages: ['10-12', '13-16'], players: '6-14',
+      equipment: 'Mål med keeper, baller, kjegler',
+      nffCategory: 'spille_med_og_mot', themes: ['forsvarsspill', 'keeper'], nffPhases: ['forsvar_hindre_maal'],
+      learningGoals: ['Kom mellom ball og mål i riktig vinkel', 'Blokkér med fremsiden av kroppen, stå på beina', 'Keeper: kommuniser posisjon og gi beskjed til forsvarer'],
+      intensity: 'high', hasOpposition: true,
+      playerCount: { min: 6, max: 14 }, equipmentTags: ['maal', 'ball', 'kjegler'],
+      description: 'Forsvareren øver på å blokkere skudd og hindre avslutning nær eget mål. Keeper og forsvarer samarbeider om å stenge rom og vinkel. Trener NFF fase F3.',
+      setup: 'Halvbane eller 20x15m foran mål med keeper. Angripere i kø 18-20m ut. Forsvarere starter ved 16-meteren.',
+      steps: [
+        'Angriper mottar ball fra trener og fører mot mål.',
+        'Forsvarer rykker ut og posisjonerer seg mellom angriper og mål.',
+        'Angriper forsøker å score. Forsvarer blokkerer eller vinner ball.',
+        'Keeper kommuniserer: «Hold side!», «Jeg har nær stolpe!»',
+        'Bytt roller etter 3 forsøk.'
+      ],
+      coaching: [
+        'Forsvarer: stå på beina, ikke kast deg ned for tidlig',
+        'Blokkér med fremsiden av kroppen — aldri ryggen til',
+        'Steng ett hjørne, la keeper ta det andre',
+        'Keeper: snakk! Fortell forsvareren hvor du er'
+      ],
+      variations: [
+        '2v1 nær mål: to angripere mot én forsvarer + keeper',
+        'Innlegg fra siden: forsvarer må markere og cleare'
+      ],
+      diagram: { width:220, height:150, field:'none', elements:[
+        {type:'goal',x:60,y:5,w:100,h:18},{type:'keeper',x:110,y:20},
+        {type:'player',x:110,y:120,team:'a',label:'A'},{type:'ball',x:118,y:116},
+        {type:'player',x:110,y:60,team:'b',label:'F'},
+        {type:'arrow',from:[110,115],to:[110,65],style:'run'},
+        {type:'arrow',from:[115,65],to:[115,25],style:'run'}
+      ]}
+    },
+
+    // --- Keeperduell ---
+    {
+      key: 'keeper_play', label: 'Keeperduell', defaultMin: 10, category: 'keeper',
+      ages: ['8-9', '10-12'], players: '4-10',
+      equipment: '2 småmål (eller store mål), baller',
+      nffCategory: 'sjef_over_ballen', themes: ['keeper'], nffPhases: ['forsvar_hindre_maal'],
+      learningGoals: ['Grunnstilling og forflytning i målet', 'Grep og skyv ved lave og høye skudd', 'Rask reaksjon og igangsetting etter redning'],
+      intensity: 'medium', hasOpposition: false,
+      playerCount: { min: 4, max: 10 }, equipmentTags: ['smaamaal', 'maal', 'ball'],
+      description: 'To keepere mot hverandre i hver sitt mål på kort avstand. Trener reaksjon, grep, plassering og utspark. Morsomt og intenst — alle får mange repetisjoner.',
+      setup: 'To mål (småmål eller store) 8-12m fra hverandre. Én keeper i hvert mål. Ekstra baller bak målene.',
+      steps: [
+        'Keeper A kaster eller sparker ballen mot Keeper Bs mål.',
+        'Keeper B forsøker å redde og angriper umiddelbart tilbake.',
+        'Spill fram og tilbake i perioder på 2 minutter.',
+        'Tell poeng: mål = 1 poeng, redning + kontroll = 1 poeng til forsvarer.',
+        'Roter keepere slik at alle prøver seg.'
+      ],
+      coaching: [
+        'Grunnstilling: lav, vekt fremover, på tå',
+        'Grep: hendene bak ballen, fingre spredt (W-grep)',
+        'Etter redning: kontroll først, så kast/spark raskt',
+        'Plassering: stå sentralt, følg ballens posisjon'
+      ],
+      variations: [
+        'Spillere på sidene skyter i stedet for keeperne',
+        'Større avstand (15m) for å øve utspark'
+      ],
+      diagram: { width:200, height:120, field:'none', elements:[
+        {type:'goal',x:10,y:30,w:12,h:60,vertical:true},{type:'goal',x:178,y:30,w:12,h:60,vertical:true},
+        {type:'keeper',x:25,y:60},{type:'keeper',x:175,y:60},
+        {type:'ball',x:50,y:55},
+        {type:'arrow',from:[50,55],to:[165,65],style:'pass'}
+      ]}
+    },
+
+    // --- Stafett med ball ---
+    {
+      key: 'relay_ball', label: 'Stafett med ball', defaultMin: 8, category: 'oppvarming',
+      ages: ['6-7', '8-9'], players: '6-20',
+      equipment: 'Baller, kjegler',
+      nffCategory: 'sjef_over_ballen', themes: ['foering_dribling'], nffPhases: ['noytral'],
+      learningGoals: ['Før ballen i fart uten å miste kontroll', 'Vend med ball rundt kjegle', 'Legg til fart gradvis — kontroll først'],
+      intensity: 'high', hasOpposition: false,
+      playerCount: { min: 6, max: 20 }, equipmentTags: ['ball', 'kjegler'],
+      description: 'Lagstafett der spillerne fører ball gjennom en kjegleløype og tilbake. Kombinerer ballkontroll med fart og lagkonkurranse. Perfekt oppvarming med mye engasjement.',
+      setup: 'To eller flere lag i kø bak en startlinje. Kjegleløype 10-15m foran (rett linje, slalåm, eller sirkelbane).',
+      steps: [
+        'Første spiller på hvert lag fører ball gjennom løypa og tilbake.',
+        'Overlever ballen til neste i køen med en pasning.',
+        'Laget som fullfører først vinner runden.',
+        'Kjør 3-4 runder med ulike løyper eller regler.'
+      ],
+      coaching: [
+        'Kontroll først, fart etterpå — ballen må være nær foten',
+        'Bruk innsiden og utsiden rundt kjeglene',
+        'Hei på lagkameratene! Sørg for at alle er klare',
+        'Presis overlevering: pasning til neste, ikke bare spark den'
+      ],
+      variations: [
+        'Kun venstre fot, kun utside',
+        'Løype med vending + skudd på mål til slutt'
+      ],
+      diagram: { width:220, height:120, field:'none', elements:[
+        {type:'player',x:20,y:40,team:'a',label:''},{type:'player',x:20,y:55,team:'a',label:''},
+        {type:'player',x:20,y:70,team:'a',label:''},{type:'ball',x:28,y:36},
+        {type:'player',x:20,y:85,team:'b',label:''},{type:'player',x:20,y:100,team:'b',label:''},
+        {type:'cone',x:80,y:60},{type:'cone',x:120,y:60},{type:'cone',x:160,y:60},{type:'cone',x:200,y:60},
+        {type:'arrow',from:[30,40],to:[195,55],style:'run'}
+      ]}
+    },
+
     // ── EGENDEFINERT (alltid nederst) ──
     { key: 'custom', label: 'Skriv inn selv', defaultMin: 10, isCustom: true, category: 'special',
       nffCategory: 'sjef_over_ballen', themes: [], nffPhases: [], learningGoals: [],
