@@ -87,6 +87,7 @@
   <link rel="stylesheet" href="competitions.css">
   <link rel="stylesheet" href="core-ui.css">
   <link rel="stylesheet" href="onboarding.css">
+  <link rel="stylesheet" href="style-workout-nff.css">
 
   <!-- Umami Analytics (personvernvennlig, ingen cookies) -->
   <script data-cfasync="false" defer src="/stats/script.js" data-website-id="bfd1e6d5-042b-4b8f-bd05-ee5aa7f70f5e"></script>
@@ -311,7 +312,6 @@
             <div>
               <strong>Kampdag med lik spilletid</strong>
               <p>Algoritmen beregner rettferdig spilletid og lager en komplett bytteplan automatisk.</p>
-              <a href="/kampdag" class="lp-feat-link">Les mer →</a>
             </div>
           </div>
           <div class="lp-feat">
@@ -319,7 +319,6 @@
             <div>
               <strong>Treningsgrupper</strong>
               <p>Del spillerne inn i jevne eller differensierte grupper basert på ferdighetsnivå.</p>
-              <a href="/treningsgrupper" class="lp-feat-link">Les mer →</a>
             </div>
           </div>
           <div class="lp-feat">
@@ -334,7 +333,6 @@
             <div>
               <strong>Formasjoner og roller</strong>
               <p>Sett posisjoner (F/M/A) og se spillerne plassert på banen i riktig sone.</p>
-              <a href="/bytteplan" class="lp-feat-link">Les mer →</a>
             </div>
           </div>
           <div class="lp-feat">
@@ -534,18 +532,6 @@
                   <span class="landing-chip">Spilletid barnefotball</span>
           <span class="landing-chip">Lik spilletid fotball</span>
 </div>
-
-<nav class="landing-footer-links landing-footer-seo" aria-label="Funksjoner">
-          <a href="/bytteplan">Bytteplan</a>
-          <span class="dot" aria-hidden="true">•</span>
-          <a href="/spilletid">Spilletid</a>
-          <span class="dot" aria-hidden="true">•</span>
-          <a href="/kampdag">Kampdag</a>
-          <span class="dot" aria-hidden="true">•</span>
-          <a href="/treningsgrupper">Treningsgrupper</a>
-          <span class="dot" aria-hidden="true">•</span>
-          <a href="/sesong">Sesong</a>
-        </nav>
 
 <nav class="landing-footer-links" aria-label="Lenker">
           <a href="/privacy.html">Personvern</a>
@@ -1294,12 +1280,7 @@
             </div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-            <div>
-              <div style="font-weight:800; font-size:14px;">Total tid</div>
-              <div id="woTotalTop" style="font-size:1.4rem; font-weight:900;">0 min</div>
-            </div>
-          </div>
+          <div id="woMetaBar" class="wo-meta-bar"></div>
 
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px;">
             <div>
@@ -1323,6 +1304,15 @@
             <div id="woPlayerSelection" class="player-selection"></div>
           </div>
 
+        </div> <!-- close wo-meta-card -->
+
+        <div class="settings-card" style="padding:12px;">
+          <button id="woGenererBtn" class="wo-gen-cta" type="button">
+            <i class="fas fa-magic"></i> Lag en treningsøkt for meg
+          </button>
+          <div id="woGenererPanel" style="display:none;"></div>
+        </div>
+
         <div class="settings-card">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
             <div style="font-weight:900;">Øvelser</div>
@@ -1337,41 +1327,31 @@
             <i class="fas fa-plus"></i> Legg til ny øvelse
           </button>
 
-          <div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
-            <button id="woSuggestBtn" class="btn-secondary" type="button">
-              <i class="fas fa-magic"></i> Lag en treningsøkt for meg
-            </button>
-            <button id="woSaveTemplateBtn" class="btn-secondary" type="button">
-              <i class="fas fa-save"></i> Lagre som mal
+          <div class="wo-btn-row" style="margin-top:14px;">
+            <button id="woExportBtn" class="btn-primary" type="button">
+              <i class="fas fa-file-pdf"></i> Eksporter
             </button>
             <button id="woSaveWorkoutBtn" class="btn-secondary" type="button">
-              <i class="fas fa-bookmark"></i> Lagre økt
+              <i class="fas fa-bookmark"></i> Lagre
             </button>
-            <button id="woExportBtn" class="btn-primary" type="button">
-              <i class="fas fa-file-pdf"></i> Eksporter / PDF
-            </button>
-            <label class="wo-export-detail-label">
-              <input id="woExportDetailToggle" type="checkbox" checked>
-              <span>Inkluder øvelsesbeskrivelser og diagrammer i PDF</span>
-            </label>
-
-            <button id="woDownloadJsonBtn" class="btn-secondary" type="button">
-              <i class="fas fa-download"></i> Last ned øktfil
-            </button>
-            <button id="woShareJsonBtn" class="btn-secondary" type="button">
-              <i class="fas fa-share-alt"></i> Del øktfil
-            </button>
-            <button id="woImportJsonBtn" class="btn-secondary" type="button">
-              <i class="fas fa-file-import"></i> Importer øktfil
-            </button>
-            <input id="woImportFile" type="file" accept=".json,application/json,text/plain" style="display:none;" />
-            <div class="wo-hint">Øktfil inneholder ikke spillere. Medtrener velger spillere lokalt etter import.</div>
+            <div class="wo-more-wrap">
+              <button id="woMoreBtn" class="btn-secondary" type="button">
+                <i class="fas fa-ellipsis-h"></i> Mer
+              </button>
+              <div id="woMoreMenu" class="wo-more-menu">
+                <button id="woSaveTemplateBtn" type="button"><i class="fas fa-save"></i> Lagre som mal</button>
+                <button id="woDownloadJsonBtn" type="button"><i class="fas fa-download"></i> Last ned øktfil</button>
+                <button id="woShareJsonBtn" type="button"><i class="fas fa-share-alt"></i> Del øktfil</button>
+                <button id="woImportJsonBtn" type="button"><i class="fas fa-file-import"></i> Importer øktfil</button>
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div class="settings-card" style="text-align:center; padding:12px; margin-top:10px;">
-          <div class="small-text" style="opacity:0.85; font-weight:800;">Total tid</div>
-          <div id="woTotalBottom" style="font-size:1.4rem; font-weight:900;">0 min</div>
+          <label class="wo-export-detail-label" style="margin-top:8px;">
+            <input id="woExportDetailToggle" type="checkbox" checked>
+            <span>Inkluder øvelsesbeskrivelser og diagrammer i PDF</span>
+          </label>
+          <input id="woImportFile" type="file" accept=".json,application/json,text/plain" style="display:none;" />
+          <button id="woSuggestBtn" type="button" style="display:none;"></button>
         </div>
 
         <div class="results-container">
@@ -1383,7 +1363,6 @@
           <h3>Mine maler</h3>
           <div id="woTemplates" class="wo-templates"></div>
         </div>
-      </div>
       </div> <!-- close workout tab -->
 
       <!-- SESONG TAB -->

@@ -1,0 +1,1062 @@
+/* =========================================================
+   WORKOUT: Bottom Sheet Exercise Picker
+   ========================================================= */
+
+/* Body lock when sheet is open */
+.wo-bs-body-lock {
+  overflow: hidden !important;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}
+
+/* Overlay container (hidden by default) */
+.wo-bs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.wo-bs-overlay.wo-bs-open {
+  pointer-events: auto;
+  visibility: visible;
+}
+
+/* Backdrop */
+.wo-bs-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wo-bs-open .wo-bs-backdrop {
+  opacity: 1;
+}
+
+/* Sheet panel */
+.wo-bs-sheet {
+  position: relative;
+  background: var(--bg-card, #fff);
+  border-radius: 20px 20px 0 0;
+  max-height: 85vh;
+  max-height: 85dvh;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.15);
+  will-change: transform;
+}
+
+.wo-bs-open .wo-bs-sheet {
+  transform: translateY(0);
+}
+
+/* Header */
+.wo-bs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 6px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.wo-bs-drag-handle {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--text-300, #cbd5e1);
+}
+
+.wo-bs-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-800, #1e293b);
+  padding-top: 4px;
+}
+
+.wo-bs-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg, #f1f5f9);
+  color: var(--text-600, #475569);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.wo-bs-close:hover {
+  background: var(--border, #e2e8f0);
+}
+
+/* Search */
+.wo-bs-search-wrap {
+  padding: 4px 16px 8px;
+  flex-shrink: 0;
+}
+
+.wo-bs-search {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg, #f8fafc);
+  color: var(--text-800, #1e293b);
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.wo-bs-search:focus {
+  border-color: var(--primary, #0b5bd3);
+  background: var(--bg-card, #fff);
+}
+
+.wo-bs-search::placeholder {
+  color: var(--text-400, #94a3b8);
+}
+
+/* Category pills */
+.wo-bs-pills {
+  display: flex;
+  gap: 6px;
+  padding: 0 16px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.wo-bs-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.wo-bs-pill {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--pill-color, #ccc);
+  background: transparent;
+  color: var(--text-700, #334155);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.wo-bs-pill:hover,
+.wo-bs-pill-active {
+  background: var(--pill-color, #ccc);
+  color: #fff;
+}
+
+/* Drikkepause shortcut */
+.wo-bs-drink-wrap {
+  padding: 0 16px 6px;
+  flex-shrink: 0;
+}
+
+.wo-bs-drink-btn {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px dashed var(--border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--bg, #f8fafc);
+  color: var(--text-700, #334155);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.wo-bs-drink-btn:hover {
+  border-color: var(--primary, #0b5bd3);
+  background: rgba(11, 91, 211, 0.04);
+}
+
+.wo-bs-drink-min {
+  color: var(--text-400, #94a3b8);
+  font-weight: 600;
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+/* Scrollable body */
+.wo-bs-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 env(safe-area-inset-bottom, 16px);
+  overscroll-behavior: contain;
+}
+
+/* Missing categories hint */
+.wo-bs-hint {
+  padding: 10px 16px;
+  margin: 0 16px 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.4;
+}
+
+.wo-bs-hint-icon {
+  font-size: 14px;
+}
+
+/* Section */
+.wo-bs-section {
+  margin-bottom: 4px;
+}
+
+/* Section header (sticky within scroll) */
+.wo-bs-section-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-600, #475569);
+  background: var(--bg-card, #fff);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  border-left: 3px solid var(--cat-color, #ccc);
+}
+
+.wo-bs-section-head-theme {
+  --cat-color: #8b5cf6;
+  background: #faf5ff;
+  color: #6d28d9;
+}
+
+/* Exercise card */
+.wo-bs-card {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  margin: 0 8px;
+  border-bottom: 1px solid var(--border, #f1f5f9);
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+}
+
+.wo-bs-card:last-child {
+  border-bottom: none;
+}
+
+.wo-bs-card:active {
+  background: var(--bg, #f8fafc);
+}
+
+/* NFF color stripe (left edge) */
+.wo-bs-card-stripe {
+  width: 4px;
+  flex-shrink: 0;
+  border-radius: 4px 0 0 4px;
+  margin: 8px 0;
+}
+
+/* Card body */
+.wo-bs-card-body {
+  flex: 1;
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.wo-bs-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-800, #1e293b);
+  line-height: 1.3;
+}
+
+.wo-bs-card-desc {
+  font-size: 12px;
+  color: var(--text-500, #64748b);
+  line-height: 1.35;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wo-bs-card-meta {
+  font-size: 11px;
+  color: var(--text-400, #94a3b8);
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+/* Opposition tag */
+.wo-bs-tag-opp {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* "I økta" badge */
+.wo-bs-badge {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--bg, #f1f5f9);
+  color: var(--text-400, #94a3b8);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Dim "in session" cards slightly */
+.wo-bs-card-insession .wo-bs-card-name,
+.wo-bs-card-insession .wo-bs-card-desc {
+  opacity: 0.55;
+}
+
+/* Custom button at bottom */
+.wo-bs-custom-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 8px 16px 16px;
+  padding: 12px 16px;
+  border: 1.5px dashed var(--border, #e2e8f0);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-600, #475569);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.wo-bs-custom-btn:hover {
+  border-color: var(--primary, #0b5bd3);
+  color: var(--primary, #0b5bd3);
+}
+
+/* =========================================================
+   WORKOUT: Exercise Trigger Button (replaces <select>)
+   ========================================================= */
+
+.wo-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  padding: 0;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--bg-card, #fff);
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Outfit', sans-serif;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+}
+
+.wo-trigger:hover {
+  border-color: var(--text-300, #cbd5e1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.wo-trigger:active {
+  box-shadow: none;
+  border-color: var(--primary, #0b5bd3);
+}
+
+/* NFF color stripe */
+.wo-trigger-stripe {
+  width: 5px;
+  align-self: stretch;
+  background: var(--trigger-color, #ccc);
+  flex-shrink: 0;
+  border-radius: 10px 0 0 10px;
+}
+
+.wo-trigger-content {
+  flex: 1;
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.wo-trigger-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-800, #1e293b);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wo-trigger-desc {
+  font-size: 11px;
+  color: var(--text-500, #64748b);
+  line-height: 1.3;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wo-trigger-chevron {
+  padding: 8px 12px 8px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-400, #94a3b8);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .wo-bs-sheet {
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .wo-bs-search {
+    font-size: 16px; /* prevent iOS zoom */
+  }
+
+  .wo-bs-card-body {
+    padding: 8px 10px;
+  }
+
+  .wo-trigger-content {
+    padding: 7px 8px;
+  }
+}
+
+/* =========================================================
+   WORKOUT: Hybrid 1 Layout — Compact cards + Accordion
+   ========================================================= */
+
+/* Section marker (thin line between NFF categories) */
+.wo-h1-marker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  margin: 2px 0;
+}
+
+.wo-h1-marker::before {
+  content: '';
+  flex: 0 0 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--marker-color, #ccc);
+}
+
+.wo-h1-marker-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-500, #64748b);
+  white-space: nowrap;
+}
+
+.wo-h1-marker-min {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-400, #94a3b8);
+  margin-left: auto;
+}
+
+/* Card base (both collapsed + expanded) */
+.wo-h1-card {
+  display: flex;
+  align-items: stretch;
+  border-radius: 12px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #e2e8f0);
+  margin-bottom: 4px;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+
+/* NFF color stripe (left edge) */
+.wo-h1-stripe {
+  width: 5px;
+  flex-shrink: 0;
+  background: var(--h1-color, #ccc);
+}
+
+/* ── Collapsed card ── */
+.wo-h1-collapsed {
+  cursor: pointer;
+  min-height: 48px;
+}
+
+.wo-h1-collapsed:hover {
+  border-color: var(--text-300, #cbd5e1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.wo-h1-collapsed:active {
+  background: var(--bg, #f8fafc);
+}
+
+.wo-h1-main {
+  flex: 1;
+  padding: 8px 10px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.wo-h1-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-800, #1e293b);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wo-h1-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.wo-h1-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg, #f1f5f9);
+  color: var(--text-500, #64748b);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.wo-h1-badge-par {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+/* Minute display (tappable for inline edit) */
+.wo-h1-min {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--text-800, #1e293b);
+  flex-shrink: 0;
+  cursor: pointer;
+  border-left: 1px solid var(--border, #f1f5f9);
+  min-width: 60px;
+  justify-content: center;
+  transition: background 0.1s;
+}
+
+.wo-h1-min:hover {
+  background: var(--bg, #f8fafc);
+}
+
+.wo-h1-min:active {
+  background: var(--border, #e2e8f0);
+}
+
+.wo-h1-min-unit {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-400, #94a3b8);
+  margin-left: 1px;
+}
+
+/* Inline minute edit input */
+.wo-h1-min-input {
+  width: 48px;
+  border: 1.5px solid var(--primary, #0b5bd3);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  padding: 2px 4px;
+  outline: none;
+  background: var(--bg-card, #fff);
+  color: var(--text-800, #1e293b);
+}
+
+/* ── Expanded card ── */
+.wo-h1-expanded {
+  border-color: var(--primary, #0b5bd3);
+  box-shadow: 0 4px 12px rgba(11, 91, 211, 0.1);
+}
+
+.wo-h1-exp-body {
+  flex: 1;
+  padding: 4px 0 0;
+  min-width: 0;
+}
+
+/* Action bar at bottom of expanded card */
+.wo-h1-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border, #e2e8f0);
+  margin-top: 8px;
+}
+
+.wo-h1-actions .btn-small {
+  font-size: 12px;
+  padding: 7px 12px;
+}
+
+/* Mobile tweaks */
+@media (max-width: 640px) {
+  .wo-h1-card {
+    border-radius: 10px;
+    margin-bottom: 3px;
+  }
+
+  .wo-h1-collapsed {
+    min-height: 44px;
+  }
+
+  .wo-h1-main {
+    padding: 6px 8px;
+  }
+
+  .wo-h1-name {
+    font-size: 13px;
+  }
+
+  .wo-h1-min {
+    padding: 6px 10px;
+    font-size: 16px;
+    min-width: 52px;
+  }
+
+  .wo-h1-actions {
+    padding: 6px 10px 8px;
+  }
+}
+
+/* =========================================================
+   WORKOUT: Meta-bar (replaces double "Total tid")
+   ========================================================= */
+
+.wo-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wo-meta-total {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--text-900, #0f172a);
+  line-height: 1;
+}
+
+.wo-meta-total-unit {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-400, #94a3b8);
+  margin-left: 2px;
+}
+
+.wo-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.wo-meta-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-500, #64748b);
+}
+
+.wo-meta-age {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.wo-meta-theme {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: #f5f3ff;
+  color: #7c3aed;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.wo-meta-theme-x {
+  background: none;
+  border: none;
+  color: #a78bfa;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 2px;
+  line-height: 1;
+  font-family: inherit;
+}
+
+.wo-meta-theme-x:hover {
+  color: #7c3aed;
+}
+
+/* NFF balance bar */
+.wo-meta-balance {
+  display: flex;
+  gap: 3px;
+  margin-top: 8px;
+  height: 24px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg, #f1f5f9);
+}
+
+.wo-meta-bal-seg {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.wo-meta-bal-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--bal-pct, 0%);
+  max-height: 100%;
+  background: var(--bal-color, #ccc);
+  opacity: 0.35;
+  border-radius: 4px;
+  transition: height 0.3s ease;
+}
+
+.wo-meta-bal-label {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-600, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 640px) {
+  .wo-meta-total {
+    font-size: 1.6rem;
+  }
+
+  .wo-meta-balance {
+    height: 22px;
+  }
+
+  .wo-meta-bal-label {
+    font-size: 8px;
+  }
+}
+
+/* =========================================================
+   WORKOUT: "Lag treningsøkt for meg" — Generer-flow
+   ========================================================= */
+
+/* CTA button */
+.wo-gen-cta {
+  width: 100%;
+  padding: 14px 18px;
+  border: 2px solid var(--primary, #0b5bd3);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(11,91,211,0.04), rgba(11,91,211,0.08));
+  color: var(--primary, #0b5bd3);
+  font-size: 15px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wo-gen-cta:hover {
+  background: linear-gradient(135deg, rgba(11,91,211,0.06), rgba(11,91,211,0.12));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(11, 91, 211, 0.15);
+}
+
+.wo-gen-cta-open {
+  border-color: var(--primary, #0b5bd3);
+  background: var(--primary, #0b5bd3);
+  color: #fff;
+}
+
+.wo-gen-cta-open:hover {
+  background: var(--primary, #0b5bd3);
+  filter: brightness(1.1);
+}
+
+/* Generer panel */
+#woGenererPanel {
+  padding: 12px 0 0;
+}
+
+.wo-gen-label {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-500, #64748b);
+  margin-bottom: 6px;
+  margin-top: 10px;
+}
+
+.wo-gen-label:first-child {
+  margin-top: 0;
+}
+
+.wo-gen-themes,
+.wo-gen-ages,
+.wo-gen-durations {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.wo-gen-pill {
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  background: var(--bg-card, #fff);
+  color: var(--text-700, #334155);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.wo-gen-pill:hover {
+  border-color: var(--primary, #0b5bd3);
+  color: var(--primary, #0b5bd3);
+}
+
+.wo-gen-pill-sel {
+  border-color: var(--primary, #0b5bd3);
+  background: var(--primary, #0b5bd3);
+  color: #fff;
+}
+
+.wo-gen-pill-sel:hover {
+  background: var(--primary, #0b5bd3);
+  filter: brightness(1.1);
+  color: #fff;
+}
+
+/* Learning goals */
+.wo-gen-goals {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+}
+
+.wo-gen-goals-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #92400e;
+  margin-bottom: 4px;
+}
+
+.wo-gen-goal {
+  font-size: 13px;
+  color: #78350f;
+  line-height: 1.5;
+  padding-left: 12px;
+  position: relative;
+}
+
+.wo-gen-goal::before {
+  content: '\2022';
+  position: absolute;
+  left: 0;
+  color: #d97706;
+}
+
+/* Generate button */
+.wo-gen-submit {
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 12px;
+  background: var(--primary, #0b5bd3);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wo-gen-submit:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(11, 91, 211, 0.25);
+}
+
+.wo-gen-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .wo-gen-cta {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .wo-gen-pill {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+/* =========================================================
+   WORKOUT: 3-button layout + "Mer" dropdown
+   ========================================================= */
+
+.wo-btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.wo-btn-row .btn-primary {
+  flex: 1;
+  min-width: 120px;
+}
+
+.wo-btn-row .btn-secondary {
+  min-width: 80px;
+}
+
+/* "Mer" dropdown wrapper */
+.wo-more-wrap {
+  position: relative;
+}
+
+.wo-more-menu {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 6px;
+  min-width: 200px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.wo-more-menu button {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-700, #334155);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border, #f1f5f9);
+}
+
+.wo-more-menu button:last-child {
+  border-bottom: none;
+}
+
+.wo-more-menu button:hover {
+  background: var(--bg, #f8fafc);
+}
+
+.wo-more-menu button i {
+  margin-right: 8px;
+  width: 16px;
+  text-align: center;
+}
