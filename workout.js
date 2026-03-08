@@ -94,7 +94,7 @@
     },
     {
       key: 'warm_ball', label: 'Ballmestring', defaultMin: 10, category: 'oppvarming',
-      ages: ['6-7','8-9','10-12'], players: '4-20',
+      ages: ['6-7','8-9','10-12','13-16'], players: '4-20',
       equipment: '1 ball per spiller, kjegler',
       nffCategory: 'sjef_over_ballen', themes: ['foering_dribling'], nffPhases: ['angrep_fremover'],
       learningGoals: ['Kontroll på ballen med korte touch', 'Bruk ulike deler av foten', 'Løft blikket mens du fører ballen'],
@@ -129,7 +129,7 @@
     },
     {
       key: 'rondo_easy', label: 'Rondo (lett)', defaultMin: 10, category: 'oppvarming',
-      ages: ['8-9','10-12'], players: '5-8',
+      ages: ['8-9','10-12','13-16'], players: '5-8',
       equipment: '1 ball, kjegler til firkant',
       nffCategory: 'spille_med_og_mot', themes: ['pasning_samspill'], nffPhases: ['angrep_fremover', 'forsvar_vinne_ball'],
       learningGoals: ['Gjør deg spillbar: avstand og vinkel til ballfører', 'Beveg deg etter pasning for å gi ny vinkel', 'Forsvarer: press på ballfører, steng pasningslinjer'],
@@ -235,7 +235,7 @@
     },
     {
       key: 'pass_move', label: 'Pasning og bevegelse', defaultMin: 10, category: 'teknikk',
-      ages: ['8-9','10-12'], players: '6-12',
+      ages: ['8-9','10-12','13-16'], players: '6-12',
       equipment: '2-3 baller, kjegler',
       nffCategory: 'sjef_over_ballen', themes: ['pasning_samspill'], nffPhases: ['angrep_fremover'],
       learningGoals: ['Beveg deg etter pasning (slå og gå)', 'Se deg rundt FØR ballen kommer', 'Førsteberøring legger ballen klar for neste pasning'],
@@ -270,7 +270,7 @@
     },
     {
       key: 'pass_square', label: 'Pasningsfirkant', defaultMin: 12, category: 'teknikk',
-      ages: ['8-9','10-12'], players: '4-12',
+      ages: ['8-9','10-12','13-16'], players: '4-12',
       equipment: 'Kjegler, 1-3 baller',
       nffCategory: 'sjef_over_ballen', themes: ['pasning_samspill', 'vendinger_mottak'], nffPhases: ['angrep_fremover'],
       learningGoals: ['Orientert førsteberøring: se dit du skal spille', 'Førstetouch legger ballen klar for pasning', 'Åpne kroppen før mottak'],
@@ -483,7 +483,7 @@
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: '1v1', label: '1 mot 1', defaultMin: 10, category: 'spill_m_motstand',
-      ages: ['6-7','8-9','10-12'], players: '4-16',
+      ages: ['6-7','8-9','10-12','13-16'], players: '4-16',
       equipment: 'Småmål eller kjegler, baller, vester',
       nffCategory: 'spille_med_og_mot', themes: ['1v1_duell', 'forsvarsspill'], nffPhases: ['angrep_avslutning', 'forsvar_vinne_ball'],
       learningGoals: ['Angriper: tøff mot forsvarer, bruk finter og fart', 'Forsvarer: tving angriperen dit DU vil, stå på tå', 'Aldri gi opp, kjemp om ballen!'],
@@ -517,7 +517,7 @@
     },
     {
       key: '2v1', label: '2 mot 1', defaultMin: 10, category: 'spill_m_motstand',
-      ages: ['8-9','10-12'], players: '6-12',
+      ages: ['8-9','10-12','13-16'], players: '6-12',
       equipment: 'Småmål eller kjegler, baller',
       nffCategory: 'spille_med_og_mot', themes: ['samarbeidsspill', 'avslutning'], nffPhases: ['angrep_avslutning'],
       learningGoals: ['Angriper med ball: trekk forsvarer FØR pasning', 'Angriper uten ball: hold avstand og vinkel, vær spillbar', 'Timing: spill pasning i riktig øyeblikk'],
@@ -553,7 +553,7 @@
     },
     {
       key: '3v2', label: '3 mot 2', defaultMin: 12, category: 'spill_m_motstand',
-      ages: ['8-9','10-12'], players: '8-15',
+      ages: ['8-9','10-12','13-16'], players: '8-15',
       equipment: 'Mål, baller, vester',
       nffCategory: 'spille_med_og_mot', themes: ['samarbeidsspill', 'avslutning'], nffPhases: ['angrep_avslutning'],
       learningGoals: ['Trekantformasjon: bred, ikke i linje', 'Spiller med ball: trekk forsvarer, spill videre', 'Avslutt! Ikke overspill, ta sjansen når du har den'],
@@ -627,7 +627,7 @@
     },
     {
       key: 'possession', label: 'Ballbesittelse', defaultMin: 12, category: 'smalagsspill',
-      ages: ['8-9','10-12'], players: '7-15',
+      ages: ['8-9','10-12','13-16'], players: '7-15',
       equipment: 'Vester, baller, kjegler til bane',
       nffCategory: 'smalagsspill', themes: ['pasning_samspill', 'forsvarsspill'], nffPhases: ['angrep_fremover', 'forsvar_vinne_ball'],
       learningGoals: ['Gjør deg spillbar: avstand og vinkel til ballfører', 'Se opp før du får ballen: orienter deg', 'Forsvar: press sammen, steng midten'],
@@ -696,7 +696,7 @@
     },
     {
       key: 'square_game', label: 'Spill i soner', defaultMin: 12, category: 'smalagsspill',
-      ages: ['10-12'], players: '8-16',
+      ages: ['10-12','13-16'], players: '8-16',
       equipment: 'Mål, vester, kjegler, baller',
       nffCategory: 'smalagsspill', themes: ['spillforstaelse', 'romforstaelse'], nffPhases: ['angrep_fremover', 'angrep_avslutning', 'forsvar_vinne_ball'],
       learningGoals: ['Se etter rom i neste sone FØR du mottar', 'Bruk bredden, ikke bare gjennom midten', 'Forsvar: kontroller midtsonen, press som lag'],
@@ -4196,8 +4196,159 @@ function serializeWorkoutFromState() {
 
 
   // -------------------------
-  // Suggestions ("Lag en treningsøkt for meg")
+  // Pre-built session templates (ferdige øktmaler)
   // -------------------------
+  const NFF_TEMPLATES = {
+    '6-7': [
+      { title: 'Leik og føring (45 min)', theme: 'foering_dribling', duration: 45, blocks: [
+        { key: 'tag', min: 8 },
+        { key: 'ball_tag', min: 8 },
+        { key: 'driving', min: 8 },
+        { key: 'drink', min: 2 },
+        { key: 'ssg', min: 15 },
+        { key: 'shot', min: 4 }
+      ]},
+      { title: 'Score mål! (45 min)', theme: 'avslutning', duration: 45, blocks: [
+        { key: 'tag', min: 6 },
+        { key: 'warm_ball', min: 8 },
+        { key: 'shot', min: 8 },
+        { key: 'drink', min: 2 },
+        { key: 'game_activity', min: 18 },
+        { key: 'shot_race', min: 3 }
+      ]},
+      { title: 'Føring og spill (60 min)', theme: 'foering_dribling', duration: 60, blocks: [
+        { key: 'ball_tag', min: 8 },
+        { key: 'driving', min: 10 },
+        { key: 'relay_ball', min: 8 },
+        { key: 'drink', min: 2 },
+        { key: 'dribble', min: 10 },
+        { key: 'ssg', min: 18 },
+        { key: 'shot_race', min: 4 }
+      ]}
+    ],
+    '8-9': [
+      { title: 'Pasning og samspill (60 min)', theme: 'pasning_samspill', duration: 60, blocks: [
+        { key: 'tag', min: 6 },
+        { key: 'pass_pair', min: 10 },
+        { key: 'pass_move', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: 'wall_pass', min: 10 },
+        { key: 'ssg_theme', min: 18 },
+        { key: 'shot', min: 4 }
+      ]},
+      { title: 'Forsvarsspill (60 min)', theme: 'forsvarsspill', duration: 60, blocks: [
+        { key: 'tag', min: 6 },
+        { key: 'warm_ball', min: 8 },
+        { key: 'defend_press', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: '1v1', min: 10 },
+        { key: 'ssg', min: 20 },
+        { key: 'shot_race', min: 4 }
+      ]},
+      { title: 'Avslutning og mål (75 min)', theme: 'avslutning', duration: 75, blocks: [
+        { key: 'tag', min: 8 },
+        { key: 'warm_ball', min: 10 },
+        { key: 'shot', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: 'finish_assist', min: 10 },
+        { key: '2v1', min: 10 },
+        { key: 'ssg', min: 22 },
+        { key: 'shot_race', min: 3 }
+      ]},
+      { title: 'Dribling og 1v1 (60 min)', theme: '1v1_duell', duration: 60, blocks: [
+        { key: 'ball_tag', min: 8 },
+        { key: 'driving', min: 8 },
+        { key: '1v1', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: '1v1_gates', min: 10 },
+        { key: 'ssg', min: 18 },
+        { key: 'shot', min: 4 }
+      ]}
+    ],
+    '10-12': [
+      { title: 'Spilloppbygging (75 min)', theme: 'spilloppbygging', duration: 75, blocks: [
+        { key: 'tag', min: 8 },
+        { key: 'rondo_easy', min: 10 },
+        { key: 'pass_square', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: 'possession_dir', min: 15 },
+        { key: 'ssg_theme', min: 25 },
+        { key: 'shot', min: 5 }
+      ]},
+      { title: 'Omstilling (75 min)', theme: 'omstilling', duration: 75, blocks: [
+        { key: 'tag', min: 8 },
+        { key: 'warm_ball', min: 8 },
+        { key: 'defend_press', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: 'transition', min: 15 },
+        { key: 'ssg_theme', min: 25 },
+        { key: 'shot', min: 7 }
+      ]},
+      { title: 'Samarbeid og avslutning (90 min)', theme: 'samarbeidsspill', duration: 90, blocks: [
+        { key: 'tag', min: 8 },
+        { key: 'pass_move', min: 10 },
+        { key: 'wall_pass', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: '3v2', min: 12 },
+        { key: 'finish_assist', min: 10 },
+        { key: 'ssg_theme', min: 28 },
+        { key: 'shot', min: 5 },
+        { key: 'drink', min: 2 },
+        { key: 'game_activity', min: 3 }
+      ]},
+      { title: 'Forsvar og pressing (75 min)', theme: 'forsvarsspill', duration: 75, blocks: [
+        { key: 'tag', min: 8 },
+        { key: 'warm_ball', min: 8 },
+        { key: 'defend_press', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: '2v2', min: 12 },
+        { key: 'block_shot', min: 10 },
+        { key: 'ssg', min: 22 },
+        { key: 'shot', min: 3 }
+      ]}
+    ],
+    '13-16': [
+      { title: 'Prepp + Forsvarsspill (90 min)', theme: 'forsvarsspill', duration: 90, blocks: [
+        { key: 'prepp', min: 12 },
+        { key: 'defend_press', min: 12 },
+        { key: 'drink', min: 2 },
+        { key: 'sit_defend', min: 15 },
+        { key: 'zone_defense', min: 15 },
+        { key: 'ssg_theme', min: 28 },
+        { key: 'cross_finish', min: 6 }
+      ]},
+      { title: 'Prepp + Spilloppbygging (90 min)', theme: 'spilloppbygging', duration: 90, blocks: [
+        { key: 'prepp', min: 12 },
+        { key: 'rondo_easy', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: 'build_up', min: 15 },
+        { key: 'sit_attack', min: 15 },
+        { key: 'ssg_theme', min: 30 },
+        { key: 'shot', min: 6 }
+      ]},
+      { title: 'Prepp + Omstilling (75 min)', theme: 'omstilling', duration: 75, blocks: [
+        { key: 'prepp', min: 12 },
+        { key: 'wall_pass', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: 'transition', min: 15 },
+        { key: 'ssg_theme', min: 28 },
+        { key: 'finish_assist', min: 8 }
+      ]},
+      { title: 'Prepp + Angrep og avslutning (90 min)', theme: 'avslutning', duration: 90, blocks: [
+        { key: 'prepp', min: 12 },
+        { key: 'pass_square', min: 10 },
+        { key: 'drink', min: 2 },
+        { key: 'sit_attack', min: 15 },
+        { key: 'finish_assist', min: 10 },
+        { key: 'ssg_theme', min: 30 },
+        { key: 'cross_finish', min: 8 },
+        { key: 'drink', min: 2 },
+        { key: 'game_activity', min: 1 }
+      ]}
+    ]
+  };
+
+  // Legacy SUGGESTIONS (used as fallback only)
   const SUGGESTIONS = [
     // 60 min
     [
@@ -4283,7 +4434,7 @@ function serializeWorkoutFromState() {
 
     // Age selector
     let ageHtml = '<div class="wo-gen-label">\u00c5rsklasse</div><div class="wo-gen-ages">';
-    for (const age of ['6-7', '8-9', '10-12']) {
+    for (const age of ['6-7', '8-9', '10-12', '13-16']) {
       const sel = _gen.selectedAge === age ? ' wo-gen-pill-sel' : '';
       ageHtml += '<button type="button" class="wo-gen-pill' + sel + '" data-age="' + age + '">' + age + ' \u00e5r</button>';
     }
@@ -4297,8 +4448,21 @@ function serializeWorkoutFromState() {
     }
     durHtml += '</div>';
 
+    // Quick templates for selected age
+    const templates = NFF_TEMPLATES[_gen.selectedAge] || [];
+    let tplHtml = '';
+    if (templates.length) {
+      tplHtml = '<div class="wo-gen-label">Ferdige \u00f8ktmaler</div><div class="wo-gen-themes">';
+      templates.forEach((tpl, idx) => {
+        tplHtml += '<button type="button" class="wo-gen-pill" data-tpl="' + idx + '">\uD83D\uDCCB ' + escapeHtml(tpl.title) + '</button>';
+      });
+      tplHtml += '</div>';
+    }
+
     el.innerHTML =
       ageHtml +
+      tplHtml +
+      '<div class="wo-gen-divider" style="border-top:1px solid rgba(255,255,255,0.1);margin:10px 0;padding-top:8px;"><div class="wo-gen-label" style="opacity:0.7">...eller bygg selv:</div></div>' +
       themesHtml +
       goalsHtml +
       durHtml +
@@ -4320,6 +4484,18 @@ function serializeWorkoutFromState() {
       btn.addEventListener('click', () => {
         _gen.selectedAge = btn.dataset.age;
         _gen.selectedTheme = null; // reset theme since available themes change
+        renderGenererFlow();
+      });
+    });
+
+    // Bind template pills
+    el.querySelectorAll('[data-tpl]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tpls = NFF_TEMPLATES[_gen.selectedAge] || [];
+        const tpl = tpls[parseInt(btn.dataset.tpl, 10)];
+        if (!tpl) return;
+        loadTemplate(tpl);
+        _gen.open = false;
         renderGenererFlow();
       });
     });
@@ -4363,6 +4539,7 @@ function serializeWorkoutFromState() {
     const dist = NFF_TIME_DISTRIBUTION[ageGroup] || NFF_TIME_DISTRIBUTION['8-9'];
     const drinkMin = 2;
     const available = durationMin - drinkMin;
+    const is1316 = ageGroup === '13-16';
 
     // Calculate minutes per category
     const catMinutes = {};
@@ -4375,13 +4552,19 @@ function serializeWorkoutFromState() {
     }
 
     // Find exercises for each category, preferring those matching the theme
-    function pickExercise(nffCatId, excludeKeys) {
+    function pickExercise(nffCatId, excludeKeys, preferKey) {
       const candidates = EXERCISES.filter(ex =>
         ex.category !== 'special' &&
         ex.nffCategory === nffCatId &&
         !excludeKeys.has(ex.key) &&
         (!ex.ages || ex.ages.includes(ageGroup))
       );
+
+      // If a specific key is preferred (e.g. 'prepp' for 13-16 oppvarming)
+      if (preferKey) {
+        const preferred = candidates.find(ex => ex.key === preferKey);
+        if (preferred) return preferred;
+      }
 
       // Prefer theme-matching exercises
       const themed = candidates.filter(ex => ex.themes && ex.themes.includes(themeId));
@@ -4393,19 +4576,23 @@ function serializeWorkoutFromState() {
     const blocks = [];
     const usedKeys = new Set();
 
-    // Build order: sjef_over_ballen → spille_med_og_mot → drikkepause → scoringstrening → smalagsspill
+    // Category order differs for 13-16 (Prepp → Situasjonsøving → Scoring → Spill)
+    // Same categories, but sjef=Prepp, med/mot=Situasjonsøving, spill=Spill
     const categoryOrder = ['sjef_over_ballen', 'spille_med_og_mot', 'scoringstrening', 'smalagsspill'];
 
     for (const catId of categoryOrder) {
       let remaining = catMinutes[catId] || 0;
       if (remaining <= 0) continue;
 
+      // For 13-16 sjef_over_ballen: prefer 'prepp' exercise
+      const preferKey = (is1316 && catId === 'sjef_over_ballen') ? 'prepp' : null;
+
       // For large allocations, try to pick 2 exercises
       const numExercises = remaining >= 20 ? 2 : 1;
       const perExercise = Math.round(remaining / numExercises);
 
       for (let i = 0; i < numExercises; i++) {
-        const ex = pickExercise(catId, usedKeys);
+        const ex = pickExercise(catId, usedKeys, i === 0 ? preferKey : null);
         if (!ex) break;
         usedKeys.add(ex.key);
 
@@ -4451,9 +4638,13 @@ function serializeWorkoutFromState() {
   function suggestWorkoutLegacy() {
     const idx = Math.floor(Math.random() * SUGGESTIONS.length);
     const tpl = SUGGESTIONS[idx];
+    loadTemplate({ blocks: tpl.map(s => s.parallel ? s : { key: s.key, min: s.min }), title: 'Forslag' });
+  }
 
+  /** Load a pre-built template into the editor */
+  function loadTemplate(tpl) {
     const blocks = [];
-    for (const step of tpl) {
+    for (const step of tpl.blocks) {
       if (step.parallel) {
         const b = makeBlock('parallel');
         b.a.exerciseKey = step.a.key;
@@ -4473,11 +4664,13 @@ function serializeWorkoutFromState() {
     state.groupsCache.clear();
     state.parallelPickB.clear();
     state.expandedBlockId = null;
-    state.eventId = null;
-    state.seasonId = null;
+    if (tpl.theme) state.theme = tpl.theme;
+    if (_gen.selectedAge) state.ageGroup = _gen.selectedAge;
 
     renderBlocks();
-    if (typeof window.showNotification === 'function') window.showNotification('Forslag generert \u2013 juster fritt', 'success');
+    if (typeof window.showNotification === 'function') {
+      window.showNotification((tpl.title || '\u00d8ktmal') + ' lastet inn \u2013 juster fritt', 'success');
+    }
   }
 
   // Keep old name for backward compat (button binding)
