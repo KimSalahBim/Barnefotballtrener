@@ -21,6 +21,8 @@
   var editingSeasonPlayer = null; // season player object when editing
   var embeddedKampdagEvent = null; // event for embedded kampdag
   var embeddedKampdagTropp = null; // tropp players for embedded kampdag
+  var embeddedWorkoutEvent = null; // event for embedded workout
+  var embeddedWorkoutPlayers = null; // players for embedded workout
   var subTeamFilter = null; // null = all, 1-5 = specific sub-team (for roster/stats tabs)
 
   // =========================================================================
@@ -711,8 +713,13 @@
     if (window.sesongKampdag && window.sesongKampdag.isActive()) {
       window.sesongKampdag.destroy();
     }
+    if (window.sesongWorkout && window.sesongWorkout.isActive()) {
+      window.sesongWorkout.destroy();
+    }
     embeddedKampdagEvent = null;
     embeddedKampdagTropp = null;
+    embeddedWorkoutEvent = null;
+    embeddedWorkoutPlayers = null;
     eventDistDraft = null;
     assignDraft = null;
     importState = { matches: null, allTeams: null, selectedTeam: null, selectedSubTeam: null, parsed: null };
@@ -960,6 +967,10 @@
       var r4 = await sb.from('season_players').delete().eq('season_id', id).eq('user_id', uid);
       if (r4.error) console.warn('[season.js] season_players cleanup:', r4.error.message);
 
+      // 5b. workouts (FK → seasons + events) — slettes FØR events
+      var rw = await sb.from('workouts').delete().eq('season_id', id).eq('user_id', uid);
+      if (rw.error) console.warn('[season.js] workouts cleanup:', rw.error.message);
+
       // 6. events (FK → seasons)
       var r5 = await sb.from('events').delete().eq('season_id', id).eq('user_id', uid);
       if (r5.error) console.warn('[season.js] events cleanup:', r5.error.message);
@@ -1112,8 +1123,16 @@
     if (!sb || !uid) return false;
 
     try {
+      // Delete linked workouts first (FK: workouts.event_id → events.id SET NULL)
+      var rw = await sb.from('workouts').delete().eq('event_id', id).eq('user_id', uid);
+      if (rw.error) console.warn('[season.js] workout cleanup on event delete:', rw.error.message);
+
       var res = await sb.from('events').delete().eq('id', id).eq('user_id', uid);
       if (res.error) throw res.error;
+
+      // Remove from badge cache
+      if (_woEventIds) _woEventIds.delete(id);
+
       notify('Hendelse slettet.', 'success');
       return true;
     } catch (e) {
@@ -1824,7 +1843,7 @@
     var activeTab = null;
     if (snView === 'dashboard') {
       activeTab = dashTab;
-    } else if (snView === 'event-detail' || snView === 'create-event' || snView === 'edit-event' || snView === 'embedded-kampdag' || snView === 'create-series' || snView === 'fotball-import') {
+    } else if (snView === 'event-detail' || snView === 'create-event' || snView === 'edit-event' || snView === 'embedded-kampdag' || snView === 'embedded-workout' || snView === 'create-series' || snView === 'fotball-import') {
       activeTab = 'calendar';
     } else if (snView === 'roster-import' || snView === 'roster-add-manual' || snView === 'roster-assign') {
       activeTab = 'roster';
@@ -1849,6 +1868,12 @@
       embeddedKampdagEvent = null;
       embeddedKampdagTropp = null;
     }
+    // Clean up embedded workout if navigating away from it
+    if (snView !== 'embedded-workout' && window.sesongWorkout && window.sesongWorkout.isActive()) {
+      window.sesongWorkout.destroy();
+      embeddedWorkoutEvent = null;
+      embeddedWorkoutPlayers = null;
+    }
 
     updateSeasonNav();
 
@@ -1868,6 +1893,7 @@
       case 'player-stats': renderPlayerStats(root); break;
       case 'fotball-import': renderFotballImport(root); break;
       case 'embedded-kampdag': renderEmbeddedKampdag(root); break;
+      case 'embedded-workout': renderEmbeddedWorkout(root); break;
       default:               renderSeasonList(root);   break;
     }
   }
@@ -5856,9 +5882,13 @@
         html +=
           '<button class="btn-primary" id="snSaveAttendance" style="width:100%; margin-top:12px;">' +
             '<i class="fas fa-check" style="margin-right:5px;"></i>Lagre oppm\u00f8te' +
-          '</button>' +
+          '</button>';
+        var hasWorkout = _woEventIds && _woEventIds.has(ev.id);
+        var woLabel = hasWorkout ? 'Rediger trenings\u00f8kt' : 'Planlegg trenings\u00f8kt';
+        var woIcon = hasWorkout ? 'fa-pen' : 'fa-dumbbell';
+        html +=
           '<button class="btn-secondary" id="snOpenWorkout" style="width:100%; margin-top:8px;">' +
-            '<i class="fas fa-dumbbell" style="margin-right:6px;"></i>Planlegg trenings\u00f8kt' +
+            '<i class="fas ' + woIcon + '" style="margin-right:6px;"></i>' + woLabel +
           '</button>';
       }
     } else {
@@ -6100,41 +6130,30 @@
     // Planlegg treningsøkt (training events)
     if ($('snOpenWorkout')) {
       $('snOpenWorkout').addEventListener('click', function() {
-        // Gather present players from UI
+        // Gather present player IDs from UI
         var attItems = root.querySelectorAll('.sn-att-item.present');
-        var presentIds = [];
+        var presentIds = {};
         for (var ai = 0; ai < attItems.length; ai++) {
-          presentIds.push(attItems[ai].getAttribute('data-pid'));
+          presentIds[attItems[ai].getAttribute('data-pid')] = true;
         }
 
-        // Map season age_class (G10, J7) to workout ageGroup (8-9, 10-12)
-        var woAge = null;
-        if (currentSeason && currentSeason.age_class) {
-          var parsedAge = parseAgeFromClass(currentSeason.age_class);
-          if (parsedAge >= 6 && parsedAge <= 7) woAge = '6-7';
-          else if (parsedAge >= 8 && parsedAge <= 9) woAge = '8-9';
-          else if (parsedAge >= 10 && parsedAge <= 12) woAge = '10-12';
-          else if (parsedAge >= 13) woAge = '13-16';
+        // Build player objects for present players
+        var presentPlayers = [];
+        for (var pi = 0; pi < seasonPlayers.length; pi++) {
+          if (presentIds[seasonPlayers[pi].player_id]) {
+            presentPlayers.push({
+              id: seasonPlayers[pi].player_id,
+              name: seasonPlayers[pi].name,
+              skill_level: seasonPlayers[pi].skill,
+              goalie: seasonPlayers[pi].goalie
+            });
+          }
         }
 
-        // Build prefill options
-        var opts = {
-          eventId: ev.id,
-          seasonId: currentSeason ? currentSeason.id : null,
-          date: ev.start_time ? ev.start_time.slice(0, 10) : null,
-          title: ev.title || 'Trening',
-          duration: ev.duration_minutes || 60,
-          ageGroup: woAge,
-          playerIds: presentIds
-        };
-
-        // Call workout.js bridge and switch tab
-        if (window.workoutPrefill) {
-          window.workoutPrefill(opts);
-        }
-        if (window.__BF_switchTab) {
-          window.__BF_switchTab('workout');
-        }
+        embeddedWorkoutEvent = ev;
+        embeddedWorkoutPlayers = presentPlayers;
+        snView = 'embedded-workout';
+        render();
       });
     }
 
@@ -6686,6 +6705,106 @@
       // Re-enable save button so user can retry
       var retryBtn = document.getElementById('skdSavePlan');
       if (retryBtn) { retryBtn.disabled = false; retryBtn.innerHTML = '<i class="fas fa-save" style="margin-right:4px;"></i>Lagre spilletid til sesong'; }
+    }
+  }
+
+  // =========================================================================
+  //  EMBEDDED WORKOUT (treningsøkt innebygd i sesong)
+  // =========================================================================
+
+  function renderEmbeddedWorkout(root) {
+    if (!embeddedWorkoutEvent) {
+      snView = 'dashboard';
+      render();
+      return;
+    }
+    var ev = embeddedWorkoutEvent;
+
+    root.innerHTML = '<div id="snWorkoutContainer"></div>';
+    var container = document.getElementById('snWorkoutContainer');
+    if (!container || !window.sesongWorkout) {
+      root.innerHTML = '<div style="padding:20px; text-align:center;">Feil: sesong-workout.js ikke lastet.</div>';
+      return;
+    }
+
+    // Find existing workout for this event
+    var existing = _woSeasonWorkouts
+      ? _woSeasonWorkouts.find(function(w) { return w.event_id === ev.id; })
+      : null;
+
+    // Map age_class to workout ageGroup
+    var woAge = null;
+    if (currentSeason && currentSeason.age_class) {
+      var parsedAge = parseAgeFromClass(currentSeason.age_class);
+      if (parsedAge >= 6 && parsedAge <= 7) woAge = '6-7';
+      else if (parsedAge >= 8 && parsedAge <= 9) woAge = '8-9';
+      else if (parsedAge >= 10 && parsedAge <= 12) woAge = '10-12';
+      else if (parsedAge >= 13) woAge = '13-16';
+    }
+
+    window.sesongWorkout.init(container, embeddedWorkoutPlayers, {
+      minutes: ev.duration_minutes || 60,
+      ageGroup: woAge,
+      eventId: ev.id,
+      seasonId: currentSeason ? currentSeason.id : null,
+      title: ev.title || 'Trening',
+      existingBlocks: existing ? existing.blocks : null,
+      existingTheme: existing ? existing.theme : null,
+      existingDbId: existing ? existing.id : null,
+      onSave: function(data) {
+        return saveWorkoutToSesong(ev, data);
+      },
+      onBack: function() {
+        window.sesongWorkout.destroy();
+        embeddedWorkoutEvent = null;
+        embeddedWorkoutPlayers = null;
+        // Refresh workout cache for badges/stats
+        _woLoadEventIds();
+        snView = 'event-detail';
+        render();
+      }
+    });
+  }
+
+  async function saveWorkoutToSesong(ev, data) {
+    var sb = getSb();
+    var uid = getOwnerUid();
+    var tid = getTeamId();
+    if (!sb || !uid) return null;
+
+    var row = {
+      user_id: uid,
+      team_id: tid || 'default',
+      title: ev.title || 'Trening',
+      workout_date: ev.start_time ? ev.start_time.slice(0, 10) : null,
+      duration_minutes: data.duration || null,
+      age_group: data.ageGroup || null,
+      theme: data.theme || null,
+      blocks: data.blocks || [],
+      is_template: false,
+      season_id: data.seasonId || null,
+      event_id: ev.id,
+      source: 'season',
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      if (data.dbId) {
+        var res = await sb.from('workouts').update(row).eq('id', data.dbId).select().single();
+        if (res.error) throw res.error;
+        return res.data;
+      } else {
+        var res2 = await sb.from('workouts').insert(row).select().single();
+        if (res2.error) throw res2.error;
+        // Update event IDs cache
+        if (!_woEventIds) _woEventIds = new Set();
+        _woEventIds.add(ev.id);
+        return res2.data;
+      }
+    } catch (e) {
+      notify('Lagring feilet.', 'error');
+      console.error('[season] saveWorkoutToSesong:', e);
+      return null;
     }
   }
 

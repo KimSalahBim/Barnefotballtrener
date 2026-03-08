@@ -5773,4 +5773,26 @@ function serializeWorkoutFromState() {
 
   document.addEventListener('DOMContentLoaded', initIfPresent);
 
+  // =========================================================
+  // SHARED API: Exposed for sesong-workout.js embedding
+  // =========================================================
+  window._woShared = {
+    EXERCISES: EXERCISES,
+    EX_BY_KEY: EX_BY_KEY,
+    NFF_CATEGORIES: NFF_CATEGORIES,
+    NFF_CATEGORY_BY_ID: NFF_CATEGORY_BY_ID,
+    NFF_THEMES: NFF_THEMES,
+    NFF_THEME_BY_ID: NFF_THEME_BY_ID,
+    NFF_THEMES_BY_AGE: NFF_THEMES_BY_AGE,
+    NFF_TIME_DISTRIBUTION: NFF_TIME_DISTRIBUTION,
+    NFF_LEARNING_GOALS: NFF_LEARNING_GOALS,
+    NFF_TEMPLATES: NFF_TEMPLATES,
+    renderDrillSVG: renderDrillSVG,
+    catLabel: catLabel,
+    catShort: catShort,
+    getLearningGoals: getLearningGoals,
+    calculateNffBalance: calculateNffBalance,
+    escapeHtml: escapeHtml,
+  };
+
 })();
