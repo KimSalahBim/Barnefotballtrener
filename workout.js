@@ -168,7 +168,7 @@
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: 'driving', label: 'Føring av ball', defaultMin: 10, category: 'teknikk',
-      ages: ['6-7','8-9','10-12'], players: '4-16',
+      ages: ['6-7','8-9','10-12','13-16'], players: '4-16',
       equipment: '1 ball per spiller, 6-10 kjegler',
       nffCategory: 'sjef_over_ballen', themes: ['foering_dribling'], nffPhases: ['angrep_fremover'],
       learningGoals: ['Ballen tett i foten med korte touch', 'Løft blikket mellom kjeglene', 'Bruk begge føtter og ulike deler av foten'],
@@ -202,7 +202,7 @@
     },
     {
       key: 'pass_pair', label: 'Pasning parvis', defaultMin: 10, category: 'teknikk',
-      ages: ['6-7','8-9','10-12'], players: '4-20',
+      ages: ['6-7','8-9','10-12','13-16'], players: '4-20',
       equipment: '1 ball per par, kjegler som markering',
       nffCategory: 'sjef_over_ballen', themes: ['pasning_samspill'], nffPhases: ['angrep_fremover'],
       learningGoals: ['Støttefoten peker mot mottaker', 'Treffe midt på ballen med innsiden', 'Åpent mottak: demp og legg klar i én bevegelse'],
@@ -305,7 +305,7 @@
     },
     {
       key: 'dribble', label: 'Dribling 1 mot 1', defaultMin: 10, category: 'teknikk',
-      ages: ['6-7','8-9','10-12'], players: '4-16',
+      ages: ['6-7','8-9','10-12','13-16'], players: '4-16',
       equipment: 'Baller, småmål eller kjegler, vester',
       nffCategory: 'spille_med_og_mot', themes: ['foering_dribling', '1v1_duell'], nffPhases: ['angrep_fremover', 'forsvar_vinne_ball'],
       learningGoals: ['Angriper: brems opp foran forsvarer, bruk finter', 'Forsvarer: stå sidelengs, vær tålmodig', 'Lav tyngdepunkt for rask retningsendring'],
@@ -339,7 +339,7 @@
     },
     {
       key: 'turn', label: 'Vendinger', defaultMin: 10, category: 'teknikk',
-      ages: ['8-9','10-12'], players: '4-16',
+      ages: ['8-9','10-12','13-16'], players: '4-16',
       equipment: '1 ball per spiller, kjegler',
       nffCategory: 'sjef_over_ballen', themes: ['vendinger_mottak', 'foering_dribling'], nffPhases: ['angrep_fremover'],
       learningGoals: ['Brems ned FØR vendingen, akseler ETTER', 'Bruk kroppen til å skjerme ballen', 'Se deg rundt i vendingsøyeblikket'],
@@ -373,7 +373,7 @@
     },
     {
       key: 'receive_turn', label: 'Mottak og vending', defaultMin: 10, category: 'teknikk',
-      ages: ['8-9','10-12'], players: '6-12',
+      ages: ['8-9','10-12','13-16'], players: '6-12',
       equipment: '1 ball per par, kjegler',
       nffCategory: 'sjef_over_ballen', themes: ['vendinger_mottak', 'pasning_samspill'], nffPhases: ['angrep_fremover'],
       learningGoals: ['Sjekk over skulderen FØR ballen kommer', 'Åpne kroppen mot dit du vil vende', 'Førstetouch i retning du skal spille'],
@@ -411,7 +411,7 @@
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       key: 'shot', label: 'Skudd på mål', defaultMin: 12, category: 'avslutning',
-      ages: ['6-7','8-9','10-12'], players: '4-14',
+      ages: ['6-7','8-9','10-12','13-16'], players: '4-14',
       equipment: 'Mål (stort eller småmål), baller, kjegler',
       nffCategory: 'scoringstrening', themes: ['avslutning'], nffPhases: ['angrep_avslutning'],
       learningGoals: ['Plassering foran kraft: sikte lavt i hjørnene', 'Støttefot peker mot mål', 'Følg opp skuddet, vær klar for retur'],
@@ -444,7 +444,7 @@
     },
     {
       key: 'shot_race', label: 'Skuddstafett', defaultMin: 10, category: 'avslutning',
-      ages: ['6-7','8-9','10-12'], players: '6-16',
+      ages: ['6-7','8-9','10-12','13-16'], players: '6-16',
       equipment: 'Mål, baller, kjegler',
       nffCategory: 'scoringstrening', themes: ['avslutning', 'foering_dribling'], nffPhases: ['angrep_avslutning'],
       learningGoals: ['Fart OG kontroll gjennom kjeglene', 'Ro deg ned foran mål: presisjon over panikkskudd'],
@@ -1043,7 +1043,7 @@
     // --- 1v1 med porter ---
     {
       key: '1v1_gates', label: '1 mot 1 med porter', defaultMin: 10, category: 'spill_m_motstand',
-      ages: ['8-9', '10-12'], players: '6-16',
+      ages: ['8-9', '10-12', '13-16'], players: '6-16',
       equipment: 'Kjegler (mange), baller',
       nffCategory: 'spille_med_og_mot', themes: ['1v1_duell', 'foering_dribling'], nffPhases: ['angrep_fremover', 'forsvar_vinne_ball'],
       learningGoals: ['Angriper: les forsvareren og velg hvilken port du angriper', 'Bruk finter og retningsforandring for å åpne porter', 'Forsvarer: steng den nærmeste porten, tving til side'],
@@ -1532,13 +1532,25 @@
   // -------------------------
 
   const NFF_CATEGORIES = [
-    { id: 'sjef_over_ballen',   label: '⚽ Sjef over ballen',   short: 'Sjef',    color: '#2e8b57' },
-    { id: 'spille_med_og_mot',  label: '⚔️ Spille med og mot',  short: 'Øvelse',  color: '#e67e22' },
-    { id: 'smalagsspill',       label: '🏟️ Smålagsspill',       short: 'Spill',   color: '#3498db' },
-    { id: 'scoringstrening',    label: '🎯 Scoringstrening',    short: 'Scoring', color: '#e74c3c' },
+    { id: 'sjef_over_ballen',   label: '⚽ Sjef over ballen',   short: 'Sjef',    color: '#2e8b57',
+      label1316: '⚽ Prepp\u2019n', short1316: 'Prepp' },
+    { id: 'spille_med_og_mot',  label: '⚔️ Spille med og mot',  short: 'Øvelse',  color: '#e67e22',
+      label1316: '⚔️ Situasjonsøving', short1316: 'Situasjon' },
+    { id: 'smalagsspill',       label: '🏟️ Smålagsspill',       short: 'Spill',   color: '#3498db',
+      label1316: '🏟️ Spill', short1316: 'Spill' },
+    { id: 'scoringstrening',    label: '🎯 Scoringstrening',    short: 'Scoring', color: '#e74c3c',
+      label1316: '🎯 Avslutning', short1316: 'Avslutning' },
   ];
 
   const NFF_CATEGORY_BY_ID = Object.fromEntries(NFF_CATEGORIES.map(c => [c.id, c]));
+
+  /** Get age-appropriate label for NFF category */
+  function catLabel(cat, ageGroup) {
+    return (ageGroup === '13-16' && cat.label1316) ? cat.label1316 : cat.label;
+  }
+  function catShort(cat, ageGroup) {
+    return (ageGroup === '13-16' && cat.short1316) ? cat.short1316 : cat.short;
+  }
 
   // Treningstemaer knyttet til NFFs spillmodell
   const NFF_THEMES = [
@@ -1838,7 +1850,7 @@
     wrap.innerHTML = NFF_CATEGORIES.map(cat =>
       '<button class="wo-bs-pill" type="button" data-cat="' + cat.id + '"' +
       ' style="--pill-color:' + cat.color + '">' +
-      cat.label + '</button>'
+      catLabel(cat, state.ageGroup) + '</button>'
     ).join('');
 
     wrap.querySelectorAll('.wo-bs-pill').forEach(btn => {
@@ -1868,7 +1880,7 @@
       html += '<div class="wo-bs-hint">';
       html += '<span class="wo-bs-hint-icon">\uD83D\uDCA1</span> ';
       html += 'Mangler i \u00f8kta: ';
-      html += missing.map(c => '<strong>' + escapeHtml(c.short) + '</strong>').join(', ');
+      html += missing.map(c => '<strong>' + escapeHtml(catShort(c, state.ageGroup)) + '</strong>').join(', ');
       html += '</div>';
     }
 
@@ -1898,7 +1910,7 @@
 
       html += '<div class="wo-bs-section" data-cat="' + cat.id + '">';
       html += '<div class="wo-bs-section-head" style="--cat-color:' + cat.color + '">';
-      html += cat.label + '</div>';
+      html += catLabel(cat, state.ageGroup) + '</div>';
 
       for (const ex of exs) {
         html += _bsRenderCard(ex, inSession);
@@ -1937,6 +1949,11 @@
       ? (ex.description.length > 70 ? ex.description.slice(0, 67) + '\u2026' : ex.description)
       : '';
 
+    // Equipment line (compact)
+    const equipLine = ex.equipment
+      ? '<div class="wo-bs-card-equip">' + escapeHtml(ex.equipment) + '</div>'
+      : '';
+
     // Meta chips
     const metaParts = [];
     metaParts.push(ex.defaultMin + ' min');
@@ -1955,6 +1972,7 @@
       '<div class="wo-bs-card-body">' +
         '<div class="wo-bs-card-name">' + escapeHtml(ex.label) + '</div>' +
         (desc ? '<div class="wo-bs-card-desc">' + escapeHtml(desc) + '</div>' : '') +
+        equipLine +
         '<div class="wo-bs-card-meta">' + metaParts.join(' \u00b7 ') + '</div>' +
       '</div>' +
       (isInSession ? '<div class="wo-bs-badge">I \u00f8kta</div>' : '') +
@@ -2697,10 +2715,11 @@
       if (!b) continue;
       const pct = balance.totalMinutes > 0 ? Math.round((b.minutes / balance.totalMinutes) * 100) : 0;
       const recPct = b.recommendedPct || 0;
+      const _age = state.ageGroup || '8-9';
       balanceHtml += '<div class="wo-meta-bal-seg" style="--bal-color:' + cat.color + '; --bal-pct:' + pct + '%" ' +
-        'title="' + escapeHtml(cat.short) + ': ' + b.minutes + ' min (' + pct + '%) \u2014 anbefalt ' + recPct + '%">' +
+        'title="' + escapeHtml(catShort(cat, _age)) + ': ' + b.minutes + ' min (' + pct + '%) \u2014 anbefalt ' + recPct + '%">' +
         '<div class="wo-meta-bal-fill"></div>' +
-        '<span class="wo-meta-bal-label">' + escapeHtml(cat.short) + '</span>' +
+        '<span class="wo-meta-bal-label">' + escapeHtml(catShort(cat, _age)) + '</span>' +
       '</div>';
     }
     balanceHtml += '</div>';
@@ -2813,7 +2832,7 @@
         if (fb !== fa) return fb - fa;
         return a.label.localeCompare(b.label, 'nb');
       });
-      html += '<optgroup label="' + escapeHtml(cat.label) + '">';
+      html += '<optgroup label="' + escapeHtml(catLabel(cat, state.ageGroup)) + '">';
       for (const x of exs) {
         const sel = x.key === selectedKey ? 'selected' : '';
         html += '<option value="' + escapeHtml(x.key) + '" ' + sel + '>' + escapeHtml(x.label) + '</option>';
@@ -3097,7 +3116,7 @@
    */
   function renderSectionMarker(cat, minutes) {
     return '<div class="wo-h1-marker" style="--marker-color:' + cat.color + '">' +
-      '<span class="wo-h1-marker-label">' + cat.label + '</span>' +
+      '<span class="wo-h1-marker-label">' + catLabel(cat, state.ageGroup) + '</span>' +
       '<span class="wo-h1-marker-min">' + minutes + ' min</span>' +
     '</div>';
   }
