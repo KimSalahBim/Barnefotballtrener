@@ -1132,6 +1132,10 @@
 
       // Remove from badge cache
       if (_woEventIds) _woEventIds.delete(id);
+      // Remove from workouts stats cache
+      if (_woSeasonWorkouts) {
+        _woSeasonWorkouts = _woSeasonWorkouts.filter(function(w) { return w.event_id !== id; });
+      }
 
       notify('Hendelse slettet.', 'success');
       return true;
@@ -6774,7 +6778,7 @@
 
     var row = {
       user_id: uid,
-      team_id: tid || 'default',
+      team_id: tid || null,
       title: ev.title || 'Trening',
       workout_date: ev.start_time ? ev.start_time.slice(0, 10) : null,
       duration_minutes: data.duration || null,
@@ -6792,6 +6796,12 @@
       if (data.dbId) {
         var res = await sb.from('workouts').update(row).eq('id', data.dbId).select().single();
         if (res.error) throw res.error;
+        // Update local cache so re-open gets fresh data without waiting for DB fetch
+        if (_woSeasonWorkouts) {
+          var idx = _woSeasonWorkouts.findIndex(function(w) { return w.id === data.dbId; });
+          if (idx >= 0) _woSeasonWorkouts[idx] = res.data;
+          else _woSeasonWorkouts.push(res.data);
+        }
         return res.data;
       } else {
         var res2 = await sb.from('workouts').insert(row).select().single();
@@ -6799,6 +6809,9 @@
         // Update event IDs cache
         if (!_woEventIds) _woEventIds = new Set();
         _woEventIds.add(ev.id);
+        // Update local workouts cache
+        if (!_woSeasonWorkouts) _woSeasonWorkouts = [];
+        _woSeasonWorkouts.push(res2.data);
         return res2.data;
       }
     } catch (e) {

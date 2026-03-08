@@ -61,34 +61,40 @@
   }
 
   // ─── AUTO-SAVE ───
-  var _swSaveTimer = null;
   var _swSaving = false; // in-flight guard
 
+  var _swDirty = false; // changes pending while a save is in-flight
+
   function scheduleAutoSave() {
+    _swDirty = true;
     if (_swSaveTimer) clearTimeout(_swSaveTimer);
     _swSaveTimer = setTimeout(async function() {
-      if (_swSaving) return; // previous save still in flight
-      if (_swCallbacks.onSave) {
-        _swSaving = true;
-        try {
-          var saveData = {
-            blocks: _sw.blocks.map(function(b) {
-              return { kind: 'single', a: { exerciseKey: b.a.exerciseKey, minutes: b.a.minutes, comment: b.a.comment || '' } };
-            }),
-            theme: _sw.theme,
-            ageGroup: _sw.ageGroup,
-            duration: totalMinutes(),
-            seasonId: _swOpts.seasonId || null,
-            dbId: _swDbId
-          };
-          var result = await _swCallbacks.onSave(saveData);
-          // Update _swDbId after first insert so subsequent saves do upsert
-          if (result && result.id && !_swDbId) {
-            _swDbId = result.id;
-          }
-        } finally {
-          _swSaving = false;
+      if (_swSaving) {
+        // Save in-flight — reschedule so this change isn't lost
+        scheduleAutoSave();
+        return;
+      }
+      if (!_swDirty || !_swCallbacks.onSave) return;
+      _swDirty = false;
+      _swSaving = true;
+      try {
+        var saveData = {
+          blocks: _sw.blocks.map(function(b) {
+            return { kind: 'single', a: { exerciseKey: b.a.exerciseKey, minutes: b.a.minutes, comment: b.a.comment || '' } };
+          }),
+          theme: _sw.theme,
+          ageGroup: _sw.ageGroup,
+          duration: totalMinutes(),
+          seasonId: _swOpts.seasonId || null,
+          dbId: _swDbId
+        };
+        var result = await _swCallbacks.onSave(saveData);
+        // Update _swDbId after first insert so subsequent saves do upsert
+        if (result && result.id && !_swDbId) {
+          _swDbId = result.id;
         }
+      } finally {
+        _swSaving = false;
       }
     }, 1500);
   }
@@ -431,6 +437,7 @@
     _sw.blocks.push(b);
     _sw.expandedBlockId = b.id;
     renderBlocks();
+    updateHeader();
   }
 
   function deleteBlock(bid) {
@@ -529,7 +536,7 @@
       while (_swSaving && waitCount < 20) { await new Promise(function(r) { setTimeout(r, 100); }); waitCount++; }
       // Force final save (await to ensure it completes before destroy)
       if (_swCallbacks.onSave && _sw.blocks.length > 0) {
-        await _swCallbacks.onSave({
+        var finalResult = await _swCallbacks.onSave({
           blocks: _sw.blocks.map(function(b) {
             return { kind: 'single', a: { exerciseKey: b.a.exerciseKey, minutes: b.a.minutes, comment: b.a.comment || '' } };
           }),
@@ -539,7 +546,11 @@
           seasonId: _swOpts.seasonId || null,
           dbId: _swDbId
         });
+        // Update _swDbId so destroy() won't fire a second INSERT
+        if (finalResult && finalResult.id) _swDbId = finalResult.id;
       }
+      // Mark inactive BEFORE calling onBack so destroy() won't fire a duplicate save
+      _swActive = false;
       if (_swCallbacks.onBack) _swCallbacks.onBack();
     });
 
@@ -569,9 +580,10 @@
 
   function bindGenererHandlers() {
     var w = W();
+    var root = _swContainer || document;
 
     // Template pills
-    var tplBtns = document.querySelectorAll('[data-tpl]');
+    var tplBtns = root.querySelectorAll('[data-tpl]');
     for (var t = 0; t < tplBtns.length; t++) {
       tplBtns[t].addEventListener('click', (function(btn) {
         return function() {
@@ -583,7 +595,7 @@
     }
 
     // Theme pills
-    var themeBtns = document.querySelectorAll('[data-theme]');
+    var themeBtns = root.querySelectorAll('[data-theme]');
     for (var i = 0; i < themeBtns.length; i++) {
       themeBtns[i].addEventListener('click', (function(btn) {
         return function() {
@@ -595,7 +607,7 @@
     }
 
     // Duration pills
-    var durBtns = document.querySelectorAll('[data-dur]');
+    var durBtns = root.querySelectorAll('[data-dur]');
     for (var d = 0; d < durBtns.length; d++) {
       durBtns[d].addEventListener('click', (function(btn) {
         return function() {
@@ -758,6 +770,7 @@
     _swContainer = null;
     _swCallbacks = {};
     _swSaving = false;
+    _swDirty = false;
     _sw.blocks = [];
     _sw.expandedBlockId = null;
     _sw.genOpen = false;
