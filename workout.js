@@ -80,8 +80,8 @@
         'Gjør området mindre for mer intensitet'
       ],
       variations: [
-        'Alle med ball: fangere sparker ballen ut av området',
-        'Havsisten: alle må drible med ball'
+        'Frostsisten: frosne spillere fryser med armene ut — fri dem ved å gå under armen',
+        'Haletag: alle har et bånd i buksen — ta andres bånd uten å miste ditt eget'
       ],
       diagram: { width:220, height:160, field:'small', elements:[
         {type:'cone',x:20,y:20},{type:'cone',x:200,y:20},{type:'cone',x:20,y:140},{type:'cone',x:200,y:140},
@@ -159,7 +159,7 @@
         {type:'player',x:110,y:150,team:'a',label:'C'},{type:'player',x:45,y:85,team:'a',label:'D'},
         {type:'player',x:110,y:85,team:'b',label:'X'},
         {type:'ball',x:120,y:16},
-        {type:'arrow',from:[110,20],to:[175,85],style:'pass'},{type:'arrow',from:[110,85],to:[110,30],style:'run'}
+        {type:'arrow',from:[110,20],to:[175,85],style:'pass'},{type:'arrow',from:[118,85],to:[165,85],style:'run'}
       ]}
     },
 
@@ -300,6 +300,7 @@
         {type:'player',x:180,y:137,team:'a',label:'C'},{type:'player',x:40,y:137,team:'a',label:'D'},
         {type:'ball',x:55,y:30},
         {type:'arrow',from:[50,33],to:[170,33],style:'pass'},
+        {type:'arrow',from:[180,41],to:[180,130],style:'pass'},
         {type:'arrow',from:[55,43],to:[168,38],style:'run'}
       ]}
     },
@@ -334,7 +335,8 @@
         {type:'player',x:110,y:55,team:'b',label:'F'},{type:'player',x:110,y:120,team:'a',label:'A'},
         {type:'ball',x:118,y:126},
         {type:'arrow',from:[110,120],to:[110,65],style:'run'},
-        {type:'cone',x:75,y:55},{type:'cone',x:145,y:55}
+        {type:'cone',x:75,y:55},{type:'cone',x:145,y:55},
+        {type:'goal',x:85,y:143,w:50,h:12}
       ]}
     },
     {
@@ -423,7 +425,8 @@
         'Spilleren fører ball mot mål fra sentralt.',
         'Avslutt på mål fra ca. 10-12 meter.',
         'Neste runde: skudd fra venstre side.',
-        'Tredje runde: mottar pasning fra siden og avslutter direkte.'
+        'Tredje runde: skudd fra høyre side.',
+        'Fjerde runde: mottar pasning fra siden og avslutter direkte.'
       ],
       coaching: [
         'Plassering slår kraft — sikte lavt i hjørnene',
@@ -688,10 +691,14 @@
       ],
       diagram: { width:240, height:160, field:'half', elements:[
         {type:'goal',x:5,y:55,w:12,h:50,vertical:true},{type:'goal',x:223,y:55,w:12,h:50,vertical:true},
-        {type:'player',x:40,y:50,team:'a',label:''},{type:'player',x:80,y:90,team:'a',label:''},
-        {type:'player',x:60,y:125,team:'a',label:''},
-        {type:'player',x:140,y:40,team:'b',label:''},{type:'player',x:175,y:80,team:'b',label:''},
-        {type:'player',x:155,y:120,team:'b',label:''},{type:'ball',x:115,y:78}
+        {type:'player',x:35,y:35,team:'a',label:''},{type:'player',x:90,y:110,team:'a',label:''},
+        {type:'player',x:60,y:75,team:'a',label:''},
+        {type:'player',x:160,y:50,team:'b',label:''},{type:'player',x:190,y:105,team:'b',label:''},
+        {type:'player',x:125,y:85,team:'b',label:''},
+        {type:'ball',x:88,y:70},
+        {type:'arrow',from:[60,75],to:[85,70],style:'run'},
+        {type:'arrow',from:[125,85],to:[92,72],style:'run'},
+        {type:'arrow',from:[160,50],to:[140,62],style:'run'}
       ]}
     },
     {
@@ -797,7 +804,7 @@
         'Tatt = bli fanger selv (siste spiller igjen vinner)',
         'Fangere uten ball — sparker andres ball ut av området'
       ],
-      diagram: { width:200, height:200, field:'none', elements:[
+      diagram: { width:200, height:200, field:'small', elements:[
         {type:'cone',x:10,y:10},{type:'cone',x:190,y:10},{type:'cone',x:10,y:190},{type:'cone',x:190,y:190},
         {type:'player',x:60,y:80,team:'a',label:''},{type:'ball',x:68,y:76},
         {type:'player',x:140,y:60,team:'a',label:''},{type:'ball',x:148,y:56},
@@ -835,7 +842,7 @@
         '2v1: legg til en medangriper for å øve samarbeid i forsvar',
         'Gi forsvareren poeng for å tvinge skudd utenfor 16-meter'
       ],
-      diagram: { width:220, height:160, field:'none', elements:[
+      diagram: { width:220, height:160, field:'small', elements:[
         {type:'goal',x:70,y:5,w:80,h:16},{type:'keeper',x:110,y:18},
         {type:'player',x:110,y:120,team:'a',label:'A'},{type:'ball',x:118,y:116},
         {type:'player',x:40,y:80,team:'b',label:'F'},
@@ -856,12 +863,10 @@
       description: 'Vanlig smålagsspill med én betingelse som forsterker øktens tema. Betingelsen styrer hva spillerne må gjøre for å score, og gir treneren kontroll over læringsfokuset.',
       setup: 'Tilpass bane til antall (4v4: 25x35m, 5v5: 30x45m). To mål. Del i to lag med vester.',
       steps: [
-        'Vanlige spilleregler, men med én betingelse for scoring.',
-        'Eksempler på betingelser:',
-        '• Alle på angripende lag over midtlinjen før scoring teller',
-        '• Mål teller dobbelt etter veggspill/kombinasjon',
-        '• Scoring kun etter maks 3 berøringer på siste spiller',
-        'Bytt betingelse halvveis for variasjon.'
+        'Velg én betingelse og forklar den tydelig før start. Eksempler: alle på angripende lag over midtlinjen, mål teller dobbelt etter kombinasjon, eller maks 3 berøringer på siste spiller.',
+        'Spill vanlig kamp med betingelsen aktiv. La spillet flyte — stopp maks 1-2 ganger kort for å forsterke temaet.',
+        'Bytt betingelse halvveis for variasjon, eller fjern den og se om atferden sitter.',
+        'Avslutt med fri tid uten betingelse: spill bare for gleden av det.'
       ],
       coaching: [
         'Forklar betingelsen tydelig FØR start',
@@ -917,6 +922,8 @@
         {type:'player',x:100,y:90,team:'a',label:''},{type:'ball',x:108,y:86},
         {type:'player',x:160,y:50,team:'b',label:''},{type:'player',x:160,y:130,team:'b',label:''},
         {type:'player',x:190,y:90,team:'b',label:''},
+        {type:'player',x:232,y:65,team:'neutral',label:'C'},{type:'player',x:232,y:90,team:'neutral',label:'C'},
+        {type:'player',x:232,y:115,team:'neutral',label:'C'},
         {type:'arrow',from:[108,86],to:[200,70],style:'pass'}
       ]}
     },
@@ -949,7 +956,7 @@
         'Dobbelt veggspill: to pasninger før avslutning',
         'Legg til aktiv forsvarer som prøver å stoppe kombinasjonen'
       ],
-      diagram: { width:220, height:150, field:'none', elements:[
+      diagram: { width:220, height:150, field:'small', elements:[
         {type:'goal',x:70,y:5,w:80,h:16},{type:'keeper',x:110,y:18},
         {type:'player',x:110,y:120,team:'a',label:'A'},{type:'ball',x:118,y:116},
         {type:'player',x:40,y:70,team:'a',label:'V'},
@@ -988,7 +995,7 @@
         'Legg til en forsvarer som prøver å blokkere tverrballen',
         'Varier: tilbakelegg fra dødlinja, tverrball fra 16m, gjennombrudd sentralt'
       ],
-      diagram: { width:220, height:160, field:'none', elements:[
+      diagram: { width:220, height:160, field:'small', elements:[
         {type:'goal',x:60,y:5,w:100,h:18},{type:'keeper',x:110,y:20},
         {type:'player',x:190,y:110,team:'a',label:'A'},{type:'ball',x:198,y:106},
         {type:'player',x:110,y:100,team:'a',label:'B'},
@@ -1031,7 +1038,7 @@
         'Med keeper: 2v2+K, større mål',
         '2v2 med jokere på sidene (3v2 i angrep)'
       ],
-      diagram: { width:200, height:160, field:'none', elements:[
+      diagram: { width:200, height:160, field:'small', elements:[
         {type:'goal',x:70,y:5,w:60,h:12},{type:'goal',x:70,y:143,w:60,h:12},
         {type:'player',x:75,y:70,team:'a',label:''},{type:'player',x:130,y:55,team:'a',label:''},
         {type:'ball',x:83,y:66},
@@ -1144,7 +1151,7 @@
         '2v1 nær mål: to angripere mot én forsvarer + keeper',
         'Innlegg fra siden: forsvarer må markere og cleare'
       ],
-      diagram: { width:220, height:150, field:'none', elements:[
+      diagram: { width:220, height:150, field:'small', elements:[
         {type:'goal',x:60,y:5,w:100,h:18},{type:'keeper',x:110,y:20},
         {type:'player',x:110,y:120,team:'a',label:'A'},{type:'ball',x:118,y:116},
         {type:'player',x:110,y:60,team:'b',label:'F'},
@@ -1243,10 +1250,10 @@
       description: 'Strukturert oppvarming for ungdom. Fokus på fart i hodet, fart i beina og fart i ballen. Gjør spillerne spilleklare for høy intensitet i spill. Bør knyttes til øktens tema.',
       setup: 'Firkant 15x15m med kjegler. Alle spillere med ball. Kan kjøres i par eller individuelt.',
       steps: [
-        'Del 1 — Føring (3 min): Alle fører ball i firkanten. Trener roper kommandoer: innside, utside, såle, vending, tempoøkning.',
-        'Del 2 — Frekvens (3 min): Ballen i hendene. Kjappe føtter over ball, sidesteg langs kjegler, akselerasjon ut av øvelse.',
-        'Del 3 — Pasning i par (4 min): To og to, kort avstand. Vekslende pasning med førstetouch i bevegelse. Øk avstand gradvis.',
-        'Del 4 — Fritt (2 min): Kombiner føring, vending og pasning i fritt tempo med økende fart.'
+        'Føring (3 min): alle fører ball i firkanten. Trener roper kommandoer — innside, utside, såle, vending, tempoøkning.',
+        'Frekvens (3 min): ball i hendene, kjappe føtter over ball, sidesteg langs kjegler, akselerasjon ut.',
+        'Pasning i par (4 min): kort avstand, vekslende pasning med førstetouch i bevegelse. Øk avstand gradvis.',
+        'Fritt (2 min): kombiner føring, vending og pasning i fritt tempo med stigende fart.'
       ],
       coaching: [
         'Kontroll på overkroppen: stå rett, ikke len deg forover',
@@ -1258,7 +1265,7 @@
         'Med motstand: legg til en passiv jager i del 1',
         'Konkurranseform: hvem klarer flest vendinger på 30 sek?'
       ],
-      diagram: { width:200, height:200, field:'none', elements:[
+      diagram: { width:200, height:200, field:'small', elements:[
         {type:'cone',x:20,y:20},{type:'cone',x:180,y:20},{type:'cone',x:20,y:180},{type:'cone',x:180,y:180},
         {type:'player',x:60,y:70,team:'a',label:''},{type:'ball',x:68,y:66},
         {type:'player',x:140,y:90,team:'a',label:''},{type:'ball',x:148,y:86},
@@ -2003,7 +2010,13 @@
     const metaParts = [];
     metaParts.push(ex.defaultMin + ' min');
     if (ex.ages && ex.ages.length) {
-      metaParts.push(ex.ages.map(a => a + ' \u00e5r').join(', '));
+      if (ex.ages.length > 2) {
+        const first = ex.ages[0].split('-')[0];
+        const last = ex.ages[ex.ages.length - 1].split('-')[1];
+        metaParts.push(first + '\u2013' + last + ' \u00e5r');
+      } else {
+        metaParts.push(ex.ages.map(a => a + ' \u00e5r').join(', '));
+      }
     }
     if (ex.hasOpposition) {
       metaParts.push('<span class="wo-bs-tag-opp">Motspill</span>');
@@ -3318,7 +3331,15 @@
     const meta = EX_BY_KEY.get(exerciseKey);
     if (!meta || !meta.description || !meta.steps) return '';
     const tags = [];
-    if (meta.ages) meta.ages.forEach(a => tags.push('📍 ' + a + ' år'));
+    if (meta.ages && meta.ages.length) {
+      if (meta.ages.length > 2) {
+        const first = meta.ages[0].split('-')[0];
+        const last = meta.ages[meta.ages.length - 1].split('-')[1];
+        tags.push('📍 ' + first + '\u2013' + last + ' år');
+      } else {
+        meta.ages.forEach(a => tags.push('📍 ' + a + ' år'));
+      }
+    }
     if (meta.players) tags.push('👥 ' + meta.players);
     if (meta.equipment) tags.push('⚙️ ' + meta.equipment);
     let html = '<div class="wo-info-content">';
