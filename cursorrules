@@ -1,0 +1,182 @@
+# Barnefotballtrener.no — Cursor Rules
+
+## Prosjekt
+PWA for barnefotballtrenere (6-12 år). Norsk app, 200+ aktive brukere med betalende abonnenter.
+Eier: Kim, Holmvik Utvikling ENK, Steinkjer.
+URL: barnefotballtrener.no. Repo: GitHub (public).
+
+## Aktiv branch: new-workout
+Stor refaktor av treningsøkt-modulen. Leveranse 1 + 1.5 ferdig (NFF-redesign + Supabase-lagring).
+Ikke merget til main enda — trenger manuell testing i Vercel preview først.
+
+## Stack
+- **Vanilla JS** — ingen React, Vue, TypeScript, bundler, eller npm
+- **IIFE-mønster** — alt er wrappet i `(function() { 'use strict'; ... })()`
+- **Supabase** — auth (Google OAuth kun), database (17+ tabeller, RLS), prosjekt-ID: jxteosjxgrblasksfeyu
+- **Stripe** — abonnement (49 kr/mnd)
+- **Vercel** — hosting, auto-deploy fra GitHub, serverless functions i /api
+- **Flat filstruktur** — alle filer i rot, ingen src/ eller dist/
+- **Umami** — cookieless analytics (GDPR-compliant)
+
+## Filer og linjetall (new-workout branch, verifisert)
+
+### Kjernefiler
+| Fil | Linjer | Rolle |
+|-----|--------|-------|
+| index.html | 1478 | Hele UI-et, alle DOM-elementer, landing page, script-tags |
+| core.js | 3001 | Spilleradmin, team-management, cloud-sync, trenerdeling |
+| season.js | 6933 | Sesong-modul: CRUD, kalender, statistikk, flerlag, embedded workout-bridge |
+| workout.js | 5826 | Treningsøkt: 40 øvelser, NFF-rammeverk, bottom sheet, Supabase CRUD |
+| kampdag.js | 3058 | Kampdag med bytteplan-algoritme, PDF-eksport |
+| sesong-kampdag.js | 3151 | Kampdag embedded i sesong (skd-prefix) |
+| sesong-workout.js | 1365 | Treningsøkt embedded i sesong, full feature-paritet med workout.js |
+| competitions.js | 1115 | Mesternes mester (konkurranser) |
+| onboarding.js | 1053 | Onboarding wizard v6 |
+| auth.js | 972 | Supabase auth, Google OAuth, session-håndtering |
+| subscription.js | 792 | Stripe-abonnement (client-side gating) |
+| pricing.js | 847 | Prisside-logikk |
+| club.js | 489 | Klubbmodul v3 (join/leave-club API, XSS-vern) |
+| grouping.js | 166 | Felles gruppealgoritmer (snake-draft, keeper-korreksjon) |
+| grouping-dragdrop.js | 324 | Drag-and-drop mellom grupper (long-press + dra) |
+| export-data.js | 332 | GDPR-eksport (alle tabeller + Stripe) |
+| logout-fix.js | 250 | Robust signout med capture-phase listener |
+| debug.js | 210 | Debug-verktøy |
+| error-logger.js | 73 | Sentry error logging |
+
+### CSS-filer
+| Fil | Linjer | Rolle |
+|-----|--------|-------|
+| style.css | 3632 | Hoved-CSS for hele appen |
+| style-workout-nff.css | 1311 | All workout NFF-redesign CSS (bottom sheet, kort, balanse-bar) |
+| landing-visual.css | 842 | Landing page visuals |
+| onboarding.css | 655 | Onboarding wizard styling |
+| auth-styles.css | 574 | Login/auth styling |
+| competitions.css | 542 | Mesternes mester styling |
+| seo-common.css | 509 | Delt CSS for SEO landing pages |
+| kampdag.css | 384 | Kampdag-modul styling |
+| kampdag-dragdrop.css | 380 | Kampdag drag-drop styling |
+| pricing.css | 584 | Prisside styling |
+| core-ui.css | 72 | Core UI utilities |
+
+### Serverless functions (/api)
+10 funksjoner: create-checkout-session, create-portal-session, delete-account, export-data,
+invite-coach, join-club, leave-club, start-trial, subscription-status, webhook.
+
+### SEO landing pages
+bytteplan.html, spilletid.html, kampdag-seo.html, treningsgrupper.html, sesong.html.
+Rewrites i vercel.json: /bytteplan → bytteplan.html osv.
+
+## Script-loading order (index.html)
+env.js → config.js → auth.js → subscription.js → auth-ui.js → pricing.js →
+grouping.js → grouping-dragdrop.js → core.js → kampdag.js → competitions.js →
+workout.js → season.js → sesong-kampdag.js → sesong-workout.js → logout-fix.js → onboarding.js
+
+Rekkefølgen er kritisk. workout.js MÅ lastes før season.js og sesong-workout.js
+(de avhenger av window._woShared).
+
+## Modulkommunikasjon (window-bridges)
+
+### Eksporterte API-er
+- `window._woShared` — fra workout.js, brukes av sesong-workout.js:
+  - Data: EXERCISES, EX_BY_KEY, NFF_CATEGORIES, NFF_CATEGORY_BY_ID, NFF_THEMES,
+    NFF_THEME_BY_ID, NFF_THEMES_BY_AGE, NFF_TIME_DISTRIBUTION, NFF_LEARNING_GOALS, NFF_TEMPLATES
+  - Funksjoner: renderDrillSVG, catLabel, catShort, getLearningGoals, calculateNffBalance, escapeHtml
+  - Utvidet API: openExercisePicker, renderExerciseTrigger, renderInfoPanel, displayName, saveWorkoutToDb, clampInt
+- `window.sesongWorkout` — { init, destroy, isActive } fra sesong-workout.js
+- `window.sesongKampdag` — { init, destroy, isActive } fra sesong-kampdag.js
+- `window.workoutPrefill(opts)` — fra workout.js, setter state fra sesong-event
+- `window.Grouping` — gruppealgoritmer fra grouping.js
+- `window.GroupDragDrop` — drag-drop fra grouping-dragdrop.js
+- `window.__BF_switchTab` — tab-navigering
+- `window.__BF_getOwnerUid` — eier-uid for trenerdeling
+- `window.players` — spillerliste fra core.js
+
+### Custom Events
+- `'workout:saved'` — dispatchet av workout.js etter lagring, lyttet på av season.js for badge-oppdatering
+- `'players:updated'` — init-trigger for sesongsmoduler (IKKE 'team:changed')
+
+## Lagring (workout, ny arkitektur)
+- **Økter og maler**: Supabase `workouts`-tabell. Ikke localStorage, ikke user_data.
+- **Draft**: localStorage (eneste unntak)
+- **Favoritter**: localStorage-cache + Supabase-sync (lagres som source='favorites' i workouts)
+- **CRUD-funksjoner**: _woLoadFromDb, _woSaveToDb, _woDeleteFromDb, _woRenameInDb, _woMigrateToDb
+- **Hjelpere**: _woGetSb(), _woGetUid(), _woGetTeamId(), _woGetSeasonId()
+- **RLS-mønster**: inline EXISTS mot team_members (IKKE is_team_member()-funksjon)
+- **Migrasjon**: localStorage → workouts-tabell kjøres automatisk ved første lasting
+
+## season.js workout-integrasjon (ny)
+- `_woSeasonWorkouts` — cache av workouts for aktiv sesong
+- `_woLoadEventIds()` — henter event_id-er for kalender-badges
+- `renderTrainingPlanStats()` — treningsstatistikk i sesong stats-tab (temafordeling, månedsoversikt)
+- `saveWorkoutToSesong(ev, data)` — lagrer økt med event_id FK
+- `renderEmbeddedWorkout(root)` — starter sesong-workout.js inne i sesong-view
+- Lytter på `workout:saved` CustomEvent
+
+## NFF-rammeverk (treningsøkt)
+- 4 aktivitetskategorier: sjef_over_ballen, spille_med_og_mot, smalagsspill, scoringstrening
+- 10 treningstemaer med aldersfiltrering
+- Aldersgrupper: 6-7, 8-9, 10-12, 13-16 med ulike tidsfordelinger
+- 40 øvelser med full metadata (nffCategory, nffPhases, themes, learningGoals, intensity, diagram)
+- 15 ferdige maler (3-4 per aldersgruppe)
+- calculateNffBalance() for faktisk vs. anbefalt fordeling
+
+## Supabase-skjema (nøkkelpunkter)
+- `team_id` er TEXT, ikke UUID
+- `getEffectiveUserId()` / `getOwnerUid()` for trenerdeling (returnerer eier-uid for delte lag)
+- RLS beskytter med inline EXISTS mot team_members. Legg alltid til eksplisitte user_id-filter i tillegg.
+- Cloud-sync med `_cloudSyncGen` race condition guard
+- Nøkkeltabeller: players, seasons, events, season_players, event_players, match_events,
+  training_series, team_members, workouts, user_data, user_access
+
+## Arkitekturprinsipper
+
+### season.js vokser IKKE
+Nye features går i egne IIFE-filer (sesong-kampdag.js, sesong-workout.js).
+season.js får kun tynne bridge-interfaces (50-100 linjer maks per integrasjon).
+
+### sesong-workout.js mønster
+Full feature-paritet med workout.js. Har parallell-split, spillervalg, gruppeinndeling,
+inline minutt-redigering, generer-flow med maler, PDF-eksport, auto-save.
+Bruker sh() helper for å hente alt fra _woShared. Har IKKE egne kopier av data.
+Prefixer: _sw for state-variabler.
+
+### Trenerdeling (coach sharing)
+team_members-tabell med owner/editor roller. invite-coach.js (serverless).
+getEffectiveUserId() returnerer eier-uid for delte lag. Editor ser eierens data.
+
+## Kodekonvensjoner
+- **Norsk UI, engelsk kode** — variabelnavn på engelsk, brukervendt tekst på norsk
+- **var i eldre filer** — season.js, kampdag.js, sesong-kampdag.js bruker var
+- **const/let i nyere kode** — workout.js bruker const/let
+- **Ingen ES modules** — alt lastes via script-tags i index.html
+- **$ = getElementById** — vanlig helper i IIFE-ene
+- **Prefix-konvensjon** — sn (season), skd (sesong-kampdag), _sw (sesong-workout), _wo (workout Supabase), _bs (bottom sheet), _gen (generer-flow)
+
+## Ting du MÅ unngå
+1. Ikke foreslå TypeScript, React, Vue, Svelte, eller noen bundler
+2. Ikke foreslå ES modules (import/export) — bruk window-objekter
+3. Ikke endre filer som fungerer uten å spørre
+4. Ikke foreslå å splitte season.js — den er stor men stabil
+5. Ikke foreslå node_modules eller npm install
+6. Ikke rang barn etter ferdighet i UI — skill_level brukes kun internt for gruppeinndeling
+7. Ikke bruk arrow functions i filer som bruker var-stil (season.js, kampdag.js)
+
+## iOS Safari-hensyn
+- `position: sticky` fungerer ikke pålitelig i flex overflow — bruk to-delt flex layout
+- Test alltid bottom-nav overlap (safe-area-inset-bottom)
+- `transform: translateZ(0)` for GPU-akselerasjon på faste elementer
+- Bottom sheet keyboard-push: test at input focus ikke ødelegger viewport
+
+## Leveranseplan (treningsøkt-modul)
+- **Leveranse 1** (NFF-redesign + UI): FERDIG
+- **Leveranse 1.5** (Supabase workouts-tabell + sesong-bridge): FERDIG
+- **Neste**: Push til new-workout branch, test i Vercel preview, merge til main
+- **Leveranse 2** (stasjonsmodell): Erstatter parallel med 1-3 stasjoner. Ny branch.
+- **Leveranse 3** (full sesong-integrasjon): sesong-workout.js embedded editor. Påbegynt.
+- **Innholdsproduksjon**: Flere øvelser og maler, løpende.
+
+## Når du foreslår endringer
+- Gi HELE den modifiserte filen, ikke patch-instruksjoner (disse feiler i denne kodebasen)
+- Sjekk at endringer ikke bryter eksisterende funksjonalitet
+- Husk at dette er en live app med betalende brukere — zero tolerance for bugs i prod
+- Verifiser linjetall og brace-depth ved store endringer
