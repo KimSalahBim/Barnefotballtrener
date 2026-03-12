@@ -3248,7 +3248,7 @@
           '<button class="btn-small" type="button" id="wo_' + bid + '_down" title="Flytt ned">\u2193</button>' +
           (isParallel ? '' : '<button class="btn-small" type="button" id="wo_' + bid + '_addParallel" title="Legg til parallell \u00f8velse">\u2016 Parallelt</button>') +
           '<button class="btn-small btn-danger" type="button" id="wo_' + bid + '_del" title="Slett">\uD83D\uDDD1 Slett</button>' +
-          '<button class="btn-small" type="button" id="wo_' + bid + '_collapse" title="Lukk">\u25b2 Lukk</button>' +
+          '<button class="btn-small" type="button" id="wo_' + bid + '_collapse" title="Lagre og lukk">\u2713 Lagre og lukk</button>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -4649,7 +4649,7 @@ function serializeWorkoutFromState() {
   const _gen = {
     open: false,
     selectedTheme: null,
-    selectedDuration: 60,
+    selectedDuration: 75,
     selectedAge: '8-9',
   };
 
@@ -4713,19 +4713,23 @@ function serializeWorkoutFromState() {
     let tplHtml = '';
     if (templates.length) {
       tplHtml = '<div class="wo-gen-label">Ferdige \u00f8ktmaler</div><div class="wo-gen-themes">';
+      const selDur = _gen.selectedDuration || 60;
       templates.forEach((tpl, idx) => {
-        tplHtml += '<button type="button" class="wo-gen-pill" data-tpl="' + idx + '">\uD83D\uDCCB ' + escapeHtml(tpl.title) + '</button>';
+        const tDur = tpl.duration || 60;
+        const dimStyle = selDur / tDur < 0.4 ? ' style="opacity:0.45;"' : '';
+        const durLabel = tDur !== selDur ? ' (' + tDur + '\u2192' + selDur + ' min)' : '';
+        tplHtml += '<button type="button" class="wo-gen-pill" data-tpl="' + idx + '"' + dimStyle + '>\uD83D\uDCCB ' + escapeHtml(tpl.title.replace(/ \(\d+ min\)$/, '')) + durLabel + '</button>';
       });
       tplHtml += '</div>';
     }
 
     el.innerHTML =
       ageHtml +
+      durHtml +
       tplHtml +
       '<div style="border-top:1px solid var(--border, #e2e8f0);margin:12px 0;padding-top:10px;"><div class="wo-gen-label" style="opacity:0.6;font-size:12px;">...eller bygg selv:</div></div>' +
       themesHtml +
       goalsHtml +
-      durHtml +
       '<button type="button" class="wo-gen-submit" id="woGenSubmit"' +
         (_gen.selectedTheme ? '' : ' disabled') + '>' +
         'Generer trenings\u00f8kt \u2192' +
@@ -4744,6 +4748,9 @@ function serializeWorkoutFromState() {
       btn.addEventListener('click', () => {
         _gen.selectedAge = btn.dataset.age;
         _gen.selectedTheme = null; // reset theme since available themes change
+        // Set default duration for age group
+        const ageDur = { '6-7': 60, '8-9': 75, '10-12': 90, '13-16': 90 };
+        _gen.selectedDuration = ageDur[_gen.selectedAge] || 60;
         renderGenererFlow();
       });
     });
@@ -4903,24 +4910,107 @@ function serializeWorkoutFromState() {
 
   /** Load a pre-built template into the editor */
   function loadTemplate(tpl) {
-    const blocks = [];
-    for (const step of tpl.blocks) {
-      if (step.parallel) {
-        const b = makeBlock('parallel');
-        b.a.exerciseKey = step.a.key;
-        b.a.minutes = step.a.min;
-        b.b.exerciseKey = step.b.key;
-        b.b.minutes = step.b.min;
-        blocks.push(b);
-      } else {
-        const b = makeBlock('single');
-        b.a.exerciseKey = step.key;
-        b.a.minutes = step.min;
-        blocks.push(b);
+    const MIN_BLOCK = 8;
+    const tplBlocks = tpl.blocks || [];
+    let tplDur = tpl.duration || 0;
+    const sessDur = _gen.selectedDuration || 60;
+
+    if (!tplDur) {
+      tplDur = tplBlocks.reduce((s, b) => s + (b.min || 0), 0);
+    }
+
+    const ratio = tplDur > 0 ? sessDur / tplDur : 1;
+    const needsAdapt = ratio < 0.85 || ratio > 1.15;
+
+    if (!needsAdapt) {
+      // Close enough — load as-is
+      const blocks = [];
+      for (const step of tplBlocks) {
+        if (step.parallel) {
+          const b = makeBlock('parallel');
+          b.a.exerciseKey = step.a.key; b.a.minutes = step.a.min;
+          b.b.exerciseKey = step.b.key; b.b.minutes = step.b.min;
+          blocks.push(b);
+        } else {
+          const b = makeBlock('single');
+          b.a.exerciseKey = step.key; b.a.minutes = step.min;
+          blocks.push(b);
+        }
+      }
+      state.blocks = blocks;
+    } else {
+      // Adapt template to selected duration
+      let steps = tplBlocks.map(s => ({ key: s.key, min: s.min,
+        parallel: s.parallel || false, a: s.a, b: s.b }));
+
+      // Remove drink breaks if shorter
+      let drinkRemoved = false;
+      if (ratio < 0.85) {
+        const before = steps.length;
+        steps = steps.filter(s => s.key !== 'drink');
+        drinkRemoved = steps.length < before;
+      }
+
+      // Remove shortest non-core blocks until they fit
+      const maxBlocks = Math.max(2, Math.floor(sessDur / MIN_BLOCK));
+      let removed = 0;
+      while (steps.length > maxBlocks) {
+        let shortIdx = -1, shortMin = Infinity;
+        for (let j = 0; j < steps.length; j++) {
+          const isCore = steps[j].key.indexOf('ssg') === 0 || steps[j].key === 'game_activity';
+          if (!isCore && steps[j].min < shortMin) { shortMin = steps[j].min; shortIdx = j; }
+        }
+        if (shortIdx < 0) {
+          for (let j = 0; j < steps.length; j++) {
+            if (steps[j].min < shortMin) { shortMin = steps[j].min; shortIdx = j; }
+          }
+        }
+        if (shortIdx >= 0) { steps.splice(shortIdx, 1); removed++; } else break;
+      }
+
+      // Distribute duration proportionally
+      const origSum = steps.reduce((s, st) => s + st.min, 0);
+      for (const s of steps) {
+        s.scaled = Math.max(MIN_BLOCK, Math.round(s.min / origSum * sessDur));
+      }
+
+      // Adjust longest block to hit target exactly
+      const usedMin = steps.reduce((s, st) => s + st.scaled, 0);
+      const diff = sessDur - usedMin;
+      if (steps.length > 0 && diff !== 0) {
+        let longest = 0;
+        for (let p = 1; p < steps.length; p++) {
+          if (steps[p].scaled > steps[longest].scaled) longest = p;
+        }
+        steps[longest].scaled = Math.max(MIN_BLOCK, steps[longest].scaled + diff);
+      }
+
+      // Build blocks
+      const blocks = [];
+      for (const step of steps) {
+        if (step.parallel) {
+          const parRatio = origSum > 0 ? sessDur / origSum : 1;
+          const b = makeBlock('parallel');
+          b.a.exerciseKey = step.a.key; b.a.minutes = Math.max(MIN_BLOCK, Math.round(step.a.min * parRatio));
+          b.b.exerciseKey = step.b.key; b.b.minutes = Math.max(MIN_BLOCK, Math.round(step.b.min * parRatio));
+          blocks.push(b);
+        } else {
+          const b = makeBlock('single');
+          b.a.exerciseKey = step.key; b.a.minutes = step.scaled;
+          blocks.push(b);
+        }
+      }
+      state.blocks = blocks;
+
+      // Notification
+      const parts = [];
+      if (drinkRemoved) parts.push('drikkepause fjernet');
+      if (removed > 0) parts.push(removed + ' øvelse' + (removed > 1 ? 'r' : '') + ' kuttet');
+      if (parts.length && typeof window.showNotification === 'function') {
+        window.showNotification('Mal tilpasset til ' + sessDur + ' min (' + parts.join(', ') + ')', 'info');
       }
     }
 
-    state.blocks = blocks;
     state.groupsCache.clear();
     state.parallelPickB.clear();
     state.expandedBlockId = null;
@@ -4928,7 +5018,7 @@ function serializeWorkoutFromState() {
     if (_gen.selectedAge) state.ageGroup = _gen.selectedAge;
 
     renderBlocks();
-    if (typeof window.showNotification === 'function') {
+    if (!needsAdapt && typeof window.showNotification === 'function') {
       window.showNotification((tpl.title || '\u00d8ktmal') + ' lastet inn \u2013 juster fritt', 'success');
     }
   }

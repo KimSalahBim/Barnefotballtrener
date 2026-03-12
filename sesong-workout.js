@@ -353,6 +353,20 @@
       }
     }
 
+    // ── Varighet ──────────────────────────────────────────────
+    var durOptions = [45, 60, 75, 90];
+    var curDur = _swMeta.duration || 60;
+    var durHtml = '<div style="border-top:1px solid var(--border,#e2e8f0);margin:10px 0 0;' +
+      'padding-top:10px;">' +
+      '<div class="wo-gen-label">Varighet</div>' +
+      '<div class="wo-gen-themes">';
+    for (var di = 0; di < durOptions.length; di++) {
+      var dSel = curDur === durOptions[di] ? ' wo-gen-pill-sel' : '';
+      durHtml += '<button type="button" class="wo-gen-pill' + dSel + '" data-swDur="' + durOptions[di] + '">' +
+        durOptions[di] + ' min</button>';
+    }
+    durHtml += '</div></div>';
+
     // ── Øktmaler ────────────────────────────────────────────
     var tplHtml = '';
     if (templates.length) {
@@ -373,7 +387,7 @@
       tplHtml += '</div></div>';
     }
 
-    el.innerHTML = temaHtml + goalsHtml + tplHtml;
+    el.innerHTML = temaHtml + goalsHtml + durHtml + tplHtml;
 
     // ── Bindinger ───────────────────────────────────────────
     var themeBtns = el.querySelectorAll('[data-swTheme]');
@@ -399,6 +413,18 @@
           el.style.display = 'none';
         });
       })(tplBtns[m]);
+    }
+
+    var durBtns = el.querySelectorAll('[data-swDur]');
+    for (var di2 = 0; di2 < durBtns.length; di2++) {
+      (function(btn) {
+        btn.addEventListener('click', function() {
+          _swMeta.duration = parseInt(btn.getAttribute('data-swDur'), 10);
+          scheduleSave();
+          updateHeader();
+          renderGenPanel();
+        });
+      })(durBtns[di2]);
     }
   }
 
@@ -499,7 +525,7 @@
           '<button class="btn-small" type="button" id="sw_' + b.id + '_down">↓</button>' +
           (!isP ? '<button class="btn-small" type="button" id="sw_' + b.id + '_mkpar">∥ Parallelt</button>' : '') +
           '<button class="btn-small btn-danger" type="button" id="sw_' + b.id + '_del">🗑 Slett</button>' +
-          '<button class="btn-small" type="button" id="sw_' + b.id + '_close">▲ Lukk</button>' +
+          '<button class="btn-small" type="button" id="sw_' + b.id + '_close">✓ Lagre og lukk</button>' +
         '</div>' +
       '</div>' +
     '</div>';
