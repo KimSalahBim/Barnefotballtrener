@@ -213,23 +213,29 @@
   function buildHeader() {
     var ageBadge = _swMeta.ageGroup
       ? '<span class="sw-meta-age">' + esc(_swMeta.ageGroup) + ' år</span>' : '';
-    var themeMeta = _swMeta.theme ? sh().NFF_THEME_BY_ID[_swMeta.theme] : null;
-    var themePill = themeMeta
-      ? '<span class="sw-meta-theme">' + esc(themeMeta.icon) + ' ' + esc(themeMeta.label) + '</span>' : '';
     return '<div class="sw-header">' +
       '<div class="sw-header-top">' +
         '<button type="button" class="sw-back-btn" id="swBackBtn" title="Tilbake">' +
           '<i class="fas fa-arrow-left"></i></button>' +
         '<div class="sw-header-info">' +
-          '<div class="sw-header-title">' + esc(_swMeta.title || 'Treningsøkt') + '</div>' +
+          '<div class="sw-header-title">' + esc(_swMeta.title || 'Treningøkt') + '</div>' +
           '<div class="sw-header-sub">' +
             (_swMeta.date ? esc(_swMeta.date) + ' &middot; ' : '') +
             '<strong id="swTotalMin">' + totalMin() + '</strong> min ' +
-            ageBadge + themePill +
+            ageBadge + '<span id="swHeaderTheme"></span>' +
           '</div>' +
         '</div>' +
       '</div>' +
     '</div>';
+  }
+
+  function buildThemePill() {
+    var themeMeta = _swMeta.theme ? sh().NFF_THEME_BY_ID[_swMeta.theme] : null;
+    if (!themeMeta) return '';
+    return '<span class="sw-meta-theme">' +
+      esc(themeMeta.icon) + ' ' + esc(themeMeta.label) +
+      ' <button type="button" class="sw-meta-theme-x" id="swThemeX" aria-label="Fjern tema">×</button>' +
+    '</span>';
   }
 
   function buildNffBar() {
@@ -303,18 +309,91 @@
   }
 
   function buildGenPanel() {
-    var templates = (sh().NFF_TEMPLATES || {})[_swMeta.ageGroup || '8-9'] || [];
-    if (!templates.length) return '';
-    var pills = '';
-    for (var i = 0; i < templates.length; i++)
-      pills += '<button type="button" class="wo-gen-pill" data-swTpl="' + i + '">' +
-               esc(templates[i].title) + '</button>';
     return '<div class="sw-gen-wrap">' +
-      '<button type="button" class="btn-secondary sw-gen-toggle" id="swGenToggle">📋 Øktmaler</button>' +
-      '<div id="swGenPills" style="display:none;flex-wrap:wrap;gap:6px;margin-top:8px;">' +
-        pills +
-      '</div>' +
+      '<button type="button" class="btn-secondary sw-gen-toggle" id="swGenToggle">' +
+        '📋 Temaer og maler</button>' +
+      '<div id="swGenPanelBody" style="display:none;"></div>' +
     '</div>';
+  }
+
+  function renderGenPanel() {
+    var el = document.getElementById('swGenPanelBody');
+    if (!el) return;
+
+    var shared     = sh();
+    var age        = _swMeta.ageGroup || '8-9';
+    var themes     = (shared.NFF_THEMES_BY_AGE || {})[age] || [];
+    var NFF_THEME_BY_ID = shared.NFF_THEME_BY_ID || {};
+    var templates  = (shared.NFF_TEMPLATES || {})[age] || [];
+
+    // ── Tema-pills ──────────────────────────────────────────
+    var temaHtml = '<div class="wo-gen-label">Øktens tema</div>' +
+      '<div class="wo-gen-themes">';
+    for (var i = 0; i < themes.length; i++) {
+      var t   = NFF_THEME_BY_ID[themes[i]];
+      if (!t) continue;
+      var sel = _swMeta.theme === themes[i] ? ' wo-gen-pill-sel' : '';
+      temaHtml += '<button type="button" class="wo-gen-pill' + sel + '"' +
+        ' data-swTheme="' + esc(themes[i]) + '">' +
+        esc(t.icon) + ' ' + esc(t.label) + '</button>';
+    }
+    temaHtml += '</div>';
+
+    // ── Læringsmål (kun når tema valgt) ─────────────────────
+    var goalsHtml = '';
+    if (_swMeta.theme && shared.getLearningGoals) {
+      var goals = shared.getLearningGoals(_swMeta.theme, age);
+      if (goals && goals.length) {
+        goalsHtml = '<div class="wo-gen-goals">' +
+          '<div class="wo-gen-goals-title">🎯 Læringsmål</div>' +
+          goals.map(function(g) {
+            return '<div class="wo-gen-goal">' + esc(g) + '</div>';
+          }).join('') +
+        '</div>';
+      }
+    }
+
+    // ── Øktmaler ────────────────────────────────────────────
+    var tplHtml = '';
+    if (templates.length) {
+      tplHtml = '<div style="border-top:1px solid var(--border,#e2e8f0);margin:10px 0 0;' +
+        'padding-top:10px;">' +
+        '<div class="wo-gen-label">Ferdige øktmaler</div>' +
+        '<div class="wo-gen-themes">';
+      for (var j = 0; j < templates.length; j++) {
+        tplHtml += '<button type="button" class="wo-gen-pill" data-swTpl="' + j + '">' +
+          '📋 ' + esc(templates[j].title) + '</button>';
+      }
+      tplHtml += '</div></div>';
+    }
+
+    el.innerHTML = temaHtml + goalsHtml + tplHtml;
+
+    // ── Bindinger ───────────────────────────────────────────
+    var themeBtns = el.querySelectorAll('[data-swTheme]');
+    for (var k = 0; k < themeBtns.length; k++) {
+      (function(btn) {
+        btn.addEventListener('click', function() {
+          var id = btn.getAttribute('data-swTheme');
+          _swMeta.theme = (_swMeta.theme === id) ? null : id;
+          scheduleSave();
+          updateHeader();
+          renderGenPanel(); // re-render for sel-state + læringsmål
+        });
+      })(themeBtns[k]);
+    }
+
+    var tplBtns = el.querySelectorAll('[data-swTpl]');
+    for (var m = 0; m < tplBtns.length; m++) {
+      (function(btn) {
+        btn.addEventListener('click', function() {
+          var idx  = parseInt(btn.getAttribute('data-swTpl'), 10);
+          var tpls = (sh().NFF_TEMPLATES || {})[_swMeta.ageGroup || '8-9'] || [];
+          if (tpls[idx]) loadTemplate(tpls[idx]);
+          el.style.display = 'none';
+        });
+      })(tplBtns[m]);
+    }
   }
 
   // ══════════════════════════════════════════════════════════
@@ -384,7 +463,7 @@
     if (b.a && (b.a.comment || '').trim())
       badges += '<span class="wo-h1-badge">📝</span>';
 
-    return '<div class="sw-card wo-h1-collapsed" data-bid="' + b.id + '" style="--h1-color:' + color + '">' +
+    return '<div class="sw-card wo-h1-card wo-h1-collapsed" data-bid="' + b.id + '" style="--h1-color:' + color + '">' +
       '<div class="wo-h1-stripe"></div>' +
       '<div class="wo-h1-main">' +
         '<div class="wo-h1-name">' + (isDrink ? '💧 ' : '') + esc(name) + '</div>' +
@@ -402,7 +481,7 @@
     var color = cat ? cat.color : '#ccc';
     var isP   = b.kind === 'parallel';
 
-    return '<div class="sw-card wo-h1-expanded" data-bid="' + b.id + '" style="--h1-color:' + color + '">' +
+    return '<div class="sw-card wo-h1-card wo-h1-expanded" data-bid="' + b.id + '" style="--h1-color:' + color + '">' +
       '<div class="wo-h1-stripe"></div>' +
       '<div class="wo-h1-exp-body">' +
         renderEditor(b, 'a') +
@@ -728,7 +807,7 @@
     var pChevron = c.querySelector('#swPlayersChevron');
     if (pToggle && pBody) {
       pToggle.addEventListener('click', function() {
-        var open = pBody.style.display !== 'none';
+        var open = pBody.style.display === 'block';
         pBody.style.display = open ? 'none' : 'block';
         if (pChevron) pChevron.textContent = open ? '▼' : '▲';
       });
@@ -760,27 +839,19 @@
       }
     }
 
-    // Øktmaler — [Bug 9] scoped
-    var genToggle = c.querySelector('#swGenToggle');
-    var genPills  = c.querySelector('#swGenPills');
-    if (genToggle && genPills) {
+    // Øktmaler/tema — [Bug 9] scoped
+    var genToggle   = c.querySelector('#swGenToggle');
+    var genPanelBody = c.querySelector('#swGenPanelBody');
+    if (genToggle && genPanelBody) {
       genToggle.addEventListener('click', function() {
-        genPills.style.display = genPills.style.display !== 'none' ? 'none' : 'flex';
+        var open = genPanelBody.style.display === 'block';
+        genPanelBody.style.display = open ? 'none' : 'block';
+        if (!open) renderGenPanel(); // populer ved åpning
       });
-      var pills = genPills.querySelectorAll('[data-swTpl]');
-      for (var j = 0; j < pills.length; j++) {
-        (function(btn) {
-          btn.addEventListener('click', function() {
-            var idx  = parseInt(btn.getAttribute('data-swTpl'), 10);
-            var tpls = (sh().NFF_TEMPLATES || {})[_swMeta.ageGroup || '8-9'] || [];
-            if (tpls[idx]) loadTemplate(tpls[idx]);
-            genPills.style.display = 'none';
-          });
-        })(pills[j]);
-      }
     }
 
     renderBlocks();
+    updateHeader(); // Fyll swHeaderTheme hvis existingTheme er satt
   }
 
   function bindExpanded(b) {
@@ -1032,6 +1103,21 @@
     if (tot) tot.textContent = String(totalMin());
     var barEl = document.getElementById('swNffBar');
     if (barEl) barEl.innerHTML = buildNffBar();
+    var themePlaceholder = document.getElementById('swHeaderTheme');
+    if (themePlaceholder) {
+      themePlaceholder.innerHTML = buildThemePill();
+      // Re-bind X-knapp (opprettet dynamisk)
+      var themeX = document.getElementById('swThemeX');
+      if (themeX) {
+        themeX.addEventListener('click', function() {
+          _swMeta.theme = null;
+          scheduleSave();
+          updateHeader();
+          var pb = document.getElementById('swGenPanelBody');
+          if (pb && pb.style.display === 'block') renderGenPanel();
+        });
+      }
+    }
   }
 
   // ══════════════════════════════════════════════════════════
