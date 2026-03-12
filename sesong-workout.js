@@ -360,9 +360,15 @@
         'padding-top:10px;">' +
         '<div class="wo-gen-label">Ferdige øktmaler</div>' +
         '<div class="wo-gen-themes">';
+      var sessDur = _swMeta.duration || 60;
       for (var j = 0; j < templates.length; j++) {
-        tplHtml += '<button type="button" class="wo-gen-pill" data-swTpl="' + j + '">' +
-          '📋 ' + esc(templates[j].title) + '</button>';
+        var tDur  = templates[j].duration || 60;
+        var tRat  = sessDur / tDur;
+        // Dimme maler som er mer enn 2.5x lengre enn økta
+        var dimStyle = tRat < 0.4 ? ' style="opacity:0.45;"' : '';
+        var durLabel = tDur !== sessDur ? ' (' + tDur + '→' + sessDur + ' min)' : '';
+        tplHtml += '<button type="button" class="wo-gen-pill" data-swTpl="' + j + '"' + dimStyle + '>' +
+          '📋 ' + esc(templates[j].title.replace(/ \(\d+ min\)$/, '')) + durLabel + '</button>';
       }
       tplHtml += '</div></div>';
     }
@@ -1074,24 +1080,122 @@
   }
 
   function loadTemplate(tpl) {
-    var blocks = tpl.blocks || [];
-    _swBlocks = blocks.map(function(step) {
-      if (step.parallel) {
-        var b = makeBlock('parallel');
-        b.a.exerciseKey = step.a.key; b.a.minutes = step.a.min;
-        b.b.exerciseKey = step.b.key; b.b.minutes = step.b.min;
-        return b;
+    var MIN_BLOCK = 5;       // minste tillatte minutter per øvelse
+    var tplBlocks = tpl.blocks || [];
+    var tplDur    = tpl.duration || 0;
+    var sessDur   = _swMeta.duration || 60;
+
+    // Beregn totalvarighet fra blokkene om tpl.duration mangler
+    if (!tplDur) {
+      for (var d = 0; d < tplBlocks.length; d++) tplDur += (tplBlocks[d].min || 0);
+    }
+
+    var ratio = tplDur > 0 ? sessDur / tplDur : 1;
+
+    // Nærme nok (innen 15%) — last som før
+    if (ratio >= 0.85 && ratio <= 1.15) {
+      _swBlocks = tplBlocks.map(function(step) {
+        if (step.parallel) {
+          var b = makeBlock('parallel');
+          b.a.exerciseKey = step.a.key; b.a.minutes = step.a.min;
+          b.b.exerciseKey = step.b.key; b.b.minutes = step.b.min;
+          return b;
+        }
+        var b2 = makeBlock('single');
+        b2.a.exerciseKey = step.key; b2.a.minutes = step.min;
+        return b2;
+      });
+    } else {
+      // Tilpass malen til øktens varighet
+      var steps = [];
+      for (var i = 0; i < tplBlocks.length; i++) {
+        steps.push({ key: tplBlocks[i].key, min: tplBlocks[i].min,
+                      parallel: tplBlocks[i].parallel || false,
+                      a: tplBlocks[i].a, b: tplBlocks[i].b });
       }
-      var b2 = makeBlock('single');
-      b2.a.exerciseKey = step.key; b2.a.minutes = step.min;
-      return b2;
-    });
+
+      // 1) Fjern drikkepause ved korte økter
+      if (ratio < 0.85) {
+        steps = steps.filter(function(s) { return s.key !== 'drink'; });
+      }
+
+      // 2) Beregn maks antall blokker som får plass
+      var maxBlocks = Math.max(2, Math.floor(sessDur / MIN_BLOCK));
+
+      // 3) Fjern korteste blokker til vi er innenfor budsjettet
+      var removed = 0;
+      while (steps.length > maxBlocks) {
+        // Finn korteste blokk (unngå ssg/ssg_theme/game_activity — de er kjerneøvelsen)
+        var shortIdx = -1, shortMin = Infinity;
+        for (var j = 0; j < steps.length; j++) {
+          var isCore = steps[j].key.indexOf('ssg') === 0 || steps[j].key === 'game_activity';
+          if (!isCore && steps[j].min < shortMin) {
+            shortMin = steps[j].min;
+            shortIdx = j;
+          }
+        }
+        // Fallback: fjern korteste uansett
+        if (shortIdx < 0) {
+          shortMin = Infinity;
+          for (var j2 = 0; j2 < steps.length; j2++) {
+            if (steps[j2].min < shortMin) { shortMin = steps[j2].min; shortIdx = j2; }
+          }
+        }
+        if (shortIdx >= 0) { steps.splice(shortIdx, 1); removed++; }
+        else break;
+      }
+
+      // 4) Fordel sessDur proporsjonalt blant gjenværende blokker
+      var origSum = 0;
+      for (var k = 0; k < steps.length; k++) origSum += steps[k].min;
+
+      for (var m = 0; m < steps.length; m++) {
+        steps[m].scaled = Math.max(MIN_BLOCK, Math.round(steps[m].min / origSum * sessDur));
+      }
+
+      // 5) Juster for å treffe sessDur nøyaktig — legg diff på lengste blokk
+      var usedMin = 0;
+      for (var n = 0; n < steps.length; n++) usedMin += steps[n].scaled;
+      var diff = sessDur - usedMin;
+      if (steps.length > 0 && diff !== 0) {
+        var longest = 0;
+        for (var p = 1; p < steps.length; p++) {
+          if (steps[p].scaled > steps[longest].scaled) longest = p;
+        }
+        steps[longest].scaled = Math.max(MIN_BLOCK, steps[longest].scaled + diff);
+      }
+
+      // 6) Bygg _swBlocks
+      _swBlocks = steps.map(function(step) {
+        if (step.parallel) {
+          var bp = makeBlock('parallel');
+          var parRatio = origSum > 0 ? sessDur / origSum : 1;
+          bp.a.exerciseKey = step.a.key; bp.a.minutes = Math.max(MIN_BLOCK, Math.round(step.a.min * parRatio));
+          bp.b.exerciseKey = step.b.key; bp.b.minutes = Math.max(MIN_BLOCK, Math.round(step.b.min * parRatio));
+          return bp;
+        }
+        var b2 = makeBlock('single');
+        b2.a.exerciseKey = step.key; b2.a.minutes = step.scaled;
+        return b2;
+      });
+
+      // Notifikasjon om tilpasning
+      var drinkRemoved = tplBlocks.some(function(s) { return s.key === 'drink'; }) && ratio < 0.85;
+      var parts = [];
+      if (drinkRemoved) parts.push('drikkepause fjernet');
+      if (removed > 0) parts.push(removed + ' øvelse' + (removed > 1 ? 'r' : '') + ' kuttet');
+      if (parts.length) {
+        if (window.showNotification)
+          window.showNotification('Mal tilpasset til ' + sessDur + ' min (' + parts.join(', ') + ')', 'info');
+      }
+    }
+
     if (tpl.theme) _swMeta.theme = tpl.theme;
     _swExpandedId = null;
     _swGroupsCache.clear();
     _swParPickB.clear();
     renderBlocks(); scheduleSave();
-    if (window.showNotification)
+    if (window.showNotification && (ratio >= 0.85 && ratio <= 1.15))
       window.showNotification((tpl.title || 'Øktmal') + ' lastet inn', 'success');
   }
 
