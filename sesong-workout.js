@@ -206,8 +206,6 @@
           '<i class="fas fa-save"></i> Lagre</button>' +
         '<button type="button" class="btn-secondary" id="swExportBtn">' +
           '<i class="fas fa-file-pdf"></i> PDF</button>' +
-        '<button type="button" class="btn-secondary" id="swClearBtn" style="margin-left:auto;">' +
-          '🗑️ Nullstill</button>' +
       '</div>' +
     '</div>';
   }
@@ -355,20 +353,6 @@
       }
     }
 
-    // ── Varighet ──────────────────────────────────────────────
-    var durOptions = [45, 60, 75, 90];
-    var curDur = _swMeta.duration || 60;
-    var durHtml = '<div style="border-top:1px solid var(--border,#e2e8f0);margin:10px 0 0;' +
-      'padding-top:10px;">' +
-      '<div class="wo-gen-label">Varighet</div>' +
-      '<div class="wo-gen-themes">';
-    for (var di = 0; di < durOptions.length; di++) {
-      var dSel = curDur === durOptions[di] ? ' wo-gen-pill-sel' : '';
-      durHtml += '<button type="button" class="wo-gen-pill' + dSel + '" data-swDur="' + durOptions[di] + '">' +
-        durOptions[di] + ' min</button>';
-    }
-    durHtml += '</div></div>';
-
     // ── Øktmaler ────────────────────────────────────────────
     var tplHtml = '';
     if (templates.length) {
@@ -376,20 +360,14 @@
         'padding-top:10px;">' +
         '<div class="wo-gen-label">Ferdige øktmaler</div>' +
         '<div class="wo-gen-themes">';
-      var sessDur = _swMeta.duration || 60;
       for (var j = 0; j < templates.length; j++) {
-        var tDur  = templates[j].duration || 60;
-        var tRat  = sessDur / tDur;
-        // Dimme maler som er mer enn 2.5x lengre enn økta
-        var dimStyle = tRat < 0.4 ? ' style="opacity:0.45;"' : '';
-        var durLabel = tDur !== sessDur ? ' (' + tDur + '→' + sessDur + ' min)' : '';
-        tplHtml += '<button type="button" class="wo-gen-pill" data-swTpl="' + j + '"' + dimStyle + '>' +
-          '📋 ' + esc(templates[j].title.replace(/ \(\d+ min\)$/, '')) + durLabel + '</button>';
+        tplHtml += '<button type="button" class="wo-gen-pill" data-swTpl="' + j + '">' +
+          '📋 ' + esc(templates[j].title) + '</button>';
       }
       tplHtml += '</div></div>';
     }
 
-    el.innerHTML = temaHtml + goalsHtml + durHtml + tplHtml;
+    el.innerHTML = temaHtml + goalsHtml + tplHtml;
 
     // ── Bindinger ───────────────────────────────────────────
     var themeBtns = el.querySelectorAll('[data-swTheme]');
@@ -415,18 +393,6 @@
           el.style.display = 'none';
         });
       })(tplBtns[m]);
-    }
-
-    var durBtns = el.querySelectorAll('[data-swDur]');
-    for (var di2 = 0; di2 < durBtns.length; di2++) {
-      (function(btn) {
-        btn.addEventListener('click', function() {
-          _swMeta.duration = parseInt(btn.getAttribute('data-swDur'), 10);
-          scheduleSave();
-          updateHeader();
-          renderGenPanel();
-        });
-      })(durBtns[di2]);
     }
   }
 
@@ -527,7 +493,7 @@
           '<button class="btn-small" type="button" id="sw_' + b.id + '_down">↓</button>' +
           (!isP ? '<button class="btn-small" type="button" id="sw_' + b.id + '_mkpar">∥ Parallelt</button>' : '') +
           '<button class="btn-small btn-danger" type="button" id="sw_' + b.id + '_del">🗑 Slett</button>' +
-          '<button class="btn-small" type="button" id="sw_' + b.id + '_close">✓ Lagre og lukk</button>' +
+          '<button class="btn-small" type="button" id="sw_' + b.id + '_close">▲ Lukk</button>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -834,19 +800,6 @@
     on('swAddParBtn',  'click', function() { addBlock('parallel'); });
     on('swSaveManBtn', 'click', handleManualSave);
     on('swExportBtn',  'click', exportPdf);
-    on('swClearBtn',   'click', function() {
-      if (_swBlocks.length === 0) return;
-      if (!window.confirm('Nullstill økta og start på nytt?')) return;
-      _swBlocks = [];
-      _swMeta.theme = null;
-      _swExpandedId = null;
-      _swGroupsCache.clear();
-      _swParPickB.clear();
-      scheduleSave();
-      updateHeader();
-      renderBlocks();
-      if (window.showNotification) window.showNotification('Økta er nullstilt.', 'info');
-    });
 
     // Spillerpanel toggle
     var pToggle  = c.querySelector('#swPlayersToggle');
@@ -1121,122 +1074,24 @@
   }
 
   function loadTemplate(tpl) {
-    var MIN_BLOCK = 5;       // minste tillatte minutter per øvelse
-    var tplBlocks = tpl.blocks || [];
-    var tplDur    = tpl.duration || 0;
-    var sessDur   = _swMeta.duration || 60;
-
-    // Beregn totalvarighet fra blokkene om tpl.duration mangler
-    if (!tplDur) {
-      for (var d = 0; d < tplBlocks.length; d++) tplDur += (tplBlocks[d].min || 0);
-    }
-
-    var ratio = tplDur > 0 ? sessDur / tplDur : 1;
-
-    // Nærme nok (innen 15%) — last som før
-    if (ratio >= 0.85 && ratio <= 1.15) {
-      _swBlocks = tplBlocks.map(function(step) {
-        if (step.parallel) {
-          var b = makeBlock('parallel');
-          b.a.exerciseKey = step.a.key; b.a.minutes = step.a.min;
-          b.b.exerciseKey = step.b.key; b.b.minutes = step.b.min;
-          return b;
-        }
-        var b2 = makeBlock('single');
-        b2.a.exerciseKey = step.key; b2.a.minutes = step.min;
-        return b2;
-      });
-    } else {
-      // Tilpass malen til øktens varighet
-      var steps = [];
-      for (var i = 0; i < tplBlocks.length; i++) {
-        steps.push({ key: tplBlocks[i].key, min: tplBlocks[i].min,
-                      parallel: tplBlocks[i].parallel || false,
-                      a: tplBlocks[i].a, b: tplBlocks[i].b });
+    var blocks = tpl.blocks || [];
+    _swBlocks = blocks.map(function(step) {
+      if (step.parallel) {
+        var b = makeBlock('parallel');
+        b.a.exerciseKey = step.a.key; b.a.minutes = step.a.min;
+        b.b.exerciseKey = step.b.key; b.b.minutes = step.b.min;
+        return b;
       }
-
-      // 1) Fjern drikkepause ved korte økter
-      if (ratio < 0.85) {
-        steps = steps.filter(function(s) { return s.key !== 'drink'; });
-      }
-
-      // 2) Beregn maks antall blokker som får plass
-      var maxBlocks = Math.max(2, Math.floor(sessDur / MIN_BLOCK));
-
-      // 3) Fjern korteste blokker til vi er innenfor budsjettet
-      var removed = 0;
-      while (steps.length > maxBlocks) {
-        // Finn korteste blokk (unngå ssg/ssg_theme/game_activity — de er kjerneøvelsen)
-        var shortIdx = -1, shortMin = Infinity;
-        for (var j = 0; j < steps.length; j++) {
-          var isCore = steps[j].key.indexOf('ssg') === 0 || steps[j].key === 'game_activity';
-          if (!isCore && steps[j].min < shortMin) {
-            shortMin = steps[j].min;
-            shortIdx = j;
-          }
-        }
-        // Fallback: fjern korteste uansett
-        if (shortIdx < 0) {
-          shortMin = Infinity;
-          for (var j2 = 0; j2 < steps.length; j2++) {
-            if (steps[j2].min < shortMin) { shortMin = steps[j2].min; shortIdx = j2; }
-          }
-        }
-        if (shortIdx >= 0) { steps.splice(shortIdx, 1); removed++; }
-        else break;
-      }
-
-      // 4) Fordel sessDur proporsjonalt blant gjenværende blokker
-      var origSum = 0;
-      for (var k = 0; k < steps.length; k++) origSum += steps[k].min;
-
-      for (var m = 0; m < steps.length; m++) {
-        steps[m].scaled = Math.max(MIN_BLOCK, Math.round(steps[m].min / origSum * sessDur));
-      }
-
-      // 5) Juster for å treffe sessDur nøyaktig — legg diff på lengste blokk
-      var usedMin = 0;
-      for (var n = 0; n < steps.length; n++) usedMin += steps[n].scaled;
-      var diff = sessDur - usedMin;
-      if (steps.length > 0 && diff !== 0) {
-        var longest = 0;
-        for (var p = 1; p < steps.length; p++) {
-          if (steps[p].scaled > steps[longest].scaled) longest = p;
-        }
-        steps[longest].scaled = Math.max(MIN_BLOCK, steps[longest].scaled + diff);
-      }
-
-      // 6) Bygg _swBlocks
-      _swBlocks = steps.map(function(step) {
-        if (step.parallel) {
-          var bp = makeBlock('parallel');
-          var parRatio = origSum > 0 ? sessDur / origSum : 1;
-          bp.a.exerciseKey = step.a.key; bp.a.minutes = Math.max(MIN_BLOCK, Math.round(step.a.min * parRatio));
-          bp.b.exerciseKey = step.b.key; bp.b.minutes = Math.max(MIN_BLOCK, Math.round(step.b.min * parRatio));
-          return bp;
-        }
-        var b2 = makeBlock('single');
-        b2.a.exerciseKey = step.key; b2.a.minutes = step.scaled;
-        return b2;
-      });
-
-      // Notifikasjon om tilpasning
-      var drinkRemoved = tplBlocks.some(function(s) { return s.key === 'drink'; }) && ratio < 0.85;
-      var parts = [];
-      if (drinkRemoved) parts.push('drikkepause fjernet');
-      if (removed > 0) parts.push(removed + ' øvelse' + (removed > 1 ? 'r' : '') + ' kuttet');
-      if (parts.length) {
-        if (window.showNotification)
-          window.showNotification('Mal tilpasset til ' + sessDur + ' min (' + parts.join(', ') + ')', 'info');
-      }
-    }
-
+      var b2 = makeBlock('single');
+      b2.a.exerciseKey = step.key; b2.a.minutes = step.min;
+      return b2;
+    });
     if (tpl.theme) _swMeta.theme = tpl.theme;
     _swExpandedId = null;
     _swGroupsCache.clear();
     _swParPickB.clear();
     renderBlocks(); scheduleSave();
-    if (window.showNotification && (ratio >= 0.85 && ratio <= 1.15))
+    if (window.showNotification)
       window.showNotification((tpl.title || 'Øktmal') + ' lastet inn', 'success');
   }
 
@@ -1305,6 +1160,25 @@
     var acc     = 0;
 
     var blocksHtml = '';
+
+    function renderGroupHtml(block, track) {
+      var key = block.id + ':' + track;
+      var cached = _swGroupsCache.get(key);
+      if (!cached || !Array.isArray(cached) || cached.length === 0) return '';
+      // Skip if single group with no meaningful split
+      if (cached.length === 1 && cached[0].length <= 1) return '';
+      var html = '<div style="margin-top:8px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:800;">Gruppeinndeling</div>';
+      for (var gi = 0; gi < cached.length; gi++) {
+        var g = cached[gi];
+        var label = cached.length === 1 ? 'Deltakere' : 'Gruppe ' + (gi + 1);
+        html += '<div style="background:#f6f8fc;border:1px solid #e2e8f0;border-left:3px solid rgba(11,91,211,0.35);border-radius:8px;padding:6px 8px;margin-top:4px;">' +
+          '<div style="font-weight:800;font-size:12px;color:#1a2333;">' + esc(label) + ' (' + g.length + ')</div>' +
+          '<div style="color:#666;font-size:12px;margin-top:2px;">' + g.map(function(p) { return esc(p.name); }).join(' \u00b7 ') + '</div>' +
+        '</div>';
+      }
+      return html;
+    }
+
     for (var bi = 0; bi < _swBlocks.length; bi++) {
       var b    = _swBlocks[bi];
       var isP  = b.kind === 'parallel';
@@ -1328,13 +1202,15 @@
       var nameA = displayName(b.a);
       var commA = esc(String(b.a && b.a.comment ? b.a.comment : '').trim());
       var svgA  = metaA && metaA.diagram
-        ? '<div style="margin:6px 0 2px;">' + shared.renderDrillSVG(metaA.diagram) + '</div>' : '';
+        ? '<div style="margin:6px 0 2px;display:flex;justify-content:center;"><div style="max-width:200px;width:100%;background:#3d8b37;border-radius:8px;padding:6px;">' + shared.renderDrillSVG(metaA.diagram) + '</div></div>' : '';
+      var grpA  = renderGroupHtml(b, 'a');
 
       if (!isP) {
         blocksHtml += secRow + '<tr>' +
           '<td style="color:#888;font-weight:800;width:40px;">' + (bi + 1) + '</td>' +
           '<td><div style="font-weight:900;">' + esc(nameA) + '</div>' + svgA +
             (commA ? '<div style="color:#666;font-size:12px;margin-top:3px;">' + commA + '</div>' : '') +
+            grpA +
           '</td>' +
           '<td style="text-align:right;font-weight:900;width:70px;">' + bMin + '</td>' +
           '<td style="text-align:right;color:#888;font-size:12px;width:50px;">' + acc + '\'</td>' +
@@ -1342,6 +1218,7 @@
       } else {
         var nameB = displayName(b.b);
         var commB = esc(String(b.b && b.b.comment ? b.b.comment : '').trim());
+        var grpB  = renderGroupHtml(b, 'b');
         blocksHtml += secRow + '<tr>' +
           '<td style="color:#888;font-weight:800;">' + (bi + 1) + '</td>' +
           '<td><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
@@ -1350,12 +1227,14 @@
               '<div style="font-weight:900;">' + esc(nameA) +
                 ' <span style="color:#888;font-size:12px;">(' + minA + ' min)</span></div>' +
               (commA ? '<div style="color:#666;font-size:12px;">' + commA + '</div>' : '') +
+              grpA +
             '</div>' +
             '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:8px;">' +
               '<div style="font-size:11px;color:#888;font-weight:800;margin-bottom:3px;">ØVELSE B</div>' +
               '<div style="font-weight:900;">' + esc(nameB) +
                 ' <span style="color:#888;font-size:12px;">(' + minB + ' min)</span></div>' +
               (commB ? '<div style="color:#666;font-size:12px;">' + commB + '</div>' : '') +
+              grpB +
             '</div>' +
           '</div></td>' +
           '<td style="text-align:right;font-weight:900;">' + bMin + '</td>' +
@@ -1401,6 +1280,7 @@
       'th,td{vertical-align:top;padding:8px 10px;border-bottom:1px solid #e2e8f0;}' +
       'th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#888;}' +
       'tr{page-break-inside:avoid;}' +
+      'svg{width:100%;height:auto;}' +
       '.btn{border:0;border-radius:10px;padding:10px 16px;font-weight:800;cursor:pointer;margin:4px;}' +
       '.btn-p{background:#0b5bd3;color:#fff;}.btn-s{background:#1f2a3d;color:#fff;}' +
       '.footer{text-align:center;margin-top:14px;font-size:11px;color:#888;}' +
