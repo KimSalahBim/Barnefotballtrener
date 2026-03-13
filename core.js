@@ -92,6 +92,11 @@
   // Session flag: skip positions in Supabase calls if column doesn't exist yet
   let _positionsColumnMissing = false;
 
+  // Realtime sync state (team-level, for shared coaching)
+  var _rtTeamChannel = null;
+  var _rtTeamId = null;
+  var _rtPlayersTimer = null;
+
   async function supabaseLoadPlayers(teamIdOverride, userIdOverride) {
     const sb = getSupabaseClient();
     const uid = userIdOverride || getOwnerUid();
@@ -639,6 +644,9 @@
   async function switchTeam(teamId) {
     if (teamId === state.currentTeamId) return;
 
+    // 0. Stop realtime sync for old team
+    stopTeamSync();
+
     // 1. Avbryt pending saves for nåværende lag
     clearTimeout(_supabaseSaveTimer);
 
@@ -678,7 +686,85 @@
     // 9. Hent øvrig data (settings, liga, workouts, competitions) fra cloud
     loadCloudUserData();
 
+    // 10. Start realtime sync for delte lag
+    startTeamSync(teamId);
+
     console.log('[core.js] Byttet til lag:', teamId);
+  }
+
+  // ─── REALTIME SYNC — Spillerstall mellom trenere ─────────────────
+
+  function startTeamSync(teamId) {
+    if (_rtTeamId === teamId && _rtTeamChannel) return;
+    stopTeamSync();
+
+    var sb = getSupabaseClient();
+    if (!sb || !teamId || !isSharedTeam()) return;
+
+    _rtTeamId = teamId;
+
+    _rtTeamChannel = sb.channel('team-' + teamId)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'players',
+        filter: 'team_id=eq.' + teamId
+      }, function(payload) {
+        try {
+          console.log('[realtime] players:', payload.eventType);
+          handlePlayerChange(payload);
+        } catch (e) { console.error('[realtime] players handler error:', e); }
+      })
+      .subscribe(function(status) {
+        console.log('[realtime] team subscription:', status);
+      });
+  }
+
+  function stopTeamSync() {
+    clearTimeout(_rtPlayersTimer);
+    _rtPlayersTimer = null;
+    if (_rtTeamChannel) {
+      var sb = getSupabaseClient();
+      try {
+        if (sb && typeof sb.removeChannel === 'function') {
+          sb.removeChannel(_rtTeamChannel);
+        } else {
+          _rtTeamChannel.unsubscribe();
+        }
+      } catch (e) { console.warn('[realtime] team cleanup error:', e); }
+      _rtTeamChannel = null;
+    }
+    _rtTeamId = null;
+  }
+
+  function handlePlayerChange(payload) {
+    // Debounce: other coach may be editing multiple players rapidly
+    clearTimeout(_rtPlayersTimer);
+    _rtPlayersTimer = setTimeout(async function() {
+      try {
+        // Skip if user has local edits pending (avoids overwriting work in progress)
+        if (state._localEdited) {
+          console.log('[realtime] Skipping player reload — local edits pending');
+          return;
+        }
+        var tidSnap = state.currentTeamId;
+        var uidSnap = getOwnerUid();
+        var sbPlayers = await supabaseLoadPlayers(tidSnap, uidSnap);
+        // Guard: team may have changed during async load
+        if (state.currentTeamId !== tidSnap) return;
+        if (sbPlayers && sbPlayers.length > 0) {
+          state.players = normalizePlayers(sbPlayers);
+          safeSet(k('players'), JSON.stringify(state.players));
+          state.selection.grouping = new Set(state.players.map(function(p) { return p.id; }));
+          renderAll();
+          publishPlayers();
+          renderTeamSwitcher();
+          console.log('[realtime] Players reloaded:', state.players.length);
+        }
+      } catch (e) {
+        console.error('[realtime] player reload error:', e);
+      }
+    }, 500);
   }
 
   function getActiveTeamId() {
@@ -2987,6 +3073,9 @@
 
       // Asynkron: hent spillere fra Supabase
       loadPlayersFromSupabase();
+
+      // Start realtime sync for delte lag
+      startTeamSync(state.currentTeamId);
 
       // Asynkron: last øvrig data fra cloud (settings, liga, etc)
       loadCloudUserData();

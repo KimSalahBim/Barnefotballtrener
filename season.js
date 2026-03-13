@@ -25,12 +25,22 @@
   var embeddedWorkoutPlayers = null; // players for embedded workout
   var subTeamFilter = null; // null = all, 1-5 = specific sub-team (for roster/stats tabs)
 
+  // Realtime sync state
+  var _rtChannel = null;   // aktiv Supabase Realtime channel (per event)
+  var _rtEventId = null;   // event-ID vi lytter på
+  var _rtSeasonChannel = null; // Realtime channel for hele sesongen (kalender)
+  var _rtSeasonId = null;      // sesong-ID vi lytter på
+  var _rtAttendanceTimer = null; // debounce for oppmøte-reload
+  var _rtCalendarTimer = null;   // debounce for kalender-reload
+  var _rtRosterTimer = null;     // debounce for sesong-stall-reload
+
   // =========================================================================
   //  HELPERS
   // =========================================================================
   function getTeamId() { return window.__BF_getTeamId ? window.__BF_getTeamId() : (window._bftTeamId || null); }
   function getUserId() { return window.authService ? window.authService.getUserId() : null; }
   function getOwnerUid() { return window.__BF_getOwnerUid ? window.__BF_getOwnerUid() : getUserId(); }
+  function isSharedTeam() { return window.__BF_isSharedTeam ? window.__BF_isSharedTeam() : false; }
 
   // Cache: which events have linked workouts (for calendar badge)
   var _woEventIds = null; // Set<string> or null
@@ -405,6 +415,9 @@
       '.sn-back:hover { background:var(--bg-hover, #f1f5f9); }',
       '.sn-back i { font-size:12px; }',
       '.sn-dash-title { font-size:20px; font-weight:700; color:var(--text-800); }',
+      '.sn-live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--text-300, #cbd5e1); margin-left:6px; vertical-align:middle; transition:background 0.3s; }',
+      '.sn-live-dot.sn-live-active { background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,0.2); animation:sn-pulse 2s ease-in-out infinite; }',
+      '@keyframes sn-pulse { 0%,100% { box-shadow:0 0 0 3px rgba(34,197,94,0.2); } 50% { box-shadow:0 0 0 6px rgba(34,197,94,0.05); } }',
       '.sn-dash-meta { font-size:13px; color:var(--text-500); margin-bottom:16px; margin-left:38px; }',
       '.sn-actions { display:flex; gap:8px; margin-bottom:20px; }',
       '.sn-actions button { flex:1; }',
@@ -709,6 +722,9 @@
   });
 
   window.addEventListener('team:changed', function() {
+    // Stop realtime sync
+    stopMatchSync();
+    stopSeasonSync();
     // Clean up embedded kampdag if active
     if (window.sesongKampdag && window.sesongKampdag.isActive()) {
       window.sesongKampdag.destroy();
@@ -742,7 +758,38 @@
   });
 
   // Sync season nav when tab becomes active (dispatched from core.js switchTab)
-  window.addEventListener('season:nav-sync', function() { updateSeasonNav(); });
+  window.addEventListener('season:nav-sync', function() {
+    updateSeasonNav();
+    // Restart season sync if we have an active season but channel was stopped
+    if (currentSeason && !_rtSeasonChannel && isSharedTeam()) {
+      startSeasonSync(currentSeason.id);
+    }
+    // Restart match sync if we're on event-detail for a match
+    if (snView === 'event-detail' && editingEvent && !_rtChannel && isSharedTeam()) {
+      var isMatch = (editingEvent.type === 'match' || editingEvent.type === 'cup_match');
+      if (isMatch) startMatchSync(editingEvent.id);
+    }
+  });
+
+  // Stop realtime subscriptions when user navigates away from Sesong tab
+  document.addEventListener('click', function(e) {
+    if (!_rtChannel && !_rtSeasonChannel) return; // nothing to stop
+    var btn = e.target.closest('[data-tab]');
+    if (btn) {
+      var tab = btn.getAttribute('data-tab');
+      // _mer just opens a popup, not a tab switch — don't stop sync
+      if (tab && tab !== 'sesong' && tab !== '_mer') {
+        stopMatchSync();
+        stopSeasonSync();
+      }
+      return;
+    }
+    // seasonNavHome has no data-tab but leaves sesong via switchTab('players')
+    if (e.target.closest('#seasonNavHome')) {
+      stopMatchSync();
+      stopSeasonSync();
+    }
+  }, true);
 
   // =========================================================================
   //  CROSS-MODULE NAME SYNC: core.js → season tables
@@ -1533,6 +1580,396 @@
     }
   }
 
+  // =========================================================================
+  //  REALTIME SYNC — Kampsynk mellom trenere
+  // =========================================================================
+
+  function startMatchSync(eventId) {
+    // Skip if already subscribed to this event
+    if (_rtEventId === eventId && _rtChannel) return;
+    stopMatchSync();
+
+    var sb = getSb();
+    if (!sb || !eventId) return;
+
+    _rtEventId = eventId;
+
+    _rtChannel = sb.channel('match-' + eventId)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'match_events',
+        filter: 'event_id=eq.' + eventId
+      }, function(payload) {
+        try {
+          console.log('[realtime] match_events:', payload.eventType);
+          handleMatchEventChange(payload);
+        } catch (e) { console.error('[realtime] match_events handler error:', e); }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'events',
+        filter: 'id=eq.' + eventId
+      }, function(payload) {
+        try {
+          console.log('[realtime] events UPDATE');
+          handleEventUpdate(payload);
+        } catch (e) { console.error('[realtime] events handler error:', e); }
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'event_players',
+        filter: 'event_id=eq.' + eventId
+      }, function(payload) {
+        try {
+          console.log('[realtime] event_players:', payload.eventType);
+          handleAttendanceChange(payload);
+        } catch (e) { console.error('[realtime] attendance handler error:', e); }
+      })
+      .subscribe(function(status) {
+        console.log('[realtime] subscription status:', status);
+        var dot = document.getElementById('snLiveIndicator');
+        if (dot) {
+          if (status === 'SUBSCRIBED') {
+            dot.classList.add('sn-live-active');
+            dot.title = 'Live-synk aktiv';
+          } else {
+            dot.classList.remove('sn-live-active');
+            dot.title = 'Kobler til\u2026';
+          }
+        }
+      });
+  }
+
+  function stopMatchSync() {
+    clearTimeout(_rtAttendanceTimer);
+    _rtAttendanceTimer = null;
+    if (_rtChannel) {
+      var sb = getSb();
+      try {
+        if (sb && typeof sb.removeChannel === 'function') {
+          sb.removeChannel(_rtChannel);
+        } else {
+          _rtChannel.unsubscribe();
+        }
+      } catch (e) { console.warn('[realtime] cleanup error:', e); }
+      _rtChannel = null;
+    }
+    _rtEventId = null;
+  }
+
+  function handleMatchEventChange(payload) {
+    // INSERT: legg til hvis ikke allerede i listen (dedupliserer egne endringer)
+    if (payload.eventType === 'INSERT' && payload.new) {
+      var exists = matchGoals.some(function(g) { return g.id === payload.new.id; });
+      if (!exists) {
+        matchGoals.push(payload.new);
+        _rtRefreshEventDetail();
+      }
+    }
+    // DELETE: fjern hvis den finnes (REPLICA IDENTITY FULL gir payload.old)
+    else if (payload.eventType === 'DELETE' && payload.old) {
+      var before = matchGoals.length;
+      matchGoals = matchGoals.filter(function(g) { return g.id !== payload.old.id; });
+      if (matchGoals.length !== before) {
+        _rtRefreshEventDetail();
+      }
+    }
+  }
+
+  function handleAttendanceChange(payload) {
+    if (!_rtEventId) return;
+    var eid = _rtEventId; // snapshot before debounce
+    // Debounce: Øyvind may mark multiple players rapidly
+    clearTimeout(_rtAttendanceTimer);
+    _rtAttendanceTimer = setTimeout(function() {
+      if (_rtEventId !== eid) return; // user navigated away during debounce
+      loadEventAttendance(eid).then(function() {
+        _rtRefreshEventDetail();
+      }).catch(function(e) {
+        console.error('[realtime] attendance reload error:', e);
+      });
+    }, 500);
+  }
+
+  function handleEventUpdate(payload) {
+    var nd = payload.new;
+    if (!nd || !editingEvent || editingEvent.id !== nd.id) return;
+
+    var scoreChanged = false;
+    var otherChanged = false;
+
+    // Score fields — need special UI handling (preserveInputs=false)
+    if (nd.result_home !== undefined && nd.result_home !== editingEvent.result_home) {
+      editingEvent.result_home = nd.result_home; scoreChanged = true;
+    }
+    if (nd.result_away !== undefined && nd.result_away !== editingEvent.result_away) {
+      editingEvent.result_away = nd.result_away; scoreChanged = true;
+    }
+
+    // All other event fields — copy if present and changed
+    var fields = ['status', 'plan_confirmed', 'plan_json', 'title', 'opponent',
+                  'is_home', 'location', 'start_time', 'duration_minutes',
+                  'format', 'notes', 'sub_team', 'type'];
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i];
+      if (nd[f] !== undefined) {
+        var isDiff = (typeof nd[f] === 'object' || typeof editingEvent[f] === 'object')
+          ? JSON.stringify(nd[f]) !== JSON.stringify(editingEvent[f])
+          : nd[f] !== editingEvent[f];
+        if (isDiff) { editingEvent[f] = nd[f]; otherChanged = true; }
+      }
+    }
+
+    if (scoreChanged || otherChanged) {
+      // Sync to events array for calendar consistency
+      var evInList = events.find(function(e) { return e.id === nd.id; });
+      if (evInList) {
+        for (var k in nd) { if (nd.hasOwnProperty(k) && k !== 'id') evInList[k] = nd[k]; }
+      }
+      _rtRefreshEventDetail(scoreChanged ? false : true);
+    }
+  }
+
+  function _rtRefreshEventDetail(preserveInputs) {
+    if (snView !== 'event-detail' || !editingEvent) return;
+    // Skip if sesong tab is not visible (user switched to another main tab)
+    var sesongTab = document.getElementById('sesong');
+    if (sesongTab && sesongTab.style.display === 'none') return;
+
+    try {
+      var focusId = document.activeElement ? document.activeElement.id : null;
+
+      // Preserve unsaved score input values before DOM destruction,
+      // but NOT when a remote score update just arrived (preserveInputs === false)
+      if (preserveInputs !== false) {
+        var sh = document.getElementById('snScoreHome');
+        var sa = document.getElementById('snScoreAway');
+        if (sh && sh.value !== '') { var v = parseInt(sh.value); if (!isNaN(v)) editingEvent.result_home = v; }
+        if (sa && sa.value !== '') { var v2 = parseInt(sa.value); if (!isNaN(v2)) editingEvent.result_away = v2; }
+      }
+
+      var root = $('snRoot');
+      if (root) {
+        // Preserve scroll position during realtime re-render
+        var scrollY = window.scrollY || window.pageYOffset || 0;
+        renderEventDetail(root);
+        window.scrollTo(0, scrollY);
+        // Restore focus if user was in a score input AND we preserved their values
+        // (don't restore when remote score arrived — avoids accidental overwrite)
+        if (preserveInputs !== false && (focusId === 'snScoreHome' || focusId === 'snScoreAway')) {
+          var restored = document.getElementById(focusId);
+          if (restored) {
+            restored.focus();
+            // Place cursor at end
+            var val = restored.value;
+            restored.value = '';
+            restored.value = val;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[realtime] refresh error:', e);
+    }
+  }
+
+  // ─── SEASON CHANNEL — Kalender-synk mellom trenere ─────────────────
+
+  function startSeasonSync(seasonId) {
+    if (_rtSeasonId === seasonId && _rtSeasonChannel) return;
+    stopSeasonSync();
+
+    var sb = getSb();
+    if (!sb || !seasonId || !isSharedTeam()) return;
+
+    _rtSeasonId = seasonId;
+
+    _rtSeasonChannel = sb.channel('season-' + seasonId)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'events',
+        filter: 'season_id=eq.' + seasonId
+      }, function(payload) {
+        try {
+          console.log('[realtime] calendar:', payload.eventType);
+          handleCalendarChange(payload);
+        } catch (e) { console.error('[realtime] calendar handler error:', e); }
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'workouts',
+        filter: 'season_id=eq.' + seasonId
+      }, function(payload) {
+        try {
+          console.log('[realtime] workouts:', payload.eventType);
+          handleWorkoutChange(payload);
+        } catch (e) { console.error('[realtime] workout handler error:', e); }
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'season_players',
+        filter: 'season_id=eq.' + seasonId
+      }, function(payload) {
+        try {
+          console.log('[realtime] season_players:', payload.eventType);
+          handleSeasonPlayersChange(payload);
+        } catch (e) { console.error('[realtime] season_players handler error:', e); }
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'training_series',
+        filter: 'season_id=eq.' + seasonId
+      }, function(payload) {
+        try {
+          console.log('[realtime] training_series:', payload.eventType);
+          handleCalendarChange(payload); // reuse: series changes affect calendar
+        } catch (e) { console.error('[realtime] training_series handler error:', e); }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'seasons',
+        filter: 'id=eq.' + seasonId
+      }, function(payload) {
+        try {
+          console.log('[realtime] seasons UPDATE');
+          handleSeasonSettingsChange(payload);
+        } catch (e) { console.error('[realtime] seasons handler error:', e); }
+      })
+      .subscribe(function(status) {
+        console.log('[realtime] season subscription:', status);
+      });
+  }
+
+  function stopSeasonSync() {
+    clearTimeout(_rtCalendarTimer);
+    clearTimeout(_rtRosterTimer);
+    _rtCalendarTimer = null;
+    _rtRosterTimer = null;
+    if (_rtSeasonChannel) {
+      var sb = getSb();
+      try {
+        if (sb && typeof sb.removeChannel === 'function') {
+          sb.removeChannel(_rtSeasonChannel);
+        } else {
+          _rtSeasonChannel.unsubscribe();
+        }
+      } catch (e) { console.warn('[realtime] season cleanup error:', e); }
+      _rtSeasonChannel = null;
+    }
+    _rtSeasonId = null;
+  }
+
+  function handleCalendarChange(payload) {
+    if (!currentSeason) return;
+    var sid = currentSeason.id; // snapshot before debounce
+    // Debounce rapid changes (e.g. bulk import)
+    clearTimeout(_rtCalendarTimer);
+    _rtCalendarTimer = setTimeout(async function() {
+      try {
+        if (!currentSeason || currentSeason.id !== sid) return; // user changed season during debounce
+        await loadEvents(sid);
+
+        // If viewing a deleted event, navigate to dashboard
+        if (snView === 'event-detail' && editingEvent) {
+          var fresh = events.find(function(e) { return e.id === editingEvent.id; });
+          if (!fresh) {
+            // Event deleted by other coach — navigate to dashboard
+            stopMatchSync();
+            editingEvent = null;
+            snView = 'dashboard';
+            dashTab = 'calendar';
+            render();
+            return;
+          }
+          // Always keep editingEvent pointing to the events array object
+          var changed = JSON.stringify(fresh) !== JSON.stringify(editingEvent);
+          editingEvent = fresh;
+          // Re-render if fields actually changed
+          if (changed) _rtRefreshEventDetail(true);
+          return;
+        }
+
+        // Re-render dashboard calendar if visible
+        var sesongTab = document.getElementById('sesong');
+        if (sesongTab && sesongTab.style.display !== 'none' && snView === 'dashboard') {
+          render();
+        }
+      } catch (e) {
+        console.error('[realtime] calendar refresh error:', e);
+      }
+    }, 500);
+  }
+
+  function handleWorkoutChange(payload) {
+    if (!currentSeason) return;
+    // Reload workout cache (badges + stats) and re-render if visible
+    _woLoadEventIds();
+    var sesongTab = document.getElementById('sesong');
+    if (sesongTab && sesongTab.style.display !== 'none') {
+      // Small delay to let _woLoadEventIds finish its async query
+      setTimeout(function() {
+        if (snView === 'dashboard') render();
+      }, 600);
+    }
+  }
+
+  function handleSeasonPlayersChange(payload) {
+    if (!currentSeason) return;
+    // Debounce: bulk roster operations (e.g. import, assign sub-teams)
+    clearTimeout(_rtRosterTimer);
+    _rtRosterTimer = setTimeout(async function() {
+      try {
+        await loadSeasonPlayers(currentSeason.id);
+        var sesongTab = document.getElementById('sesong');
+        if (!sesongTab || sesongTab.style.display === 'none') return;
+        // Re-render whichever view uses seasonPlayers
+        if (snView === 'dashboard') {
+          render(); // roster tab, stats tab both use seasonPlayers
+        } else if (snView === 'event-detail') {
+          _rtRefreshEventDetail(true); // attendance list uses seasonPlayers
+        }
+      } catch (e) {
+        console.error('[realtime] roster reload error:', e);
+      }
+    }, 500);
+  }
+
+  function handleSeasonSettingsChange(payload) {
+    var nd = payload.new;
+    if (!nd || !currentSeason || currentSeason.id !== nd.id) return;
+
+    // Update currentSeason with all changed fields
+    var changed = false;
+    var fields = ['name', 'format', 'age_class', 'sub_team_count', 'sub_team_mode', 'sub_team_names'];
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i];
+      if (nd[f] !== undefined && JSON.stringify(nd[f]) !== JSON.stringify(currentSeason[f])) {
+        currentSeason[f] = nd[f];
+        changed = true;
+      }
+    }
+    // Update seasons array too
+    if (changed) {
+      var sInList = seasons.find(function(s) { return s.id === nd.id; });
+      if (sInList) {
+        for (var j = 0; j < fields.length; j++) {
+          if (nd[fields[j]] !== undefined) sInList[fields[j]] = nd[fields[j]];
+        }
+      }
+      var sesongTab = document.getElementById('sesong');
+      if (sesongTab && sesongTab.style.display !== 'none') {
+        render();
+      }
+    }
+  }
+
   async function saveMatchResult(eventId, resultHome, resultAway, status) {
     var sb = getSb();
     var uid = getOwnerUid();
@@ -1877,6 +2314,10 @@
       window.sesongWorkout.destroy();
       embeddedWorkoutEvent = null;
       embeddedWorkoutPlayers = null;
+    }
+    // Stop realtime sync if navigating away from event-detail
+    if (snView !== 'event-detail') {
+      stopMatchSync();
     }
 
     updateSeasonNav();
@@ -5646,7 +6087,9 @@
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
           '<button class="sn-back" id="snBackFromDetail"><i class="fas fa-chevron-left"></i> Kalender</button>' +
-          '<span class="sn-dash-title">' + typeIcon(ev.type) + ' ' + escapeHtml(title) + '</span>' +
+          '<span class="sn-dash-title">' + typeIcon(ev.type) + ' ' + escapeHtml(title) +
+            (isMatch && isSharedTeam() ? ' <span id="snLiveIndicator" class="sn-live-dot" title="Kobler til\u2026"></span>' : '') +
+          '</span>' +
         '</div>' +
         '<div style="margin-top:12px;">';
 
@@ -6094,6 +6537,16 @@
     }
 
     root.innerHTML = html;
+
+    // Start realtime sync for matches (shared coaching only — solo users don't need it)
+    if (isMatch && isSharedTeam()) {
+      startMatchSync(ev.id);
+      // If subscription already active, restore indicator state (DOM was rebuilt)
+      if (_rtChannel && _rtEventId === ev.id) {
+        var dot = document.getElementById('snLiveIndicator');
+        if (dot) { dot.classList.add('sn-live-active'); dot.title = 'Live-synk aktiv'; }
+      }
+    }
 
     // --- BIND HANDLERS ---
     $('snBackFromDetail').addEventListener('click', goToDashboard);
@@ -6877,6 +7330,8 @@
   // =========================================================================
 
   function goToList() {
+    stopMatchSync();
+    stopSeasonSync();
     currentSeason = null;
     events = [];
     seasonPlayers = [];
@@ -6896,6 +7351,7 @@
   }
 
   async function goToDashboard() {
+    stopMatchSync();
     editingEvent = null;
     eventDistDraft = null;
     snView = 'dashboard';
@@ -6912,6 +7368,8 @@
   async function openSeason(seasonId) {
     var s = seasons.find(function(x) { return x.id === seasonId; });
     if (!s) return;
+    stopMatchSync();
+    stopSeasonSync();
     // Clear previous season's caches
     seasonStats = [];
     seasonGoals = [];
@@ -6926,6 +7384,7 @@
     dashTab = 'calendar';
     await Promise.all([loadEvents(seasonId), loadSeasonPlayers(seasonId), loadRegisteredEventIds(seasonId)]);
     _woLoadEventIds(); // Async, non-blocking
+    startSeasonSync(seasonId);
     snView = 'dashboard';
     render();
   }
