@@ -207,6 +207,8 @@
         '<button type="button" class="btn-secondary" id="swExportBtn">' +
           '<i class="fas fa-file-pdf"></i> PDF</button>' +
       '</div>' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-500,#64748b);margin-top:6px;cursor:pointer;">' +
+        '<input type="checkbox" id="swExportDetailToggle" checked> Inkluder beskrivelser og diagrammer</label>' +
     '</div>';
   }
 
@@ -310,8 +312,8 @@
 
   function buildGenPanel() {
     return '<div class="sw-gen-wrap">' +
-      '<button type="button" class="btn-secondary sw-gen-toggle" id="swGenToggle">' +
-        '📋 Temaer og maler</button>' +
+      '<button type="button" class="btn-primary sw-gen-toggle" id="swGenToggle" style="width:100%;font-size:15px;padding:13px 16px;">' +
+        '<i class="fas fa-pencil-alt" style="margin-right:6px;"></i> Lag en treningsøkt for meg</button>' +
       '<div id="swGenPanelBody" style="display:none;"></div>' +
     '</div>';
   }
@@ -1158,6 +1160,7 @@
     var total   = totalMin();
     var prevCat = null;
     var acc     = 0;
+    var includeDetail = !!(document.getElementById('swExportDetailToggle') && document.getElementById('swExportDetailToggle').checked);
 
     var blocksHtml = '';
 
@@ -1177,6 +1180,31 @@
         '</div>';
       }
       return html;
+    }
+
+    function renderExInfo(ex) {
+      if (!includeDetail) return '';
+      var meta = shared.EX_BY_KEY.get(ex ? ex.exerciseKey : null);
+      if (!meta || !meta.description) return '';
+      var info = '<div style="color:#374151;font-size:12px;margin-top:4px;line-height:1.5;">' + esc(meta.description) + '</div>';
+      if (meta.equipment) {
+        info += '<div style="color:#556070;font-size:12px;margin-top:4px;"><span style="font-weight:700;color:#374151;">Utstyr:</span> ' + esc(meta.equipment) + '</div>';
+      }
+      if (meta.setup) {
+        info += '<div style="color:#556070;font-size:12px;margin-top:4px;"><span style="font-weight:700;color:#374151;">Oppsett:</span> ' + esc(meta.setup) + '</div>';
+      }
+      if (meta.steps && meta.steps.length) {
+        info += '<div style="margin-top:4px;"><span style="font-weight:700;color:#374151;font-size:12px;">Gjennomf\u00f8ring:</span><ol style="margin:2px 0 0 16px;padding:0;font-size:12px;line-height:1.5;color:#556070;">';
+        for (var si = 0; si < meta.steps.length; si++) info += '<li>' + esc(meta.steps[si]) + '</li>';
+        info += '</ol></div>';
+      }
+      if (meta.coaching && meta.coaching.length) {
+        info += '<div style="color:#556070;font-size:12px;margin-top:4px;"><span style="font-weight:700;color:#374151;">Tips:</span> ' + meta.coaching.map(function(c) { return esc(c); }).join(' \u00b7 ') + '</div>';
+      }
+      if (meta.diagram) {
+        info += '<div style="margin:6px 0 2px;display:flex;justify-content:center;"><div style="max-width:200px;width:100%;background:#3d8b37;border-radius:8px;padding:6px;">' + shared.renderDrillSVG(meta.diagram) + '</div></div>';
+      }
+      return info;
     }
 
     for (var bi = 0; bi < _swBlocks.length; bi++) {
@@ -1201,14 +1229,13 @@
 
       var nameA = displayName(b.a);
       var commA = esc(String(b.a && b.a.comment ? b.a.comment : '').trim());
-      var svgA  = metaA && metaA.diagram
-        ? '<div style="margin:6px 0 2px;display:flex;justify-content:center;"><div style="max-width:200px;width:100%;background:#3d8b37;border-radius:8px;padding:6px;">' + shared.renderDrillSVG(metaA.diagram) + '</div></div>' : '';
+      var infoA = renderExInfo(b.a);
       var grpA  = renderGroupHtml(b, 'a');
 
       if (!isP) {
         blocksHtml += secRow + '<tr>' +
           '<td style="color:#888;font-weight:800;width:40px;">' + (bi + 1) + '</td>' +
-          '<td><div style="font-weight:900;">' + esc(nameA) + '</div>' + svgA +
+          '<td><div style="font-weight:900;">' + esc(nameA) + '</div>' + infoA +
             (commA ? '<div style="color:#666;font-size:12px;margin-top:3px;">' + commA + '</div>' : '') +
             grpA +
           '</td>' +
@@ -1218,6 +1245,7 @@
       } else {
         var nameB = displayName(b.b);
         var commB = esc(String(b.b && b.b.comment ? b.b.comment : '').trim());
+        var infoB = renderExInfo(b.b);
         var grpB  = renderGroupHtml(b, 'b');
         blocksHtml += secRow + '<tr>' +
           '<td style="color:#888;font-weight:800;">' + (bi + 1) + '</td>' +
@@ -1226,6 +1254,7 @@
               '<div style="font-size:11px;color:#888;font-weight:800;margin-bottom:3px;">ØVELSE A</div>' +
               '<div style="font-weight:900;">' + esc(nameA) +
                 ' <span style="color:#888;font-size:12px;">(' + minA + ' min)</span></div>' +
+              infoA +
               (commA ? '<div style="color:#666;font-size:12px;">' + commA + '</div>' : '') +
               grpA +
             '</div>' +
@@ -1233,6 +1262,7 @@
               '<div style="font-size:11px;color:#888;font-weight:800;margin-bottom:3px;">ØVELSE B</div>' +
               '<div style="font-weight:900;">' + esc(nameB) +
                 ' <span style="color:#888;font-size:12px;">(' + minB + ' min)</span></div>' +
+              infoB +
               (commB ? '<div style="color:#666;font-size:12px;">' + commB + '</div>' : '') +
               grpB +
             '</div>' +
