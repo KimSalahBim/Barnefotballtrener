@@ -1,15 +1,15 @@
 /* Fotball Trener App - Premium Design med ekte logoer */
 :root {
   /* Primær */
-  --primary: #2563EB;
-  --primary-light: #3B82F6;
-  --primary-dim: rgba(37, 99, 235, 0.10);
-  --primary-glow: rgba(37, 99, 235, 0.25);
+  --primary: #456C4B;
+  --primary-light: #5a8a60;
+  --primary-dim: rgba(69, 108, 75, 0.10);
+  --primary-glow: rgba(69, 108, 75, 0.25);
 
   /* Bakgrunner – lys modus */
-  --bg: #F1F5F9;
+  --bg: #f3f6f3;
   --bg-card: #FFFFFF;
-  --bg-input: #FFFFFF;
+  --bg-input: #f3f6f3;
 
   /* Bakgrunner – mørke seksjoner (kampdag bane/spilletid) */
   --bg-dark: #0F172A;
@@ -44,14 +44,14 @@
   --grass-alt: #2D6A2E;
 
   /* Border */
-  --border: #E2E8F0;
+  --border: #d8e4da;
+  --border-light: #edf1ed;
   --border-dark: rgba(255, 255, 255, 0.08);
 
   /* Radius */
-  --radius-sm: 8px;
+  --radius-sm: 10px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --radius-xl: 20px;
   --radius-full: 999px;
 
   /* Shadows */
@@ -215,7 +215,7 @@ body {
 .login-input:focus {
     outline: none;
     border-color: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(25,118,210,0.1);
+    box-shadow: 0 0 0 3px var(--primary-dim);
 }
 
 .login-btn {
@@ -233,7 +233,7 @@ body {
 
 .login-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(13,71,161,0.3);
+    box-shadow: 0 10px 20px var(--primary-glow);
 }
 
 .error-message {
@@ -262,10 +262,10 @@ body {
 /* Header */
 .app-header {
     background: var(--bg-card);
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     padding: 20px 30px;
     margin-bottom: 20px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    border: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -510,7 +510,7 @@ body {
 
 .btn-primary:hover {
     filter: brightness(0.98);
-    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+    box-shadow: 0 8px 18px var(--primary-glow);
     transform: translateY(-1px);
 }
 
@@ -547,10 +547,10 @@ body {
 
 .stat-card {
     background: var(--bg-card);
-    border-radius: 15px;
+    border-radius: var(--radius-lg);
     padding: 20px;
     text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
     transition: transform 0.2s ease;
 }
 
@@ -582,9 +582,9 @@ body {
 /* Player List */
 .player-list {
     background: var(--bg-card);
-    border-radius: 15px;
+    border-radius: var(--radius-lg);
     padding: 25px 30px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
 }
 
 .player-item {
@@ -601,7 +601,6 @@ body {
 .player-item:hover {
     background: var(--bg-card);
     transform: translateX(5px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
 }
 
 .player-avatar {
@@ -698,12 +697,12 @@ body {
 }
 
 .action-btn-edit {
-    background: rgba(25,118,210,0.1);
+    background: var(--primary-dim);
     color: var(--primary-light);
 }
 
 .action-btn-edit:hover {
-    background: rgba(25,118,210,0.2);
+    background: var(--primary-glow);
     transform: scale(1.1);
 }
 
@@ -746,10 +745,10 @@ body {
    ================================================ */
 .player-selection {
     background: var(--bg-card);
-    border-radius: 15px;
+    border-radius: var(--radius-lg);
     padding: 8px 20px 20px;
     margin-bottom: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
     max-height: 420px;
     overflow-y: auto;
     display: grid;
@@ -976,7 +975,7 @@ body {
 
 .player-checkbox-item.selected {
     border-color: var(--primary-light);
-    background: rgba(25,118,210,0.05);
+    background: var(--primary-dim);
 }
 
 .player-checkbox-item input[type="checkbox"] {
@@ -1013,10 +1012,10 @@ body {
 /* Group Settings */
 .group-settings {
     background: var(--bg-card);
-    border-radius: 15px;
+    border-radius: var(--radius-lg);
     padding: 25px 30px;
     margin-bottom: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
 }
 
 .settings-row {
@@ -1088,9 +1087,9 @@ body {
 /* Results Container */
 .results-container {
     background: var(--bg-card);
-    border-radius: 15px;
+    border-radius: var(--radius-lg);
     padding: 25px 30px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
 }
 
 .teams-container {
@@ -1101,7 +1100,7 @@ body {
 
 .team-card {
     border: 2px solid var(--border);
-    border-radius: 15px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
     transition: transform 0.2s ease;
 }
@@ -1395,8 +1394,8 @@ body {
 .password-box {
     background: var(--bg-card);
     padding: 40px;
-    border-radius: 20px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
     width: 100%;
     max-width: 420px;
     text-align: center;
@@ -1472,10 +1471,10 @@ body {
 /* Kortelement som brukes flere steder i ny index */
 .settings-card {
     background: var(--bg-card);
-    border-radius: 15px;
+    border-radius: var(--radius-lg);
     padding: 20px 22px;
     margin-bottom: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
 }
 
 @media (max-width: 768px) {
@@ -1498,7 +1497,7 @@ body {
 .input:focus {
     outline: none;
     border-color: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(25,118,210,0.15);
+    box-shadow: 0 0 0 3px var(--primary-dim);
 }
 
 /* Toggle switch (nivå av/på) */
@@ -1548,10 +1547,10 @@ body {
 /* Kampdag output */
 .kampdag-block {
     background: var(--bg-card);
-    border-radius: 15px;
+    border-radius: var(--radius-lg);
     padding: 18px 20px;
     margin-bottom: 16px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
 }
 
 .kampdag-block h4 {
@@ -1601,7 +1600,7 @@ body {
     align-items: center;
     gap: 10px;
     padding: 12px 14px;
-    background: linear-gradient(135deg, rgba(25,118,210,0.10) 0%, rgba(25,118,210,0.04) 100%);
+    background: linear-gradient(135deg, var(--primary-dim) 0%, transparent 100%);
     border-bottom: 1px solid var(--border);
 }
 
@@ -1611,8 +1610,8 @@ body {
     font-weight: 700;
     padding: 6px 10px;
     border-radius: 999px;
-    background: rgba(25,118,210,0.10);
-    border: 1px solid rgba(25,118,210,0.20);
+    background: var(--primary-dim);
+    border: 1px solid var(--primary-glow);
 }
 
 .kampdag-event-body {
@@ -2156,11 +2155,10 @@ body.gated #mainApp {
 }
 
 .wo-block {
-  border: 1px solid #e6e9ef;
-  border-radius: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   padding: 10px;
   background: var(--bg-card);
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
 }
 .wo-block-parallel {
   border-left: 4px solid var(--warning);
@@ -2285,15 +2283,15 @@ body.gated #mainApp {
 }
 
 .wo-template-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  border: 1px solid #e6e9ef;
-  border-radius: 16px;
-  padding: 12px;
-  background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px;
+    background: var(--bg-card);
 }
 
 .wo-template-actions {
@@ -3622,7 +3620,7 @@ html, body {
 
 .team-modal-create:hover {
   filter: brightness(0.98);
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 8px 18px var(--primary-glow);
   transform: translateY(-1px);
 }
 
