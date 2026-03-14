@@ -172,7 +172,7 @@
   }
 
   // Sub-team helpers
-  var SUB_TEAM_COLORS = ['#3b82f6', '#ea580c', '#059669', '#7c3aed', '#ec4899'];
+  var SUB_TEAM_COLORS = ['#456C4B', '#ea580c', '#059669', '#7c3aed', '#ec4899'];
 
   // NFF aldersklasse → format, varighet, barnefotball-status
   var NFF_AGE_RULES = {
@@ -3533,13 +3533,13 @@
             '<div style="display:flex; gap:10px; align-items:center;">' +
               (sc.goals > 0
                 ? '<div style="text-align:center;">' +
-                    '<div style="font-weight:700; font-size:16px;">' + sc.goals + '</div>' +
+                    '<div style="font-weight:500; font-size:16px;">' + sc.goals + '</div>' +
                     '<div style="font-size:10px; color:var(--text-400);">m\u00e5l</div>' +
                   '</div>'
                 : '') +
               (sc.assists > 0
                 ? '<div style="text-align:center;">' +
-                    '<div style="font-weight:700; font-size:16px; color:var(--text-600);">' + sc.assists + '</div>' +
+                    '<div style="font-weight:500; font-size:16px; color:var(--text-600);">' + sc.assists + '</div>' +
                     '<div style="font-size:10px; color:var(--text-400);">assist</div>' +
                   '</div>'
                 : '') +
@@ -3619,7 +3619,7 @@
     'samarbeidsspill': { label: 'Samarbeidsspill', icon: '\uD83D\uDC65', color: '#06b6d4' },
     'forsvarsspill': { label: 'Forsvarsspill', icon: '\uD83D\uDEE1\ufe0f', color: '#64748b' },
     'omstilling': { label: 'Omstilling', icon: '\uD83D\uDD01', color: '#ec4899' },
-    'spilloppbygging': { label: 'Spilloppbygging', icon: '\uD83D\uDCD0', color: '#3b82f6' },
+    'spilloppbygging': { label: 'Spilloppbygging', icon: '\uD83D\uDCD0', color: '#456C4B' },
     'keeper': { label: 'Keeper', icon: '\uD83E\uDDE4', color: '#eab308' }
   };
 
@@ -3681,7 +3681,7 @@
       '</div>';
 
     // Theme distribution
-    html += '<div style="margin-top:16px; font-weight:700; font-size:14px; margin-bottom:10px;">Temafordeling</div>';
+    html += '<div style="margin-top:16px; font-weight:500; font-size:14px; margin-bottom:10px;">Temafordeling</div>';
 
     for (var ti = 0; ti < allThemes.length; ti++) {
       var themeId = allThemes[ti];
@@ -3724,7 +3724,7 @@
     var months = Object.keys(monthCounts).sort();
     if (months.length > 1) {
       var MONTH_NAMES_NO = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
-      html += '<div style="margin-top:16px; font-weight:700; font-size:14px; margin-bottom:10px;">Per m\u00e5ned</div>';
+      html += '<div style="margin-top:16px; font-weight:500; font-size:14px; margin-bottom:10px;">Per m\u00e5ned</div>';
       html += '<div style="display:flex; gap:4px; align-items:flex-end; height:80px;">';
       var maxMonth = 0;
       for (var mi = 0; mi < months.length; mi++) { if (monthCounts[months[mi]] > maxMonth) maxMonth = monthCounts[months[mi]]; }
@@ -3734,8 +3734,8 @@
         var monthIdx = parseInt(months[mj].split('-')[1]) - 1;
         html +=
           '<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;">' +
-            '<div style="font-size:11px; font-weight:700; color:var(--text-600);">' + mc + '</div>' +
-            '<div style="width:100%; max-width:32px; height:' + barH + 'px; background:#3b82f6; border-radius:4px;"></div>' +
+            '<div style="font-size:11px; font-weight:500; color:var(--text-600);">' + mc + '</div>' +
+            '<div style="width:100%; max-width:32px; height:' + barH + 'px; background:#456C4B; border-radius:4px;"></div>' +
             '<div style="font-size:10px; color:var(--text-400);">' + MONTH_NAMES_NO[monthIdx] + '</div>' +
           '</div>';
       }
@@ -4223,7 +4223,7 @@
         if (pgm) {
           var parts = [];
           if (pgm.goals > 0) parts.push('\u26BD' + (pgm.goals > 1 ? '\u00d7' + pgm.goals : ''));
-          if (pgm.assists > 0) parts.push('<span style="font-weight:800; color:var(--primary, #2563eb);">A</span>' + (pgm.assists > 1 ? '\u00d7' + pgm.assists : ''));
+          if (pgm.assists > 0) parts.push('<span style="font-weight:500; color:var(--primary, #456C4B);">A</span>' + (pgm.assists > 1 ? '\u00d7' + pgm.assists : ''));
           if (parts.length > 0) goalBadge = '<div style="font-size:12px; white-space:nowrap;">' + parts.join(' ') + '</div>';
         }
 
@@ -4232,7 +4232,7 @@
         if ((ev.type === 'match' || ev.type === 'cup_match') && ev.status === 'completed' && ev.result_home !== null && ev.result_home !== undefined) {
           var ourScore = ev.is_home ? ev.result_home : ev.result_away;
           var theirScore = ev.is_home ? ev.result_away : ev.result_home;
-          scoreText = '<div style="font-size:13px; font-weight:700; color:var(--text-500);">' + ourScore + '\u2013' + theirScore + '</div>';
+          scoreText = '<div style="font-size:13px; font-weight:500; color:var(--text-500);">' + ourScore + '\u2013' + theirScore + '</div>';
         }
 
         // Per-event minutes badge
@@ -4944,7 +4944,7 @@
       if ((ev.type === 'match' || ev.type === 'cup_match') && ev.status === 'completed' && ev.result_home !== null && ev.result_home !== undefined) {
         var ourScore = ev.is_home ? ev.result_home : ev.result_away;
         var theirScore = ev.is_home ? ev.result_away : ev.result_home;
-        scoreBadge = '<div style="font-size:13px; font-weight:700; color:var(--text-600); white-space:nowrap;">' + ourScore + '\u2013' + theirScore + '</div>';
+        scoreBadge = '<div style="font-size:13px; font-weight:500; color:var(--text-600); white-space:nowrap;">' + ourScore + '\u2013' + theirScore + '</div>';
         regBadge = ''; // Don't show both
       }
 
@@ -6730,7 +6730,7 @@
   function matchEventItemHtml(item, showActions) {
     var isAssist = item.type === 'assist';
     var icon = isAssist
-      ? '<span style="font-weight:800; color:var(--primary, #2563eb); font-size:14px; width:20px; text-align:center;">A</span>'
+      ? '<span style="font-weight:500; color:var(--primary, #456C4B); font-size:14px; width:20px; text-align:center;">A</span>'
       : '<span>\u26BD</span>';
     var actions = '';
     if (showActions) {
