@@ -2582,6 +2582,146 @@
   //  VIEW: DASHBOARD (season detail with events)
   // =========================================================================
 
+  function loadLagsideCard() {
+    var card = document.getElementById('snLagsideCard');
+    if (!card) return;
+    var teamId = getTeamId();
+    if (!teamId) return;
+
+    var cardStyle = 'border-left:3px solid var(--primary,#456C4B);padding:10px 14px;margin-bottom:12px;';
+
+    card.innerHTML = '<div class="settings-card" style="' + cardStyle + '">' +
+      '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<i class="fas fa-spinner fa-spin" style="color:var(--text-400);"></i>' +
+        '<span style="font-size:13px;color:var(--text-400);">Laster lagside...</span>' +
+      '</div></div>';
+
+    (async function() {
+      try {
+        var sb = getSb();
+        if (!sb) return;
+        var res = await sb.from('team_pages').select('token, active').eq('team_id', teamId).maybeSingle();
+        if (res.error) throw res.error;
+
+        if (res.data && res.data.active) {
+          renderLagsideActive(card, teamId, res.data.token, cardStyle);
+        } else {
+          renderLagsideCreate(card, teamId, cardStyle);
+        }
+      } catch (e) {
+        card.innerHTML = '';
+      }
+    })();
+  }
+
+  function renderLagsideCreate(card, teamId, cardStyle) {
+    card.innerHTML = '<div class="settings-card" style="' + cardStyle + '">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+        '<i class="fas fa-link" style="color:var(--primary,#456C4B);"></i>' +
+        '<span style="font-size:14px;font-weight:500;">Lagside for foreldre</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--text-400);margin-bottom:8px;">Del kalender og oppm\u00f8te med foreldre \u2014 uten at de trenger appen.</div>' +
+      '<button class="btn-secondary" id="snLagsideCreateBtn" style="width:100%;font-size:13px;padding:8px 12px;">' +
+        '<i class="fas fa-plus" style="margin-right:5px;"></i>Opprett lagside' +
+      '</button>' +
+    '</div>';
+
+    var createBtn = document.getElementById('snLagsideCreateBtn');
+    if (createBtn) {
+      createBtn.addEventListener('click', async function() {
+        createBtn.disabled = true;
+        createBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:5px;"></i>Oppretter...';
+        try {
+          var sb = getSb();
+          if (!sb) throw new Error('Ikke innlogget');
+          var session = await sb.auth.getSession();
+          var token = session.data.session ? session.data.session.access_token : null;
+          if (!token) throw new Error('Ingen sesjon');
+
+          var response = await fetch('/api/team-page?action=create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ team_id: teamId }),
+          });
+          var result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Noe gikk galt');
+          renderLagsideActive(card, teamId, result.token, cardStyle);
+          notify('Lagside opprettet!', 'success');
+        } catch (e) {
+          createBtn.disabled = false;
+          createBtn.innerHTML = '<i class="fas fa-plus" style="margin-right:5px;"></i>Opprett lagside';
+          notify(e.message || 'Kunne ikke opprette lagside.', 'error');
+        }
+      });
+    }
+  }
+
+  function renderLagsideActive(card, teamId, pageToken, cardStyle) {
+    var url = 'https://barnefotballtrener.no/lag/' + pageToken;
+    card.innerHTML = '<div class="settings-card" style="' + cardStyle + '">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+        '<i class="fas fa-link" style="color:var(--primary,#456C4B);"></i>' +
+        '<span style="font-size:14px;font-weight:500;">Lagside for foreldre</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;align-items:center;">' +
+        '<input type="text" id="snLagsideUrl" value="' + escapeHtml(url) + '" readonly ' +
+          'style="flex:1;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);min-width:0;">' +
+        '<button class="btn-secondary" id="snLagsideCopyBtn" style="font-size:12px;padding:6px 10px;white-space:nowrap;">' +
+          '<i class="fas fa-copy" style="margin-right:4px;"></i>Kopier' +
+        '</button>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">' +
+        '<span style="font-size:11px;color:var(--text-400);">Alle med lenken kan se kalender og melde oppm\u00f8te.</span>' +
+        '<button id="snLagsideRegenBtn" style="background:none;border:none;font-size:11px;color:var(--text-400);cursor:pointer;text-decoration:underline;padding:0;">Ny lenke</button>' +
+      '</div>' +
+    '</div>';
+
+    var copyBtn = document.getElementById('snLagsideCopyBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function() {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(function() {
+            notify('Lenke kopiert!', 'success');
+          });
+        } else {
+          var input = document.getElementById('snLagsideUrl');
+          if (input) { input.select(); document.execCommand('copy'); }
+          notify('Lenke kopiert!', 'success');
+        }
+      });
+    }
+
+    var regenBtn = document.getElementById('snLagsideRegenBtn');
+    if (regenBtn) {
+      regenBtn.addEventListener('click', async function() {
+        if (!confirm('Gjeldende lenke slutter \u00e5 virke. Fortsett?')) return;
+        regenBtn.disabled = true;
+        regenBtn.textContent = 'Genererer...';
+        try {
+          var sb = getSb();
+          if (!sb) throw new Error('Ikke innlogget');
+          var session = await sb.auth.getSession();
+          var tok = session.data.session ? session.data.session.access_token : null;
+          if (!tok) throw new Error('Ingen sesjon');
+
+          var response = await fetch('/api/team-page?action=regenerate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+            body: JSON.stringify({ team_id: teamId }),
+          });
+          var result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Noe gikk galt');
+          renderLagsideActive(card, teamId, result.token, cardStyle);
+          notify('Ny lenke generert.', 'success');
+        } catch (e) {
+          regenBtn.disabled = false;
+          regenBtn.textContent = 'Ny lenke';
+          notify(e.message || 'Kunne ikke generere ny lenke.', 'error');
+        }
+      });
+    }
+  }
+
   function renderDashboard(root) {
     if (!currentSeason) { goToList(); return; }
     var s = currentSeason;
@@ -2606,6 +2746,11 @@
         '<div class="sn-dash-meta">' + escapeHtml(metaParts.join(' \u00B7 ')) + '</div>' +
       '</div>';
 
+    // Lagside card (team owners only)
+    if (!isSharedTeam()) {
+      html += '<div id="snLagsideCard"></div>';
+    }
+
     // Tab content
     if (dashTab === 'calendar') {
       html += renderCalendarTab();
@@ -2616,6 +2761,11 @@
     }
 
     root.innerHTML = html;
+
+    // Load lagside card async
+    if (!isSharedTeam()) {
+      loadLagsideCard();
+    }
 
     // Show NFF disclaimer overlay if stats tab and not yet accepted
     if (dashTab === 'stats' && !hasAcceptedNffDisclaimer()) {

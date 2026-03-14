@@ -814,10 +814,10 @@
       html += '<div class="team-dropdown-item' + (isActive ? ' active' : '') + '" data-team-id="' + t.id + '">' +
         '<span class="team-color-dot" style="background:' + escapeHtml(t.color) + '"></span>' +
         '<span class="team-item-name">' + escapeHtml(t.name) + '</span>' +
-        '<span class="team-item-actions" style="position:relative;">' +
-          '<button class="team-item-more" data-team-id="' + t.id + '" data-team-type="own" title="Handlinger">' +
-            '<i class="fas fa-ellipsis-h"></i>' +
-          '</button>' +
+        '<span class="team-item-actions">' +
+          '<button class="team-item-invite" data-team-id="' + t.id + '" title="Inviter trener"><i class="fas fa-user-plus"></i></button>' +
+          '<button class="team-item-edit" data-team-id="' + t.id + '" title="Rediger"><i class="fas fa-pen"></i></button>' +
+          (ownTeams.length > 1 ? '<button class="team-item-delete" data-team-id="' + t.id + '" title="Slett"><i class="fas fa-trash"></i></button>' : '') +
         '</span>' +
         '<span class="team-item-check">' + (isActive ? '<i class="fas fa-check"></i>' : '') + '</span>' +
         '</div>';
@@ -840,10 +840,8 @@
         html += '<div class="team-dropdown-item' + (isActive ? ' active' : '') + '" data-team-id="' + t.id + '">' +
           '<span class="team-color-dot" style="background:' + escapeHtml(t.color) + '"></span>' +
           '<span class="team-item-name">' + escapeHtml(t.name) + '</span>' +
-          '<span class="team-item-actions" style="position:relative;">' +
-            '<button class="team-item-more" data-team-id="' + t.id + '" data-team-type="shared" title="Handlinger">' +
-              '<i class="fas fa-ellipsis-h"></i>' +
-            '</button>' +
+          '<span class="team-item-actions">' +
+            '<button class="team-item-leave" data-team-id="' + t.id + '" title="Forlat lag"><i class="fas fa-sign-out-alt"></i></button>' +
           '</span>' +
           '<span class="team-item-check">' + (isActive ? '<i class="fas fa-check"></i>' : '') + '</span>' +
           '</div>';
@@ -864,78 +862,57 @@
       });
     }
 
-    // "⋯" menu buttons
-    container.querySelectorAll('.team-item-more').forEach(function(moreBtn) {
-      moreBtn.addEventListener('click', function(e) {
+    // Invite buttons
+    container.querySelectorAll('.team-item-invite').forEach(function(invBtn) {
+      invBtn.addEventListener('click', function(e) {
         e.stopPropagation();
-        var tid = moreBtn.getAttribute('data-team-id');
-        var teamType = moreBtn.getAttribute('data-team-type');
+        var tid = invBtn.getAttribute('data-team-id');
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.remove('show');
+        if (btn) btn.classList.remove('open');
+        showInviteModal(tid);
+      });
+    });
 
-        var existing = document.querySelector('.team-action-menu');
-        if (existing) {
-          var wasForSame = existing.getAttribute('data-for-team') === tid;
-          existing.remove();
-          if (wasForSame) return;
-        }
+    // Edit buttons
+    container.querySelectorAll('.team-item-edit').forEach(function(editBtn) {
+      editBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var tid = editBtn.getAttribute('data-team-id');
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.remove('show');
+        if (btn) btn.classList.remove('open');
+        showEditTeamModal(tid);
+      });
+    });
 
-        var menu = document.createElement('div');
-        menu.className = 'team-action-menu';
-        menu.setAttribute('data-for-team', tid);
-        menu.style.cssText = 'position:absolute;right:0;top:100%;z-index:200;min-width:200px;' +
-          'background:var(--bg-card,#fff);border:0.5px solid var(--border,#d8e4da);border-radius:10px;' +
-          'box-shadow:0 4px 16px rgba(0,0,0,0.10);padding:4px 0;';
+    // Delete buttons
+    container.querySelectorAll('.team-item-delete').forEach(function(delBtn) {
+      delBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var tid = delBtn.getAttribute('data-team-id');
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.remove('show');
+        if (btn) btn.classList.remove('open');
+        confirmDeleteTeam(tid);
+      });
+    });
 
-        var items = [];
-        if (teamType === 'own') {
-          items = [
-            { icon: 'fa-link', label: 'Lagside for foreldre', action: function() { showLagsideModal(tid); } },
-            { icon: 'fa-user-plus', label: 'Inviter trener', action: function() { showInviteModal(tid); } },
-            { icon: 'fa-pen', label: 'Rediger lagnavn', action: function() { showEditTeamModal(tid); } },
-            { icon: 'fa-trash', label: 'Slett lag', action: function() { confirmDeleteTeam(tid); }, danger: true }
-          ];
-          if (ownTeams.length <= 1) items.pop();
-        } else {
-          items = [
-            { icon: 'fa-sign-out-alt', label: 'Forlat lag', action: function() { confirmLeaveTeam(tid); } }
-          ];
-        }
-
-        items.forEach(function(item) {
-          var row = document.createElement('button');
-          row.type = 'button';
-          row.style.cssText = 'display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;' +
-            'border:0;background:none;font-size:13px;cursor:pointer;text-align:left;' +
-            'color:' + (item.danger ? 'var(--error,#dc2626)' : 'var(--text-900,#1a1a1a)') + ';';
-          row.innerHTML = '<i class="fas ' + item.icon + '" style="width:16px;text-align:center;opacity:0.7;"></i>' +
-            '<span>' + item.label + '</span>';
-          row.addEventListener('mouseenter', function() { row.style.background = 'var(--bg,#f3f6f3)'; });
-          row.addEventListener('mouseleave', function() { row.style.background = 'none'; });
-          row.addEventListener('click', function(ev) {
-            ev.stopPropagation();
-            menu.remove();
-            var dd = $('teamDropdown');
-            if (dd) dd.classList.remove('show');
-            if (btn) btn.classList.remove('open');
-            item.action();
-          });
-          menu.appendChild(row);
-        });
-
-        moreBtn.closest('.team-item-actions').appendChild(menu);
-
-        var closeMenu = function(ev) {
-          if (!menu.contains(ev.target) && ev.target !== moreBtn && !moreBtn.contains(ev.target)) {
-            menu.remove();
-            document.removeEventListener('click', closeMenu, true);
-          }
-        };
-        setTimeout(function() { document.addEventListener('click', closeMenu, true); }, 0);
+    // Leave buttons (delte lag)
+    container.querySelectorAll('.team-item-leave').forEach(function(leaveBtn) {
+      leaveBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var tid = leaveBtn.getAttribute('data-team-id');
+        var dd = $('teamDropdown');
+        if (dd) dd.classList.remove('show');
+        if (btn) btn.classList.remove('open');
+        confirmLeaveTeam(tid);
       });
     });
 
     container.querySelectorAll('.team-dropdown-item').forEach(function(item) {
       item.addEventListener('click', function(e) {
-        if (e.target.closest('.team-item-more') || e.target.closest('.team-action-menu')) return;
+        if (e.target.closest('.team-item-edit') || e.target.closest('.team-item-delete') || e.target.closest('.team-item-invite')) return;
         var tid = item.getAttribute('data-team-id');
         if (tid && tid !== state.currentTeamId) {
           switchTeam(tid);
@@ -1316,149 +1293,6 @@
       if (input) input.focus();
     }, 100);
   }
-
-  // Lagside-modal (team page for parents)
-  function showLagsideModal(teamId) {
-    var team = state.teams.find(function(t) { return t.id === teamId; });
-    if (!team || team._isShared) return;
-
-    var existing = $('lagsideModal');
-    if (existing) existing.remove();
-
-    var modal = document.createElement('div');
-    modal.id = 'lagsideModal';
-    modal.className = 'team-modal-overlay';
-
-    function renderContent(body) {
-      modal.innerHTML =
-        '<div class="team-modal-box">' +
-          '<h3>Lagside for foreldre</h3>' +
-          body +
-          '<div class="team-modal-actions">' +
-            '<button class="team-modal-cancel" type="button">Lukk</button>' +
-          '</div>' +
-        '</div>';
-      modal.querySelector('.team-modal-cancel').addEventListener('click', function() {
-        modal.remove();
-      });
-    }
-
-    renderContent('<p style="font-size:13px;color:var(--text-400);text-align:center;padding:16px 0;">Laster...</p>');
-    document.body.appendChild(modal);
-    modal.addEventListener('click', function(e) {
-      if (e.target === modal) modal.remove();
-    });
-
-    (async function() {
-      try {
-        var sb = getSupabaseClient();
-        if (!sb) throw new Error('Ikke innlogget');
-
-        var res = await sb.from('team_pages').select('token, active').eq('team_id', teamId).maybeSingle();
-        if (res.error) throw res.error;
-
-        if (res.data && res.data.active) {
-          showActiveState(res.data.token);
-        } else {
-          showCreateState();
-        }
-      } catch (e) {
-        renderContent('<p style="font-size:13px;color:var(--error);">Kunne ikke laste lagside-status: ' + escapeHtml(e.message || 'Ukjent feil') + '</p>');
-      }
-    })();
-
-    function showCreateState() {
-      renderContent(
-        '<p style="font-size:13px;color:var(--text-400);margin:0 0 14px;">Opprett en lagside som foreldre kan bruke til å se kalender og melde oppmøte.</p>' +
-        '<button class="team-modal-create" type="button" id="lagsideCreateBtn" style="width:100%;">Opprett lagside for foreldre</button>'
-      );
-      var createBtn = $('lagsideCreateBtn');
-      if (createBtn) {
-        createBtn.addEventListener('click', async function() {
-          createBtn.disabled = true;
-          createBtn.textContent = 'Oppretter...';
-          try {
-            var sb = getSupabaseClient();
-            var session = await sb.auth.getSession();
-            var token = session.data.session ? session.data.session.access_token : null;
-            if (!token) throw new Error('Ingen sesjon');
-
-            var response = await fetch('/api/team-page?action=create', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-              body: JSON.stringify({ team_id: teamId }),
-            });
-            var result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Noe gikk galt');
-            showActiveState(result.token);
-            showNotification('Lagside opprettet!', 'success');
-          } catch (e) {
-            createBtn.disabled = false;
-            createBtn.textContent = 'Opprett lagside for foreldre';
-            showNotification(e.message || 'Kunne ikke opprette lagside.', 'error');
-          }
-        });
-      }
-    }
-
-    function showActiveState(pageToken) {
-      var url = 'https://barnefotballtrener.no/lag/' + pageToken;
-      renderContent(
-        '<p style="font-size:13px;color:var(--text-400);margin:0 0 10px;">Del denne lenken med foreldre i laget. Alle med lenken kan se lagets kalender og melde oppmøte.</p>' +
-        '<input type="text" id="lagsideUrl" value="' + escapeHtml(url) + '" readonly style="width:100%;box-sizing:border-box;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);margin-bottom:10px;cursor:text;">' +
-        '<div style="display:flex;gap:8px;">' +
-          '<button class="team-modal-create" type="button" id="lagsideCopyBtn" style="flex:1;">Kopier lenke</button>' +
-          '<button class="team-modal-cancel" type="button" id="lagsideRegenBtn" style="flex:1;color:var(--text-400);">Ny lenke</button>' +
-        '</div>'
-      );
-
-      var copyBtn = $('lagsideCopyBtn');
-      if (copyBtn) {
-        copyBtn.addEventListener('click', function() {
-          var input = $('lagsideUrl');
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(url).then(function() {
-              showNotification('Lenke kopiert!', 'success');
-            });
-          } else if (input) {
-            input.select();
-            document.execCommand('copy');
-            showNotification('Lenke kopiert!', 'success');
-          }
-        });
-      }
-
-      var regenBtn = $('lagsideRegenBtn');
-      if (regenBtn) {
-        regenBtn.addEventListener('click', async function() {
-          if (!confirm('Gjeldende lenke slutter å virke. Fortsett?')) return;
-          regenBtn.disabled = true;
-          regenBtn.textContent = 'Genererer...';
-          try {
-            var sb = getSupabaseClient();
-            var session = await sb.auth.getSession();
-            var tok = session.data.session ? session.data.session.access_token : null;
-            if (!tok) throw new Error('Ingen sesjon');
-
-            var response = await fetch('/api/team-page?action=regenerate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-              body: JSON.stringify({ team_id: teamId }),
-            });
-            var result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Noe gikk galt');
-            showActiveState(result.token);
-            showNotification('Ny lenke generert.', 'success');
-          } catch (e) {
-            regenBtn.disabled = false;
-            regenBtn.textContent = 'Ny lenke';
-            showNotification(e.message || 'Kunne ikke generere ny lenke.', 'error');
-          }
-        });
-      }
-    }
-  }
-
 
   async function migrateLocalToSupabase(teamIdOverride, userIdOverride) {
     // Engangs: flytt localStorage-spillere til Supabase hvis Supabase er tom for dette laget
