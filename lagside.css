@@ -1,0 +1,498 @@
+/* lagside.css — Parent-facing team page */
+/* Standalone: no dependency on style.css or any app CSS */
+
+:root {
+  --ls-green: #456C4B;
+  --ls-green-light: #5a8560;
+  --ls-bg: #f4f6f5;
+  --ls-card: #ffffff;
+  --ls-text: #0f172a;
+  --ls-text-secondary: #64748b;
+  --ls-text-hint: #94a3b8;
+  --ls-border: #e2e8f0;
+  --ls-success: #059669;
+  --ls-success-bg: #ecfdf5;
+  --ls-danger: #dc2626;
+  --ls-danger-bg: #fef2f2;
+  --ls-warning: #d97706;
+  --ls-warning-bg: #fffbeb;
+  --ls-info: #2563eb;
+  --ls-info-bg: #eff6ff;
+  --ls-radius: 12px;
+  --ls-radius-sm: 8px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--ls-bg);
+  color: var(--ls-text);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  min-height: 100dvh;
+}
+
+#lagside-root {
+  max-width: 480px;
+  margin: 0 auto;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Loading */
+.ls-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 12px;
+  color: var(--ls-text-secondary);
+  font-size: 14px;
+}
+
+.ls-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid var(--ls-border);
+  border-top-color: var(--ls-green);
+  border-radius: 50%;
+  animation: ls-spin 0.7s linear infinite;
+}
+
+@keyframes ls-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error */
+.ls-error {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--ls-text-secondary);
+}
+.ls-error h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ls-text);
+  margin-bottom: 8px;
+}
+.ls-error p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Header */
+.ls-header {
+  background: var(--ls-green);
+  color: #fff;
+  padding: 20px 16px 16px;
+  padding-top: calc(20px + env(safe-area-inset-top, 0));
+}
+.ls-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+.ls-header-sub {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+/* Player picker pill */
+.ls-player-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 4px 14px 4px 4px;
+  margin-top: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  color: #fff;
+  transition: background 0.15s;
+}
+.ls-player-pill:active {
+  background: rgba(255,255,255,0.25);
+}
+.ls-player-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+.ls-player-pill .fa-chevron-down {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-left: 2px;
+}
+
+/* Player picker modal */
+.ls-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.ls-picker-sheet {
+  background: var(--ls-card);
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-width: 480px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0));
+}
+.ls-picker-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.ls-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--ls-radius-sm);
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-size: 15px;
+  color: var(--ls-text);
+  transition: background 0.1s;
+}
+.ls-picker-item:active {
+  background: var(--ls-bg);
+}
+.ls-picker-item .ls-player-avatar {
+  background: var(--ls-info-bg);
+  color: var(--ls-info);
+}
+.ls-picker-item.active .ls-player-avatar {
+  background: var(--ls-success-bg);
+  color: var(--ls-success);
+}
+
+/* Content area */
+.ls-content {
+  padding: 12px 12px 24px;
+}
+
+/* Cards */
+.ls-card {
+  background: var(--ls-card);
+  border: 0.5px solid var(--ls-border);
+  border-radius: var(--ls-radius);
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+/* Hero badge */
+.ls-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  letter-spacing: 0.01em;
+}
+.ls-badge-match { background: var(--ls-danger-bg); color: var(--ls-danger); }
+.ls-badge-training { background: var(--ls-info-bg); color: var(--ls-info); }
+.ls-badge-completed { background: var(--ls-bg); color: var(--ls-text-secondary); }
+
+/* Hero card */
+.ls-hero-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+.ls-hero-meta {
+  font-size: 13px;
+  color: var(--ls-text-secondary);
+  margin-top: 4px;
+  line-height: 1.6;
+}
+
+/* Attendance buttons */
+.ls-att-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.ls-att-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: var(--ls-radius-sm);
+  border: 1px solid var(--ls-border);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  background: var(--ls-card);
+  color: var(--ls-text);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.ls-att-btn:active { transform: scale(0.97); }
+.ls-att-btn.selected-yes {
+  background: var(--ls-success-bg);
+  color: var(--ls-success);
+  border-color: var(--ls-success);
+}
+.ls-att-btn.selected-no {
+  background: var(--ls-danger-bg);
+  color: var(--ls-danger);
+  border-color: var(--ls-danger);
+}
+.ls-att-btn.selected-maybe {
+  background: var(--ls-warning-bg);
+  color: var(--ls-warning);
+  border-color: var(--ls-warning);
+}
+.ls-att-count {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ls-text-secondary);
+  margin-top: 8px;
+}
+
+/* Coach message */
+.ls-message {
+  background: var(--ls-warning-bg);
+  border-radius: var(--ls-radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.5;
+}
+.ls-message i { margin-right: 6px; }
+
+/* Result card */
+.ls-result {
+  text-align: center;
+  padding: 16px;
+}
+.ls-result-label {
+  font-size: 12px;
+  color: var(--ls-text-secondary);
+  margin-bottom: 4px;
+}
+.ls-result-score {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+.ls-result-teams {
+  font-size: 13px;
+  color: var(--ls-text-secondary);
+  margin-top: 2px;
+}
+.ls-result-fairness {
+  display: inline-block;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-success-bg);
+  color: var(--ls-success);
+  margin-top: 10px;
+}
+
+/* Section titles */
+.ls-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 16px 0 8px;
+  padding-left: 2px;
+}
+
+/* Calendar list */
+.ls-cal-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--ls-border);
+}
+.ls-cal-item:last-child { border-bottom: none; }
+
+.ls-cal-date {
+  width: 40px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.ls-cal-day {
+  font-size: 11px;
+  color: var(--ls-text-secondary);
+  text-transform: lowercase;
+}
+.ls-cal-num {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.ls-cal-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.ls-cal-dot-match { background: var(--ls-danger); }
+.ls-cal-dot-training { background: var(--ls-info); }
+
+.ls-cal-info { flex: 1; min-width: 0; }
+.ls-cal-info-title {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ls-cal-info-sub {
+  font-size: 12px;
+  color: var(--ls-text-secondary);
+}
+
+.ls-cal-att {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ls-cal-att-yes { background: var(--ls-success-bg); color: var(--ls-success); }
+.ls-cal-att-no { background: var(--ls-danger-bg); color: var(--ls-danger); }
+.ls-cal-att-none { background: var(--ls-bg); color: var(--ls-text-hint); }
+
+/* Workout info */
+.ls-workout-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.ls-workout-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ls-workout-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ls-text-secondary);
+}
+.ls-workout-cat {
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.ls-workout-min {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--ls-text-hint);
+}
+.ls-workout-goals {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ls-text-secondary);
+  line-height: 1.5;
+}
+
+/* NFF info box */
+.ls-nff-info {
+  background: var(--ls-bg);
+  border-radius: var(--ls-radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--ls-text-secondary);
+  line-height: 1.6;
+}
+
+/* Month summary */
+.ls-month-summary {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+/* Footer */
+.ls-footer {
+  text-align: center;
+  padding: 20px 16px 12px;
+  font-size: 11px;
+  color: var(--ls-text-hint);
+}
+.ls-footer a {
+  color: var(--ls-green);
+  text-decoration: none;
+}
+
+/* Previous event card (compact) */
+.ls-prev-label {
+  font-size: 12px;
+  color: var(--ls-text-secondary);
+  margin-bottom: 4px;
+}
+.ls-prev-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.ls-prev-meta {
+  font-size: 12px;
+  color: var(--ls-text-secondary);
+}
+
+/* Disabled state for past events */
+.ls-att-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Calendar expand (attendance inline) */
+.ls-cal-expand {
+  padding: 8px 0 4px;
+}
+
+.ls-cal-item[data-cal-eid] {
+  cursor: pointer;
+}
+
+/* Toast */
+.ls-toast {
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0));
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ls-text);
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  z-index: 200;
+  max-width: 320px;
+  text-align: center;
+  animation: ls-toast-in 0.2s ease;
+}
+
+@keyframes ls-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
