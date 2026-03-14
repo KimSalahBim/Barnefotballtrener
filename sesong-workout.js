@@ -274,7 +274,7 @@
     return '<div class="sw-players-wrap">' +
       '<div id="swPlayersToggle" style="cursor:pointer;display:flex;align-items:center;' +
         'justify-content:space-between;padding:10px 0;border-bottom:1px solid #e2e8f0;margin-bottom:4px;">' +
-        '<span style="font-weight:700;font-size:14px;">' +
+        '<span style="font-weight:500;font-size:14px;">' +
           '<i class="fas fa-users" style="margin-right:6px;opacity:0.7;"></i>' +
           'Spillere til økten <span id="swPlayerCount">' + _swSelected.size + '</span>/' + _swPlayers.length +
         '</span>' +
@@ -545,28 +545,28 @@
       return '<button type="button" class="sw-split-chip" data-splitpid="' + esc(p.id) + '"' +
         ' data-bid="' + bid + '"' +
         ' style="background:' + bgB + ';border:1.5px solid ' + border + ';border-radius:20px;' +
-        'padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;' +
+        'padding:4px 10px;font-size:12px;font-weight:500;cursor:pointer;' +
         'display:inline-flex;align-items:center;gap:5px;--pc-color:' + color + '">' +
         '<span style="width:18px;height:18px;border-radius:50%;background:' + color + ';' +
           'display:inline-flex;align-items:center;justify-content:center;' +
-          'font-size:9px;font-weight:900;color:#fff;">' +
+          'font-size:9px;font-weight:500;color:#fff;">' +
           esc((p.name || '?').charAt(0).toUpperCase()) + '</span>' +
         esc(p.name) + (p.goalie ? ' 🧤' : '') +
-        '<span style="font-size:10px;font-weight:900;opacity:0.6;margin-left:2px;">' + side + '</span>' +
+        '<span style="font-size:10px;font-weight:500;opacity:0.6;margin-left:2px;">' + side + '</span>' +
       '</button>';
     }).join('');
 
     return '<div class="wo-parallel-pick" style="margin:10px 0;padding:10px 12px;' +
       'background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
-        '<span style="font-weight:800;font-size:13px;">Spillerfordeling</span>' +
+        '<span style="font-weight:500;font-size:13px;">Spillerfordeling</span>' +
         '<span class="small-text" style="opacity:0.7;">Klikk en spiller for å bytte side</span>' +
       '</div>' +
       '<div style="display:flex;gap:12px;margin-bottom:8px;">' +
-        '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:800;color:#166534;">' +
+        '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:500;color:#166534;">' +
           'Øvelse A: <strong>' + countA + '</strong>' +
         '</div>' +
-        '<div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:800;color:#1e40af;">' +
+        '<div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:500;color:#1e40af;">' +
           'Øvelse B: <strong>' + countB + '</strong>' +
         '</div>' +
         '<button type="button" class="btn-small" id="sw_' + bid + '_pickGoalies">Keepere → B</button>' +
@@ -1242,12 +1242,12 @@
       if (!cached || !Array.isArray(cached) || cached.length === 0) return '';
       // Skip if single group with no meaningful split
       if (cached.length === 1 && cached[0].length <= 1) return '';
-      var html = '<div style="margin-top:8px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:800;">Gruppeinndeling</div>';
+      var html = '<div style="margin-top:8px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:500;">Gruppeinndeling</div>';
       for (var gi = 0; gi < cached.length; gi++) {
         var g = cached[gi];
         var label = cached.length === 1 ? 'Deltakere' : 'Gruppe ' + (gi + 1);
         html += '<div style="background:#f6f8fc;border:1px solid #e2e8f0;border-left:3px solid rgba(11,91,211,0.35);border-radius:8px;padding:6px 8px;margin-top:4px;">' +
-          '<div style="font-weight:800;font-size:12px;color:#1a2333;">' + esc(label) + ' (' + g.length + ')</div>' +
+          '<div style="font-weight:500;font-size:12px;color:#1a2333;">' + esc(label) + ' (' + g.length + ')</div>' +
           '<div style="color:#666;font-size:12px;margin-top:2px;">' + g.map(function(p) { return esc(p.name); }).join(' \u00b7 ') + '</div>' +
         '</div>';
       }
@@ -1260,18 +1260,18 @@
       if (!meta || !meta.description) return '';
       var info = '<div style="color:#374151;font-size:12px;margin-top:4px;line-height:1.5;">' + esc(meta.description) + '</div>';
       if (meta.equipment) {
-        info += '<div style="color:#556070;font-size:12px;margin-top:4px;"><span style="font-weight:700;color:#374151;">Utstyr:</span> ' + esc(meta.equipment) + '</div>';
+        info += '<div style="color:#556070;font-size:12px;margin-top:4px;"><span style="font-weight:500;color:#374151;">Utstyr:</span> ' + esc(meta.equipment) + '</div>';
       }
       if (meta.setup) {
-        info += '<div style="color:#556070;font-size:12px;margin-top:4px;"><span style="font-weight:700;color:#374151;">Oppsett:</span> ' + esc(meta.setup) + '</div>';
+        info += '<div style="color:#556070;font-size:12px;margin-top:4px;"><span style="font-weight:500;color:#374151;">Oppsett:</span> ' + esc(meta.setup) + '</div>';
       }
       if (meta.steps && meta.steps.length) {
-        info += '<div style="margin-top:4px;"><span style="font-weight:700;color:#374151;font-size:12px;">Gjennomf\u00f8ring:</span><ol style="margin:2px 0 0 16px;padding:0;font-size:12px;line-height:1.5;color:#556070;">';
+        info += '<div style="margin-top:4px;"><span style="font-weight:500;color:#374151;font-size:12px;">Gjennomf\u00f8ring:</span><ol style="margin:2px 0 0 16px;padding:0;font-size:12px;line-height:1.5;color:#556070;">';
         for (var si = 0; si < meta.steps.length; si++) info += '<li>' + esc(meta.steps[si]) + '</li>';
         info += '</ol></div>';
       }
       if (meta.coaching && meta.coaching.length) {
-        info += '<div style="color:#556070;font-size:12px;margin-top:4px;"><span style="font-weight:700;color:#374151;">Tips:</span> ' + meta.coaching.map(function(c) { return esc(c); }).join(' \u00b7 ') + '</div>';
+        info += '<div style="color:#556070;font-size:12px;margin-top:4px;"><span style="font-weight:500;color:#374151;">Tips:</span> ' + meta.coaching.map(function(c) { return esc(c); }).join(' \u00b7 ') + '</div>';
       }
       if (meta.diagram) {
         info += '<div style="margin:6px 0 2px;display:flex;justify-content:center;"><div style="max-width:200px;width:100%;background:#3d8b37;border-radius:8px;padding:6px;">' + shared.renderDrillSVG(meta.diagram) + '</div></div>';
@@ -1294,7 +1294,7 @@
         var catObj = shared.NFF_CATEGORY_BY_ID[curCat];
         if (catObj)
           secRow = '<tr><td colspan="4" style="border-left:4px solid ' + catObj.color +
-            ';padding:5px 10px;font-size:11px;font-weight:800;color:' + catObj.color +
+            ';padding:5px 10px;font-size:11px;font-weight:500;color:' + catObj.color +
             ';background:#f9fafb;">' + esc(shared.catLabel(catObj, _swMeta.ageGroup)) + '</td></tr>';
       }
       if (curCat) prevCat = curCat;
@@ -1306,12 +1306,12 @@
 
       if (!isP) {
         blocksHtml += secRow + '<tr>' +
-          '<td style="color:#888;font-weight:800;width:40px;">' + (bi + 1) + '</td>' +
-          '<td><div style="font-weight:900;">' + esc(nameA) + '</div>' + infoA +
+          '<td style="color:#888;font-weight:500;width:40px;">' + (bi + 1) + '</td>' +
+          '<td><div style="font-weight:500;">' + esc(nameA) + '</div>' + infoA +
             (commA ? '<div style="color:#666;font-size:12px;margin-top:3px;">' + commA + '</div>' : '') +
             grpA +
           '</td>' +
-          '<td style="text-align:right;font-weight:900;width:70px;">' + bMin + '</td>' +
+          '<td style="text-align:right;font-weight:500;width:70px;">' + bMin + '</td>' +
           '<td style="text-align:right;color:#888;font-size:12px;width:50px;">' + acc + '\'</td>' +
         '</tr>';
       } else {
@@ -1320,26 +1320,26 @@
         var infoB = renderExInfo(b.b);
         var grpB  = renderGroupHtml(b, 'b');
         blocksHtml += secRow + '<tr>' +
-          '<td style="color:#888;font-weight:800;">' + (bi + 1) + '</td>' +
+          '<td style="color:#888;font-weight:500;">' + (bi + 1) + '</td>' +
           '<td><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
             '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:8px;">' +
-              '<div style="font-size:11px;color:#888;font-weight:800;margin-bottom:3px;">ØVELSE A</div>' +
-              '<div style="font-weight:900;">' + esc(nameA) +
+              '<div style="font-size:11px;color:#888;font-weight:500;margin-bottom:3px;">ØVELSE A</div>' +
+              '<div style="font-weight:500;">' + esc(nameA) +
                 ' <span style="color:#888;font-size:12px;">(' + minA + ' min)</span></div>' +
               infoA +
               (commA ? '<div style="color:#666;font-size:12px;">' + commA + '</div>' : '') +
               grpA +
             '</div>' +
             '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:8px;">' +
-              '<div style="font-size:11px;color:#888;font-weight:800;margin-bottom:3px;">ØVELSE B</div>' +
-              '<div style="font-weight:900;">' + esc(nameB) +
+              '<div style="font-size:11px;color:#888;font-weight:500;margin-bottom:3px;">ØVELSE B</div>' +
+              '<div style="font-weight:500;">' + esc(nameB) +
                 ' <span style="color:#888;font-size:12px;">(' + minB + ' min)</span></div>' +
               infoB +
               (commB ? '<div style="color:#666;font-size:12px;">' + commB + '</div>' : '') +
               grpB +
             '</div>' +
           '</div></td>' +
-          '<td style="text-align:right;font-weight:900;">' + bMin + '</td>' +
+          '<td style="text-align:right;font-weight:500;">' + bMin + '</td>' +
           '<td style="text-align:right;color:#888;font-size:12px;">' + acc + '\'</td>' +
         '</tr>';
       }
@@ -1351,7 +1351,7 @@
     if (bal && bal.totalMinutes > 0) {
       balHtml = '<div style="margin-top:12px;">' +
         '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#888;' +
-          'font-weight:800;margin-bottom:6px;">NFF-fordeling</div>' +
+          'font-weight:500;margin-bottom:6px;">NFF-fordeling</div>' +
         '<div style="display:flex;gap:4px;height:22px;">';
       for (var ci = 0; ci < shared.NFF_CATEGORIES.length; ci++) {
         var cat = shared.NFF_CATEGORIES[ci];
@@ -1361,7 +1361,7 @@
         balHtml += '<div style="flex:' + pct2 + ';background:' + cat.color + '22;' +
           'border-left:3px solid ' + cat.color + ';border-radius:4px;' +
           'display:flex;align-items:center;justify-content:center;' +
-          'font-size:9px;font-weight:800;color:' + cat.color + ';">' + bx.minutes + 'm</div>';
+          'font-size:9px;font-weight:500;color:' + cat.color + ';">' + bx.minutes + 'm</div>';
       }
       balHtml += '</div></div>';
     }
@@ -1375,16 +1375,16 @@
       '<title>' + esc(title) + '</title><style>' +
       'body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f6f8fc;}' +
       '.wrap{max-width:900px;margin:0 auto;padding:16px;}' +
-      '.hdr{background:linear-gradient(135deg,#0b5bd3,#19b0ff);color:#fff;border-radius:16px;padding:14px 18px;margin-bottom:10px;}' +
-      '.hdr-t{font-size:18px;font-weight:900;}.hdr-s{font-size:13px;opacity:0.9;margin-top:2px;}' +
+      '.hdr{background:linear-gradient(135deg,#456C4B,#5a8a60);color:#fff;border-radius:16px;padding:14px 18px;margin-bottom:10px;}' +
+      '.hdr-t{font-size:18px;font-weight:700;}.hdr-s{font-size:13px;opacity:0.9;margin-top:2px;}' +
       '.card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;}' +
       'table{width:100%;border-collapse:collapse;}' +
       'th,td{vertical-align:top;padding:8px 10px;border-bottom:1px solid #e2e8f0;}' +
       'th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#888;}' +
       'tr{page-break-inside:avoid;}' +
       'svg{width:100%;height:auto;}' +
-      '.btn{border:0;border-radius:10px;padding:10px 16px;font-weight:800;cursor:pointer;margin:4px;}' +
-      '.btn-p{background:#0b5bd3;color:#fff;}.btn-s{background:#1f2a3d;color:#fff;}' +
+      '.btn{border:0;border-radius:10px;padding:10px 16px;font-weight:500;cursor:pointer;margin:4px;}' +
+      '.btn-p{background:#456C4B;color:#fff;}.btn-s{background:#1f2a3d;color:#fff;}' +
       '.footer{text-align:center;margin-top:14px;font-size:11px;color:#888;}' +
       '@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
       'body{background:#fff;}.wrap{padding:0;}' +
@@ -1398,7 +1398,7 @@
           '<th>#</th><th>Øvelse</th>' +
           '<th style="text-align:right">Min</th><th style="text-align:right">Akk.</th>' +
         '</tr></thead><tbody>' + blocksHtml + '</tbody></table>' + balHtml + '</div>' +
-        '<div style="text-align:center;font-size:1.5rem;font-weight:900;margin-top:14px;">' +
+        '<div style="text-align:center;font-size:1.5rem;font-weight:500;margin-top:14px;">' +
           total + ' min totalt</div>' +
         '<div class="actions" style="margin-top:12px;text-align:center;">' +
           '<button class="btn btn-p" onclick="window.print()">Lagre som PDF</button>' +
