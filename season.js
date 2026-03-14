@@ -2588,7 +2588,7 @@
     var teamId = getTeamId();
     if (!teamId) return;
 
-    var cardStyle = 'border-left:3px solid var(--primary,#456C4B);padding:10px 14px;margin-bottom:12px;';
+    var cardStyle = 'border-left:4px solid var(--primary,#456C4B);padding:12px 14px;margin-bottom:12px;';
 
     card.innerHTML = '<div class="settings-card" style="' + cardStyle + '">' +
       '<div style="display:flex;align-items:center;gap:8px;">' +
@@ -2616,11 +2616,11 @@
 
   function renderLagsideCreate(card, teamId, cardStyle) {
     card.innerHTML = '<div class="settings-card" style="' + cardStyle + '">' +
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
-        '<i class="fas fa-link" style="color:var(--primary,#456C4B);"></i>' +
+      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">' +
+        '<span style="font-size:15px;line-height:1;">&#128279;</span>' +
         '<span style="font-size:14px;font-weight:500;">Lagside for foreldre</span>' +
       '</div>' +
-      '<div style="font-size:12px;color:var(--text-400);margin-bottom:8px;">Del kalender og oppm\u00f8te med foreldre \u2014 uten at de trenger appen.</div>' +
+      '<div style="font-size:12px;color:var(--text-400);line-height:1.4;margin-bottom:10px;">Opprett en lagside s\u00e5 foreldre kan se kalender, melde oppm\u00f8te og f\u00f8lge kamper \u2014 uten \u00e5 laste ned appen.</div>' +
       '<button class="btn-secondary" id="snLagsideCreateBtn" style="width:100%;font-size:13px;padding:8px 12px;">' +
         '<i class="fas fa-plus" style="margin-right:5px;"></i>Opprett lagside' +
       '</button>' +
@@ -2659,20 +2659,22 @@
   function renderLagsideActive(card, teamId, pageToken, cardStyle) {
     var url = 'https://barnefotballtrener.no/lag/' + pageToken;
     card.innerHTML = '<div class="settings-card" style="' + cardStyle + '">' +
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
-        '<i class="fas fa-link" style="color:var(--primary,#456C4B);"></i>' +
+      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">' +
+        '<span style="font-size:15px;line-height:1;">&#128279;</span>' +
         '<span style="font-size:14px;font-weight:500;">Lagside for foreldre</span>' +
       '</div>' +
-      '<div style="display:flex;gap:6px;align-items:center;">' +
+      '<div style="font-size:12px;color:var(--text-400);line-height:1.4;margin-bottom:8px;">Foreldre \u00e5pner lenken for \u00e5 se kalender, melde oppm\u00f8te og f\u00f8lge kamper \u2014 uten \u00e5 laste ned appen.</div>' +
+      '<div style="display:flex;gap:6px;align-items:stretch;">' +
         '<input type="text" id="snLagsideUrl" value="' + escapeHtml(url) + '" readonly ' +
-          'style="flex:1;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);min-width:0;">' +
-        '<button class="btn-secondary" id="snLagsideCopyBtn" style="font-size:12px;padding:6px 10px;white-space:nowrap;">' +
+          'style="flex:1;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;padding:7px 8px;' +
+          'border:1px solid var(--border);border-radius:8px;background:var(--bg,#f3f6f3);min-width:0;' +
+          'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-600);">' +
+        '<button class="btn-secondary" id="snLagsideCopyBtn" style="font-size:12px;padding:7px 12px;white-space:nowrap;border-radius:8px;">' +
           '<i class="fas fa-copy" style="margin-right:4px;"></i>Kopier' +
         '</button>' +
       '</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">' +
-        '<span style="font-size:11px;color:var(--text-400);">Alle med lenken kan se kalender og melde oppm\u00f8te.</span>' +
-        '<button id="snLagsideRegenBtn" style="background:none;border:none;font-size:11px;color:var(--text-400);cursor:pointer;text-decoration:underline;padding:0;">Ny lenke</button>' +
+      '<div style="text-align:right;margin-top:6px;">' +
+        '<button id="snLagsideRegenBtn" style="background:none;border:none;font-size:12px;color:var(--text-400);cursor:pointer;text-decoration:underline;padding:0;">Ny lenke</button>' +
       '</div>' +
     '</div>';
 
@@ -2694,7 +2696,7 @@
     var regenBtn = document.getElementById('snLagsideRegenBtn');
     if (regenBtn) {
       regenBtn.addEventListener('click', async function() {
-        if (!confirm('Gjeldende lenke slutter \u00e5 virke. Fortsett?')) return;
+        if (!confirm('Den gamle lenken slutter \u00e5 virke. Foreldre m\u00e5 f\u00e5 ny lenke. Fortsett?')) return;
         regenBtn.disabled = true;
         regenBtn.textContent = 'Genererer...';
         try {
