@@ -84,7 +84,7 @@
 
 .wo-bs-title {
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-800, #1e293b);
   padding-top: 4px;
 }
@@ -130,7 +130,7 @@
 }
 
 .wo-bs-search:focus {
-  border-color: var(--primary, #0b5bd3);
+  border-color: var(--primary);
   background: var(--bg-card, #fff);
 }
 
@@ -161,7 +161,7 @@
   background: transparent;
   color: var(--text-700, #334155);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   font-family: 'Outfit', sans-serif;
   cursor: pointer;
   white-space: nowrap;
@@ -188,7 +188,7 @@
   background: var(--bg, #f8fafc);
   color: var(--text-700, #334155);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   font-family: 'Outfit', sans-serif;
   cursor: pointer;
   text-align: left;
@@ -196,13 +196,13 @@
 }
 
 .wo-bs-drink-btn:hover {
-  border-color: var(--primary, #0b5bd3);
-  background: rgba(11, 91, 211, 0.04);
+  border-color: var(--primary);
+  background: var(--primary-dim);
 }
 
 .wo-bs-drink-min {
   color: var(--text-400, #94a3b8);
-  font-weight: 600;
+  font-weight: 500;
   margin-left: 6px;
   font-size: 12px;
 }
@@ -245,7 +245,7 @@
   z-index: 1;
   padding: 8px 16px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-600, #475569);
@@ -298,7 +298,7 @@
 
 .wo-bs-card-name {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-800, #1e293b);
   line-height: 1.3;
 }
@@ -357,7 +357,7 @@
   background: #fef2f2;
   color: #dc2626;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 /* "I økta" badge */
@@ -371,7 +371,7 @@
   background: var(--bg, #f1f5f9);
   color: var(--text-400, #94a3b8);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -392,7 +392,7 @@
   background: transparent;
   color: var(--text-600, #475569);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   font-family: 'Outfit', sans-serif;
   cursor: pointer;
   text-align: left;
@@ -400,8 +400,8 @@
 }
 
 .wo-bs-custom-btn:hover {
-  border-color: var(--primary, #0b5bd3);
-  color: var(--primary, #0b5bd3);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* =========================================================
@@ -431,7 +431,7 @@
 
 .wo-trigger:active {
   box-shadow: none;
-  border-color: var(--primary, #0b5bd3);
+  border-color: var(--primary);
 }
 
 /* NFF color stripe */
@@ -451,7 +451,7 @@
 
 .wo-trigger-name {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-800, #1e293b);
   line-height: 1.3;
   white-space: nowrap;
@@ -472,7 +472,7 @@
 .wo-trigger-chevron {
   padding: 8px 12px 8px 4px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-400, #94a3b8);
   flex-shrink: 0;
   white-space: nowrap;
@@ -522,7 +522,7 @@
 
 .wo-h1-marker-label {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-500, #64748b);
@@ -531,7 +531,7 @@
 
 .wo-h1-marker-min {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-400, #94a3b8);
   margin-left: auto;
 }
@@ -582,7 +582,7 @@
 
 .wo-h1-name {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-800, #1e293b);
   line-height: 1.3;
   white-space: nowrap;
@@ -603,7 +603,7 @@
   background: var(--bg, #f1f5f9);
   color: var(--text-500, #64748b);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -619,7 +619,7 @@
   gap: 2px;
   padding: 8px 12px;
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 500;
   color: var(--text-800, #1e293b);
   flex-shrink: 0;
   cursor: pointer;
@@ -639,7 +639,7 @@
 
 .wo-h1-min-unit {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-400, #94a3b8);
   margin-left: 1px;
 }
@@ -647,11 +647,11 @@
 /* Inline minute edit input */
 .wo-h1-min-input {
   width: 48px;
-  border: 1.5px solid var(--primary, #0b5bd3);
+  border: 1.5px solid var(--primary);
   border-radius: 8px;
   text-align: center;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 500;
   font-family: 'Outfit', sans-serif;
   padding: 2px 4px;
   outline: none;
@@ -661,8 +661,8 @@
 
 /* ── Expanded card ── */
 .wo-h1-expanded {
-  border-color: var(--primary, #0b5bd3);
-  box-shadow: 0 4px 12px rgba(11, 91, 211, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px var(--primary-dim);
 }
 
 .wo-h1-exp-body {
@@ -729,14 +729,14 @@
 
 .wo-meta-total {
   font-size: 2rem;
-  font-weight: 900;
+  font-weight: 500;
   color: var(--text-900, #0f172a);
   line-height: 1;
 }
 
 .wo-meta-total-unit {
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-400, #94a3b8);
   margin-left: 2px;
 }
@@ -750,7 +750,7 @@
 
 .wo-meta-count {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-500, #64748b);
 }
 
@@ -758,10 +758,10 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: 6px;
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--primary-dim);
+  color: var(--primary);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .wo-meta-theme {
@@ -773,7 +773,7 @@
   background: #f5f3ff;
   color: #7c3aed;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .wo-meta-theme-x {
@@ -830,7 +830,7 @@
   justify-content: center;
   height: 100%;
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-600, #475569);
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -858,12 +858,12 @@
 .wo-gen-cta {
   width: 100%;
   padding: 14px 18px;
-  border: 2px solid var(--primary, #0b5bd3);
+  border: 2px solid var(--primary);
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(11,91,211,0.04), rgba(11,91,211,0.08));
-  color: var(--primary, #0b5bd3);
+  background: linear-gradient(135deg, var(--primary-dim), var(--primary-glow));
+  color: var(--primary);
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 500;
   font-family: 'Outfit', sans-serif;
   cursor: pointer;
   transition: all 0.2s;
@@ -874,19 +874,19 @@
 }
 
 .wo-gen-cta:hover {
-  background: linear-gradient(135deg, rgba(11,91,211,0.06), rgba(11,91,211,0.12));
+  background: linear-gradient(135deg, var(--primary-dim), var(--primary-glow));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(11, 91, 211, 0.15);
+  box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .wo-gen-cta-open {
-  border-color: var(--primary, #0b5bd3);
-  background: var(--primary, #0b5bd3);
+  border-color: var(--primary);
+  background: var(--primary);
   color: #fff;
 }
 
 .wo-gen-cta-open:hover {
-  background: var(--primary, #0b5bd3);
+  background: var(--primary);
   filter: brightness(1.1);
 }
 
@@ -897,7 +897,7 @@
 
 .wo-gen-label {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-500, #64748b);
@@ -924,7 +924,7 @@
   background: var(--bg-card, #fff);
   color: var(--text-700, #334155);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   font-family: 'Outfit', sans-serif;
   cursor: pointer;
   transition: all 0.15s;
@@ -932,18 +932,18 @@
 }
 
 .wo-gen-pill:hover {
-  border-color: var(--primary, #0b5bd3);
-  color: var(--primary, #0b5bd3);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .wo-gen-pill-sel {
-  border-color: var(--primary, #0b5bd3);
-  background: var(--primary, #0b5bd3);
+  border-color: var(--primary);
+  background: var(--primary);
   color: #fff;
 }
 
 .wo-gen-pill-sel:hover {
-  background: var(--primary, #0b5bd3);
+  background: var(--primary);
   filter: brightness(1.1);
   color: #fff;
 }
@@ -959,7 +959,7 @@
 
 .wo-gen-goals-title {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
   color: #92400e;
   margin-bottom: 4px;
 }
@@ -986,10 +986,10 @@
   padding: 14px 20px;
   border: none;
   border-radius: 12px;
-  background: var(--primary, #0b5bd3);
+  background: var(--primary);
   color: #fff;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 500;
   font-family: 'Outfit', sans-serif;
   cursor: pointer;
   transition: all 0.2s;
@@ -998,7 +998,7 @@
 .wo-gen-submit:hover:not(:disabled) {
   filter: brightness(1.1);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(11, 91, 211, 0.25);
+  box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .wo-gen-submit:disabled {
@@ -1085,7 +1085,7 @@
   background: transparent;
   color: var(--text-700, #334155);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   font-family: 'Outfit', sans-serif;
   text-align: left;
   cursor: pointer;
@@ -1110,12 +1110,12 @@
 .wo-help-dialog {
   margin-top: 8px;
   padding: 14px 16px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: var(--primary-dim);
+  border: 1px solid var(--border);
   border-radius: 12px;
   font-size: 13px;
   line-height: 1.6;
-  color: #1e3a5f;
+  color: var(--text-700);
   animation: wo-help-fadein 0.2s ease-out;
 }
 
@@ -1146,14 +1146,14 @@
   padding: 10px;
   border-radius: 10px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   font-family: 'Outfit', sans-serif;
   cursor: pointer;
   border: none;
 }
 
 .wo-help-dialog .wo-help-go {
-  background: var(--brand, #2563eb);
+  background: var(--primary);
   color: #fff;
 }
 
@@ -1222,7 +1222,7 @@
 }
 
 .sw-header-title {
-  font-weight: 800;
+  font-weight: 700;
   font-size: 16px;
   color: var(--text, #1f2a3d);
   white-space: nowrap;
@@ -1248,7 +1248,7 @@
   padding: 1px 7px;
   border-radius: 99px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   background: #f1f5f9;
   color: #475569;
 }
@@ -1264,7 +1264,7 @@
   background: transparent;
   color: #94a3b8;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 500;
   cursor: pointer;
   padding: 0;
   line-height: 1;
