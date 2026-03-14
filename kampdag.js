@@ -805,7 +805,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const needs = { F: kdFormation[0], M: kdFormation[1], A: kdFormation[2] };
     const zones = [
       { key: 'F', name: 'Forsvar', need: needs.F, have: counts.F, color: '#16a34a' },
-      { key: 'M', name: 'Midtbane', need: needs.M, have: counts.M, color: '#2563eb' },
+      { key: 'M', name: 'Midtbane', need: needs.M, have: counts.M, color: '#456C4B' },
       { key: 'A', name: 'Angrep', need: needs.A, have: counts.A, color: '#dc2626' },
     ].filter(z => z.need > 0);
 
@@ -814,7 +814,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     el.style.background = warn ? 'var(--warning-dim)' : 'var(--success-dim)';
     el.style.color = warn ? 'var(--warning)' : 'var(--success)';
 
-    el.innerHTML = `<div style="font-weight:800; margin-bottom:6px;">${warn ? '\u26a0 ' : ''}Sonedekning for ${kdFormationKey}</div>` +
+    el.innerHTML = `<div style="font-weight:500; margin-bottom:6px;">${warn ? '\u26a0 ' : ''}Sonedekning for ${kdFormationKey}</div>` +
       zones.map(z => {
         const pct = Math.min(100, Math.round((z.have / Math.max(1, present.length)) * 100));
         const low = z.have < z.need;
@@ -824,7 +824,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           <div style="flex:1;height:6px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;">
             <div style="height:100%;width:${pct}%;background:${low ? 'var(--warning)' : z.color};border-radius:3px;"></div>
           </div>
-          <span style="width:32px;text-align:right;font-weight:800;${low ? 'color:var(--warning);' : ''}">${z.have}${low ? ' \u26a0' : ''}</span>
+          <span style="width:32px;text-align:right;font-weight:500;${low ? 'color:var(--warning);' : ''}">${z.have}${low ? ' \u26a0' : ''}</span>
         </div>`;
       }).join('') +
       (warn ? `<div style="margin-top:6px;font-size:12px;">Noen spillere vil bli plassert utenfor preferanse.</div>` : '');
@@ -2653,7 +2653,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       const dots0 = slots.map(s => {
         const pid = sm0.slots[s.key];
         const nm = pid ? escapeHtml(idToName[pid] || pid) : '?';
-        return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:${startB}px;height:${startB}px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;"><span style="font-size:${startBfont}px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${startBmax}px;">${nm}</span></div></div>`;
+        return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:${startB}px;height:${startB}px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;"><span style="font-size:${startBfont}px;font-weight:500;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${startBmax}px;">${nm}</span></div></div>`;
       }).join('');
       const benchNames0 = sm0.bench.map(pid => escapeHtml(idToName[pid] || pid)).join(' \u00b7 ') || '\u2014';
       startSection = `
@@ -2732,7 +2732,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           const pid = sm.slots[s.key]; const nm = pid ? escapeHtml(idToName[pid]||pid) : '?';
           const isNew = pid && newIds.has(pid);
           const outline = isNew ? 'box-shadow:0 0 0 2px #fbbf24;' : '';
-          return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:${bytteB}px;height:${bytteB}px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;${outline}"><span style="font-size:${bytteBfont}px;font-weight:800;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${bytteBmax}px;">${nm}</span></div></div>`;
+          return `<div style="position:absolute;left:${s.x}%;top:${s.y}%;transform:translate(-50%,-50%);z-index:2;"><div style="width:${bytteB}px;height:${bytteB}px;border-radius:50%;background:${bbg[s.zone]};border:1.5px solid ${bbd[s.zone]};display:flex;align-items:center;justify-content:center;${outline}"><span style="font-size:${bytteBfont}px;font-weight:500;color:${bc[s.zone]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${bytteBmax}px;">${nm}</span></div></div>`;
         }).join('');
         body = `<div class="cpitch" style="position:relative;width:100%;height:${bytteH}px;background:linear-gradient(180deg,#1a5c1a,#145214);overflow:hidden;border-radius:6px;"><div style="position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.1);"></div>${dots}</div>`;
         const benchNames = sm.bench.map(pid => escapeHtml(idToName[pid]||pid)).join(', ') || '\u2014';
@@ -2761,18 +2761,18 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;background:#0f172a;color:#e2e8f0;line-height:1.45}
 .wrap{max-width:900px;margin:0 auto;padding:16px}
-.header{background:linear-gradient(135deg,#0b5bd3,#19b0ff);color:#fff;border-radius:10px;padding:6px 10px;display:flex;gap:8px;align-items:center;box-shadow:0 3px 8px rgba(11,91,211,0.3)}
+.header{background:linear-gradient(135deg,#456C4B,#5a8a60);color:#fff;border-radius:10px;padding:6px 10px;display:flex;gap:8px;align-items:center;box-shadow:0 3px 8px rgba(11,91,211,0.3)}
 .logo{width:40px;height:40px;border-radius:8px;background:#fff;overflow:hidden;flex-shrink:0}
 .logo img{width:40px;height:40px;object-fit:cover}
-.h-title{font-size:13px;font-weight:900}
+.h-title{font-size:13px;font-weight:700}
 .h-sub{opacity:0.9;font-size:10px;margin-top:1px}
-.section-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em;color:#60a5fa;margin:8px 0 4px;padding-bottom:3px;border-bottom:2px solid rgba(255,255,255,0.08)}
+.section-title{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.04em;color:#60a5fa;margin:8px 0 4px;padding-bottom:3px;border-bottom:2px solid rgba(255,255,255,0.08)}
 .main-card{background:#1a2333;border-radius:14px;padding:8px;margin-top:6px;border:1px solid rgba(255,255,255,0.06)}
 /* Pitch */
 .pitch{background:linear-gradient(180deg,#1a5c1a,#145214);border:2px solid #2a7a2a;border-radius:12px;padding:12px 8px;position:relative;overflow:hidden}
 .pitch::before{content:'';position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,0.12)}
 .pitch-row{display:flex;justify-content:center;gap:6px;padding:6px 0;position:relative;z-index:1}
-.pp{border-radius:7px;padding:3px 8px;font-size:11px;font-weight:700}
+.pp{border-radius:7px;padding:3px 8px;font-size:11px;font-weight:500}
 .pp-f{background:rgba(34,197,94,0.2);color:#4ade80;border:1px solid rgba(34,197,94,0.3)}
 .pp-m{background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
 .pp-a{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3)}
@@ -2783,11 +2783,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .chip{font-size:11px;padding:3px 8px;background:rgba(255,255,255,0.08);border-radius:6px}
 /* Timeline */
 .tl-chart{background:rgba(255,255,255,0.03);border-radius:10px;padding:8px}
-.tl-header{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin-bottom:4px}
+.tl-header{font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin-bottom:4px}
 .tl-row{display:flex;align-items:center;gap:4px;padding:1px 0}
-.tl-name{width:56px;text-align:right;font-size:10px;font-weight:700;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-name{width:56px;text-align:right;font-size:10px;font-weight:500;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tl-bar{flex:1;height:12px;background:rgba(255,255,255,0.04);border-radius:3px;display:flex;overflow:hidden}
-.tl-min{width:30px;text-align:right;font-size:9px;font-weight:800;color:#64748b}
+.tl-min{width:30px;text-align:right;font-size:9px;font-weight:500;color:#64748b}
 .tl-axis{display:flex;justify-content:space-between;margin:2px 36px 0 62px;font-size:8px;color:#475569}
 .tl-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;padding-left:62px;font-size:9px;color:#64748b}
 .tl-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:3px;vertical-align:middle}
@@ -2798,18 +2798,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .card{background:#1e293b;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);break-inside:avoid;page-break-inside:avoid}
 .card-head{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.06)}
-.card-title{font-weight:900;font-size:12px;color:#fff}
-.card-keeper{background:rgba(168,85,247,0.15);padding:3px 8px;border-radius:999px;font-size:10px;color:#c084fc;font-weight:700}
+.card-title{font-weight:500;font-size:12px;color:#fff}
+.card-keeper{background:rgba(168,85,247,0.15);padding:3px 8px;border-radius:999px;font-size:10px;color:#c084fc;font-weight:500}
 .card-body{padding:3px 6px 4px}
-.zl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;display:flex;align-items:center;gap:4px;margin-bottom:2px}
+.zl{font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:0.04em;display:flex;align-items:center;gap:4px;margin-bottom:2px}
 .zd{width:6px;height:6px;border-radius:50%}
 .zp{display:flex;flex-wrap:wrap;gap:3px;padding-left:10px;margin-bottom:4px}
 .zc{font-size:10px;font-weight:600;padding:1px 5px;border-radius:5px;background:rgba(255,255,255,0.08);color:#cbd5e1;border:1px solid rgba(255,255,255,0.06)}
 .zc-new{background:rgba(34,197,94,0.15);color:#4ade80;border-color:rgba(34,197,94,0.4)}
 .swaps{padding-top:4px;border-top:1px solid rgba(255,255,255,0.06);margin-top:4px}
 .sw{display:flex;align-items:center;gap:3px;padding:0;font-size:8.5px}
-.sw-in{color:#4ade80;font-weight:900;width:14px;text-align:center}
-.sw-out{color:#f87171;font-weight:900;width:14px;text-align:center}
+.sw-in{color:#4ade80;font-weight:500;width:14px;text-align:center}
+.sw-out{color:#f87171;font-weight:500;width:14px;text-align:center}
 .note{font-size:10px;color:#475569;font-style:italic;margin-top:4px}
 .footer{text-align:center;margin-top:10px;font-size:9px;color:#475569;padding:6px 0;border-top:1px solid rgba(255,255,255,0.06)}
 @page{margin:6mm 8mm}
@@ -2860,7 +2860,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 
   <div class="footer">Laget med Barnefotballtrener.no</div>
   <div class="actions" style="display:flex;gap:10px;margin-top:12px;">
-    <button style="border:0;border-radius:10px;padding:10px 16px;font-weight:800;background:#0b5bd3;color:#fff;cursor:pointer;font-size:13px;" onclick="window.print()">Lagre som PDF</button>
+    <button style="border:0;border-radius:10px;padding:10px 16px;font-weight:500;background:#456C4B;color:#fff;cursor:pointer;font-size:13px;" onclick="window.print()">Lagre som PDF</button>
   </div>
   <div id="saveGuide" style="margin-top:12px;"></div>
   <script>
@@ -3006,9 +3006,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
         if (inNames.length || outNames.length) {
           subsEl.style.display = '';
           subsEl.innerHTML =
-            (inNames.length ? `<span style="color:#16a34a;font-weight:700;">\u2191 ${inNames.map(n => escapeHtml(n)).join(', ')}</span>` : '') +
+            (inNames.length ? `<span style="color:#16a34a;font-weight:500;">\u2191 ${inNames.map(n => escapeHtml(n)).join(', ')}</span>` : '') +
             (inNames.length && outNames.length ? ' &nbsp; ' : '') +
-            (outNames.length ? `<span style="color:#dc2626;font-weight:700;">\u2193 ${outNames.map(n => escapeHtml(n)).join(', ')}</span>` : '');
+            (outNames.length ? `<span style="color:#dc2626;font-weight:500;">\u2193 ${outNames.map(n => escapeHtml(n)).join(', ')}</span>` : '');
         } else {
           subsEl.style.display = 'none';
         }
