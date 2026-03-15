@@ -2627,7 +2627,7 @@
         '<span style="font-size:15px;line-height:1;">&#128279;</span>' +
         '<span style="font-size:14px;font-weight:500;">Lagside for foreldre</span>' +
       '</div>' +
-      '<div style="font-size:12px;color:var(--text-400);line-height:1.4;margin-bottom:10px;">Opprett en lagside s\u00e5 foreldre kan se kalender, melde oppm\u00f8te og f\u00f8lge kamper \u2014 uten \u00e5 laste ned appen.</div>' +
+      '<div style="font-size:12px;color:var(--text-400);line-height:1.4;margin-bottom:10px;">Foreldre \u00e5pner lenken for \u00e5 se kalender, beskjeder og f\u00f8lge kamper \u2014 uten \u00e5 laste ned appen.</div>' +
       '<button class="btn-secondary" id="snLagsideCreateBtn" style="width:100%;font-size:13px;padding:8px 12px;">' +
         '<i class="fas fa-plus" style="margin-right:5px;"></i>Opprett lagside' +
       '</button>' +
@@ -2682,7 +2682,7 @@
         '</div>' +
         '<i class="fas fa-chevron-right" style="color:var(--text-400);font-size:12px;"></i>' +
       '</div>' +
-      '<div style="font-size:12px;color:var(--text-400);line-height:1.4;margin-top:4px;">Foreldre \u00e5pner lenken for \u00e5 se kalender, melde oppm\u00f8te og f\u00f8lge kamper \u2014 uten \u00e5 laste ned appen.</div>' +
+      '<div style="font-size:12px;color:var(--text-400);line-height:1.4;margin-top:4px;">Foreldre \u00e5pner lenken for \u00e5 se kalender, beskjeder og f\u00f8lge kamper \u2014 uten \u00e5 laste ned appen.</div>' +
       '<div style="display:flex;gap:6px;align-items:center;margin-top:8px;" id="snLagsideCopyRow">' +
         '<input type="text" value="' + escapeHtml(url) + '" readonly ' +
           'style="flex:1;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;padding:7px 8px;' +
@@ -2810,8 +2810,6 @@
 
     var toggles = [
       { key: 'default_share_workout', label: 'Del treningsinnhold', desc: 'Vis \u00f8velser og tema for treninger' },
-      { key: 'default_share_fairness', label: 'Del deltakerantall', desc: 'Vis antall spillere som deltok i kamper' },
-      { key: 'default_show_attendance_count', label: 'Vis oppm\u00f8teoversikt', desc: 'Foreldre ser antall p\u00e5meldte per hendelse' },
     ];
 
     for (var t = 0; t < toggles.length; t++) {
@@ -6720,11 +6718,6 @@
     }
 
     if (isMatch && ev.status === 'completed') {
-      html += '<div style="padding:6px 14px;display:flex;align-items:center;gap:8px;">' +
-        '<input type="checkbox" id="snShareFairness"' + (ev.share_fairness ? ' checked' : '') + '>' +
-        '<label for="snShareFairness" style="font-size:13px;">Del deltakerantall p\u00e5 lagside</label>' +
-        '</div>';
-
       html += '<div style="padding:10px 14px;">' +
         '<label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px;">Kampkommentar for foreldre</label>' +
         '<textarea id="snShareComment" rows="2" maxlength="500" placeholder="F.eks. Bra innsats, vi jobbet med \u00e5 spille fremover..." ' +
@@ -6758,14 +6751,12 @@
         var fields = {
           parent_message: ($('snParentMessage') ? $('snParentMessage').value : null) || null,
           share_workout: $('snShareWorkout') ? $('snShareWorkout').checked : false,
-          share_fairness: $('snShareFairness') ? $('snShareFairness').checked : false,
           share_comment: ($('snShareComment') ? $('snShareComment').value : null) || null,
         };
         var res = await updateEvent(ev.id, fields);
         if (res) {
           ev.parent_message = fields.parent_message;
           ev.share_workout = fields.share_workout;
-          ev.share_fairness = fields.share_fairness;
           ev.share_comment = fields.share_comment;
         }
       });
