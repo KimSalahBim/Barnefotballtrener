@@ -2112,7 +2112,7 @@
     var cards = root.querySelectorAll('.sn-season-card');
     for (var c = 0; c < cards.length; c++) {
       cards[c].addEventListener('click', (function(sid) {
-        return function() { openSeason(sid); };
+        return function() { openSeason(sid).catch(function(e) { console.error('[season.js] openSeason error:', e); }); };
       })(cards[c].getAttribute('data-sid')));
     }
 
@@ -7314,9 +7314,9 @@
     dashTab = 'calendar';
     await Promise.all([loadEvents(seasonId), loadSeasonPlayers(seasonId), loadRegisteredEventIds(seasonId)]);
     _woLoadEventIds(); // Async, non-blocking
-    startSeasonSync(seasonId);
     snView = 'dashboard';
     render();
+    try { startSeasonSync(seasonId); } catch (e) { console.error('[season.js] startSeasonSync error:', e); }
   }
 
 })();
