@@ -59,9 +59,9 @@
   --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
   --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
 
-  /* Legacy-kompatibilitet (brukes av pricing.css som ikke er migrert ennå) */
-  --egge-blue: #0b5bd3;
-  --egge-light-blue: #3b82f6;
+  /* Legacy-kompatibilitet (pricing overlay / login flow — grønn palett) */
+  --egge-blue: #456C4B;
+  --egge-light-blue: #5d8a66;
   --gray-50: #F8FAFC;
   --gray-200: #E2E8F0;
   --gray-300: #CBD5E1;
@@ -95,7 +95,7 @@ body {
     /* Pre-login viewport wrapper (do NOT scroll the page; scroll inside the card) */
     overflow: hidden;
 
-    background: linear-gradient(to bottom, #1f5da3, #1a4b82);
+    background: linear-gradient(to bottom, #2d5433, #3a5e40);
     z-index: 1000;
 
     /* Safe-area friendly padding (iOS notch/home indicator) */

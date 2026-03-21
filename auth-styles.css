@@ -116,7 +116,7 @@
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(243,154,31,0.65), rgba(255,210,74,0.55), rgba(46,139,87,0.60));
+  background: linear-gradient(135deg, rgba(243,154,31,0.65), rgba(255,210,74,0.55), rgba(69,108,75,0.68));
   z-index: -1;
   opacity: 0.0;
   transition: opacity 160ms ease;
@@ -396,6 +396,13 @@ button#googleSignInBtn.btn-google:active{
   margin: 10px auto 0;
   text-decoration: none;
   text-align: center;
+  color: #456C4B;
+  border-color: rgba(69, 108, 75, 0.35);
+}
+#passwordProtection .btn-secondary.btn-secondary-link:hover {
+  background: rgba(69, 108, 75, 0.06);
+  border-color: rgba(69, 108, 75, 0.48);
+  color: #3a5a40;
 }
 
 #passwordProtection .public-landing {
@@ -438,7 +445,7 @@ button#googleSignInBtn.btn-google:active{
   border-radius: 12px;
   padding: 12px 10px;
   text-align: center;
-  background: rgba(11, 91, 211, 0.03);
+  background: rgba(69, 108, 75, 0.05);
 }
 
 #passwordProtection .public-landing .price-title {
@@ -461,15 +468,15 @@ button#googleSignInBtn.btn-google:active{
 }
 
 #passwordProtection .public-landing .landing-faq {
-  border: 1px solid rgba(11, 91, 211, 0.14);
+  border: 1px solid rgba(69, 108, 75, 0.2);
   border-radius: 12px;
   padding: 10px 12px;
   margin-top: 10px;
-  background: rgba(11, 91, 211, 0.035);
+  background: rgba(69, 108, 75, 0.04);
 }
 
 #passwordProtection .public-landing .landing-faq[open] {
-  background: rgba(11, 91, 211, 0.055);
+  background: rgba(69, 108, 75, 0.07);
 }
 
 #passwordProtection .public-landing .landing-faq summary {
@@ -493,7 +500,7 @@ button#googleSignInBtn.btn-google:active{
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 6px solid rgba(11, 91, 211, 0.9);
+  border-top: 6px solid rgba(69, 108, 75, 0.9);
   line-height: 0;
   transform: rotate(0deg) translateY(-1px);
   transition: transform 160ms ease;
@@ -510,7 +517,7 @@ button#googleSignInBtn.btn-google:active{
 }
 
 #passwordProtection .public-landing .landing-faq a {
-  color: #0b5bd3;
+  color: #456C4B;
   text-decoration: underline;
 }
 
@@ -527,16 +534,16 @@ button#googleSignInBtn.btn-google:active{
   justify-content: center;
   gap: 10px;
   padding: 10px 10px;
-  border: 1px solid rgba(11, 91, 211, 0.14);
+  border: 1px solid rgba(69, 108, 75, 0.2);
   border-radius: 12px;
-  background: rgba(11, 91, 211, 0.035);
+  background: rgba(69, 108, 75, 0.04);
   font-size: 0.92rem;
   font-weight: 650;
   color: #0b1220;
 }
 
 #passwordProtection .landing-trust .trust-item i {
-  color: rgba(11, 91, 211, 0.95);
+  color: rgba(69, 108, 75, 0.95);
 }
 
 #passwordProtection .landing-footer-links {
@@ -549,13 +556,13 @@ button#googleSignInBtn.btn-google:active{
 }
 
 #passwordProtection .landing-footer-links a {
-  color: #0b5bd3;
+  color: #456C4B;
   text-decoration: none;
   font-weight: 650;
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(11, 91, 211, 0.18);
-  background: rgba(11, 91, 211, 0.035);
+  border: 1px solid rgba(69, 108, 75, 0.22);
+  background: rgba(69, 108, 75, 0.05);
 }
 
 #passwordProtection .landing-footer-links .dot {

@@ -72,7 +72,7 @@
 }
 
 .lp-trust-pill i {
-  color: var(--bf-green, #2e8b57);
+  color: var(--bf-green, #456C4B);
   font-size: 11px;
 }
 
@@ -275,8 +275,8 @@
   flex-shrink: 0;
 }
 
-.lp-feat-icon.green  { background: #ecfdf5; color: #2e8b57; }
-.lp-feat-icon.blue   { background: #eff6ff; color: #2563eb; }
+.lp-feat-icon.green  { background: #ecfdf5; color: #456C4B; }
+.lp-feat-icon.blue   { background: #ecf4ee; color: #456C4B; }
 .lp-feat-icon.orange { background: #fff7ed; color: #f39a1f; }
 .lp-feat-icon.purple { background: #f5f3ff; color: #7c3aed; }
 .lp-feat-icon.rose   { background: #fff1f2; color: #e11d48; }
@@ -302,7 +302,7 @@
   margin-top: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--bf-primary, #0b5bd3);
+  color: #456C4B;
   text-decoration: none;
 }
 .lp-feat-link:hover {
@@ -311,6 +311,12 @@
 
 .landing-footer-seo {
   margin-bottom: 8px;
+}
+
+/* SEO + footer nav links (login card) — grønn palett */
+#passwordProtection .landing-footer-seo a,
+#passwordProtection .landing-footer-links a {
+  color: #456C4B;
 }
 
 /* -------------------------------------------
@@ -411,14 +417,14 @@
   top: 48px;
   bottom: 0;
   width: 2px;
-  background: linear-gradient(180deg, #2e8b57, rgba(46,139,87,0.1));
+  background: linear-gradient(180deg, #456C4B, rgba(69,108,75,0.1));
 }
 
 .lp-step-num {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: #2e8b57;
+  background: #456C4B;
   color: #fff;
   display: flex;
   align-items: center;
@@ -426,7 +432,7 @@
   font-size: 15px;
   font-weight: 900;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(46,139,87,0.25);
+  box-shadow: 0 4px 12px rgba(69,108,75,0.28);
 }
 
 .lp-step strong {
@@ -469,9 +475,9 @@
 }
 
 .lp-pc-popular {
-  background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
-  border-color: rgba(46,139,87,0.22);
-  box-shadow: 0 6px 18px rgba(46,139,87,0.1);
+  background: linear-gradient(135deg, #ecf4ee, #f4faf5);
+  border-color: rgba(69,108,75,0.35);
+  box-shadow: 0 6px 18px rgba(69,108,75,0.14);
   transform: scale(1.03);
 }
 .lp-pc-popular:hover {
@@ -486,7 +492,7 @@
   letter-spacing: 0.04em;
   margin-bottom: 4px;
 }
-.lp-pc-popular .lp-pc-label { color: #2e8b57; }
+.lp-pc-popular .lp-pc-label { color: #456C4B; }
 
 .lp-pc-amount {
   font-size: 22px;
@@ -503,7 +509,7 @@
 
 .lp-popular-badge {
   display: inline-block;
-  background: #2e8b57;
+  background: #456C4B;
   color: #fff;
   font-size: 8.5px;
   font-weight: 800;
@@ -536,14 +542,14 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #2e8b57;
+  background: #456C4B;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(46,139,87,0.2);
+  box-shadow: 0 4px 12px rgba(69,108,75,0.24);
 }
 
 .lp-club-content h3 {
@@ -571,7 +577,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: #2e8b57;
+  background: #456C4B;
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -580,13 +586,13 @@
   cursor: pointer;
   font-family: inherit;
   transition: all 150ms ease;
-  box-shadow: 0 4px 12px rgba(46,139,87,0.2);
+  box-shadow: 0 4px 12px rgba(69,108,75,0.24);
 }
 
 .lp-club-btn:hover {
-  background: #247048;
+  background: #3a5a40;
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(46,139,87,0.3);
+  box-shadow: 0 6px 18px rgba(69,108,75,0.32);
 }
 
 .lp-club-btn:active {

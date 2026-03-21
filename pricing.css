@@ -56,7 +56,7 @@
   gap: 10px;
   margin: 0 auto 40px;
   font-weight: 600;
-  box-shadow: 0 4px 15px rgba(13, 71, 161, 0.3);
+  box-shadow: 0 4px 15px rgba(69, 108, 75, 0.35);
   position: relative;
   left: 50%;
   transform: translateX(-50%);
@@ -191,7 +191,7 @@
   background: var(--egge-blue);
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(13, 71, 161, 0.3);
+  box-shadow: 0 5px 15px rgba(69, 108, 75, 0.35);
 }
 
 .btn-select.primary {
@@ -508,7 +508,7 @@
 .btn-submit:hover {
   background: var(--egge-light-blue);
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(13, 71, 161, 0.3);
+  box-shadow: 0 5px 15px rgba(69, 108, 75, 0.35);
 }
 
 /* Responsive */
