@@ -3044,6 +3044,8 @@ body.gated #mainApp {
 .grpdd-dragging {
   opacity: 0.2 !important;
   transform: scale(0.95);
+  outline: 2px dashed var(--primary) !important;
+  outline-offset: -2px;
 }
 
 /* Target player — swap */
@@ -3064,11 +3066,11 @@ body.gated #mainApp {
   position: fixed;
   pointer-events: none;
   z-index: 9999;
-  padding: 6px 14px;
+  padding: 8px 18px;
   border-radius: 10px;
   background: var(--primary, #0b5bd3);
   color: #fff;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3);
   transform: translate(-50%, -50%);
