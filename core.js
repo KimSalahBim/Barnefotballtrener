@@ -2544,7 +2544,6 @@
               <div class="result-item grpdd-player"
                    data-grpdd-gi="${gi}"
                    data-grpdd-pi="${pi}">
-                <span class="grpdd-grip"><i class="fas fa-grip-vertical"></i></span>
                 <span class="grpdd-name">${escapeHtml(p.name)}${p.goalie ? ' 🧤' : ''}</span>
               </div>
             `).join('')}

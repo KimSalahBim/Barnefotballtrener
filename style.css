@@ -2928,34 +2928,6 @@ body.gated #mainApp {
     padding: 10px 12px !important;
   }
 
-  /* ── RESULTS: compact group/team cards ── */
-  .results-card {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px 10px;
-    margin-bottom: 8px;
-  }
-  .results-card h3 {
-    font-size: 14px !important;
-    margin: 0 0 4px 0 !important;
-  }
-  .results-list {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 3px;
-  }
-  .result-item {
-    font-size: 12px;
-    padding: 3px 6px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   /* ── GROUP CARDS (kampdag output, treningsgrupper, laginndeling) ── */
   .group-card {
     background: var(--bg);
@@ -3067,15 +3039,6 @@ body.gated #mainApp {
   -webkit-touch-callout: none;
 }
 .grpdd-player:active { cursor: grabbing; }
-
-.grpdd-grip {
-  color: var(--text-600, #6b7a8d);
-  opacity: 0.35;
-  font-size: 11px;
-  flex-shrink: 0;
-  margin-right: 4px;
-}
-.grpdd-player:hover .grpdd-grip { opacity: 0.7; }
 
 /* Source player being dragged */
 .grpdd-dragging {
