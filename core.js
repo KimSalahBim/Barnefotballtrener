@@ -106,7 +106,7 @@
     try {
       const { data, error } = await sb
         .from('players')
-        .select('id, name, skill, goalie, active, team_id, positions')
+        .select('id, name, skill, goalie, active, team_id, positions, avatar')
         .eq('user_id', uid)
         .eq('team_id', tid);
 
@@ -157,6 +157,7 @@
         skill: p.skill,
         goalie: p.goalie,
         active: p.active,
+        avatar: p.avatar || null,
         updated_at: new Date().toISOString()
       });
       const rows = players.map(p => _positionsColumnMissing
@@ -1430,7 +1431,8 @@
         skill,
         goalie: Boolean(p.goalie),
         active: p.active === false ? false : true,
-        positions: validPos.length > 0 ? validPos : ['F','M','A']
+        positions: validPos.length > 0 ? validPos : ['F','M','A'],
+        avatar: (typeof p.avatar === 'string' && p.avatar) ? p.avatar : null
       });
     }
     return out;
@@ -1660,6 +1662,9 @@
       const pos = p.positions || ['F','M','A'];
       return `
         <div class="player-card" data-id="${escapeHtml(p.id)}">
+          <div class="pc-avatar-wrap" style="flex-shrink:0;cursor:pointer;" title="Endre avatar">
+            ${window.Avatar ? window.Avatar.render(p.avatar, 44, p.name) : '<div style="width:44px;height:44px;border-radius:50%;background:#456C4B;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;">' + escapeHtml((p.name || '?').charAt(0).toUpperCase()) + '</div>'}
+          </div>
           <div class="player-info">
             <div class="player-name">${escapeHtml(p.name)}</div>
             <div class="player-tags">${state.settings.useSkill ? `<span class="tag">Nivå ${p.skill}</span>` : ''}${p.goalie ? `<span class="tag">🧤</span>` : `<span class="tag">⚽</span>`}</div>
@@ -1680,6 +1685,19 @@
       const id = card.getAttribute('data-id');
       const p = state.players.find(x => x.id === id);
       if (!p) return;
+
+      // Avatar click handler
+      var avWrap = card.querySelector('.pc-avatar-wrap');
+      if (avWrap && window.Avatar) {
+        avWrap.addEventListener('click', function(e) {
+          e.stopPropagation();
+          window.Avatar.openPicker(p.avatar, p.name, function(newAvatar) {
+            p.avatar = newAvatar;
+            saveState();
+            renderPlayerList();
+          });
+        });
+      }
 
       // Ensure player is always active (active toggle removed from UI)
       if (!p.active) { p.active = true; saveState(); }
