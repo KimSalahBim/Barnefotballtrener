@@ -6915,7 +6915,8 @@
               name: sp.name,
               goalie: sp.goalie || false,
               positions: sp.positions || ['F','M','A'],
-              skill: sp.skill || 3
+              skill: sp.skill || 3,
+              avatar: getPlayerAvatar(sp.player_id)
             });
           }
         }
