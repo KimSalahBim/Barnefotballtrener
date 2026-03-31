@@ -2051,7 +2051,15 @@
 
     const idToName = {};
     const idToAvatar = {};
-    presentPlayers.forEach(p => { idToName[p.id] = p.name; idToAvatar[p.id] = p.avatar || null; });
+    const _corePlayers = window.players || [];
+    presentPlayers.forEach(p => {
+      idToName[p.id] = p.name;
+      var av = null;
+      for (var _ci = 0; _ci < _corePlayers.length; _ci++) {
+        if (_corePlayers[_ci].id === p.id) { av = _corePlayers[_ci].avatar || null; break; }
+      }
+      idToAvatar[p.id] = av;
+    });
 
     const first = best.segments[0];
     const startIds = first.lineup.slice();

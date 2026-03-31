@@ -5290,6 +5290,8 @@
     }
 
     function goBackFromEdit() {
+      // Sync avatar changes to Spillere tab (safe — edit form is gone after render())
+      setTimeout(function() { if (window.__BF_publishPlayers) window.__BF_publishPlayers(); }, 50);
       // Return to player-stats view (keeps editingSeasonPlayer)
       snView = 'player-stats';
       render();
