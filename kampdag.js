@@ -536,7 +536,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       return `
         <label class="player-checkbox" style="--pc-color:${_pcColors[i % _pcColors.length]}">
           <input type="checkbox" data-id="${escapeHtml(p.id)}" ${checked}>
-          <div class="pc-avatar">${escapeHtml((p.name || '?').charAt(0).toUpperCase())}</div>
+          <div class="pc-avatar"${p.avatar ? ' style="background:transparent;border-radius:50%;overflow:hidden;padding:0;"' : ''}>${p.avatar ? '<img src="/avatars/' + p.avatar + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">' : escapeHtml((p.name || '?').charAt(0).toUpperCase())}</div>
           <div class="pc-info">
             <div class="player-name">${escapeHtml(p.name)}</div>
             ${p.goalie ? '<span class="pc-keeper">\ud83e\udde4 Keeper</span>' : ''}
@@ -2254,7 +2254,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         }).join('');
 
         const benchHtml0 = sm0.bench.map(pid =>
-          `<div class="kd-bench-bubble" data-seg="0" data-pid="${pid}">${idToAvatar[pid] ? '<img src="/avatars/' + idToAvatar[pid] + '" style="width:18px;height:18px;border-radius:50%;vertical-align:middle;margin-right:3px;">' : ''}<span class="kd-p-name">${escapeHtml(idToName[pid] || pid)}</span></div>`
+          `<div class="kd-bench-bubble" data-seg="0" data-pid="${pid}">${idToAvatar[pid] ? '<img src="/avatars/' + idToAvatar[pid] + '" style="width:28px;height:28px;border-radius:50%;vertical-align:middle;margin-right:3px;">' : ''}<span class="kd-p-name">${escapeHtml(idToName[pid] || pid)}</span></div>`
         ).join('');
 
         lineupEl.innerHTML = `
@@ -2318,7 +2318,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           }).join('');
 
           const benchHtml = sm.bench.map(pid =>
-            `<div class="kd-bench-bubble" data-seg="${idx}" data-pid="${pid}">${idToAvatar[pid] ? '<img src="/avatars/' + idToAvatar[pid] + '" style="width:18px;height:18px;border-radius:50%;vertical-align:middle;margin-right:3px;">' : ''}<span class="kd-p-name">${escapeHtml(idToName[pid] || pid)}</span></div>`
+            `<div class="kd-bench-bubble" data-seg="${idx}" data-pid="${pid}">${idToAvatar[pid] ? '<img src="/avatars/' + idToAvatar[pid] + '" style="width:28px;height:28px;border-radius:50%;vertical-align:middle;margin-right:3px;">' : ''}<span class="kd-p-name">${escapeHtml(idToName[pid] || pid)}</span></div>`
           ).join('');
 
           // Swap strip

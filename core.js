@@ -1814,7 +1814,7 @@
       groupingEl.innerHTML = selectable.map((p, i) => `
         <label class="player-checkbox" style="--pc-color:${_pcColors[i % _pcColors.length]}">
           <input type="checkbox" data-id="${escapeHtml(p.id)}" ${state.selection.grouping.has(p.id) ? 'checked' : ''}>
-          <div class="pc-avatar">${escapeHtml((p.name || '?').charAt(0).toUpperCase())}</div>
+          <div class="pc-avatar"${p.avatar ? ' style="background:transparent;border-radius:50%;overflow:hidden;padding:0;"' : ''}>${p.avatar ? '<img src="/avatars/' + p.avatar + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">' : escapeHtml((p.name || '?').charAt(0).toUpperCase())}</div>
           <div class="pc-info">
             <div class="player-name">${escapeHtml(p.name)}</div>
             ${p.goalie ? '<span class="pc-keeper">🧤 Keeper</span>' : ''}
