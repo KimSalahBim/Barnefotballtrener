@@ -5187,6 +5187,9 @@
     var posM = (sp.positions || []).indexOf('M') >= 0;
     var posA = (sp.positions || []).indexOf('A') >= 0;
 
+    var isImported = sp.player_id && sp.player_id.indexOf('p_') === 0;
+    var currentAvatar = isImported ? getPlayerAvatar(sp.player_id) : null;
+
     var html =
       '<div class="settings-card">' +
         '<div class="sn-dash-header">' +
@@ -5194,6 +5197,16 @@
           '<span class="sn-dash-title">Rediger spiller</span>' +
         '</div>' +
         '<div class="sn-form">' +
+          '<div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">' +
+            '<div id="snEditAvatarPreview" style="width:80px;height:80px;border-radius:50%;overflow:hidden;' + (isImported ? 'cursor:pointer;' : '') + '">' +
+              (currentAvatar
+                ? '<img src="/avatars/' + currentAvatar + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+                : '<div style="width:80px;height:80px;border-radius:50%;background:var(--primary,#456C4B);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:32px;">' + (sp.name || '?').charAt(0).toUpperCase() + '</div>') +
+            '</div>' +
+            (isImported
+              ? '<button type="button" id="snEditAvatarBtn" style="margin-top:10px;border:1px solid var(--border);background:var(--bg,#f3f6f3);border-radius:8px;padding:6px 16px;font-size:13px;cursor:pointer;font-weight:600;font-family:inherit;">' + (currentAvatar ? 'Endre avatar' : 'Velg avatar') + '</button>'
+              : '<div style="margin-top:8px;font-size:12px;color:var(--text-400);">Importer spilleren for å velge avatar</div>') +
+          '</div>' +
           '<div class="form-group">' +
             '<label for="snEditName">Navn</label>' +
             '<input type="text" id="snEditName" value="' + escapeHtml(sp.name) + '" maxlength="40" autocomplete="off">' +
@@ -5241,6 +5254,39 @@
     var editPosBtns = root.querySelectorAll('.snEditPos');
     for (var ep = 0; ep < editPosBtns.length; ep++) {
       editPosBtns[ep].addEventListener('click', function() { this.classList.toggle('active'); });
+    }
+
+    // Avatar picker (only for imported players)
+    if (isImported && window.Avatar) {
+      var avatarPreview = $('snEditAvatarPreview');
+      var avatarBtn = $('snEditAvatarBtn');
+      function openAvPicker() {
+        var curAv = getPlayerAvatar(sp.player_id);
+        window.Avatar.openPicker(curAv, sp.name, function(newAvatar) {
+          // Update core.js player directly (window.players is same ref as state.players)
+          var corePlayers = window.players || [];
+          for (var ci = 0; ci < corePlayers.length; ci++) {
+            if (corePlayers[ci].id === sp.player_id) {
+              corePlayers[ci].avatar = newAvatar;
+              // Persist to localStorage + Supabase (debounced)
+              if (window.__BF_saveState) window.__BF_saveState();
+              // Do NOT call __BF_publishPlayers here!
+              // It dispatches players:updated which triggers render() in season.js,
+              // which would re-render this edit form and lose unsaved changes.
+              break;
+            }
+          }
+          // Update preview in form
+          if (avatarPreview) {
+            avatarPreview.innerHTML = newAvatar
+              ? '<img src="/avatars/' + newAvatar + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+              : '<div style="width:80px;height:80px;border-radius:50%;background:var(--primary,#456C4B);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:32px;">' + (sp.name || '?').charAt(0).toUpperCase() + '</div>';
+          }
+          if (avatarBtn) avatarBtn.textContent = newAvatar ? 'Endre avatar' : 'Velg avatar';
+        });
+      }
+      if (avatarPreview) avatarPreview.addEventListener('click', openAvPicker);
+      if (avatarBtn) avatarBtn.addEventListener('click', openAvPicker);
     }
 
     function goBackFromEdit() {
