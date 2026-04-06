@@ -338,7 +338,7 @@
     const map = {
       club_month: "Klubb (månedlig)",
       club_year: "Klubb (årlig)",
-      club_lifetime: "Klubb (livstid)"
+      club_lifetime: "Klubb (engangskjøp)"
     };
     planEl.textContent = map[status.plan] || "Klubblisens";
   }

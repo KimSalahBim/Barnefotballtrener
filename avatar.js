@@ -8,83 +8,17 @@
   var PICKER_ID = 'avatarPickerModal';
 
   // =====================================================
-  // METADATA: 496 avatars, 3-char code per avatar
+  // METADATA: 496 avatars — visually verified
   // Char 1: J=Jente, G=Gutt
-  // Char 2: A=6-10, B=11-14, C=15-16
-  // Char 3: L=Blondt, B=Brunt, S=Svart, R=Rødt, H=Hijab
-  // Index 0 = avatar-001, index 495 = avatar-496
+  // Char 2: A=6-10, B=11-15
+  // Char 3: L=Lyst, M=Mørkt, R=Rødlig, H=Hodeplagg
   // =====================================================
-  var _META = (
-    // 1-10          11-20          21-30          31-40          41-50
-    'JAL,JAB,JAR,JAB,JAS,JAS,JAS,JAS,JAL,JAB,' +
-    'JAB,JAR,JAS,JAS,JAL,JAB,JAL,JAB,JAS,JAR,' +
-    'GAL,GAB,GAR,GAB,GAS,GAS,GAS,GAS,GAL,GAB,' +
-    'GAB,GAR,GAS,GAS,GAL,GAB,GAB,GAB,GAS,GAR,' +
-    'JBL,JBB,JBS,JBS,JBR,JBB,JBL,JBS,JBS,JBR,' +
-    // 51-60         61-70          71-80          81-90          91-100
-    'JBB,JBB,JBS,JBL,JBS,JBB,GBL,GBB,GBS,GBS,' +
-    'GBR,GBB,GBB,GBS,GBS,GBB,GBB,GBS,GBL,GBS,' +
-    'GBB,GBB,JAS,GBB,JAS,GAS,JBL,GAB,JBS,GAB,' +
-    'GAL,JBB,JAS,GBR,JAB,GBS,JBR,GAS,JAB,GBB,' +
-    'GAS,JBS,GAR,JBB,GBB,JAL,GAS,JBB,JAS,GBB,' +
-    // 101-110       111-120        121-130        131-140        141-150
-    'JAL,JAL,JAL,JAL,JBL,JBL,JBL,JAL,GAL,GAL,' +
-    'GAL,GAL,GBL,GBL,GBL,GBL,JAS,GAS,JAS,GBS,' +
-    'JAS,GBS,JBS,GAS,JAS,GBS,JAB,GBS,JAB,JAS,' +
-    'JBB,JAS,GAB,GAS,GBB,GBS,JAB,JAS,JBB,JAB,' +
-    'GAS,GAB,GBB,GBS,JAB,GAS,JBS,GAB,JAS,JAS,' +
-    // 151-160       161-170        171-180        181-190        191-200
-    'JAS,JBS,GAS,GAS,GBS,GBS,JAB,GAB,JAB,GAB,' +
-    'JBB,GBB,JBB,GBB,JAB,GAB,JAB,GAB,JBB,GBB,' +
-    'JBS,GBB,JAL,JAB,JBS,JAR,GAL,GAB,GBB,GAL,' +
-    'JAL,GAB,JAS,GAS,JAB,GAR,GAS,JAB,JBL,GBS,' +
-    'JBS,GBB,JBB,GBS,JBR,GBL,JCL,JCB,JCS,JCR,' +
-    // 201-210       211-220        221-230        231-240        241-250
-    'JCB,JCB,JCS,JCS,GCL,GCB,GCS,GCB,GCS,GCL,' +
-    'GCS,GCB,JCB,GCS,GCS,JCB,JAS,JAS,JBS,JAS,' +
-    'GAS,GBS,GAS,GBS,JAS,JBS,GCS,GAS,JAS,GBS,' +
-    'JAS,GBS,JAS,GBS,JAS,GBS,JAH,JAH,JBH,JAH,' +
-    'JBH,JAH,JBH,JCH,JAL,GAB,JAS,GBB,JBS,GBS,' +
-    // 251-260       261-270        271-280        281-290        291-300
-    'GAL,JBB,GAL,GAB,GBB,GAS,JAR,GBB,JAS,GBB,' +
-    'JAS,GAS,JAS,GAS,JBS,GBB,JBS,GBB,JAL,GAB,' +
-    'JAS,GAB,JAB,GAS,JAR,GAB,JAL,GAB,JAS,GAB,' +
-    'JBB,GBB,JBB,GBB,JBS,GBS,GAL,JBB,JAL,GAL,' +
-    'JAL,GAL,JBL,GBL,JAL,GBL,JCL,GBL,JAL,GCL,' +
-    // 301-310       311-320        321-330        331-340        341-350
-    'JAL,GAL,JBL,GAL,JCL,GCL,GAL,JBL,JCL,GBL,' +
-    'JAL,GAL,JAB,GAB,JBB,GAB,JBB,GAB,JAB,GCB,' +
-    'JBB,GBB,JAB,GAB,JCB,GBB,JAB,GCB,JAB,GBB,' +
-    'JBB,GAB,GCB,JAB,GBB,JAB,JAR,GAR,JBR,GAR,' +
-    'JBR,GAR,JAR,GBR,JCR,GBR,JAR,GCR,JAR,GBR,' +
-    // 351-360       361-370        371-380        381-390        391-400
-    'JAR,GAR,JBR,GBR,JCR,GCR,JAS,GAS,JBS,GAS,' +
-    'JBS,GAS,JAS,GBS,JCS,GBS,JAS,GCS,GAS,JAS,' +
-    'JAS,JBS,GBS,JCS,GBS,GAS,JCB,GCS,GCB,JCS,' +
-    'JCS,GCS,GCS,JCB,JCS,GCB,JCB,GCS,JCB,GCS,' +
-    'JCB,GCL,JCS,GCB,GCR,JCS,GCS,JCS,JCB,GCL,' +
-    // 401-410       411-420        421-430        431-440        441-450
-    'JAL,GAB,JAB,GAS,JBB,GBB,JBS,GBL,JAS,GAB,' +
-    'JCB,GAR,JBS,GAL,GCB,JAB,GBS,JBB,GAL,JBS,' +
-    'JAL,GAB,JAS,GBB,JBB,GBS,JAR,GBB,JCB,GAL,' +
-    'GCS,JAS,JAL,GAB,JAL,GAL,JBB,GBL,JBR,GAR,' +
-    'JCB,GBL,JAL,JAB,JAS,GAS,JAS,GBS,JAS,GBS,' +
-    // 451-460       461-470        471-480        481-490        491-496
-    'JAS,GBS,JBS,GCS,GAS,JCS,JAL,JAB,JAS,JAB,' +
-    'JBR,JBB,JAL,JBS,JAB,GAB,JAB,GAB,JBS,GBB,' +
-    'JBB,GBS,JCB,GCS,GAS,JAB,GAS,JAS,GBB,JBS,' +
-    'JBS,GBB,JAB,GCS,GAB,JAS,JCS,GAB,JAS,GAS,' +
-    'JAS,GBS,JBS,GAS,JCS,GBS'
-  ).split(',');
+  var _META = 'JBM,GAM,JBM,GAM,JAM,JAM,JAM,JAM,JBM,GAM,JBM,GAM,JAM,JAM,JAM,JAM,JBM,JBM,JBM,JBM,GBM,GAM,GAM,GAM,JAM,GAM,JAM,GAM,JAL,JAM,JAR,JBM,JBM,GBM,JBM,GAM,JAM,GAR,GAM,JAM,JAL,GAM,JAM,GAM,GAM,GAM,JAM,GAM,JBR,JBM,JBL,JBM,GAM,GAM,GAM,GAM,GAM,GAM,GAM,GAM,JAL,GAM,JBM,GAM,JAM,GAM,JAM,GAM,JAM,JAM,JAM,JAM,JBM,JBL,JBM,JBM,JBM,JBM,JBM,JBM,JBL,GBM,JBM,GBM,GBL,GBL,GAL,GAL,JAM,JAM,JAM,JAM,JBM,GAM,JAM,GAM,JAM,GAM,JAM,GAM,JAL,JAM,JAM,JAR,JAM,JAM,GAM,JBM,GAL,GAM,GAR,GAM,JBM,GAM,JBM,GAM,JBM,JBM,JBM,JBM,JBL,JBM,JBM,JBM,JAR,GAM,JAM,GAM,JBL,GAM,JAM,GBM,GAM,GAM,GAL,GAM,JBM,GBM,GBM,JBM,JBM,GBM,JBM,GBL,GAM,GBL,GBM,GBM,JBL,JBM,JBM,JBM,GAL,JBM,JAM,GAM,JAM,GAM,JAM,GAM,GAL,GAM,GAL,GAR,JAH,JAH,JAH,JAH,JAL,GAM,JAM,GAL,JAL,JAM,JAM,JAR,JAM,GAM,JAR,GAM,GBL,GBM,GAM,GBM,JAM,GAM,JAM,GAM,GAM,GAM,GAM,GBM,JAL,GAM,JAM,GAM,JAL,JAL,JAR,JBL,JBL,JAL,JBL,JAL,JAM,JBM,GBM,GAM,GBL,GBM,GBM,GBM,JAL,GAL,JAM,GAM,JAM,GAM,JAM,GAM,GAL,GBM,GAM,GAM,GAM,GBL,GBM,GBM,JAM,GAM,JAM,GAM,JAM,GAM,JAM,GAM,JBM,GBM,GBM,JBM,GAM,GAM,GAM,GAR,JAM,GAM,JAM,GAL,GAM,GAM,GAM,GAM,GAL,GBM,GBM,GAM,GBR,JBM,GBM,JBL,JBM,GAM,JBM,GAM,JAM,JAM,JAR,JAM,JBH,JBH,JBH,JAH,GAL,GAL,GAR,GAL,JAM,GAM,GAL,JAM,GAL,GAM,GAM,GAR,GBR,GBM,GBM,GBM,JAL,GBM,JAM,GAM,JAL,GAM,JAL,GAL,GAM,JBM,GAM,GAM,GAM,JBM,JBM,JBM,JAL,GAL,GAL,JAL,GAM,JAR,GAM,JAL,JAM,GAM,JAM,GAM,JBM,GBM,GBM,JBM,GAM,JAM,JAM,GAM,GBM,JBM,GAL,JAM,JBM,GBM,JBM,GBM,JBM,GBH,GBH,JBH,GAM,JAM,GAM,JAM,JBM,GBM,GBM,JBM,JBR,GBR,JBR,GBR,JAL,GAL,JAL,GAL,GBM,JBM,JBM,GBL,JBM,GBH,JAH,GBM,JBM,GAM,JAM,GAM,JAM,GAM,JAM,JAM,JAM,GAM,JAM,GAR,JBM,GAL,JAL,GBM,JAL,GAL,JAL,GAL,JAH,GAH,JAH,GAH,JBM,GBL,GBM,JBL,JAL,GAL,JAL,GAL,JAM,GAM,JAM,GBM,JAR,GAR,GAR,GAR,JAM,GAM,JAM,GAM,JBR,GBR,JBR,GBR,JBL,GBM,JBM,GBM,JBM,GAL,GAL,JAL,JBM,GBM,GAM,JBM,JAM,GAM,JAM,GAM,JBR,JBM,JAL,JAM,JBM,GBM,JBM,GBL,JBM,GAM,GAM,JBL,JBM,GAL,JAR,GAR,JAM,GAM,JAM,GAM,JAR,GAL,JAR,GAR,JBM,GBM,JBM,GBM,JAL,GAL,JAL,GAL,JAL,GAL,JAL,GAL,JBM,GAM,JBM,GAM,JBM,GBM,GBR,JBM,JAL,JAM,JAM,JAM,JAL,GAL,JAL,GAL,JAL,GAL,JAL,GAL,JAL,GAL,JAL,GAL,JAR,GAR,JBR,GAR,JAL,GAL,JAL,GAL,JAM,GBM,JAM,GAM'.split(',');
 
   function getMeta(avatarNum) {
     var code = _META[avatarNum - 1];
     if (!code || code.length !== 3) return null;
-    return {
-      gender: code[0],  // J or G
-      age: code[1],     // A=6-10, B=11-14, C=15-16
-      hair: code[2]     // L=blondt, B=brunt, S=svart, R=rødt, H=hijab
-    };
+    return { gender: code[0], age: code[1], hair: code[2] };
   }
 
   // =====================================================
@@ -94,12 +28,10 @@
     size = size || 48;
     if (filename) {
       return '<img src="' + AVATAR_PATH + filename + '" ' +
-        'alt="" ' +
-        'width="' + size + '" height="' + size + '" ' +
-        'style="border-radius:50%;display:block;object-fit:cover;" ' +
-        'loading="lazy" ' +
+        'alt="" width="' + size + '" height="' + size + '" ' +
+        'style="border-radius:50%;display:block;object-fit:cover;" loading="lazy" ' +
         'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">' +
-        '<div class="av-fallback" style="display:' + (filename ? 'none' : 'flex') + ';width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:var(--primary,#456C4B);color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:' + Math.round(size * 0.4) + 'px;">' +
+        '<div class="av-fallback" style="display:none;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:var(--primary,#456C4B);color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:' + Math.round(size * 0.4) + 'px;">' +
         (name ? name.charAt(0).toUpperCase() : '?') + '</div>';
     }
     return '<div class="av-fallback" style="display:flex;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:var(--primary,#456C4B);color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:' + Math.round(size * 0.4) + 'px;">' +
@@ -113,10 +45,9 @@
     var existing = document.getElementById(PICKER_ID);
     if (existing) existing.remove();
 
-    // Filter state
-    var filterGender = null; // null=all, 'J', 'G'
-    var filterAge = null;    // null=all, 'A', 'B', 'C'
-    var filterHair = null;   // null=all, 'L', 'B', 'S', 'R', 'H'
+    var filterGender = null;
+    var filterAge = null;
+    var filterHair = null;
 
     var modal = document.createElement('div');
     modal.id = PICKER_ID;
@@ -131,7 +62,7 @@
     header.innerHTML = '<div style="font-weight:800;font-size:15px;color:var(--text-900,#1a1a1a);">Velg avatar' + (playerName ? ' for ' + playerName : '') + '</div>' +
       '<button id="avPickerClose" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--text-600,#666);padding:4px 8px;">✕</button>';
 
-    // Preview + remove
+    // Preview
     var preview = document.createElement('div');
     preview.style.cssText = 'padding:10px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border,#d8e4da);flex-shrink:0;';
     preview.innerHTML = '<div id="avPickerPreview" style="flex-shrink:0;">' + renderAvatar(currentAvatar, 56, playerName) + '</div>' +
@@ -166,33 +97,27 @@
       { val: 'J', label: 'Jenter' },
       { val: 'G', label: 'Gutter' }
     ]);
-
     var ageRow = makeFilterRow('Alder', [
       { val: '', label: 'Alle' },
       { val: 'A', label: '6-10' },
-      { val: 'B', label: '11-14' },
-      { val: 'C', label: '15-16' }
+      { val: 'B', label: '11-15' }
     ]);
-
     var hairRow = makeFilterRow('Hår', [
       { val: '', label: 'Alle' },
-      { val: 'L', label: 'Blondt' },
-      { val: 'B', label: 'Brunt' },
-      { val: 'S', label: 'Svart' },
-      { val: 'R', label: 'Rødt' },
-      { val: 'H', label: 'Hijab' }
+      { val: 'L', label: 'Lyst' },
+      { val: 'M', label: 'Mørkt' },
+      { val: 'R', label: 'Rødlig' },
+      { val: 'H', label: 'Hodeplagg' }
     ]);
 
     filterBar.appendChild(genderRow);
     filterBar.appendChild(ageRow);
     filterBar.appendChild(hairRow);
 
-    // Count badge
     var countBadge = document.createElement('div');
     countBadge.id = 'avFilterCount';
     countBadge.style.cssText = 'padding:4px 16px 0;font-size:11px;color:var(--text-400,#999);flex-shrink:0;';
 
-    // Grid container (scrollable)
     var gridWrap = document.createElement('div');
     gridWrap.style.cssText = 'overflow-y:auto;padding:8px 12px 20px;flex:1;';
     var grid = document.createElement('div');
@@ -200,7 +125,6 @@
     grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:5px;';
     gridWrap.appendChild(grid);
 
-    // Build grid
     function rebuildGrid() {
       grid.innerHTML = '';
       var count = 0;
@@ -210,7 +134,6 @@
         if (filterGender && m.gender !== filterGender) continue;
         if (filterAge && m.age !== filterAge) continue;
         if (filterHair && m.hair !== filterHair) continue;
-
         var fname = 'avatar-' + String(i).padStart(3, '0') + '.png';
         var btn = document.createElement('button');
         btn.setAttribute('data-avatar', fname);
@@ -231,7 +154,6 @@
       }
     }
 
-    // Wire filter events
     function handleFilterClick(row, setter) {
       row.addEventListener('click', function(e) {
         var btn = e.target.closest('button[data-val]');
@@ -247,7 +169,6 @@
     handleFilterClick(ageRow, function(v) { filterAge = v; });
     handleFilterClick(hairRow, function(v) { filterHair = v; });
 
-    // Assemble modal
     sheet.appendChild(header);
     sheet.appendChild(preview);
     sheet.appendChild(filterBar);
@@ -256,10 +177,8 @@
     modal.appendChild(sheet);
     document.body.appendChild(modal);
 
-    // Initial grid
     rebuildGrid();
 
-    // Events
     function close() { modal.remove(); }
     modal.addEventListener('click', function(e) { if (e.target === modal) close(); });
     document.getElementById('avPickerClose').addEventListener('click', close);

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avatar-kategorisering v2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', -apple-system, sans-serif; background: #f3f6f3; color: #2c2c2c; padding: 12px; }
+  h1 { color: #456C4B; margin-bottom: 4px; font-size: 20px; }
+  .info { color: #666; margin-bottom: 8px; font-size: 13px; }
+
+  .toolbar { background: white; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; border: 1px solid #d8e4da; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .toolbar button { background: #456C4B; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; }
+  .toolbar .count { font-size: 13px; color: #456C4B; font-weight: 600; }
+
+  .mode-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .mode-tab { background: #e8efe8; border: 1px solid #d8e4da; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 600; font-size: 13px; color: #456C4B; }
+  .mode-tab.active { background: #456C4B; color: white; border-color: #456C4B; }
+
+  /* === SINGLE MODE === */
+  .single-view { display: none; text-align: center; }
+  .single-view.active { display: block; }
+  .single-card { background: white; border-radius: 16px; padding: 24px; border: 1px solid #d8e4da; max-width: 400px; margin: 0 auto; }
+  .single-card img { width: 180px; height: 180px; border-radius: 50%; display: block; margin: 0 auto 16px; }
+  .single-num { font-size: 14px; color: #888; margin-bottom: 12px; }
+  .single-current { font-size: 14px; font-weight: 700; color: #456C4B; margin-bottom: 16px; }
+  .cat-row { margin-bottom: 12px; }
+  .cat-row label { font-size: 12px; font-weight: 700; color: #888; display: block; margin-bottom: 4px; }
+  .cat-opts { display: flex; gap: 6px; justify-content: center; }
+  .cat-btn { border: 2px solid #d8e4da; border-radius: 10px; padding: 8px 16px; font-size: 14px; cursor: pointer; font-weight: 700; background: #f8faf8; transition: all 0.1s; min-width: 70px; }
+  .cat-btn:hover { border-color: #456C4B; background: #eef4ee; }
+  .cat-btn.active { background: #456C4B; color: white; border-color: #456C4B; }
+  .cat-btn .key { font-size: 10px; display: block; color: #aaa; margin-top: 2px; }
+  .cat-btn.active .key { color: rgba(255,255,255,0.7); }
+  .nav-btns { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+  .nav-btns button { padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid #d8e4da; background: #f8faf8; }
+  .nav-btns button.primary { background: #456C4B; color: white; border-color: #456C4B; }
+  .progress-bar { height: 6px; background: #e8efe8; border-radius: 3px; margin-bottom: 10px; }
+  .progress-fill { height: 100%; background: #456C4B; border-radius: 3px; transition: width 0.2s; }
+
+  /* === GRID MODE === */
+  .grid-view { display: none; }
+  .grid-view.active { display: block; }
+  .page-nav { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  .page-btn { background: #e8efe8; border: 1px solid #d8e4da; border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-weight: 600; color: #456C4B; }
+  .page-btn.active { background: #456C4B; color: white; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 5px; }
+  .card { text-align: center; background: white; border-radius: 10px; padding: 4px; border: 2px solid #d8e4da; cursor: pointer; transition: border-color 0.15s; }
+  .card:hover { border-color: #456C4B; }
+  .card.done { border-color: #22c55e; }
+  .card.undone { border-color: #fbbf24; }
+  .card img { width: 60px; height: 60px; border-radius: 50%; display: block; margin: 0 auto; }
+  .card .num { font-size: 10px; color: #888; }
+  .card .meta { font-size: 9px; font-weight: 700; color: #456C4B; margin-top: 1px; }
+  .card .meta.empty { color: #ccc; }
+
+  .export-area { margin-top: 16px; }
+  .export-area textarea { width: 100%; height: 200px; font-family: monospace; font-size: 11px; border: 1px solid #d8e4da; border-radius: 8px; padding: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Avatar-kategorisering v2</h1>
+<p class="info">Kategorier: Kjønn (J/G) · Alder (6-10 / 11-15) · Hår (Lyst / Mørkt / Rødlig / Hodeplagg)</p>
+
+<div class="toolbar">
+  <button onclick="exportMeta()">Eksporter metadata</button>
+  <button onclick="jumpToNext()">Hopp til neste ukategorisert</button>
+  <span class="count" id="doneCount">0 / 496 kategorisert</span>
+</div>
+
+<div class="mode-tabs">
+  <div class="mode-tab active" id="tabSingle" onclick="setMode('single')">Én og én (tastatur)</div>
+  <div class="mode-tab" id="tabGrid" onclick="setMode('grid')">Oversikt (grid)</div>
+</div>
+
+<!-- SINGLE MODE -->
+<div class="single-view active" id="singleView">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="single-card">
+    <img id="singleImg" src="">
+    <div class="single-num" id="singleNum">Avatar 1 / 496</div>
+    <div class="single-current" id="singleCurrent">Ikke kategorisert</div>
+
+    <div class="cat-row">
+      <label>Kjønn</label>
+      <div class="cat-opts" id="optGender">
+        <button class="cat-btn" data-val="J" onclick="setGender('J')">Jente<span class="key">J</span></button>
+        <button class="cat-btn" data-val="G" onclick="setGender('G')">Gutt<span class="key">G</span></button>
+      </div>
+    </div>
+
+    <div class="cat-row">
+      <label>Alder</label>
+      <div class="cat-opts" id="optAge">
+        <button class="cat-btn" data-val="A" onclick="setAge('A')">6-10<span class="key">1</span></button>
+        <button class="cat-btn" data-val="B" onclick="setAge('B')">11-15<span class="key">2</span></button>
+      </div>
+    </div>
+
+    <div class="cat-row">
+      <label>Hår</label>
+      <div class="cat-opts" id="optHair">
+        <button class="cat-btn" data-val="L" onclick="setHair('L')">Lyst<span class="key">Q</span></button>
+        <button class="cat-btn" data-val="M" onclick="setHair('M')">Mørkt<span class="key">W</span></button>
+        <button class="cat-btn" data-val="R" onclick="setHair('R')">Rødlig<span class="key">E</span></button>
+        <button class="cat-btn" data-val="H" onclick="setHair('H')">Hodeplagg<span class="key">R</span></button>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button onclick="goSingle(-1)">← Forrige</button>
+      <button class="primary" onclick="goSingle(1)">Neste →</button>
+    </div>
+  </div>
+  <p style="margin-top:12px;font-size:12px;color:#888;">Tastatursnarveier: J/G (kjønn), 1/2 (alder), Q/W/E/R (hår), → eller mellomrom (neste), ← (forrige)</p>
+</div>
+
+<!-- GRID MODE -->
+<div class="grid-view" id="gridView">
+  <div class="page-nav" id="pageNav"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="export-area" id="exportArea" style="display:none;">
+  <p style="font-weight:600;margin-bottom:6px;">Metadata-streng (kopier til avatar.js):</p>
+  <textarea id="exportText" readonly></textarea>
+  <button onclick="copyExport()" style="margin-top:8px;background:#456C4B;color:white;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;">Kopier til utklippstavle</button>
+</div>
+
+<script>
+var AVATAR_COUNT = 496;
+var AVATAR_PATH = 'avatars/';
+var PAGE_SIZE = 100;
+
+// Storage key for saving progress
+var STORAGE_KEY = 'avatar_categorization_v2';
+
+// Initialize empty metadata (3 chars per avatar, '---' = uncategorized)
+var meta = [];
+for (var i = 0; i < AVATAR_COUNT; i++) meta[i] = '---';
+
+// Load from localStorage if saved
+try {
+  var saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    var parsed = JSON.parse(saved);
+    if (Array.isArray(parsed) && parsed.length === AVATAR_COUNT) meta = parsed;
+  }
+} catch(e) {}
+
+function saveMeta() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(meta)); } catch(e) {}
+  updateCounts();
+}
+
+var currentIdx = 0;
+var currentPage = 0;
+var mode = 'single';
+
+// Temp state for single mode
+var tmpGender = null, tmpAge = null, tmpHair = null;
+
+var GENDER_LABELS = { J: 'Jente', G: 'Gutt' };
+var AGE_LABELS = { A: '6-10', B: '11-15' };
+var HAIR_LABELS = { L: 'Lyst', M: 'Mørkt', R: 'Rødlig', H: 'Hodeplagg' };
+
+function fname(num) { return 'avatar-' + String(num).padStart(3, '0') + '.png'; }
+
+function labelFor(code) {
+  if (!code || code === '---') return 'Ikke kategorisert';
+  return (GENDER_LABELS[code[0]] || '?') + ' · ' + (AGE_LABELS[code[1]] || '?') + ' · ' + (HAIR_LABELS[code[2]] || '?');
+}
+
+function countDone() {
+  var n = 0;
+  for (var i = 0; i < meta.length; i++) if (meta[i] !== '---') n++;
+  return n;
+}
+
+function updateCounts() {
+  document.getElementById('doneCount').textContent = countDone() + ' / ' + AVATAR_COUNT + ' kategorisert';
+}
+
+// === SINGLE MODE ===
+function loadSingle() {
+  var code = meta[currentIdx];
+  tmpGender = code !== '---' ? code[0] : null;
+  tmpAge = code !== '---' ? code[1] : null;
+  tmpHair = code !== '---' ? code[2] : null;
+
+  document.getElementById('singleImg').src = AVATAR_PATH + fname(currentIdx + 1);
+  document.getElementById('singleNum').textContent = 'Avatar ' + (currentIdx + 1) + ' / ' + AVATAR_COUNT;
+  document.getElementById('singleCurrent').textContent = labelFor(code);
+  document.getElementById('progressFill').style.width = (countDone() / AVATAR_COUNT * 100) + '%';
+
+  updateBtns('optGender', tmpGender);
+  updateBtns('optAge', tmpAge);
+  updateBtns('optHair', tmpHair);
+}
+
+function updateBtns(containerId, activeVal) {
+  var btns = document.getElementById(containerId).querySelectorAll('.cat-btn');
+  for (var b = 0; b < btns.length; b++) {
+    btns[b].classList.toggle('active', btns[b].dataset.val === activeVal);
+  }
+}
+
+function setGender(v) { tmpGender = v; updateBtns('optGender', v); autoSave(); }
+function setAge(v) { tmpAge = v; updateBtns('optAge', v); autoSave(); }
+function setHair(v) { tmpHair = v; updateBtns('optHair', v); autoSave(); }
+
+function autoSave() {
+  if (tmpGender && tmpAge && tmpHair) {
+    meta[currentIdx] = tmpGender + tmpAge + tmpHair;
+    document.getElementById('singleCurrent').textContent = labelFor(meta[currentIdx]);
+    saveMeta();
+  }
+}
+
+function goSingle(dir) {
+  currentIdx = Math.max(0, Math.min(AVATAR_COUNT - 1, currentIdx + dir));
+  loadSingle();
+}
+
+function jumpToNext() {
+  for (var i = 0; i < AVATAR_COUNT; i++) {
+    var idx = (currentIdx + 1 + i) % AVATAR_COUNT;
+    if (meta[idx] === '---') {
+      currentIdx = idx;
+      if (mode === 'single') loadSingle();
+      else {
+        currentPage = Math.floor(idx / PAGE_SIZE);
+        renderGrid();
+        renderPageNav();
+      }
+      return;
+    }
+  }
+  alert('Alle 496 avatarer er kategorisert!');
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (mode !== 'single') return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  switch(e.key.toLowerCase()) {
+    case 'j': setGender('J'); break;
+    case 'g': setGender('G'); break;
+    case '1': setAge('A'); break;
+    case '2': setAge('B'); break;
+    case 'q': setHair('L'); break;
+    case 'w': setHair('M'); break;
+    case 'e': setHair('R'); break;
+    case 'r': setHair('H'); break;
+    case 'arrowright': case ' ': e.preventDefault(); goSingle(1); break;
+    case 'arrowleft': goSingle(-1); break;
+  }
+});
+
+// === GRID MODE ===
+function renderGrid() {
+  var grid = document.getElementById('grid');
+  var start = currentPage * PAGE_SIZE;
+  var end = Math.min(start + PAGE_SIZE, AVATAR_COUNT);
+  var html = '';
+  for (var i = start; i < end; i++) {
+    var num = i + 1;
+    var code = meta[i];
+    var done = code !== '---';
+    html += '<div class="card ' + (done ? 'done' : 'undone') + '" onclick="editFromGrid(' + i + ')">' +
+      '<img src="' + AVATAR_PATH + fname(num) + '" loading="lazy">' +
+      '<div class="num">' + num + '</div>' +
+      '<div class="meta ' + (done ? '' : 'empty') + '">' + (done ? labelFor(code) : '—') + '</div>' +
+      '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function renderPageNav() {
+  var nav = document.getElementById('pageNav');
+  var pages = Math.ceil(AVATAR_COUNT / PAGE_SIZE);
+  var html = '';
+  for (var p = 0; p < pages; p++) {
+    var s = p * PAGE_SIZE + 1, e = Math.min((p+1)*PAGE_SIZE, AVATAR_COUNT);
+    html += '<button class="page-btn' + (p === currentPage ? ' active' : '') + '" onclick="goPage(' + p + ')">' + s + '-' + e + '</button>';
+  }
+  nav.innerHTML = html;
+}
+
+function goPage(p) {
+  currentPage = p;
+  renderGrid();
+  renderPageNav();
+}
+
+function editFromGrid(idx) {
+  currentIdx = idx;
+  setMode('single');
+  loadSingle();
+}
+
+// === MODE SWITCH ===
+function setMode(m) {
+  mode = m;
+  document.getElementById('singleView').classList.toggle('active', m === 'single');
+  document.getElementById('gridView').classList.toggle('active', m === 'grid');
+  document.getElementById('tabSingle').classList.toggle('active', m === 'single');
+  document.getElementById('tabGrid').classList.toggle('active', m === 'grid');
+  if (m === 'single') loadSingle();
+  if (m === 'grid') { renderGrid(); renderPageNav(); }
+}
+
+// === EXPORT ===
+function exportMeta() {
+  var uncategorized = AVATAR_COUNT - countDone();
+  if (uncategorized > 0) {
+    if (!confirm(uncategorized + ' avatarer er ikke kategorisert ennå. Eksportere likevel?')) return;
+  }
+  document.getElementById('exportText').value = meta.join(',');
+  document.getElementById('exportArea').style.display = 'block';
+  document.getElementById('exportArea').scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyExport() {
+  var ta = document.getElementById('exportText');
+  ta.select();
+  document.execCommand('copy');
+  alert('Kopiert! Send til Claude eller lim inn i avatar.js.');
+}
+
+// === INIT ===
+// Find first uncategorized
+for (var fi = 0; fi < AVATAR_COUNT; fi++) {
+  if (meta[fi] === '---') { currentIdx = fi; break; }
+}
+loadSingle();
+updateCounts();
+</script>
+</body>
+</html>

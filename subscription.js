@@ -411,7 +411,7 @@ function setModalTexts(status) {
   // Plan: støtt både `plan` og `planType`
   if (planEl) {
     const planKey = (status && (status.plan || status.planType)) || null;
-    const planMap = { month: "Månedlig", year: "Årlig", lifetime: "Livstid" };
+    const planMap = { month: "Månedlig", year: "Årlig", lifetime: "Engangskjøp" };
     planEl.textContent = (planKey && planMap[planKey]) ? planMap[planKey] : "—";
   }
 
@@ -505,8 +505,8 @@ function setModalTexts(status) {
       const createdByScript = cancelBtn.dataset?.createdBy === "subscriptionjs";
 
       if (isLifetime) {
-        if (createdByScript) cancelBtn.innerHTML = "ðŸ† Livstid (ingen kansellering)";
-        cancelBtn.title = "Livstidskjøp kan ikke kanselleres.";
+        if (createdByScript) cancelBtn.innerHTML = "🏆 Engangskjøp (ingen kansellering)";
+        cancelBtn.title = "Engangskjøp kan ikke kanselleres.";
       } else if (isTrial) {
         if (createdByScript) cancelBtn.innerHTML = "🧪 Prøveperiode (ingen kansellering)";
         cancelBtn.title = "Prøveperioden avsluttes automatisk – ingen kansellering nødvendig.";

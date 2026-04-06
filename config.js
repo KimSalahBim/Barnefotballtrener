@@ -36,12 +36,12 @@ const CONFIG = {
       description: '299 kr per Ã¥r (spar 49%)'
     },
     lifetime: {
-      id: 'price_1SyaJ2Do19YzWAtS55jH22b9',
-      amount: 799,
+      id: 'price_1TJ84KDo19YzWAtS351HjDIX',
+      amount: 999,
       currency: 'NOK',
       interval: 'one_time',
       name: 'Livstid',
-      description: '799 kr - betal Ã©n gang'
+      description: '999 kr - betal én gang'
     }
   },
 
