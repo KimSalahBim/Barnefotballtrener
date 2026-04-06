@@ -268,6 +268,7 @@ export default async function handler(req, res) {
       success_url: `${baseUrl}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/?canceled=true`,
       client_reference_id: userId,
+      allow_promotion_codes: true,
       
       // LEGAL: Display angrerett notice at checkout (visible to customer before payment)
       custom_text: {
