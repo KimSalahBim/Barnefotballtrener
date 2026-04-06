@@ -655,6 +655,9 @@
     // 2. Lagre nåværende state
     saveState();
 
+    // Lukk spillprofil før lag byttes (unngå stale DOM og gamle objektreferanser)
+    if (_profilePlayerId) hidePlayerProfile();
+
     // 3. Bytt lag
     state.currentTeamId = teamId;
     window._bftTeamId = teamId;
@@ -1364,6 +1367,9 @@
     currentGroups: null   // cached for drag-drop editing
   };
 
+  // Player profile view state
+  var _profilePlayerId = null;
+
   // Expose for other modules (kampdag.js)
   function publishPlayers() {
     window.players = state.players; // MUST be an Array
@@ -1676,7 +1682,6 @@
             <button type="button" class="pos-btn${pos.includes('A') ? ' pos-a-on' : ''}" data-zone="A">A</button>
           </div>
           <button class="icon-btn edit" type="button" title="Rediger">✏️</button>
-          <button class="icon-btn delete" type="button" title="Slett">🗑️</button>
         </div>
       `;
     }).join('');
@@ -1729,76 +1734,9 @@
 
       const editBtn = card.querySelector('button.edit');
       if (editBtn) {
-        editBtn.addEventListener('click', () => {
-          const newName = window.prompt('Nytt navn:', p.name);
-          if (newName === null) return;
-          const name = String(newName).trim();
-          
-          // PRIVACY COMPLIANCE: Validate player name length (max 50 chars)
-          if (!name) return showNotification('Navn kan ikke være tomt', 'error');
-          if (name.length > 50) {
-            return showNotification('Spillernavn må være maks 50 tegn (kun fornavn anbefales)', 'error');
-          }
-          
-          // PRIVACY WARNING: Alert if name contains space (might be full name)
-          if (name.includes(' ') && !p.name.includes(' ')) {
-            // Only warn if adding space (not if already had space)
-            const confirmed = window.confirm(
-              '⚠️ PERSONVERN-ADVARSEL:\n\n' +
-              'Navnet inneholder mellomrom og kan være et fullt navn.\n\n' +
-              'For å beskytte barns personvern bør du KUN bruke fornavn.\n\n' +
-              'Vil du fortsette likevel?'
-            );
-            if (!confirmed) {
-              return;
-            }
-          }
-
-          let skill = p.skill;
-          if (state.settings.useSkill) {
-            const newSkill = window.prompt('Ferdighetsnivå (1–6):', String(p.skill));
-            if (newSkill === null) return;
-            const v = Number(newSkill);
-            if (Number.isFinite(v)) skill = Math.max(1, Math.min(6, Math.round(v)));
-          }
-
-          const goalie = window.confirm('Skal spilleren kunne stå i mål? (OK = ja, Avbryt = nei)');
-
-          const oldName = p.name;
-          p.name = name;
-          p.skill = skill;
-          p.goalie = goalie;
-
-          saveState();
-          publishPlayers();
-          renderAll();
-          showNotification('Spiller oppdatert', 'success');
-
-          // Dispatch rename event so season module can sync denormalized names
-          if (oldName !== name) {
-            window.dispatchEvent(new CustomEvent('player:renamed', {
-              detail: { playerId: p.id, newName: name, oldName: oldName }
-            }));
-          }
-        });
-      }
-
-      const delBtn = card.querySelector('button.delete');
-      if (delBtn) {
-        delBtn.addEventListener('click', () => {
-          const ok = window.confirm(`Slette "${p.name}"?`);
-          if (!ok) return;
-          state.players = state.players.filter(x => x.id !== id);
-          // remove from selections
-          state.selection.grouping.delete(id);
-
-          saveState();
-          // Slett direkte fra Supabase (ikke vent på debounce)
-          clearTimeout(_supabaseSaveTimer); // unngå redundant debounce-upsert
-          supabaseDeletePlayer(id);
-          renderAll();
-          publishPlayers();
-          showNotification('Spiller slettet', 'info');
+        editBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          showPlayerProfile(p.id);
         });
       }
     });
@@ -1853,7 +1791,275 @@
   function renderAll() {
     updateStats();
     renderPlayerList();
+    // Profil åpen: renderPlayerList() erstatter lista i DOM; oppdater profilen fra
+    // gjeldende state (Supabase/realtime kan ha byttet ut player-objekter). Hvis
+    // spilleren er borte (annet lag / slettet), lukk profilen.
+    if (_profilePlayerId) {
+      if (!state.players.some(function(x) { return x.id === _profilePlayerId; })) {
+        hidePlayerProfile();
+        return;
+      }
+      renderPlayerProfile();
+    }
     renderSelections();
+  }
+
+  // ------------------------------
+  // Player Profile View
+  // ------------------------------
+  function showPlayerProfile(playerId) {
+    _profilePlayerId = playerId;
+    // Hide list UI
+    var listEls = ['playerList', 'posHelpCard'];
+    listEls.forEach(function(id) { var el = $(id); if (el) el.style.display = 'none'; });
+    // Also hide form, stats, actions
+    var formEl = document.querySelector('#players .player-form');
+    var statsEl = document.querySelector('#players .stats-container');
+    var actionsEl = document.querySelector('#players .actions-container');
+    var headerEl = document.querySelector('#players .tab-header');
+    var skillCard = document.querySelector('#players .settings-card');
+    if (formEl) formEl.style.display = 'none';
+    if (statsEl) statsEl.style.display = 'none';
+    if (actionsEl) actionsEl.style.display = 'none';
+    if (headerEl) headerEl.style.display = 'none';
+    if (skillCard) skillCard.style.display = 'none';
+    renderPlayerProfile();
+  }
+
+  function hidePlayerProfile() {
+    _profilePlayerId = null;
+    var profileView = $('playerProfileView');
+    if (profileView) { profileView.style.display = 'none'; profileView.innerHTML = ''; }
+    // Restore list UI
+    var listEls = ['playerList', 'posHelpCard'];
+    listEls.forEach(function(id) { var el = $(id); if (el) el.style.display = ''; });
+    var formEl = document.querySelector('#players .player-form');
+    var statsEl = document.querySelector('#players .stats-container');
+    var actionsEl = document.querySelector('#players .actions-container');
+    var headerEl = document.querySelector('#players .tab-header');
+    var skillCard = document.querySelector('#players .settings-card');
+    if (formEl) formEl.style.display = '';
+    if (statsEl) statsEl.style.display = '';
+    if (actionsEl) actionsEl.style.display = '';
+    if (headerEl) headerEl.style.display = '';
+    if (skillCard) skillCard.style.display = '';
+    renderAll();
+  }
+
+  function renderPlayerProfile() {
+    var profileView = $('playerProfileView');
+    if (!profileView || !_profilePlayerId) return;
+
+    var p = state.players.find(function(x) { return x.id === _profilePlayerId; });
+    if (!p) { hidePlayerProfile(); return; }
+
+    var posF = (p.positions || []).indexOf('F') >= 0;
+    var posM = (p.positions || []).indexOf('M') >= 0;
+    var posA = (p.positions || []).indexOf('A') >= 0;
+    var profilePositions = (p.positions || ['F', 'M', 'A']).filter(function(z) { return ['F', 'M', 'A'].includes(z); });
+    if (profilePositions.length === 0) profilePositions = ['F', 'M', 'A'];
+
+    var avatarHtml = window.Avatar
+      ? (p.avatar
+        ? '<img src="/avatars/' + p.avatar + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+        : '<div style="width:88px;height:88px;border-radius:50%;background:var(--primary,#456C4B);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:36px;">' + escapeHtml((p.name || '?').charAt(0).toUpperCase()) + '</div>')
+      : '<div style="width:88px;height:88px;border-radius:50%;background:var(--primary,#456C4B);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:36px;">' + escapeHtml((p.name || '?').charAt(0).toUpperCase()) + '</div>';
+
+    var html =
+      '<div class="settings-card" style="margin-top:8px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">' +
+          '<button type="button" id="profileBack" style="background:none;border:none;cursor:pointer;font-size:15px;color:var(--primary,#456C4B);font-weight:700;font-family:inherit;padding:4px 0;">‹ Spillere</button>' +
+          '<span style="font-size:17px;font-weight:800;color:var(--text-900,#1a1a1a);">' + escapeHtml(p.name) + '</span>' +
+        '</div>' +
+
+        // Avatar
+        '<div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border,#d8e4da);">' +
+          '<div id="profileAvatarPreview" style="width:88px;height:88px;border-radius:50%;overflow:hidden;cursor:pointer;">' +
+            avatarHtml +
+          '</div>' +
+          '<button type="button" id="profileAvatarBtn" style="margin-top:10px;border:1px solid var(--border,#d8e4da);background:var(--bg,#f3f6f3);border-radius:8px;padding:6px 16px;font-size:13px;cursor:pointer;font-weight:600;font-family:inherit;">' + (p.avatar ? 'Endre avatar' : 'Velg avatar') + '</button>' +
+        '</div>' +
+
+        // Name
+        '<div style="margin-bottom:14px;">' +
+          '<label style="font-size:13px;font-weight:700;color:var(--text-600,#666);display:block;margin-bottom:4px;">Navn</label>' +
+          '<input type="text" id="profileName" value="' + escapeHtml(p.name) + '" maxlength="50" autocomplete="off" style="width:100%;padding:10px 12px;border:1px solid var(--border,#d8e4da);border-radius:10px;font-size:15px;font-family:inherit;">' +
+        '</div>' +
+
+        // Keeper toggle
+        '<div style="margin-bottom:14px;">' +
+          '<label style="font-size:13px;font-weight:700;color:var(--text-600,#666);display:block;margin-bottom:4px;">Kan stå i mål?</label>' +
+          '<div style="display:flex;gap:0;max-width:200px;">' +
+            '<button type="button" class="profileGkBtn' + (!p.goalie ? ' profile-gk-active' : '') + '" data-val="false" style="flex:1;padding:8px;border:1px solid var(--border,#d8e4da);background:' + (!p.goalie ? 'var(--primary,#456C4B)' : 'var(--bg,#f3f6f3)') + ';color:' + (!p.goalie ? '#fff' : 'var(--text-700,#444)') + ';font-weight:700;font-size:13px;border-radius:8px 0 0 8px;cursor:pointer;font-family:inherit;">Nei</button>' +
+            '<button type="button" class="profileGkBtn' + (p.goalie ? ' profile-gk-active' : '') + '" data-val="true" style="flex:1;padding:8px;border:1px solid var(--border,#d8e4da);border-left:none;background:' + (p.goalie ? 'var(--primary,#456C4B)' : 'var(--bg,#f3f6f3)') + ';color:' + (p.goalie ? '#fff' : 'var(--text-700,#444)') + ';font-weight:700;font-size:13px;border-radius:0 8px 8px 0;cursor:pointer;font-family:inherit;">Ja</button>' +
+          '</div>' +
+        '</div>' +
+
+        // Skill (only if enabled)
+        (state.settings.useSkill ?
+          '<div style="margin-bottom:14px;">' +
+            '<label style="font-size:13px;font-weight:700;color:var(--text-600,#666);display:block;margin-bottom:4px;">Ferdighetsnivå (1–6)</label>' +
+            '<input type="number" id="profileSkill" min="1" max="6" value="' + p.skill + '" style="width:80px;padding:10px 12px;border:1px solid var(--border,#d8e4da);border-radius:10px;font-size:15px;font-family:inherit;">' +
+          '</div>'
+        : '') +
+
+        // Positions
+        '<div style="margin-bottom:20px;">' +
+          '<label style="font-size:13px;font-weight:700;color:var(--text-600,#666);display:block;margin-bottom:4px;">Posisjoner</label>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<button type="button" class="profilePosBtn" data-pos="F" style="flex:1;padding:10px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (posF ? 'rgba(34,197,94,0.4)' : 'var(--border,#d8e4da)') + ';background:' + (posF ? 'rgba(34,197,94,0.1)' : 'var(--bg,#f3f6f3)') + ';color:' + (posF ? '#16a34a' : 'var(--text-500,#888)') + ';font-family:inherit;">Forsvar</button>' +
+            '<button type="button" class="profilePosBtn" data-pos="M" style="flex:1;padding:10px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (posM ? 'rgba(59,130,246,0.4)' : 'var(--border,#d8e4da)') + ';background:' + (posM ? 'rgba(59,130,246,0.1)' : 'var(--bg,#f3f6f3)') + ';color:' + (posM ? '#2563eb' : 'var(--text-500,#888)') + ';font-family:inherit;">Midtbane</button>' +
+            '<button type="button" class="profilePosBtn" data-pos="A" style="flex:1;padding:10px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (posA ? 'rgba(239,68,68,0.4)' : 'var(--border,#d8e4da)') + ';background:' + (posA ? 'rgba(239,68,68,0.1)' : 'var(--bg,#f3f6f3)') + ';color:' + (posA ? '#dc2626' : 'var(--text-500,#888)') + ';font-family:inherit;">Angrep</button>' +
+          '</div>' +
+        '</div>' +
+
+        // Save / Cancel
+        '<div style="display:flex;gap:8px;margin-bottom:16px;">' +
+          '<button type="button" id="profileCancel" style="flex:1;padding:12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--border,#d8e4da);background:var(--bg,#f3f6f3);color:var(--text-700,#444);font-family:inherit;">Avbryt</button>' +
+          '<button type="button" id="profileSave" style="flex:1;padding:12px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:var(--primary,#456C4B);color:#fff;font-family:inherit;">✓ Lagre</button>' +
+        '</div>' +
+
+        // Delete
+        '<div style="padding-top:16px;border-top:1px solid var(--border,#d8e4da);">' +
+          '<button type="button" id="profileDelete" style="width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.05);color:#dc2626;font-family:inherit;">🗑️ Slett spiller</button>' +
+        '</div>' +
+      '</div>';
+
+    profileView.innerHTML = html;
+    profileView.style.display = 'block';
+
+    function refreshProfilePosButtons() {
+      var colors = { F: { border: 'rgba(34,197,94,0.4)', bg: 'rgba(34,197,94,0.1)', color: '#16a34a' }, M: { border: 'rgba(59,130,246,0.4)', bg: 'rgba(59,130,246,0.1)', color: '#2563eb' }, A: { border: 'rgba(239,68,68,0.4)', bg: 'rgba(239,68,68,0.1)', color: '#dc2626' } };
+      profileView.querySelectorAll('.profilePosBtn').forEach(function(btn) {
+        var pos = btn.getAttribute('data-pos');
+        var on = profilePositions.includes(pos);
+        var c = colors[pos];
+        btn.style.borderColor = on ? c.border : 'var(--border,#d8e4da)';
+        btn.style.background = on ? c.bg : 'var(--bg,#f3f6f3)';
+        btn.style.color = on ? c.color : 'var(--text-500,#888)';
+      });
+    }
+
+    // --- Event handlers ---
+
+    // Back
+    $('profileBack').addEventListener('click', hidePlayerProfile);
+
+    // Cancel
+    $('profileCancel').addEventListener('click', hidePlayerProfile);
+
+    // Avatar picker
+    if (window.Avatar) {
+      var avPreview = $('profileAvatarPreview');
+      var avBtn = $('profileAvatarBtn');
+      function openProfileAvPicker() {
+        window.Avatar.openPicker(p.avatar, p.name, function(newAvatar) {
+          p.avatar = newAvatar;
+          saveState();
+          if (avPreview) {
+            avPreview.innerHTML = newAvatar
+              ? '<img src="/avatars/' + newAvatar + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+              : '<div style="width:88px;height:88px;border-radius:50%;background:var(--primary,#456C4B);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:36px;">' + escapeHtml((p.name || '?').charAt(0).toUpperCase()) + '</div>';
+          }
+          if (avBtn) avBtn.textContent = newAvatar ? 'Endre avatar' : 'Velg avatar';
+        });
+      }
+      if (avPreview) avPreview.addEventListener('click', openProfileAvPicker);
+      if (avBtn) avBtn.addEventListener('click', openProfileAvPicker);
+    }
+
+    // Keeper toggle
+    profileView.querySelectorAll('.profileGkBtn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        profileView.querySelectorAll('.profileGkBtn').forEach(function(b) {
+          b.classList.remove('profile-gk-active');
+          var active = b === btn;
+          b.style.background = active ? 'var(--primary,#456C4B)' : 'var(--bg,#f3f6f3)';
+          b.style.color = active ? '#fff' : 'var(--text-700,#444)';
+          if (active) b.classList.add('profile-gk-active');
+        });
+      });
+    });
+
+    // Position toggles
+    profileView.querySelectorAll('.profilePosBtn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var pos = btn.getAttribute('data-pos');
+        if (profilePositions.includes(pos)) {
+          profilePositions = profilePositions.filter(function(z) { return z !== pos; });
+        } else {
+          profilePositions = [...new Set([...profilePositions, pos])];
+        }
+        if (profilePositions.length === 0) profilePositions = ['F', 'M', 'A'];
+        refreshProfilePosButtons();
+      });
+    });
+
+    // Save
+    $('profileSave').addEventListener('click', function() {
+      var nameInput = $('profileName');
+      var name = (nameInput.value || '').trim();
+
+      if (!name) {
+        showNotification('Navn kan ikke være tomt', 'error');
+        nameInput.focus();
+        return;
+      }
+      if (name.length > 50) {
+        showNotification('Spillernavn må være maks 50 tegn (kun fornavn anbefales)', 'error');
+        return;
+      }
+
+      if (name.indexOf(' ') !== -1 && p.name.indexOf(' ') === -1) {
+        if (!window.confirm('Navnet inneholder mellomrom og kan være et fullt navn.\n\nFor å beskytte barns personvern bør du KUN bruke fornavn.\n\nVil du fortsette med dette navnet likevel?')) {
+          nameInput.focus();
+          return;
+        }
+      }
+
+      var goalie = !!(profileView.querySelector('.profileGkBtn[data-val="true"]') && profileView.querySelector('.profileGkBtn[data-val="true"]').classList.contains('profile-gk-active'));
+
+      var skill = p.skill;
+      var skillInput = $('profileSkill');
+      if (skillInput) {
+        var v = parseInt(skillInput.value, 10);
+        if (Number.isFinite(v)) skill = Math.max(1, Math.min(6, v));
+      }
+
+      var positions = profilePositions.slice();
+      if (positions.length === 0) positions = ['F', 'M', 'A'];
+
+      var oldName = p.name;
+      p.name = name;
+      p.skill = skill;
+      p.goalie = goalie;
+      p.positions = positions;
+
+      saveState();
+      publishPlayers();
+      showNotification('Spiller oppdatert', 'success');
+
+      if (oldName !== name) {
+        window.dispatchEvent(new CustomEvent('player:renamed', {
+          detail: { playerId: p.id, newName: name, oldName: oldName }
+        }));
+      }
+
+      hidePlayerProfile();
+    });
+
+    // Delete
+    $('profileDelete').addEventListener('click', function() {
+      if (!window.confirm('Slette "' + p.name + '"?')) return;
+      state.players = state.players.filter(function(x) { return x.id !== p.id; });
+      state.selection.grouping.delete(p.id);
+      saveState();
+      clearTimeout(_supabaseSaveTimer);
+      supabaseDeletePlayer(p.id);
+      publishPlayers();
+      showNotification('Spiller slettet', 'info');
+      hidePlayerProfile();
+    });
   }
 
   // ------------------------------
@@ -2026,6 +2232,9 @@
 
     function switchTab(tabId) {
       if (!tabId) return;
+
+      // Close player profile if open
+      if (_profilePlayerId) hidePlayerProfile();
 
       // STEG 0: Sidetittel
       const titleMap = {
