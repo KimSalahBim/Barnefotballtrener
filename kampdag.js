@@ -345,9 +345,15 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           const formatEl = $('kdFormat');
           const minutesEl = $('kdMinutes');
           if (formatEl && formatEl.value === '7' && minutesEl && minutesEl.value === '60') {
-            // Only override if user hasn't changed defaults
+            // Only override if user hasn't changed defaults.
+            // Order matters (same as onboarding.js lines 970-981):
+            // 1) Set format + dispatch change → updates formation grid, sets generic minutes
+            // 2) Override minutes with NFF-specific value → may differ from format default
+            // 3) Dispatch input → updates keeper allocation with correct minutes
             formatEl.value = nff.format;
+            formatEl.dispatchEvent(new Event('change'));
             minutesEl.value = nff.minutes;
+            minutesEl.dispatchEvent(new Event('input'));
             console.log('[Kampdag] Pre-set from onboarding:', ageClass, '->', nff.format + 'er', nff.minutes + 'min');
           }
         }
@@ -1104,10 +1110,20 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const mins = {};
     lastPresent.forEach(p => { mins[p.id] = 0; });
     for (let i = 0; i < lastBest.segments.length; i++) {
-      const dt = lastBest.segments[i].end - lastBest.segments[i].start;
-      const sm = getSlotMap(i);
-      for (const pid of Object.values(sm.slots).filter(Boolean)) {
-        mins[pid] = (mins[pid] || 0) + dt;
+      const seg = lastBest.segments[i];
+      const dt = seg.end - seg.start;
+      if (kdSlotOverrides[i]) {
+        // Overrides present: use slot-based counting (user may have changed lineup)
+        const sm = getSlotMap(i);
+        for (const pid of Object.values(sm.slots).filter(Boolean)) {
+          mins[pid] = (mins[pid] || 0) + dt;
+        }
+      } else {
+        // No overrides: use algorithm lineup directly (always correct,
+        // avoids silent player drops when slot layout has fewer positions than lineup)
+        for (const pid of seg.lineup) {
+          mins[pid] = (mins[pid] || 0) + dt;
+        }
       }
     }
     return mins;
@@ -2179,6 +2195,14 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     lastPresent = present;
     lastP = P;
     lastT = T;
+
+    // Validate formation matches current format (prevents stale key from wrong format)
+    const fmtOpts = FORMATIONS[P];
+    if (fmtOpts && kdFormationKey && !fmtOpts[kdFormationKey]) {
+      kdFormationKey = getDefaultFormationKey(P);
+      kdFormation = fmtOpts[kdFormationKey] || Object.values(fmtOpts)[0];
+    }
+
     lastFormation = kdFormation ? kdFormation.slice() : null;
     lastFormationKey = kdFormationKey || '';
     lastUseFormation = !!(kdFormationOn && kdFormation);
@@ -2258,7 +2282,10 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           const segEnd = best.segments[si + 1] ? best.segments[si + 1].start : T;
           const sm = getSlotMap(si);
           const onField = new Set(Object.values(sm.slots).filter(Boolean));
-          if (!onField.has(m.id)) {
+          // Also check algorithm lineup for non-overridden segments
+          // (slot layout may have fewer positions than lineup size)
+          const inLineup = !kdSlotOverrides[si] && seg.lineup.includes(m.id);
+          if (!onField.has(m.id) && !inLineup) {
             segs.push({ pct: ((segEnd - seg.start) / T * 100), color: 'transparent' });
             continue;
           }
@@ -2762,7 +2789,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           const segEnd = best.segments[si+1] ? best.segments[si+1].start : T;
           const sm = getSlotMap(si);
           const onField = new Set(Object.values(sm.slots).filter(Boolean));
-          if (!onField.has(m.id)) { segs.push({pct:((segEnd-seg.start)/T*100),c:'transparent'}); continue; }
+          const inLineup = !kdSlotOverrides[si] && seg.lineup.includes(m.id);
+          if (!onField.has(m.id) && !inLineup) { segs.push({pct:((segEnd-seg.start)/T*100),c:'transparent'}); continue; }
           let color = zc.X;
           for (const s of slots) { if (sm.slots[s.key] === m.id) { color = zc[s.zone] || zc.X; break; } }
           segs.push({pct:((segEnd-seg.start)/T*100),c:color});
@@ -3123,13 +3151,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 
     // 2. Overstyr minutter (etter format-change som auto-setter default)
     if (opts.minutes && minutesEl) {
-      if (_activateDurPill) {
-        // activateDurPill setter verdi + dispatcher input + synker piller
-        _activateDurPill(parseInt(opts.minutes, 10));
-      } else {
-        minutesEl.value = opts.minutes;
-        minutesEl.dispatchEvent(new Event('input'));
-      }
+      minutesEl.value = parseInt(opts.minutes, 10);
+      minutesEl.dispatchEvent(new Event('input'));
     }
 
     // 3. Sett oppmøte (hvilke spillere som er med)
