@@ -5,9 +5,9 @@
 
 #competitions {
   --comp-primary: #456C4B;      /* behold blå som base for helhet */
-  --comp-accent:  #f57c00;      /* oransje fra logo */
-  --comp-green:   #2e7d32;      /* grønn fra logo */
-  --comp-yellow:  #fbc02d;      /* gul fra logo */
+  --comp-accent:  #456C4B;      /* primærgrønn */
+  --comp-green:   #456C4B;      /* primærgrønn */
+  --comp-yellow:  #456C4B;      /* primærgrønn */
   --comp-ink:     #0b1220;
   --comp-muted:   #667085;
   --comp-border:  #e6eaf2;
@@ -46,7 +46,7 @@
   background: linear-gradient(135deg, var(--comp-accent), var(--comp-yellow));
   color: #0b1220;
   border-color: rgba(0,0,0,0.06);
-  box-shadow: 0 8px 18px rgba(245, 124, 0, 0.18);
+  box-shadow: 0 8px 18px rgba(69, 108, 75, 0.18);
 }
 
 .comp-pill:disabled {
