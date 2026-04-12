@@ -17,6 +17,7 @@
   var seasonPlayers = [];
   var dashTab = 'calendar'; // 'calendar' | 'roster' | 'stats'
   var snView = 'list'; // 'list' | 'create-season' | 'edit-season' | 'dashboard' | 'create-event' | 'edit-event' | 'event-detail' | 'roster-import'
+  var showArchivedSeasons = false;
   var editingEvent = null; // event object when editing
   var editingSeasonPlayer = null; // season player object when editing
   var embeddedKampdagEvent = null; // event for embedded kampdag
@@ -508,7 +509,7 @@
   window.addEventListener('season:nav-sync', function() {
     updateSeasonNav();
     // Restart season sync if we have an active season but channel was stopped
-    if (currentSeason && !_rtSeasonChannel && isSharedTeam()) {
+    if (currentSeason && currentSeason.status !== 'archived' && !_rtSeasonChannel && isSharedTeam()) {
       startSeasonSync(currentSeason.id);
     }
     // Restart match sync if we're on event-detail for a match
@@ -651,6 +652,14 @@
 
       if (res.error) throw res.error;
       seasons = res.data || [];
+
+      // Sort: active first (by created_at desc), then archived (by created_at desc)
+      seasons.sort(function(a, b) {
+        var aArch = a.status === 'archived' ? 1 : 0;
+        var bArch = b.status === 'archived' ? 1 : 0;
+        if (aArch !== bArch) return aArch - bArch;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
 
       // Fetch event counts per season in one query
       if (seasons.length > 0) {
@@ -1908,6 +1917,9 @@
       };
     }
 
+    // Track events that have minutes data (for coverage label)
+    var eventsWithMinutesSet = {};
+
     // Event type map
     var eventTypeMap = {};
     for (var e = 0; e < events.length; e++) {
@@ -1948,6 +1960,9 @@
       playerMap[row.player_id].totalEvents++;
       if (row.minutes_played) {
         playerMap[row.player_id].minutesPlayed += row.minutes_played;
+        if (evType === 'match' || evType === 'cup_match') {
+          eventsWithMinutesSet[row.event_id] = true;
+        }
       }
     }
 
@@ -2012,7 +2027,8 @@
       topScorers: topScorers,
       topAssisters: topAssisters,
       totalGoals: totalGoalsCount,
-      totalAssists: totalAssists
+      totalAssists: totalAssists,
+      matchesWithMinutesData: Object.keys(eventsWithMinutesSet).length
     };
   }
 
@@ -2096,7 +2112,10 @@
   // =========================================================================
 
   function renderSeasonList(root) {
-    if (seasons.length === 0) {
+    var activeSeasons = seasons.filter(function(s) { return s.status !== 'archived'; });
+    var archivedSeasons = seasons.filter(function(s) { return s.status === 'archived'; });
+
+    if (activeSeasons.length === 0 && archivedSeasons.length === 0) {
       root.innerHTML =
         '<div class="sn-empty">' +
           '<div class="sn-empty-icon">\uD83D\uDCC5</div>' +
@@ -2111,8 +2130,10 @@
     }
 
     var html = '';
-    for (var i = 0; i < seasons.length; i++) {
-      var s = seasons[i];
+
+    // Active seasons
+    for (var i = 0; i < activeSeasons.length; i++) {
+      var s = activeSeasons[i];
       var range = formatDateRange(s.start_date, s.end_date);
       var countText = s._eventCount === 1 ? '1 hendelse' : (s._eventCount || 0) + ' hendelser';
       var meta = [];
@@ -2132,9 +2153,39 @@
     html += '<button class="btn-secondary" id="snCreateMoreBtn" style="width:100%;margin-top:8px;">' +
       '<i class="fas fa-plus" style="margin-right:6px;"></i>Opprett ny sesong</button>';
 
+    // Archived seasons (collapsible)
+    if (archivedSeasons.length > 0) {
+      html += '<div style="margin-top:24px;">' +
+        '<button id="snToggleArchived" style="background:none; border:none; cursor:pointer; padding:8px 0; font-size:13px; font-weight:600; color:var(--text-400); display:flex; align-items:center; gap:6px; width:100%;">' +
+          '<i class="fas fa-chevron-' + (showArchivedSeasons ? 'down' : 'right') + '" id="snArchiveChevron" style="font-size:10px; width:12px;"></i>' +
+          'Tidligere sesonger (' + archivedSeasons.length + ')' +
+        '</button>' +
+        '<div id="snArchivedList" style="' + (showArchivedSeasons ? '' : 'display:none;') + '">';
+
+      for (var a = 0; a < archivedSeasons.length; a++) {
+        var as = archivedSeasons[a];
+        var aRange = formatDateRange(as.start_date, as.end_date);
+        var aCountText = as._eventCount === 1 ? '1 hendelse' : (as._eventCount || 0) + ' hendelser';
+        var aMeta = [];
+        if (aRange) aMeta.push(aRange);
+        aMeta.push(aCountText);
+
+        html +=
+          '<div class="sn-season-card" data-sid="' + as.id + '" style="opacity:0.65;">' +
+            '<div class="sn-card-top">' +
+              '<span class="sn-card-name">' + escapeHtml(as.name) + '</span>' +
+              '<span class="sn-badge" style="background:var(--border-light,#e2e8f0); color:var(--text-400); font-size:10px;">Arkivert</span>' +
+            '</div>' +
+            '<div class="sn-card-meta">' + escapeHtml(aMeta.join(' \u00B7 ')) + '</div>' +
+          '</div>';
+      }
+
+      html += '</div></div>';
+    }
+
     root.innerHTML = html;
 
-    // Bind click handlers
+    // Bind click handlers for ALL season cards (active + archived)
     var cards = root.querySelectorAll('.sn-season-card');
     for (var c = 0; c < cards.length; c++) {
       cards[c].addEventListener('click', (function(sid) {
@@ -2145,6 +2196,15 @@
     $('snCreateMoreBtn').addEventListener('click', function() {
       snView = 'create-season';
       render();
+    });
+
+    var toggleBtn = $('snToggleArchived');
+    if (toggleBtn) toggleBtn.addEventListener('click', function() {
+      showArchivedSeasons = !showArchivedSeasons;
+      var list = $('snArchivedList');
+      var chevron = $('snArchiveChevron');
+      if (list) list.style.display = showArchivedSeasons ? '' : 'none';
+      if (chevron) chevron.className = 'fas fa-chevron-' + (showArchivedSeasons ? 'down' : 'right');
     });
   }
 
@@ -3059,6 +3119,15 @@
         '<div class="sn-dash-meta">' + escapeHtml(metaParts.join(' \u00B7 ')) + '</div>' +
       '</div>';
 
+    // Archived banner
+    if (s.status === 'archived') {
+      html +=
+        '<div style="background:rgba(234,179,8,0.10); border:1px solid rgba(234,179,8,0.3); border-radius:var(--radius-sm,10px); padding:10px 14px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:8px;">' +
+          '<div style="font-size:13px; color:#a16207;"><i class="fas fa-box-archive" style="margin-right:6px;"></i>Denne sesongen er arkivert</div>' +
+          '<button class="btn-secondary" id="snReopenFromBanner" style="font-size:12px; padding:4px 12px;">Gjen\u00e5pne</button>' +
+        '</div>';
+    }
+
     // Lagside card (team owners only)
     if (!isSharedTeam()) {
       html += '<div id="snLagsideCard"></div>';
@@ -3099,6 +3168,22 @@
     if (editSeasonBtn) editSeasonBtn.addEventListener('click', function() {
       snView = 'edit-season';
       render();
+    });
+
+    var reopenBanner = $('snReopenFromBanner');
+    if (reopenBanner) reopenBanner.addEventListener('click', async function() {
+      reopenBanner.disabled = true;
+      reopenBanner.textContent = '\u2026';
+      var updated = await updateSeason(currentSeason.id, { status: 'active' });
+      if (updated) {
+        currentSeason.status = 'active';
+        var idx = seasons.findIndex(function(x) { return x.id === currentSeason.id; });
+        if (idx !== -1) seasons[idx].status = 'active';
+        render();
+      } else {
+        reopenBanner.disabled = false;
+        reopenBanner.textContent = 'Gjen\u00e5pne';
+      }
     });
 
     // Bind tab-specific handlers
@@ -3166,6 +3251,13 @@
         '<button class="btn-secondary" id="snDuplicateSeason" style="width:100%; margin-bottom:8px;">' +
           '<i class="fas fa-copy" style="margin-right:6px;"></i>Dupliser sesong' +
         '</button>' +
+        (currentSeason.status === 'archived'
+          ? '<button class="btn-secondary" id="snReopenSeason" style="width:100%; margin-bottom:8px;">' +
+              '<i class="fas fa-box-open" style="margin-right:6px;"></i>Gjenåpne sesong' +
+            '</button>'
+          : '<button class="btn-secondary" id="snArchiveSeason" style="width:100%; margin-bottom:8px;">' +
+              '<i class="fas fa-box-archive" style="margin-right:6px;"></i>Arkiver sesong' +
+            '</button>') +
         '<button class="sn-btn-danger" id="snDeleteSeason" style="width:100%;">' +
           '<i class="fas fa-trash" style="margin-right:6px;"></i>Slett sesong' +
         '</button>' +
@@ -3268,6 +3360,41 @@
       } else {
         dupBtn.disabled = false;
         dupBtn.innerHTML = '<i class="fas fa-copy" style="margin-right:6px;"></i>Dupliser sesong';
+      }
+    });
+
+    var archiveBtn = $('snArchiveSeason');
+    if (archiveBtn) archiveBtn.addEventListener('click', async function() {
+      var s = currentSeason;
+      if (!s) return;
+      if (!confirm('Arkiver sesongen \u00AB' + s.name + '\u00BB?\n\nSesongen flyttes til \u00ABTidligere sesonger\u00BB. Alt innhold beholdes.')) return;
+      archiveBtn.disabled = true;
+      archiveBtn.textContent = 'Arkiverer\u2026';
+      var updated = await updateSeason(s.id, { status: 'archived' });
+      if (updated) {
+        showArchivedSeasons = true;
+        goToList();
+      } else {
+        archiveBtn.disabled = false;
+        archiveBtn.innerHTML = '<i class="fas fa-box-archive" style="margin-right:6px;"></i>Arkiver sesong';
+      }
+    });
+
+    var reopenBtn = $('snReopenSeason');
+    if (reopenBtn) reopenBtn.addEventListener('click', async function() {
+      var s = currentSeason;
+      if (!s) return;
+      reopenBtn.disabled = true;
+      reopenBtn.textContent = 'Gjen\u00e5pner\u2026';
+      var updated = await updateSeason(s.id, { status: 'active' });
+      if (updated) {
+        currentSeason.status = 'active';
+        var idx = seasons.findIndex(function(x) { return x.id === s.id; });
+        if (idx !== -1) seasons[idx].status = 'active';
+        render();
+      } else {
+        reopenBtn.disabled = false;
+        reopenBtn.innerHTML = '<i class="fas fa-box-open" style="margin-right:6px;"></i>Gjenåpne sesong';
       }
     });
   }
@@ -4029,6 +4156,20 @@
     '</tr></thead>';
     html += '<tbody>';
 
+    // Compute max/avg minutes for proportional bar width and color
+    var maxMinutes = 0;
+    var playersWithMinutes = 0;
+    var totalMinutesSum = 0;
+    for (var mi = 0; mi < p.length; mi++) {
+      if (p[mi].minutesPlayed > 0) {
+        playersWithMinutes++;
+        totalMinutesSum += p[mi].minutesPlayed;
+        if (p[mi].minutesPlayed > maxMinutes) maxMinutes = p[mi].minutesPlayed;
+      }
+    }
+    var avgMinutes = playersWithMinutes > 0 ? totalMinutesSum / playersWithMinutes : 0;
+    var showMinuteBars = playersWithMinutes > Math.floor(p.length / 2); // >50% have data
+
     for (var i = 0; i < p.length; i++) {
       var pl = p[i];
       var totalPossible = pl.relevantTrainings + pl.relevantMatches;
@@ -4048,7 +4189,14 @@
         '<td class="sn-pname"><div style="display:flex;align-items:center;gap:8px;">' + renderSeasonAvatar(pl.player.player_id, pl.player.name, 28) + '<span>' + escapeHtml(pl.player.name) + statStBadge + '</span></div></td>' +
         '<td>' + pl.trainingsAttended + '</td>' +
         '<td>' + pl.matchesAttended + '</td>' +
-        '<td>' + (pl.minutesPlayed || 0) + '</td>' +
+        '<td>' + (function() {
+          if (!pl.minutesPlayed) return '\u2014';
+          var minPct = maxMinutes > 0 ? Math.round((pl.minutesPlayed / maxMinutes) * 100) : 0;
+          var dev = avgMinutes > 0 ? Math.abs(pl.minutesPlayed - avgMinutes) / avgMinutes : 0;
+          var minColor = dev <= 0.15 ? 'var(--success, #22c55e)' : dev <= 0.30 ? '#eab308' : 'var(--error, #ef4444)';
+          return '<div style="font-weight:600;">' + pl.minutesPlayed + '</div>' +
+            (showMinuteBars ? '<div class="sn-bar-wrap"><div class="sn-bar-fill" style="width:' + minPct + '%; background:' + minColor + ';"></div></div>' : '');
+        })() + '</td>' +
         '<td>' +
           '<div style="font-weight:600;">' + pct + '%</div>' +
           '<div class="sn-bar-wrap"><div class="sn-bar-fill" style="width:' + pct + '%; background:' + barColor + ';"></div></div>' +
@@ -4057,6 +4205,39 @@
     }
 
     html += '</tbody></table></div>';
+
+    // ── PLAYING TIME FAIRNESS ──
+    if (playersWithMinutes >= 3 && stats.matchesWithMinutesData >= 2) {
+      var minValues = p.filter(function(x) { return x.minutesPlayed > 0; }).map(function(x) { return x.minutesPlayed; });
+      var minAvg = minValues.reduce(function(a, b) { return a + b; }, 0) / minValues.length;
+      if (minAvg > 0) {
+        var minMaxDev = 0;
+        for (var md = 0; md < minValues.length; md++) {
+          var mDev = Math.abs(minValues[md] - minAvg) / minAvg;
+          if (mDev > minMaxDev) minMaxDev = mDev;
+        }
+        var minFairClass, minFairText;
+        if (minMaxDev <= 0.15) {
+          minFairClass = 'sn-fair-good';
+          minFairText = '\u2705 Jevnt fordelt spilletid';
+        } else if (minMaxDev <= 0.30) {
+          minFairClass = 'sn-fair-ok';
+          minFairText = '\u26a0\ufe0f Noe variasjon i spilletid';
+        } else {
+          minFairClass = 'sn-fair-bad';
+          minFairText = '\u26a0\ufe0f Stor variasjon i spilletid';
+        }
+        html += '<div style="text-align:center; margin:10px 0;"><span class="sn-fair-badge ' + minFairClass + '">' + minFairText + '</span></div>';
+      }
+    }
+
+    // Coverage label
+    if (stats.matchesWithMinutesData > 0 && stats.allMatches > 0) {
+      html += '<div style="text-align:center; font-size:11px; color:var(--text-400); margin-bottom:12px;">Spilletid registrert for ' + stats.matchesWithMinutesData + ' av ' + stats.allMatches + ' kamper</div>';
+      if (stats.matchesWithMinutesData < Math.ceil(stats.allMatches / 2)) {
+        html += '<div style="text-align:center; font-size:11px; color:var(--text-400); margin-bottom:12px;"><i class="fas fa-info-circle" style="margin-right:4px;"></i>Tips: Bruk kampdag-planleggeren for \u00e5 registrere spilletid.</div>';
+      }
+    }
 
     // ── TRAINING PLAN STATS ──
     html += renderTrainingPlanStats();
@@ -7743,7 +7924,9 @@
     _woLoadEventIds(); // Async, non-blocking
     snView = 'dashboard';
     render();
-    try { startSeasonSync(seasonId); } catch (e) { console.error('[season.js] startSeasonSync error:', e); }
+    if (s.status !== 'archived') {
+      try { startSeasonSync(seasonId); } catch (e) { console.error('[season.js] startSeasonSync error:', e); }
+    }
   }
 
 })();
