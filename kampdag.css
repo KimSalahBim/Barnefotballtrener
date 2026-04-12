@@ -154,12 +154,12 @@
   cursor:pointer;
   transition:background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
-.kd-freq-active{
+.kd-freq-btn.kd-freq-active:not(.kd-mode-chip){
   background:var(--primary) !important;
   color:#fff !important;
   border-color:transparent !important;
 }
-.kd-freq-active .small-text{
+.kd-freq-btn.kd-freq-active:not(.kd-mode-chip) .small-text{
   color:rgba(255,255,255,0.85) !important;
 }
 .kd-freq-btn .small-text{
@@ -381,4 +381,144 @@
 #kdTimerWrap .settings-card{box-shadow:0 4px 16px rgba(0,0,0,0.15);}
 @media (prefers-color-scheme:dark){
   #kdTimerWrap .settings-card{box-shadow:0 4px 16px rgba(0,0,0,0.4);}
+}
+
+/* ── KAMPDAG UI REDESIGN ── */
+.kd-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--text-500); margin-bottom: 8px;
+}
+.kd-divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+.kd-pill-group, .kd-dur-group {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.kd-pill, .kd-dur-pill {
+  flex: 1 1 auto; min-width: 52px;
+  padding: 9px 4px; border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg); color: var(--text-600);
+  font-family: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer; text-align: center; transition: all 0.15s ease;
+  line-height: 1.2;
+}
+.kd-dur-pill { font-size: 13px; }
+.kd-pill-sub {
+  font-size: 9px; font-weight: 500; opacity: 0.75;
+  margin-top: 2px; display: block;
+}
+.kd-pill:hover:not(.kd-pill-active),
+.kd-dur-pill:hover:not(.kd-pill-active) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-dim);
+}
+.kd-pill-active {
+  border-color: var(--primary) !important;
+  background: var(--primary) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+.kd-dur-custom-input {
+  width: 100%; text-align: center; font-size: 16px; font-weight: 700;
+}
+.kd-auto-badge {
+  background: var(--primary-dim);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 10px;
+  font-size: 12px; color: var(--primary); font-weight: 600; margin-top: 8px;
+}
+.kd-mode-chip {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  padding: 9px 10px; border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg); font-family: inherit;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  color: var(--text-600); transition: all 0.15s;
+}
+.kd-chip-icon { font-size: 16px; flex-shrink: 0; }
+.kd-chip-text { display: flex; flex-direction: column; text-align: left; }
+.kd-chip-sub { font-size: 10px; font-weight: 500; color: var(--text-400); }
+.kd-mode-chip.kd-freq-active {
+  border-color: var(--primary);
+  background: var(--primary-dim);
+  color: var(--primary);
+}
+.kd-mode-chip.kd-freq-active .kd-chip-sub { color: var(--primary); opacity: 0.7; }
+
+/* Keeper counter */
+.kd-counter {
+  display: flex; align-items: center;
+  border: 1.5px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+  background: var(--bg);
+}
+.kd-counter-btn {
+  width: 36px; height: 36px; border: none; background: transparent;
+  font-size: 22px; font-weight: 700; cursor: pointer;
+  color: var(--primary); font-family: inherit;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s; flex-shrink: 0;
+}
+.kd-counter-btn:hover { background: var(--primary-dim); }
+.kd-counter-btn:disabled { color: var(--text-400); cursor: not-allowed; }
+#kdKeeperCountDisplay {
+  width: 34px; text-align: center; font-size: 17px; font-weight: 800;
+  color: var(--text-900);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  line-height: 36px; flex-shrink: 0;
+}
+
+/* Keeper rows — override old grid-based definition */
+#kampdag .kd-keeper-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 8px 10px;
+  box-sizing: border-box;
+  width: 100%; min-width: 0;
+  grid-template-columns: unset;
+}
+.kd-keeper-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+#kampdag .kd-keeper-row .kd-keeper-select {
+  flex: 1 1 0;
+  min-width: 80px !important;
+  width: auto !important;
+  max-width: 100%;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-900);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: auto;
+  appearance: auto;
+}
+#kampdag .kd-keeper-row .kd-keeper-min-input {
+  flex: 0 0 52px !important;
+  width: 52px !important;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-900);
+  background: white;
+  outline: none;
+  box-sizing: border-box;
+}
+.kd-keeper-min-label {
+  font-size: 11px; color: var(--text-400); font-weight: 500;
+  flex-shrink: 0; white-space: nowrap;
 }

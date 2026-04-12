@@ -61,6 +61,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   let lastUseFormation = false; // whether formation was active at generation
   let lastPositions = {};       // position preferences snapshot at generation
 
+  // Exposed pill helper (set from bindKampdagUI, used by kampdagPrefill)
+  let _activateDurPill = null;
+
   // Drag & drop slot override state
   let kdSlotOverrides = {};     // { segIdx: { slots: {slotKey: playerId}, bench: [playerId] } }
   let kdDragState = null;
@@ -305,7 +308,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       renderKampdagPlayers();
       updateKampdagCounts();
       refreshKeeperUI();
-      if (kdFormationOn) { renderPositionList(); updateCoverage(); }
+      if (kdFormationOn) { renderPositionList(); }
       console.log('[Kampdag] Players re-rendered, count:', getPlayersArray().length);
     } catch (err) {
       console.error('[Kampdag] Error in players:updated handler:', err);
@@ -368,7 +371,6 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const minutesEl = $('kdMinutes');
     const selectAllBtn = $('kdSelectAll');
     const deselectAllBtn = $('kdDeselectAll');
-    const refreshBtn = $('kdRefresh');
     const manualKeeperEl = $('kdManualKeeper');
     const keeperCountEl = $('kdKeeperCount');
     const genBtn = $('kdGenerate');
@@ -401,20 +403,14 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       kdSelected = new Set(getPlayersArray().map(p => p.id));
       renderKampdagPlayers();
       refreshKeeperUI();
-      if (kdFormationOn) { renderPositionList(); updateCoverage(); }
+      if (kdFormationOn) { renderPositionList(); }
     });
 
     if (deselectAllBtn) deselectAllBtn.addEventListener('click', () => {
       kdSelected = new Set();
       renderKampdagPlayers();
       refreshKeeperUI();
-      if (kdFormationOn) { renderPositionList(); updateCoverage(); }
-    });
-
-    if (refreshBtn) refreshBtn.addEventListener('click', () => {
-      renderKampdagPlayers();
-      refreshKeeperUI();
-      updateKampdagCounts();
+      if (kdFormationOn) { renderPositionList(); }
     });
 
     if (manualKeeperEl) manualKeeperEl.addEventListener('change', () => {
@@ -487,6 +483,122 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       });
     }
 
+    // ── Helper: activate duration pill by value ──
+    _activateDurPill = activateDurPill;
+    function activateDurPill(min) {
+      var durPillsEl = document.getElementById('kdDurPills');
+      if (!durPillsEl) return;
+      var matched = false;
+      durPillsEl.querySelectorAll('.kd-dur-pill').forEach(function(b) {
+        var isMatch = parseInt(b.dataset.min, 10) === min;
+        b.classList.toggle('kd-pill-active', isMatch);
+        if (isMatch) matched = true;
+      });
+      var customRow = document.getElementById('kdDurCustomRow');
+      if (!matched) {
+        // Ingen fast pill matcher (f.eks. 20 min for 3-er) — vis custom input
+        durPillsEl.querySelectorAll('.kd-dur-pill').forEach(function(b) {
+          b.classList.toggle('kd-pill-active', parseInt(b.dataset.min, 10) === 0);
+        });
+        if (customRow) customRow.style.display = 'block';
+      } else {
+        if (customRow) customRow.style.display = 'none';
+      }
+      var el = $('kdMinutes');
+      if (el) {
+        el.value = min;
+        el.dispatchEvent(new Event('input'));
+      }
+    }
+
+    // ── Helper: update keeper counter display ──
+    function updateKeeperCounter(delta) {
+      var kcEl = $('kdKeeperCount');
+      var display = $('kdKeeperCountDisplay');
+      var current = clamp(parseInt(kcEl ? kcEl.value : '1', 10), 0, 4);
+      var next = clamp(current + delta, 1, 4);
+      if (kcEl) kcEl.value = String(next);
+      if (display) display.textContent = String(next);
+      var minusBtn = $('kdKeeperMinus');
+      var plusBtn = $('kdKeeperPlus');
+      if (minusBtn) minusBtn.disabled = (next <= 1);
+      if (plusBtn) plusBtn.disabled = (next >= 4);
+      refreshKeeperUI();
+      autoFillKeeperMinutes();
+      updateKeeperSummary();
+    }
+
+    // ── Format pills ──
+    var formatPillsEl = document.getElementById('kdFormatPills');
+    if (formatPillsEl) {
+      formatPillsEl.addEventListener('click', function(e) {
+        var btn = e.target.closest('.kd-pill[data-format]');
+        if (!btn) return;
+        formatPillsEl.querySelectorAll('.kd-pill').forEach(function(b) {
+          b.classList.remove('kd-pill-active');
+        });
+        btn.classList.add('kd-pill-active');
+        var fmt = btn.dataset.format;
+        var formatEl2 = $('kdFormat');
+        if (formatEl2) {
+          formatEl2.value = fmt;
+          formatEl2.dispatchEvent(new Event('change'));
+        }
+        var durMap = { '3': 20, '5': 40, '7': 60, '9': 70, '11': 80 };
+        var autoMin = durMap[fmt];
+        if (autoMin) activateDurPill(autoMin);
+        refreshKeeperUI();
+        updateKampdagCounts();
+      });
+    }
+
+    // ── Duration pills ──
+    var durPillsEl2 = document.getElementById('kdDurPills');
+    if (durPillsEl2) {
+      durPillsEl2.addEventListener('click', function(e) {
+        var btn = e.target.closest('.kd-dur-pill[data-min]');
+        if (!btn) return;
+        durPillsEl2.querySelectorAll('.kd-dur-pill').forEach(function(b) {
+          b.classList.remove('kd-pill-active');
+        });
+        btn.classList.add('kd-pill-active');
+        var customRow = document.getElementById('kdDurCustomRow');
+        var min = parseInt(btn.dataset.min, 10);
+        if (min === 0) {
+          if (customRow) customRow.style.display = 'block';
+          var inp = $('kdMinutes');
+          if (inp) inp.focus();
+        } else {
+          if (customRow) customRow.style.display = 'none';
+          var el = $('kdMinutes');
+          if (el) {
+            el.value = min;
+            el.dispatchEvent(new Event('input'));
+          }
+        }
+      });
+    }
+
+    // ── Keeper counter buttons ──
+    var keeperMinusBtn = $('kdKeeperMinus');
+    var keeperPlusBtn = $('kdKeeperPlus');
+    if (keeperMinusBtn) keeperMinusBtn.addEventListener('click', function() { updateKeeperCounter(-1); });
+    if (keeperPlusBtn) keeperPlusBtn.addEventListener('click', function() { updateKeeperCounter(1); });
+    // Initialiser disabled-state (starter alltid på 1)
+    if (keeperMinusBtn) keeperMinusBtn.disabled = true;
+
+    // ── Keeper panel focusout refresh ──
+    const keeperPanel = $('kdKeeperPanel');
+    if (keeperPanel && !keeperPanel.dataset.kdFocusOutBound) {
+      keeperPanel.dataset.kdFocusOutBound = '1';
+      keeperPanel.addEventListener('focusout', () => {
+        requestAnimationFrame(() => {
+          if (keeperPanel.contains(document.activeElement)) return;
+          refreshKeeperUI();
+        });
+      });
+    }
+
     // Formation always on: hide toggle switch, show panel for non-3v3
     const formToggle = $('kdFormationToggle');
     const formCard = formToggle?.closest('.settings-card');
@@ -554,7 +666,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         updateKampdagCounts();
         refreshKeeperUI();
         updateKeeperSummary();
-        if (kdFormationOn) { renderPositionList(); updateCoverage(); }
+        if (kdFormationOn) { renderPositionList(); }
       });
     });
 
@@ -632,6 +744,10 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     const kcEl = $('kdKeeperCount');
     if (kcEl && parseInt(kcEl.value, 10) < 1) {
       kcEl.value = '1';
+      const display = $('kdKeeperCountDisplay');
+      if (display) display.textContent = '1';
+      const minusBtn = $('kdKeeperMinus');
+      if (minusBtn) minusBtn.disabled = true;
       autoFillKeeperMinutes();
     }
 
@@ -761,73 +877,34 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         kdFormation = opts[key];
         grid.querySelectorAll('.kd-formation-opt').forEach(o => o.classList.remove('kd-formation-active'));
         opt.classList.add('kd-formation-active');
-        updateCoverage();
       });
     });
 
     renderPositionList();
-    updateCoverage();
   }
 
   function renderPositionList() {
     const container = $('kdPositionList');
-    if (!container) return;
-    const present = getPresentPlayers();
-    const posMap = getPositionsMap();
+    if (container) { container.innerHTML = ''; container.style.display = 'none'; }
 
-    container.innerHTML = present.map(p => {
-      const pos = posMap[p.id] || new Set(['F', 'M', 'A']);
-      return `<div class="kd-pos-row">
-        <div class="kd-pos-name">${escapeHtml(p.name)}</div>
-        <div class="kd-pos-checks">
-          <span class="kd-pos-tag ${pos.has('F') ? 'kd-pos-f-on' : ''}" style="pointer-events:none;">F</span>
-          <span class="kd-pos-tag ${pos.has('M') ? 'kd-pos-m-on' : ''}" style="pointer-events:none;">M</span>
-          <span class="kd-pos-tag ${pos.has('A') ? 'kd-pos-a-on' : ''}" style="pointer-events:none;">A</span>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  function updateCoverage() {
-    const el = $('kdCoverage');
-    if (!el || !kdFormation) { if (el) el.style.display = 'none'; return; }
-
-    const present = getPresentPlayers();
-    const posMap = getPositionsMap();
-    const counts = { F: 0, M: 0, A: 0 };
-    present.forEach(p => {
-      const pos = posMap[p.id] || new Set(['F', 'M', 'A']);
-      if (pos.has('F')) counts.F++;
-      if (pos.has('M')) counts.M++;
-      if (pos.has('A')) counts.A++;
-    });
-
-    const needs = { F: kdFormation[0], M: kdFormation[1], A: kdFormation[2] };
-    const zones = [
-      { key: 'F', name: 'Forsvar', need: needs.F, have: counts.F, color: '#16a34a' },
-      { key: 'M', name: 'Midtbane', need: needs.M, have: counts.M, color: '#456C4B' },
-      { key: 'A', name: 'Angrep', need: needs.A, have: counts.A, color: '#dc2626' },
-    ].filter(z => z.need > 0);
-
-    const warn = zones.some(z => z.have < z.need);
-    el.style.display = 'block';
-    el.style.background = warn ? 'var(--warning-dim)' : 'var(--success-dim)';
-    el.style.color = warn ? 'var(--warning)' : 'var(--success)';
-
-    el.innerHTML = `<div style="font-weight:500; margin-bottom:6px;">${warn ? '\u26a0 ' : ''}Sonedekning for ${kdFormationKey}</div>` +
-      zones.map(z => {
-        const pct = Math.min(100, Math.round((z.have / Math.max(1, present.length)) * 100));
-        const low = z.have < z.need;
-        return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;">
-          <span style="width:8px;height:8px;border-radius:50%;background:${z.color};flex-shrink:0;"></span>
-          <span style="width:72px;">${z.name} (${z.need})</span>
-          <div style="flex:1;height:6px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:${low ? 'var(--warning)' : z.color};border-radius:3px;"></div>
-          </div>
-          <span style="width:32px;text-align:right;font-weight:500;${low ? 'color:var(--warning);' : ''}">${z.have}${low ? ' \u26a0' : ''}</span>
-        </div>`;
-      }).join('') +
-      (warn ? `<div style="margin-top:6px;font-size:12px;">Noen spillere vil bli plassert utenfor preferanse.</div>` : '');
+    var posStatus = $('kdPosStatus');
+    if (posStatus) {
+      var present = getPresentPlayers();
+      var posMap = getPositionsMap();
+      var withoutPref = present.filter(function(p) {
+        var pos = posMap[p.id];
+        return !pos || pos.size === 0;
+      }).length;
+      if (present.length === 0) {
+        posStatus.style.display = 'none';
+      } else if (withoutPref === 0) {
+        posStatus.style.display = 'block';
+        posStatus.innerHTML = '<span style="color:var(--success,#15803d);font-size:12px;font-weight:700;">\u2713 Alle spillere har posisjonsinnstilling</span>';
+      } else {
+        posStatus.style.display = 'block';
+        posStatus.innerHTML = '<span style="color:var(--warning,#b45309);font-size:12px;font-weight:600;">\u26a0\ufe0f ' + withoutPref + ' spiller' + (withoutPref > 1 ? 'e' : '') + ' mangler posisjonsinnstilling \u2014 sett i Spillere-fanen</span>';
+      }
+    }
   }
 
   // Assign positions to a lineup based on formation + preferences
@@ -3035,12 +3112,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     if (opts.format && formatEl) {
       formatEl.value = opts.format;
       formatEl.dispatchEvent(new Event('change'));
+      // Sync format pill UI
+      var fpGroup = document.getElementById('kdFormatPills');
+      if (fpGroup) {
+        fpGroup.querySelectorAll('.kd-pill[data-format]').forEach(function(b) {
+          b.classList.toggle('kd-pill-active', b.dataset.format === String(opts.format));
+        });
+      }
     }
 
     // 2. Overstyr minutter (etter format-change som auto-setter default)
     if (opts.minutes && minutesEl) {
-      minutesEl.value = opts.minutes;
-      minutesEl.dispatchEvent(new Event('input'));
+      if (_activateDurPill) {
+        // activateDurPill setter verdi + dispatcher input + synker piller
+        _activateDurPill(parseInt(opts.minutes, 10));
+      } else {
+        minutesEl.value = opts.minutes;
+        minutesEl.dispatchEvent(new Event('input'));
+      }
     }
 
     // 3. Sett oppmøte (hvilke spillere som er med)
@@ -3052,7 +3141,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     // 4. Oppdater avhengig UI
     refreshKeeperUI();
     updateKampdagCounts();
-    if (kdFormationOn) { renderPositionList(); updateCoverage(); }
+    if (kdFormationOn) { renderPositionList(); }
 
     console.log('[Kampdag] Prefilled from sesong:', opts);
     return true;
