@@ -764,16 +764,16 @@ body {
     margin: 0;
     padding: 10px 12px;
     border-radius: 14px;
-    border: 2px solid #ede9fe;
-    background: #fff;
+    border: 2px solid var(--border);
+    background: var(--bg-card);
     cursor: pointer;
     position: relative;
     transition: all 0.18s ease;
     overflow: visible;
 }
 .player-selection .player-checkbox:hover {
-    border-color: #c4b5fd;
-    background: #faf8ff;
+    border-color: var(--primary);
+    background: var(--primary-dim);
 }
 
 /* Hide native checkbox */
@@ -863,16 +863,16 @@ body {
    CHECKED STATE — uses :has(:checked)
    ================================================ */
 .player-selection .player-checkbox:has(:checked) {
-    border-color: #818cf8;
-    background: #faf8ff;
-    box-shadow: 0 2px 12px rgba(129,140,248,0.12);
+    border-color: var(--primary);
+    background: var(--primary-dim);
+    box-shadow: 0 2px 12px var(--primary-glow);
 }
 .player-selection .player-checkbox:has(:checked) .pc-avatar {
-    background: var(--pc-color, #a5b4fc);
-    color: #312e81;
+    background: var(--pc-color, var(--primary));
+    color: #fff;
 }
 .player-selection .player-checkbox:has(:checked) .player-name {
-    color: #1e1b4b !important;
+    color: var(--text-900) !important;
 }
 .player-selection .player-checkbox:has(:checked) .pc-keeper {
     background: #fef3c7;
