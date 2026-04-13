@@ -1158,30 +1158,335 @@ body {
     color: var(--text-700);
 }
 
-/* Liga */
+/* ═══════════════════════════════════════
+   LIGA MODULE
+   ═══════════════════════════════════════ */
+
+.liga-setup-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* --- Collapsed summary --- */
+.liga-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.liga-summary-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.liga-summary-teams {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.liga-summary-meta {
+  font-size: 12px;
+  color: var(--text-500);
+  font-weight: 500;
+}
+
+.liga-summary-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.liga-btn-sm {
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+}
+
+.liga-btn-reset {
+  color: var(--error) !important;
+  border-color: var(--error) !important;
+}
+
+.liga-btn-reset:hover {
+  background: var(--error-dim) !important;
+}
+
+/* --- Progress --- */
+.liga-progress {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-500);
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+/* --- Series separator --- */
+.liga-series-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 10px;
+}
+
+.liga-series-separator::before,
+.liga-series-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.liga-series-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-dim);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* --- Round header --- */
+.liga-round-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-800);
+  margin: 14px 0 8px;
+}
+
+/* --- BYE indicator --- */
+.liga-bye {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-400);
+  font-style: italic;
+  padding: 4px 0 2px;
+}
+
+/* --- Match card --- */
+.liga-match-card {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  transition: border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.liga-match-played {
+  border-color: var(--border);
+  border-left: 3px solid var(--primary);
+}
+
+.liga-match-pending {
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+.liga-match-row {
+  margin-bottom: 8px;
+}
+
+/* --- Sides --- */
+.liga-side {
+  flex: 1;
+  min-width: 0;
+}
+
+.liga-side-away {
+  text-align: right;
+}
+
+.liga-side-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-400);
+  margin-bottom: 2px;
+}
+
+.liga-side-away .liga-side-label {
+  text-align: right;
+}
+
+.liga-team-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+
+.liga-side-away .liga-team-name {
+  text-align: right;
+}
+
+/* --- Score inputs --- */
+.liga-score {
+  width: 100% !important;
+  text-align: center !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  padding: 8px !important;
+  min-height: 48px;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* --- Separator dash --- */
+.liga-mid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  font-weight: 500;
+  opacity: 0.35;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* --- Edit team names --- */
+.liga-edit-names {
+  margin-bottom: 12px;
+}
+
+.liga-edit-names-label {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-600);
+  margin-bottom: 6px;
+}
+
+.liga-edit-names-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.liga-edit-name {
+  flex: 1;
+  min-width: 100px;
+  max-width: 180px;
+  font-size: 13px !important;
+  padding: 6px 10px !important;
+}
+
+/* --- Table --- */
+.liga-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .liga-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .liga-table th,
 .liga-table td {
-    padding: 12px 10px;
-    border-bottom: 1px solid var(--border);
-    text-align: center;
-    font-size: 14px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .liga-table th {
-    background: var(--bg);
-    color: var(--text-700);
-    font-weight: 700;
+  background: var(--primary-dim);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 13px;
 }
 
-.liga-table td:nth-child(2) {
-    text-align: left;
-    font-weight: 700;
+.liga-th-team,
+.liga-td-team {
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.liga-th-pts {
+  color: var(--primary);
+}
+
+.liga-td-pts {
+  font-weight: 700;
+  color: var(--text-900);
+}
+
+/* ── Liga mobile ── */
+@media (max-width: 600px) {
+  .liga-match-card {
+    padding: 8px 10px;
+  }
+
+  .liga-score {
+    font-size: 16px !important;
+    min-height: 44px;
+  }
+
+  .liga-team-name {
+    font-size: 13px;
+  }
+
+  .liga-round-header {
+    font-size: 13px;
+    margin: 10px 0 6px;
+  }
+
+  .liga-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .liga-summary-actions {
+    width: 100%;
+  }
+
+  .liga-summary-actions .liga-btn-sm {
+    flex: 1;
+  }
+
+  .liga-edit-name {
+    max-width: none;
+  }
+
+  .liga-th-team,
+  .liga-td-team {
+    max-width: 90px;
+  }
+
+  .liga-table th,
+  .liga-table td {
+    padding: 8px 5px;
+    font-size: 13px;
+  }
+
+  .liga-table th {
+    font-size: 12px;
+  }
+
+  .liga-progress {
+    font-size: 12px;
+  }
+
+  .liga-bye {
+    font-size: 12px;
+  }
 }
 
 /* Match items */
@@ -2612,12 +2917,6 @@ body.gated #mainApp {
     font-size: 13px !important;
   }
 
-  /* --- LIGA: inputs/selects --- */
-  #liga .input,
-  #liga select {
-    padding: 7px 10px !important;
-  }
-
   /* --- NUMBER INPUTS (Antall lag/grupper/runder +/- buttons) --- */
   .number-input input,
   .number-input,
@@ -2692,15 +2991,6 @@ body.gated #mainApp {
   .player-list-container {
     padding: 10px 12px !important;
     margin-bottom: 10px !important;
-  }
-
-  /* --- LIGA: tighter spacing --- */
-  #liga .settings-card {
-    padding: 10px 12px !important;
-  }
-  #liga label {
-    font-size: 13px !important;
-    margin-bottom: 2px !important;
   }
 
   /* ── GLOBAL COMPACT: inputs, labels, buttons across all tabs ── */
@@ -2811,35 +3101,6 @@ body.gated #mainApp {
     font-size: 12px !important;
   }
 
-  /* ── LIGA: compact controls ── */
-  #liga .settings-row {
-    gap: 8px !important;
-    margin-bottom: 8px !important;
-  }
-  #liga .settings-label {
-    font-size: 13px !important;
-    min-width: 0 !important;
-    margin-bottom: 2px !important;
-  }
-  #liga .team-names {
-    margin-bottom: 6px !important;
-  }
-  #liga .team-names label {
-    font-size: 12px !important;
-    margin-bottom: 1px !important;
-  }
-  #liga .team-names input {
-    padding: 6px 10px !important;
-    font-size: 16px !important;
-    margin-bottom: 4px !important;
-  }
-  .liga-matches h3 {
-    font-size: 14px !important;
-    margin: 6px 0 3px !important;
-  }
-  .liga-match-row {
-    margin-bottom: 4px !important;
-  }
   .results-container h3 {
     font-size: 15px !important;
     margin-bottom: 6px !important;
@@ -2916,14 +3177,6 @@ body.gated #mainApp {
     border-radius: 10px !important;
   }
 
-  /* ── LIGA: compact match rows ── */
-  .liga-match-row {
-    margin-bottom: 6px !important;
-  }
-  .liga-matches h3 {
-    font-size: 14px !important;
-    margin: 8px 0 4px !important;
-  }
   .results-container {
     padding: 10px 12px !important;
   }

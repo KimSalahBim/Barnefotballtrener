@@ -1278,7 +1278,7 @@
           <p class="tab-description">Sett opp en enkel liga med lag, kamper og tabell.</p>
         </div>
 
-        <div class="settings-card">
+        <div id="ligaSetup" class="settings-card">
           <div class="settings-row">
             <div class="settings-label">Antall lag:</div>
             <div class="number-control">
@@ -1299,25 +1299,21 @@
 
           <div id="ligaTeamNames" class="team-names"></div>
 
-          <div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap;">
+          <div class="settings-row liga-setup-actions">
             <button id="startLigaBtn" class="btn-primary" type="button">
               <i class="fas fa-play"></i> Start liga
-            </button>
-
-            <button id="resetLigaBtn" class="btn-danger" type="button">
-              <i class="fas fa-rotate-left"></i> Nullstill
             </button>
           </div>
         </div>
 
-        <div class="results-container">
-          <h3>Kamper</h3>
-          <div id="ligaMatches"></div>
-        </div>
-
-        <div class="results-container">
+        <div class="results-container" id="ligaTableWrap" style="display:none;">
           <h3>Tabell</h3>
           <div id="ligaTable"></div>
+        </div>
+
+        <div class="results-container" id="ligaMatchesWrap" style="display:none;">
+          <h3>Kamper</h3>
+          <div id="ligaMatches"></div>
         </div>
       </div>
 
