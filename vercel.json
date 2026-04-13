@@ -150,6 +150,10 @@
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
     {
+      "source": "/liga.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
       "source": "/auth-ui.js",
       "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
     },
