@@ -1,7 +1,7 @@
 ﻿// kommune-data.js - Norwegian municipality coordinates
 // Generated 2026-04-14 from Kartverket API (api.kartverket.no/kommuneinfo/v1)
 // Source: Kartverket CC BY 4.0
-// 357 municipalities
+// 357 municipalities (duplicates disambiguated with county).
 //
 // Usage: window.KOMMUNE_DATA['steinkjer'] -> { lat: 64.0507, lon: 11.4819, knr: '5006' }
 
@@ -111,8 +111,8 @@
     'heim': { lat: 63.2470, lon: 9.0904, knr: '5055' },
     'hemnes': { lat: 66.0108, lon: 14.1428, knr: '1832' },
     'hemsedal': { lat: 60.9282, lon: 8.3835, knr: '3326' },
-    'herøy': { lat: 62.4390, lon: 5.2931, knr: '1515' },
-    'herøy': { lat: 66.1329, lon: 11.6061, knr: '1818' },
+    'herøy (møre og romsdal)': { lat: 62.4390, lon: 5.2931, knr: '1515' },
+    'herøy (nordland)': { lat: 66.1329, lon: 11.6061, knr: '1818' },
     'hitra': { lat: 63.5653, lon: 8.6939, knr: '5056' },
     'hjartdal': { lat: 59.6930, lon: 8.6910, knr: '4024' },
     'hjelmeland': { lat: 59.2035, lon: 6.4062, knr: '1133' },
@@ -345,8 +345,8 @@
     'værøy': { lat: 67.5853, lon: 12.8715, knr: '1857' },
     'vågan': { lat: 68.2777, lon: 14.6631, knr: '1865' },
     'vågå': { lat: 61.7020, lon: 8.9946, knr: '3435' },
-    'våler': { lat: 59.4644, lon: 10.9224, knr: '3114' },
-    'våler': { lat: 60.8134, lon: 12.0147, knr: '3419' },
+    'våler (østfold)': { lat: 59.4644, lon: 10.9224, knr: '3114' },
+    'våler (innlandet)': { lat: 60.8134, lon: 12.0147, knr: '3419' },
     'øksnes': { lat: 69.0199, lon: 14.8008, knr: '1868' },
     'ørland': { lat: 63.8414, lon: 9.7004, knr: '5057' },
     'ørsta': { lat: 62.2471, lon: 6.2859, knr: '1520' },

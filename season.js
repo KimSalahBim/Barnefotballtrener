@@ -253,7 +253,7 @@
     var keys = Object.keys(window.KOMMUNE_DATA).sort();
     var opts = '';
     for (var i = 0; i < keys.length; i++) {
-      var display = keys[i].replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      var display = keys[i].replace(/(^|\s)\S/g, function(m) { return m.toUpperCase(); });
       opts += '<option value="' + display + '"></option>';
     }
     return opts;
@@ -270,7 +270,7 @@
     for (var key in window.KOMMUNE_DATA) {
       var k = window.KOMMUNE_DATA[key];
       if (Math.abs(k.lat - lat) < 0.001 && Math.abs(k.lon - lon) < 0.001) {
-        return key.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+        return key.replace(/(^|\s)\S/g, function(m) { return m.toUpperCase(); });
       }
     }
     return '';
@@ -2357,8 +2357,7 @@
           hint.style.display = 'block';
           hint.innerHTML = '<i class="fas fa-map-marker-alt" style="margin-right:4px;color:var(--primary);"></i>Koordinater: ' + coords.lat + ', ' + coords.lon;
         } else if (hint) {
-          hint.style.display = this.value ? 'block' : 'none';
-          if (this.value) hint.innerHTML = '<i class="fas fa-question-circle" style="margin-right:4px;color:var(--text-400);"></i>Fant ikke kommunen. Km-beregning settes opp senere.';
+          hint.style.display = 'none';
         }
       });
     }
@@ -2612,8 +2611,7 @@
           hint.style.display = 'block';
           hint.innerHTML = '<i class="fas fa-map-marker-alt" style="margin-right:4px;color:var(--primary);"></i>Koordinater: ' + coords.lat + ', ' + coords.lon;
         } else if (hint) {
-          hint.style.display = this.value ? 'block' : 'none';
-          if (this.value) hint.innerHTML = '<i class="fas fa-question-circle" style="margin-right:4px;color:var(--text-400);"></i>Fant ikke kommunen.';
+          hint.style.display = 'none';
         }
       });
     }
