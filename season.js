@@ -510,12 +510,22 @@
     updateSeasonNav();
     // Restart season sync if we have an active season but channel was stopped
     if (currentSeason && currentSeason.status !== 'archived' && !_rtSeasonChannel && isSharedTeam()) {
-      startSeasonSync(currentSeason.id);
+      try {
+        startSeasonSync(currentSeason.id);
+      } catch (e) {
+        console.warn('[season.js] startSeasonSync failed:', e.message);
+      }
     }
     // Restart match sync if we're on event-detail for a match
     if (snView === 'event-detail' && editingEvent && !_rtChannel && isSharedTeam()) {
       var isMatch = (editingEvent.type === 'match' || editingEvent.type === 'cup_match');
-      if (isMatch) startMatchSync(editingEvent.id);
+      if (isMatch) {
+        try {
+          startMatchSync(editingEvent.id);
+        } catch (e) {
+          console.warn('[season.js] startMatchSync failed (realtime unavailable):', e.message);
+        }
+      }
     }
   });
 
@@ -7032,11 +7042,14 @@
 
     // Start realtime sync for matches (shared coaching only — solo users don't need it)
     if (isMatch && isSharedTeam()) {
-      startMatchSync(ev.id);
-      // If subscription already active, restore indicator state (DOM was rebuilt)
-      if (_rtChannel && _rtEventId === ev.id) {
-        var dot = document.getElementById('snLiveIndicator');
-        if (dot) { dot.classList.add('sn-live-active'); dot.title = 'Live-synk aktiv'; }
+      try {
+        startMatchSync(ev.id);
+        if (_rtChannel && _rtEventId === ev.id) {
+          var dot = document.getElementById('snLiveIndicator');
+          if (dot) { dot.classList.add('sn-live-active'); dot.title = 'Live-synk aktiv'; }
+        }
+      } catch (e) {
+        console.warn('[season.js] startMatchSync failed (realtime unavailable):', e.message);
       }
     }
 
@@ -7935,7 +7948,11 @@
     snView = 'dashboard';
     render();
     if (s.status !== 'archived') {
-      try { startSeasonSync(seasonId); } catch (e) { console.error('[season.js] startSeasonSync error:', e); }
+      try {
+        startSeasonSync(seasonId);
+      } catch (e) {
+        console.warn('[season.js] startSeasonSync failed:', e.message);
+      }
     }
   }
 
