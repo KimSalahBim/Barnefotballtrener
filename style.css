@@ -1219,6 +1219,15 @@ body {
   background: var(--error-dim) !important;
 }
 
+.liga-btn-archive {
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+.liga-btn-archive:hover {
+  background: var(--primary-dim) !important;
+}
+
 /* --- Progress --- */
 .liga-progress {
   font-size: 13px;
@@ -1260,6 +1269,27 @@ body {
   font-weight: 600;
   color: var(--text-800);
   margin: 14px 0 8px;
+}
+
+/* --- Round group --- */
+.liga-round-group {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.liga-round-group .liga-round-header {
+  margin-top: 0;
+}
+
+.liga-round-group .liga-match-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.liga-round-group .liga-bye {
+  margin-top: 4px;
 }
 
 /* --- BYE indicator --- */
@@ -1555,6 +1585,11 @@ body {
   .liga-round-header {
     font-size: 13px;
     margin: 10px 0 6px;
+  }
+
+  .liga-round-group {
+    padding: 10px;
+    margin-bottom: 10px;
   }
 
   .liga-edit-name {

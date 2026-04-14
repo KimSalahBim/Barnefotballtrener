@@ -434,6 +434,9 @@
             '<span class="liga-summary-meta">' + league.teams.length + ' lag \u00b7 ' + serieText + '</span>' +
           '</div>' +
           '<div class="liga-summary-actions">' +
+            '<button class="btn-secondary liga-btn-sm liga-btn-archive" id="ligaArchiveBtn" type="button">' +
+              '<i class="fas fa-box-archive"></i> Arkiver' +
+            '</button>' +
             '<button class="btn-secondary liga-btn-sm" id="ligaExpandSetup" type="button">' +
               '<i class="fas fa-pen"></i> Endre' +
             '</button>' +
@@ -455,6 +458,23 @@
           if (!confirm('Nullstille ligaen? Alle kamper og resultater slettes.')) return;
           resetLeague();
           restoreSetupForm();
+        });
+      }
+
+      var archiveBtn = $('ligaArchiveBtn');
+      if (archiveBtn) {
+        archiveBtn.addEventListener('click', function() {
+          if (!_state.liga) return;
+          var hasResults = _state.liga.matches.some(function(m) {
+            return m.homeGoals !== null && m.awayGoals !== null;
+          });
+          if (!hasResults) {
+            window.showNotification('Ingen resultater å arkivere', 'error');
+            return;
+          }
+          archiveLeague(_state.liga);
+          renderHistory();
+          window.showNotification('Liga arkivert i historikk', 'success');
         });
       }
 
@@ -503,10 +523,13 @@
       }
       lastRep = rep;
 
+      var roundGroup = document.createElement('div');
+      roundGroup.className = 'liga-round-group';
+
       var h3 = document.createElement('div');
       h3.className = 'liga-round-header';
       h3.textContent = 'Runde ' + round + ' (serie ' + rep + ')';
-      wrap.appendChild(h3);
+      roundGroup.appendChild(h3);
 
       var matchGroup = groups.get(k2);
       for (var mi = 0; mi < matchGroup.length; mi++) {
@@ -531,7 +554,7 @@
               '<input type="number" min="0" step="1" inputmode="numeric" class="input liga-score" data-mid="' + m.id + '" data-side="away" placeholder="\u2013" value="' + ag + '">' +
             '</div>' +
           '</div>';
-        wrap.appendChild(row);
+        roundGroup.appendChild(row);
       }
 
       if (league.teams.length % 2 === 1) {
@@ -545,9 +568,11 @@
           var byeEl = document.createElement('div');
           byeEl.className = 'liga-bye';
           byeEl.textContent = byeTeam.name + ' har fri';
-          wrap.appendChild(byeEl);
+          roundGroup.appendChild(byeEl);
         }
       }
+
+      wrap.appendChild(roundGroup);
     }
 
     matchesEl.appendChild(wrap);
