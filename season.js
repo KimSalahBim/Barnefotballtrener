@@ -266,9 +266,10 @@
   }
 
   function reverseKommuneLookup(lat, lon) {
-    if (!window.KOMMUNE_DATA || !lat || !lon) return '';
+    if (!window.KOMMUNE_DATA || lat == null || lon == null) return '';
     for (var key in window.KOMMUNE_DATA) {
-      if (window.KOMMUNE_DATA[key].lat === lat && window.KOMMUNE_DATA[key].lon === lon) {
+      var k = window.KOMMUNE_DATA[key];
+      if (Math.abs(k.lat - lat) < 0.001 && Math.abs(k.lon - lon) < 0.001) {
         return key.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
       }
     }
@@ -733,8 +734,8 @@
         sub_team_mode: data.sub_team_mode || 'fixed',
         sub_team_names: data.sub_team_names || null,
         home_location: data.home_location || null,
-        home_lat: data.home_lat || null,
-        home_lon: data.home_lon || null
+        home_lat: data.home_lat != null ? data.home_lat : null,
+        home_lon: data.home_lon != null ? data.home_lon : null
       };
       var res = await sb.from('seasons').insert(row).select().single();
       if (res.error) throw res.error;
@@ -2349,7 +2350,7 @@
     // Kommune → show coordinate confirmation
     var kommuneInput = $('snHomeKommune');
     if (kommuneInput) {
-      kommuneInput.addEventListener('change', function() {
+      kommuneInput.addEventListener('input', function() {
         var hint = $('snKommuneHint');
         var coords = lookupKommuneCoords(this.value);
         if (coords && hint) {
@@ -2604,7 +2605,7 @@
     // Edit: Kommune → show coordinate confirmation
     var editKommuneInput = $('snEditHomeKommune');
     if (editKommuneInput) {
-      editKommuneInput.addEventListener('change', function() {
+      editKommuneInput.addEventListener('input', function() {
         var hint = $('snEditKommuneHint');
         var coords = lookupKommuneCoords(this.value);
         if (coords && hint) {
