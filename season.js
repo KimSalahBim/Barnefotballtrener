@@ -7020,6 +7020,13 @@
 
     root.innerHTML = html;
 
+    // TEMP DEBUG: mobile touch diagnostic
+    var _dbg = document.createElement('div');
+    _dbg.id = 'snMobileDebug';
+    _dbg.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#fef3c7;color:#92400e;padding:6px 12px;font-size:11px;z-index:99999;display:none;';
+    document.body.appendChild(_dbg);
+    function _mdbg(msg) { _dbg.style.display = 'block'; _dbg.textContent = msg; setTimeout(function() { _dbg.style.display = 'none'; }, 3000); }
+
     // Start realtime sync for matches (shared coaching only — solo users don't need it)
     if (isMatch && isSharedTeam()) {
       startMatchSync(ev.id);
@@ -7256,7 +7263,9 @@
 
     // Velg alle / Velg ingen buttons
     var troppAllBtn = $('snTroppAll');
+    _mdbg('troppAllBtn=' + !!troppAllBtn + ', items=' + root.querySelectorAll('.sn-att-item').length);
     if (troppAllBtn) troppAllBtn.addEventListener('click', function() {
+      _mdbg('Velg alle CLICKED, items=' + root.querySelectorAll('.sn-att-item').length);
       var items = root.querySelectorAll('.sn-att-item');
       for (var ti = 0; ti < items.length; ti++) {
         items[ti].classList.add('present');
@@ -7354,6 +7363,7 @@
 
     // --- ROTATION DISTRIBUTION HANDLERS ---
     var rotDraftBtn = $('snRotateDraft');
+    _mdbg('rotDraftBtn=' + !!rotDraftBtn);
     if (rotDraftBtn) rotDraftBtn.addEventListener('click', function() {
       // Get currently selected tropp
       var troppItems = root.querySelectorAll('.sn-att-item.present');
