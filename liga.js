@@ -70,6 +70,10 @@
     if (!hasResults) return;
 
     var history = loadHistory();
+    // Skip if already archived (same liga)
+    if (history.length > 0 && history[history.length - 1].liga &&
+        history[history.length - 1].liga.createdAt === league.createdAt) return;
+
     history.push({
       id: 'lh_' + Date.now(),
       archivedAt: Date.now(),
