@@ -7028,6 +7028,11 @@
     _dbg.textContent = 'DEBUG: innerHTML done, binding handlers...';
     function _mdbg(msg) { _dbg.style.display = 'block'; _dbg.textContent = msg; setTimeout(function() { _dbg.style.display = 'none'; }, 3000); }
 
+    // TEMP: Log what element actually receives touches
+    document.addEventListener('touchstart', function(e) {
+      _mdbg('TOUCH: ' + e.target.tagName + '#' + (e.target.id || '') + '.' + e.target.className.split(' ')[0]);
+    }, true);
+
     // Start realtime sync for matches (shared coaching only — solo users don't need it)
     if (isMatch && isSharedTeam()) {
       startMatchSync(ev.id);
