@@ -1489,8 +1489,18 @@
     }
   }
 
+  var _rtTouchActive = false;
+  document.addEventListener('touchstart', function() { _rtTouchActive = true; }, { passive: true, capture: true });
+  document.addEventListener('touchend', function() { setTimeout(function() { _rtTouchActive = false; }, 350); }, { passive: true, capture: true });
+  document.addEventListener('touchcancel', function() { _rtTouchActive = false; }, { passive: true, capture: true });
+
   function _rtRefreshEventDetail(preserveInputs) {
     if (snView !== 'event-detail' || !editingEvent) return;
+    if (_rtTouchActive) {
+      // Defer re-render until touch completes — prevents iOS click cancellation
+      setTimeout(function() { _rtRefreshEventDetail(preserveInputs); }, 400);
+      return;
+    }
     // Skip if sesong tab is not visible (user switched to another main tab)
     var sesongTab = document.getElementById('sesong');
     if (sesongTab && sesongTab.style.display === 'none') return;
