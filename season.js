@@ -253,7 +253,7 @@
     var keys = Object.keys(window.KOMMUNE_DATA).sort();
     var opts = '';
     for (var i = 0; i < keys.length; i++) {
-      var display = keys[i].replace(/(^|\s)\S/g, function(m) { return m.toUpperCase(); });
+      var display = keys[i].replace(/(^|\s)\S/g, function(m) { return m.toUpperCase(); }).replace(/\bOg\b/g, 'og');
       opts += '<option value="' + display + '"></option>';
     }
     return opts;
@@ -270,7 +270,7 @@
     for (var key in window.KOMMUNE_DATA) {
       var k = window.KOMMUNE_DATA[key];
       if (Math.abs(k.lat - lat) < 0.001 && Math.abs(k.lon - lon) < 0.001) {
-        return key.replace(/(^|\s)\S/g, function(m) { return m.toUpperCase(); });
+        return key.replace(/(^|\s)\S/g, function(m) { return m.toUpperCase(); }).replace(/\bOg\b/g, 'og');
       }
     }
     return '';
@@ -840,7 +840,10 @@
         age_class: sourceSeason.age_class || null,
         sub_team_count: sourceSeason.sub_team_count || 1,
         sub_team_mode: sourceSeason.sub_team_mode || 'fixed',
-        sub_team_names: sourceSeason.sub_team_names || null
+        sub_team_names: sourceSeason.sub_team_names || null,
+        home_location: sourceSeason.home_location || null,
+        home_lat: sourceSeason.home_lat != null ? sourceSeason.home_lat : null,
+        home_lon: sourceSeason.home_lon != null ? sourceSeason.home_lon : null
       };
       var res = await sb.from('seasons').insert(newRow).select().single();
       if (res.error) throw res.error;
