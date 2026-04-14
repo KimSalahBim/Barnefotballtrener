@@ -151,7 +151,7 @@ export default async function handler(req, res) {
     try {
       const { data: seasonsData, error: seasonsErr } = await supabaseAdmin
         .from('seasons')
-        .select('id, team_id, name, format, start_date, end_date, created_at')
+        .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
@@ -164,7 +164,7 @@ export default async function handler(req, res) {
           // Season players (roster per season)
           const { data: spData } = await supabaseAdmin
             .from('season_players')
-            .select('id, season_id, player_id, player_name, player_skill, player_goalie, player_positions, active')
+            .select('*')
             .eq('user_id', userId)
             .in('season_id', seasonIds);
           if (spData) exportData.app_data.season_players = spData;
@@ -172,7 +172,7 @@ export default async function handler(req, res) {
           // Events (matches, trainings)
           const { data: evData } = await supabaseAdmin
             .from('events')
-            .select('id, season_id, type, title, start_time, duration_minutes, location, opponent, is_home, format, notes, status, result_home, result_away, plan_json, plan_confirmed, created_at')
+            .select('*')
             .eq('user_id', userId)
             .in('season_id', seasonIds)
             .order('start_time', { ascending: false });
@@ -185,7 +185,7 @@ export default async function handler(req, res) {
               // Event players (attendance, minutes, goalkeeper)
               const { data: epData } = await supabaseAdmin
                 .from('event_players')
-                .select('id, event_id, season_id, player_id, attended, minutes_played, is_goalkeeper, absence_reason, in_squad, player_name')
+                .select('*')
                 .eq('user_id', userId)
                 .in('event_id', eventIds);
               if (epData) exportData.app_data.event_players = epData;
@@ -193,7 +193,7 @@ export default async function handler(req, res) {
               // Match events (goals, assists)
               const { data: meData } = await supabaseAdmin
                 .from('match_events')
-                .select('id, event_id, player_id, player_name, type, created_at')
+                .select('*')
                 .eq('user_id', userId)
                 .in('event_id', eventIds);
               if (meData) exportData.app_data.match_events = meData;
@@ -203,7 +203,7 @@ export default async function handler(req, res) {
           // Training series
           const { data: tsData } = await supabaseAdmin
             .from('training_series')
-            .select('id, season_id, title, day_of_week, start_time, duration_minutes, location, start_date, end_date')
+            .select('*')
             .eq('user_id', userId)
             .in('season_id', seasonIds);
           if (tsData) exportData.app_data.training_series = tsData;
