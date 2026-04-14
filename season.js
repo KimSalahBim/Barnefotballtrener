@@ -248,6 +248,33 @@
     return SUB_TEAM_COLORS[(idx - 1) % SUB_TEAM_COLORS.length] || '#64748b';
   }
 
+  function buildKommuneDatalist() {
+    if (!window.KOMMUNE_DATA) return '';
+    var keys = Object.keys(window.KOMMUNE_DATA).sort();
+    var opts = '';
+    for (var i = 0; i < keys.length; i++) {
+      var display = keys[i].replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      opts += '<option value="' + display + '"></option>';
+    }
+    return opts;
+  }
+
+  function lookupKommuneCoords(name) {
+    if (!window.KOMMUNE_DATA || !name) return null;
+    var key = name.toLowerCase().trim();
+    return window.KOMMUNE_DATA[key] || null;
+  }
+
+  function reverseKommuneLookup(lat, lon) {
+    if (!window.KOMMUNE_DATA || !lat || !lon) return '';
+    for (var key in window.KOMMUNE_DATA) {
+      if (window.KOMMUNE_DATA[key].lat === lat && window.KOMMUNE_DATA[key].lon === lon) {
+        return key.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      }
+    }
+    return '';
+  }
+
   // =========================================================================
   //  iCAL EXPORT HELPERS
   // =========================================================================
@@ -704,7 +731,10 @@
         age_class: data.age_class || null,
         sub_team_count: parseInt(data.sub_team_count) || 1,
         sub_team_mode: data.sub_team_mode || 'fixed',
-        sub_team_names: data.sub_team_names || null
+        sub_team_names: data.sub_team_names || null,
+        home_location: data.home_location || null,
+        home_lat: data.home_lat || null,
+        home_lon: data.home_lon || null
       };
       var res = await sb.from('seasons').insert(row).select().single();
       if (res.error) throw res.error;
@@ -2258,6 +2288,18 @@
             '</div>' +
           '</div>' +
 
+          // Home venue
+          '<div class="form-group" style="margin-top:14px;">' +
+            '<label for="snHomeLocation">Hjemmebane <span style="font-weight:400;color:var(--text-400);">(valgfritt)</span></label>' +
+            '<input type="text" id="snHomeLocation" placeholder="F.eks. L\u00f8banen Kunstgress" autocomplete="off">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="snHomeKommune">Kommune <span style="font-weight:400;color:var(--text-400);">(for km-beregning)</span></label>' +
+            '<input type="text" id="snHomeKommune" list="snKommuneList" placeholder="Skriv kommunenavn\u2026" autocomplete="off">' +
+            '<datalist id="snKommuneList">' + buildKommuneDatalist() + '</datalist>' +
+            '<div class="sn-hint" id="snKommuneHint" style="display:none;"></div>' +
+          '</div>' +
+
           // Sub-team count
           '<div style="border-top:2px solid var(--border);margin-top:18px;padding-top:16px;">' +
             '<div class="form-group">' +
@@ -2303,6 +2345,22 @@
 
     $('snBackFromCreate').addEventListener('click', goToList);
     $('snCancelCreate').addEventListener('click', goToList);
+
+    // Kommune → show coordinate confirmation
+    var kommuneInput = $('snHomeKommune');
+    if (kommuneInput) {
+      kommuneInput.addEventListener('change', function() {
+        var hint = $('snKommuneHint');
+        var coords = lookupKommuneCoords(this.value);
+        if (coords && hint) {
+          hint.style.display = 'block';
+          hint.innerHTML = '<i class="fas fa-map-marker-alt" style="margin-right:4px;color:var(--primary);"></i>Koordinater: ' + coords.lat + ', ' + coords.lon;
+        } else if (hint) {
+          hint.style.display = this.value ? 'block' : 'none';
+          if (this.value) hint.innerHTML = '<i class="fas fa-question-circle" style="margin-right:4px;color:var(--text-400);"></i>Fant ikke kommunen. Km-beregning settes opp senere.';
+        }
+      });
+    }
 
     // Age class → auto-suggest format + show NFF hint
     $('snAgeClass').addEventListener('change', function() {
@@ -2361,6 +2419,10 @@
       var modeEl = root.querySelector('.sn-mode-card.selected');
       var subTeamMode = (modeEl && subTeamCount > 1) ? (modeEl.getAttribute('data-mode') || 'fixed') : 'fixed';
 
+      var homeLocation = ($('snHomeLocation') ? $('snHomeLocation').value : '').trim() || null;
+      var homeKommune = ($('snHomeKommune') ? $('snHomeKommune').value : '').trim();
+      var homeCoords = lookupKommuneCoords(homeKommune);
+
       var season = await createSeason({
         name: name,
         format: $('snSeasonFormat').value,
@@ -2369,7 +2431,10 @@
         age_class: $('snAgeClass').value || null,
         sub_team_count: subTeamCount,
         sub_team_mode: subTeamMode,
-        sub_team_names: null
+        sub_team_names: null,
+        home_location: homeLocation,
+        home_lat: homeCoords ? homeCoords.lat : null,
+        home_lon: homeCoords ? homeCoords.lon : null
       });
 
       if (season) {
@@ -2412,6 +2477,8 @@
           '</div>';
       }
     }
+
+    var editKommuneName = reverseKommuneLookup(s.home_lat, s.home_lon);
 
     root.innerHTML =
       '<div class="settings-card">' +
@@ -2474,6 +2541,18 @@
             '</div>' +
           '</div>' +
 
+          // Home venue
+          '<div class="form-group" style="margin-top:14px;">' +
+            '<label for="snEditHomeLocation">Hjemmebane <span style="font-weight:400;color:var(--text-400);">(valgfritt)</span></label>' +
+            '<input type="text" id="snEditHomeLocation" value="' + escapeHtml(s.home_location || '') + '" placeholder="F.eks. L\u00f8banen Kunstgress" autocomplete="off">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="snEditHomeKommune">Kommune <span style="font-weight:400;color:var(--text-400);">(for km-beregning)</span></label>' +
+            '<input type="text" id="snEditHomeKommune" list="snEditKommuneList" value="' + escapeHtml(editKommuneName) + '" placeholder="Skriv kommunenavn\u2026" autocomplete="off">' +
+            '<datalist id="snEditKommuneList">' + buildKommuneDatalist() + '</datalist>' +
+            '<div class="sn-hint" id="snEditKommuneHint" style="' + (s.home_lat ? '' : 'display:none;') + '">' + (s.home_lat ? '<i class="fas fa-map-marker-alt" style="margin-right:4px;color:var(--primary);"></i>Koordinater: ' + s.home_lat + ', ' + s.home_lon : '') + '</div>' +
+          '</div>' +
+
           // Sub-team count
           '<div style="border-top:2px solid var(--border);margin-top:18px;padding-top:16px;">' +
             '<div class="form-group">' +
@@ -2521,6 +2600,22 @@
 
     $('snBackFromEditSeason').addEventListener('click', goToDashboard);
     $('snCancelEditSeason').addEventListener('click', goToDashboard);
+
+    // Edit: Kommune → show coordinate confirmation
+    var editKommuneInput = $('snEditHomeKommune');
+    if (editKommuneInput) {
+      editKommuneInput.addEventListener('change', function() {
+        var hint = $('snEditKommuneHint');
+        var coords = lookupKommuneCoords(this.value);
+        if (coords && hint) {
+          hint.style.display = 'block';
+          hint.innerHTML = '<i class="fas fa-map-marker-alt" style="margin-right:4px;color:var(--primary);"></i>Koordinater: ' + coords.lat + ', ' + coords.lon;
+        } else if (hint) {
+          hint.style.display = this.value ? 'block' : 'none';
+          if (this.value) hint.innerHTML = '<i class="fas fa-question-circle" style="margin-right:4px;color:var(--text-400);"></i>Fant ikke kommunen.';
+        }
+      });
+    }
 
     // Age class → auto-suggest format
     $('snEditAgeClass').addEventListener('change', function() {
@@ -2604,6 +2699,10 @@
         if (teamNames.every(function(n) { return !n; })) teamNames = null;
       }
 
+      var editHomeLocation = ($('snEditHomeLocation') ? $('snEditHomeLocation').value : '').trim() || null;
+      var editHomeKommune = ($('snEditHomeKommune') ? $('snEditHomeKommune').value : '').trim();
+      var editHomeCoords = lookupKommuneCoords(editHomeKommune);
+
       var fields = {
         name: name,
         format: parseInt($('snEditSeasonFormat').value) || s.format,
@@ -2612,7 +2711,10 @@
         age_class: $('snEditAgeClass').value || null,
         sub_team_count: newCount,
         sub_team_mode: newMode,
-        sub_team_names: teamNames
+        sub_team_names: teamNames,
+        home_location: editHomeLocation,
+        home_lat: editHomeCoords ? editHomeCoords.lat : (editHomeLocation ? s.home_lat : null),
+        home_lon: editHomeCoords ? editHomeCoords.lon : (editHomeLocation ? s.home_lon : null)
       };
 
       var updated = await updateSeason(s.id, fields);
