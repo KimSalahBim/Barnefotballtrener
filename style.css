@@ -1291,11 +1291,15 @@ body {
 
 .liga-match-pending {
   border-style: dashed;
-  opacity: 0.7;
+  border-color: var(--border);
 }
 
 .liga-match-row {
   margin-bottom: 8px;
+}
+
+.liga-matches {
+  max-width: 600px;
 }
 
 /* --- Sides --- */
@@ -1309,9 +1313,9 @@ body {
 }
 
 .liga-side-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
-  color: var(--text-400);
+  color: var(--text-500);
   margin-bottom: 2px;
 }
 
@@ -1477,6 +1481,9 @@ body {
   font-weight: 600;
   color: var(--primary);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
 }
 
 .liga-history-winner i {
@@ -1505,8 +1512,33 @@ body {
   padding-top: 10px;
 }
 
+@media (max-width: 768px) {
+  .liga-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .liga-summary-actions {
+    width: 100%;
+  }
+
+  .liga-summary-actions .liga-btn-sm {
+    flex: 1;
+  }
+}
+
 /* ── Liga mobile ── */
 @media (max-width: 600px) {
+  .liga-setup-actions {
+    flex-direction: column;
+  }
+
+  .liga-setup-actions .btn-primary,
+  .liga-setup-actions .btn-secondary {
+    width: 100%;
+  }
+
   .liga-match-card {
     padding: 8px 10px;
   }
@@ -1523,20 +1555,6 @@ body {
   .liga-round-header {
     font-size: 13px;
     margin: 10px 0 6px;
-  }
-
-  .liga-summary {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .liga-summary-actions {
-    width: 100%;
-  }
-
-  .liga-summary-actions .liga-btn-sm {
-    flex: 1;
   }
 
   .liga-edit-name {
@@ -1576,6 +1594,7 @@ body {
 
   .liga-history-winner {
     font-size: 11px;
+    max-width: 80px;
   }
 }
 
