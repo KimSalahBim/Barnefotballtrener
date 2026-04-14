@@ -1485,11 +1485,11 @@ body {
 
 .liga-history-toggle,
 .liga-history-delete {
-  padding: 4px 6px !important;
-  font-size: 13px !important;
+  padding: 8px !important;
+  font-size: 14px !important;
   color: var(--text-400) !important;
-  min-width: 28px;
-  min-height: 28px;
+  min-width: 44px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

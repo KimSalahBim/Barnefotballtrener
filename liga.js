@@ -191,7 +191,14 @@
       var dateStr = date.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' });
       var teamNames = liga.teams.map(function(t) { return escapeHtml(t.name); }).join(' \u00b7 ');
       var rows = calcTable(liga);
-      var winner = rows.length > 0 ? escapeHtml(rows[0].team) : '';
+      var winner = '';
+      if (rows.length > 0) {
+        if (rows.length > 1 && rows[0].pts === rows[1].pts && rows[0].gd === rows[1].gd && rows[0].gf === rows[1].gf) {
+          winner = 'Delt 1. plass';
+        } else {
+          winner = escapeHtml(rows[0].team);
+        }
+      }
 
       html +=
         '<div class="liga-history-entry" data-history-id="' + entry.id + '">' +
@@ -364,7 +371,7 @@
           window.showNotification('Hvert lag må ha et unikt navn', 'error');
           return;
         }
-        if (_state.liga && _state.liga.matches && _state.liga.matches.some(function(m) { return m.homeGoals !== null; })) {
+        if (_state.liga && _state.liga.matches && _state.liga.matches.some(function(m) { return m.homeGoals !== null && m.awayGoals !== null; })) {
           if (!confirm('Du har registrerte resultater. Starte ny liga sletter disse. Fortsett?')) return;
         }
         var nTeams = Math.max(2, Math.min(5, Number($('ligaTeams').value) || 2));
@@ -579,6 +586,21 @@
         var tableEl2 = $('ligaTable');
         if (!tableEl2) return;
         tableEl2.innerHTML = renderTableHTML(league);
+
+        var cardEl = inp.closest('.liga-match-card');
+        if (cardEl) {
+          var matchIsPlayed = (match.homeGoals !== null && match.awayGoals !== null);
+          cardEl.className = matchIsPlayed ? 'liga-match-card liga-match-played' : 'liga-match-card liga-match-pending';
+        }
+
+        var progressEl = matchesEl.querySelector('.liga-progress');
+        if (progressEl) {
+          var total = league.matches.length;
+          var played = league.matches.filter(function(mm) {
+            return mm.homeGoals !== null && mm.awayGoals !== null;
+          }).length;
+          progressEl.textContent = played + ' av ' + total + ' kamper registrert';
+        }
       });
     });
 
@@ -590,6 +612,15 @@
 
         var oldName = league.teams[idx].name;
         if (oldName === newName) return;
+
+        var isDuplicate = league.teams.some(function(t, ti) {
+          return ti !== idx && t.name.toLowerCase().trim() === newName.toLowerCase().trim();
+        });
+        if (isDuplicate) {
+          inp.value = oldName;
+          window.showNotification('Lagnavnet "' + newName + '" er allerede i bruk', 'error');
+          return;
+        }
 
         league.teams[idx].name = newName;
         for (var mj = 0; mj < league.matches.length; mj++) {
@@ -716,7 +747,7 @@
           window.showNotification('Hvert lag må ha et unikt navn', 'error');
           return;
         }
-        if (_state.liga && _state.liga.matches && _state.liga.matches.some(function(m) { return m.homeGoals !== null; })) {
+        if (_state.liga && _state.liga.matches && _state.liga.matches.some(function(m) { return m.homeGoals !== null && m.awayGoals !== null; })) {
           if (!confirm('Du har registrerte resultater. Starte ny liga sletter disse. Fortsett?')) return;
         }
         var league = buildLeague();
