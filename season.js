@@ -7023,8 +7023,9 @@
     // TEMP DEBUG: mobile touch diagnostic
     var _dbg = document.createElement('div');
     _dbg.id = 'snMobileDebug';
-    _dbg.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#fef3c7;color:#92400e;padding:6px 12px;font-size:11px;z-index:99999;display:none;';
+    _dbg.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#fef3c7;color:#92400e;padding:6px 12px;font-size:11px;z-index:99999;display:block;';
     document.body.appendChild(_dbg);
+    _dbg.textContent = 'DEBUG: innerHTML done, binding handlers...';
     function _mdbg(msg) { _dbg.style.display = 'block'; _dbg.textContent = msg; setTimeout(function() { _dbg.style.display = 'none'; }, 3000); }
 
     // Start realtime sync for matches (shared coaching only — solo users don't need it)
@@ -7159,10 +7160,12 @@
       });
     }
 
-    $('snEditEvent').addEventListener('click', function() {
-      snView = 'edit-event';
-      render();
-    });
+    if ($('snEditEvent')) {
+      $('snEditEvent').addEventListener('click', function() {
+        snView = 'edit-event';
+        render();
+      });
+    }
 
     var icalEvBtn = $('snIcalEvent');
     if (icalEvBtn) icalEvBtn.addEventListener('click', function() {
@@ -7172,26 +7175,28 @@
       downloadIcsFile(ics, safeName + '.ics');
     });
 
-    $('snDeleteEvent').addEventListener('click', async function() {
-      if (!confirm('Slett denne hendelsen?')) return;
+    if ($('snDeleteEvent')) {
+      $('snDeleteEvent').addEventListener('click', async function() {
+        if (!confirm('Slett denne hendelsen?')) return;
 
-      var btn = $('snDeleteEvent');
-      btn.disabled = true;
-      btn.textContent = 'Sletter\u2026';
+        var btn = $('snDeleteEvent');
+        btn.disabled = true;
+        btn.textContent = 'Sletter\u2026';
 
-      var ok = await deleteEvent(ev.id);
-      if (ok) {
-        editingEvent = null;
-        seasonStats = [];
-        seasonGoals = [];
-        await loadEvents(currentSeason.id);
-        snView = 'dashboard';
-        render();
-      } else {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-trash" style="margin-right:5px;"></i>Slett';
-      }
-    });
+        var ok = await deleteEvent(ev.id);
+        if (ok) {
+          editingEvent = null;
+          seasonStats = [];
+          seasonGoals = [];
+          await loadEvents(currentSeason.id);
+          snView = 'dashboard';
+          render();
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-trash" style="margin-right:5px;"></i>Slett';
+        }
+      });
+    }
 
     // --- PLAN CONFIRMED TOGGLE ---
     var confirmBtn = $('snConfirmPlan');
