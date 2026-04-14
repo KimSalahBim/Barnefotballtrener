@@ -538,12 +538,22 @@
     updateSeasonNav();
     // Restart season sync if we have an active season but channel was stopped
     if (currentSeason && currentSeason.status !== 'archived' && !_rtSeasonChannel && isSharedTeam()) {
-      startSeasonSync(currentSeason.id);
+      try {
+        startSeasonSync(currentSeason.id);
+      } catch (e) {
+        console.warn('[season.js] startSeasonSync failed:', e.message);
+      }
     }
     // Restart match sync if we're on event-detail for a match
     if (snView === 'event-detail' && editingEvent && !_rtChannel && isSharedTeam()) {
       var isMatch = (editingEvent.type === 'match' || editingEvent.type === 'cup_match');
-      if (isMatch) startMatchSync(editingEvent.id);
+      if (isMatch) {
+        try {
+          startMatchSync(editingEvent.id);
+        } catch (e) {
+          console.warn('[season.js] startMatchSync failed (realtime unavailable):', e.message);
+        }
+      }
     }
   });
 
@@ -1523,8 +1533,18 @@
     }
   }
 
+  var _rtTouchActive = false;
+  document.addEventListener('touchstart', function() { _rtTouchActive = true; }, { passive: true, capture: true });
+  document.addEventListener('touchend', function() { setTimeout(function() { _rtTouchActive = false; }, 350); }, { passive: true, capture: true });
+  document.addEventListener('touchcancel', function() { _rtTouchActive = false; }, { passive: true, capture: true });
+
   function _rtRefreshEventDetail(preserveInputs) {
     if (snView !== 'event-detail' || !editingEvent) return;
+    if (_rtTouchActive) {
+      // Defer re-render until touch completes — prevents iOS click cancellation
+      setTimeout(function() { _rtRefreshEventDetail(preserveInputs); }, 400);
+      return;
+    }
     // Skip if sesong tab is not visible (user switched to another main tab)
     var sesongTab = document.getElementById('sesong');
     if (sesongTab && sesongTab.style.display === 'none') return;
@@ -2758,6 +2778,31 @@
         // Refresh seasons list for when we go back
         var idx = seasons.findIndex(function(x) { return x.id === updated.id; });
         if (idx !== -1) seasons[idx] = Object.assign(seasons[idx], updated);
+
+        // Auto-recompute km if home coordinates changed
+        var homeChanged = (s.home_lat !== updated.home_lat || s.home_lon !== updated.home_lon);
+        if (homeChanged && updated.home_lat && updated.home_lon && events.length > 0 && window.sesongFordeling) {
+          try {
+            var kmResults = window.sesongFordeling.computeSeasonDistances(updated, events, true);
+            if (kmResults.length > 0) {
+              for (var kr = 0; kr < kmResults.length; kr++) {
+                for (var ke = 0; ke < events.length; ke++) {
+                  if (events[ke].id === kmResults[kr].eventId) {
+                    events[ke].location_lat = kmResults[kr].location_lat;
+                    events[ke].location_lon = kmResults[kr].location_lon;
+                    events[ke].distance_km = kmResults[kr].distance_km;
+                    break;
+                  }
+                }
+              }
+              window.sesongFordeling.saveDistances(kmResults);
+              notify('Km-avstand oppdatert for ' + kmResults.length + ' kamp' + (kmResults.length > 1 ? 'er' : '') + '.', 'info');
+            }
+          } catch (kmErr) {
+            console.warn('[season.js] Auto km-calc after home change:', kmErr.message);
+          }
+        }
+
         goToDashboard();
       } else {
         btn.disabled = false;
@@ -6377,6 +6422,30 @@
           currentSeason.age_class = anyMatch.ageClass;
         }
 
+        // Auto-compute km for imported/updated matches
+        if (currentSeason.home_lat && currentSeason.home_lon && window.sesongFordeling) {
+          try {
+            var kmResults = window.sesongFordeling.computeSeasonDistances(currentSeason, events);
+            if (kmResults.length > 0) {
+              // Update local events array
+              for (var kr = 0; kr < kmResults.length; kr++) {
+                for (var ke = 0; ke < events.length; ke++) {
+                  if (events[ke].id === kmResults[kr].eventId) {
+                    events[ke].location_lat = kmResults[kr].location_lat;
+                    events[ke].location_lon = kmResults[kr].location_lon;
+                    events[ke].distance_km = kmResults[kr].distance_km;
+                    break;
+                  }
+                }
+              }
+              // Persist to Supabase (fire-and-forget, local state already updated)
+              window.sesongFordeling.saveDistances(kmResults);
+            }
+          } catch (kmErr) {
+            console.warn('[season.js] Auto km-calc after import:', kmErr.message);
+          }
+        }
+
         // Build notification
         var stNote = '';
         if (importState.selectedSubTeam && currentSeason) {
@@ -7126,11 +7195,14 @@
 
     // Start realtime sync for matches (shared coaching only — solo users don't need it)
     if (isMatch && isSharedTeam()) {
-      startMatchSync(ev.id);
-      // If subscription already active, restore indicator state (DOM was rebuilt)
-      if (_rtChannel && _rtEventId === ev.id) {
-        var dot = document.getElementById('snLiveIndicator');
-        if (dot) { dot.classList.add('sn-live-active'); dot.title = 'Live-synk aktiv'; }
+      try {
+        startMatchSync(ev.id);
+        if (_rtChannel && _rtEventId === ev.id) {
+          var dot = document.getElementById('snLiveIndicator');
+          if (dot) { dot.classList.add('sn-live-active'); dot.title = 'Live-synk aktiv'; }
+        }
+      } catch (e) {
+        console.warn('[season.js] startMatchSync failed (realtime unavailable):', e.message);
       }
     }
 
@@ -8029,7 +8101,11 @@
     snView = 'dashboard';
     render();
     if (s.status !== 'archived') {
-      try { startSeasonSync(seasonId); } catch (e) { console.error('[season.js] startSeasonSync error:', e); }
+      try {
+        startSeasonSync(seasonId);
+      } catch (e) {
+        console.warn('[season.js] startSeasonSync failed:', e.message);
+      }
     }
   }
 
