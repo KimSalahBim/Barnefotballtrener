@@ -1427,6 +1427,84 @@ body {
   color: var(--text-900);
 }
 
+/* --- History --- */
+.liga-history-entry {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-card);
+}
+
+.liga-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.liga-history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.liga-history-date {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-400);
+}
+
+.liga-history-teams {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-700);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.liga-history-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.liga-history-winner {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.liga-history-winner i {
+  font-size: 11px;
+}
+
+.liga-history-toggle,
+.liga-history-delete {
+  padding: 4px 6px !important;
+  font-size: 13px !important;
+  color: var(--text-400) !important;
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.liga-history-delete:hover {
+  color: var(--error) !important;
+}
+
+.liga-history-table {
+  margin-top: 10px;
+  border-top: 1px solid var(--border-light);
+  padding-top: 10px;
+}
+
 /* ── Liga mobile ── */
 @media (max-width: 600px) {
   .liga-match-card {
@@ -1486,6 +1564,18 @@ body {
 
   .liga-bye {
     font-size: 12px;
+  }
+
+  .liga-history-entry {
+    padding: 8px 10px;
+  }
+
+  .liga-history-teams {
+    font-size: 12px;
+  }
+
+  .liga-history-winner {
+    font-size: 11px;
   }
 }
 

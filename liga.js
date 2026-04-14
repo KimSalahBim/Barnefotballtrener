@@ -17,6 +17,67 @@
       .replace(/'/g, '&#039;');
   }
 
+  // ── Liga history storage ──
+  var _historyMem = new Map();
+
+  function _hGet(key) {
+    try { return localStorage.getItem(key); }
+    catch (e) { return _historyMem.get(key) || null; }
+  }
+
+  function _hSet(key, value) {
+    try { localStorage.setItem(key, value); }
+    catch (e) { _historyMem.set(key, value); }
+  }
+
+  function _hKey() {
+    try {
+      var uid = (window.authService && typeof window.authService.getUserId === 'function'
+        ? window.authService.getUserId() : null) || 'anon';
+      var tid = window._bftTeamId || 'default';
+      return 'bft:' + uid + ':' + tid + ':ligaHistory';
+    } catch (e) {
+      return 'bft:anon:default:ligaHistory';
+    }
+  }
+
+  var MAX_HISTORY = 20;
+
+  function loadHistory() {
+    var raw = _hGet(_hKey());
+    if (!raw) return [];
+    try {
+      var arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function saveHistory(history) {
+    var trimmed = false;
+    while (history.length > MAX_HISTORY) { history.shift(); trimmed = true; }
+    if (trimmed) window.showNotification('Eldste liga fjernet fra historikk (maks ' + MAX_HISTORY + ')', 'info');
+    _hSet(_hKey(), JSON.stringify(history));
+    if (window._bftCloud) {
+      try { window._bftCloud.save('ligaHistory', JSON.stringify(history)); } catch (e) {}
+    }
+  }
+
+  function archiveLeague(league) {
+    if (!league || !league.teams || !league.matches) return;
+    var hasResults = league.matches.some(function(m) {
+      return m.homeGoals !== null && m.awayGoals !== null;
+    });
+    if (!hasResults) return;
+
+    var history = loadHistory();
+    history.push({
+      id: 'lh_' + Date.now(),
+      archivedAt: Date.now(),
+      liga: JSON.parse(JSON.stringify(league))
+    });
+    saveHistory(history);
+  }
+
   // ── Dependencies (set by init) ──
   var _state = null;
   var _saveState = null;
@@ -103,6 +164,112 @@
           '</tr>';
       }).join('') +
       '</tbody></table></div>';
+  }
+
+  function renderHistory() {
+    var container = $('ligaHistory');
+    if (!container) return;
+
+    var history = loadHistory();
+    if (history.length === 0) {
+      container.innerHTML = '';
+      var historyWrap = $('ligaHistoryWrap');
+      if (historyWrap) historyWrap.style.display = 'none';
+      return;
+    }
+
+    var historyWrap2 = $('ligaHistoryWrap');
+    if (historyWrap2) historyWrap2.style.display = '';
+
+    var html = '';
+    for (var i = history.length - 1; i >= 0; i--) {
+      var entry = history[i];
+      var liga = entry.liga;
+      if (!liga || !liga.teams) continue;
+
+      var date = new Date(entry.archivedAt);
+      var dateStr = date.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' });
+      var teamNames = liga.teams.map(function(t) { return escapeHtml(t.name); }).join(' \u00b7 ');
+      var rows = calcTable(liga);
+      var winner = rows.length > 0 ? escapeHtml(rows[0].team) : '';
+
+      html +=
+        '<div class="liga-history-entry" data-history-id="' + entry.id + '">' +
+          '<div class="liga-history-header">' +
+            '<div class="liga-history-info">' +
+              '<span class="liga-history-date">' + dateStr + '</span>' +
+              '<span class="liga-history-teams">' + teamNames + '</span>' +
+            '</div>' +
+            '<div class="liga-history-actions">' +
+              (winner ? '<span class="liga-history-winner"><i class="fas fa-trophy"></i> ' + winner + '</span>' : '') +
+              '<button class="liga-history-toggle btn-ghost" data-history-toggle="' + entry.id + '" type="button">' +
+                '<i class="fas fa-chevron-down"></i>' +
+              '</button>' +
+              '<button class="liga-history-delete btn-ghost" data-history-delete="' + entry.id + '" type="button" title="Slett">' +
+                '<i class="fas fa-trash-can"></i>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="liga-history-table" id="ligaHistTable_' + entry.id + '" style="display:none;">' +
+            renderTableHTML(liga) +
+          '</div>' +
+        '</div>';
+    }
+
+    container.innerHTML = html;
+
+    container.querySelectorAll('[data-history-toggle]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = btn.getAttribute('data-history-toggle');
+        var tableDiv = $('ligaHistTable_' + id);
+        if (!tableDiv) return;
+        var isOpen = tableDiv.style.display !== 'none';
+        tableDiv.style.display = isOpen ? 'none' : '';
+        var icon = btn.querySelector('i');
+        if (icon) {
+          icon.className = isOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+        }
+      });
+    });
+
+    container.querySelectorAll('[data-history-delete]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = btn.getAttribute('data-history-delete');
+        if (!confirm('Slette denne ligaen fra historikk?')) return;
+        var history2 = loadHistory();
+        history2 = history2.filter(function(e) { return e.id !== id; });
+        saveHistory(history2);
+        renderHistory();
+        window.showNotification('Fjernet fra historikk', 'info');
+      });
+    });
+  }
+
+  function loadHistoryFromCloud() {
+    if (!window._bftCloud) return;
+    try {
+      window._bftCloud.loadAll().then(function(rows) {
+        if (rows === null) return;
+        if (!rows || rows.length === 0) {
+          var raw = _hGet(_hKey());
+          if (raw) {
+            try { window._bftCloud.save('ligaHistory', raw); } catch (e) {}
+          }
+          return;
+        }
+        rows.forEach(function(row) {
+          if (row.key === 'ligaHistory' && row.value) {
+            var localRaw = _hGet(_hKey());
+            if (!localRaw || localRaw === '[]') {
+              _hSet(_hKey(), JSON.stringify(row.value));
+              renderHistory();
+            }
+          }
+        });
+      });
+    } catch (e) {
+      console.warn('[Liga] Cloud history load failed:', e.message);
+    }
   }
 
   function renderProgress(league) {
@@ -226,6 +393,7 @@
           rounds: nRounds,
           matches: matches
         };
+        if (_state.liga) archiveLeague(_state.liga);
         _state.liga = league;
         _saveState();
         render();
@@ -439,6 +607,7 @@
   }
 
   function resetLeague() {
+    if (_state.liga) archiveLeague(_state.liga);
     _state.liga = null;
     _saveState();
     var matchesEl = $('ligaMatches');
@@ -449,6 +618,7 @@
     var matchesWrap = $('ligaMatchesWrap');
     if (tableWrap) tableWrap.style.display = 'none';
     if (matchesWrap) matchesWrap.style.display = 'none';
+    renderHistory();
     window.showNotification('Liga nullstilt', 'info');
   }
 
@@ -466,6 +636,7 @@
       if (matchesEl) matchesEl.innerHTML = '';
       if (tableEl) tableEl.innerHTML = '';
     }
+    renderHistory();
   }
 
   function init(deps) {
@@ -474,6 +645,8 @@
     _state = deps.state;
     _saveState = deps.saveState;
     setup();
+    loadHistoryFromCloud();
+    renderHistory();
   }
 
   window.liga = { init: init, render: render };
@@ -547,6 +720,7 @@
           if (!confirm('Du har registrerte resultater. Starte ny liga sletter disse. Fortsett?')) return;
         }
         var league = buildLeague();
+        if (_state.liga) archiveLeague(_state.liga);
         _state.liga = league;
         _saveState();
         render();
