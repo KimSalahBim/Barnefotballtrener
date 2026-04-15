@@ -934,7 +934,8 @@
         is_home: (data.type === 'match' || data.type === 'cup_match') ? (data.is_home !== false) : null,
         format: data.format ? parseInt(data.format) : null,
         notes: (data.notes || '').trim() || null,
-        sub_team: data.sub_team ? parseInt(data.sub_team) : null
+        sub_team: data.sub_team ? parseInt(data.sub_team) : null,
+        distance_km: data.distance_km != null ? data.distance_km : null
       };
       var res = await sb.from('events').insert(row).select().single();
       if (res.error) throw res.error;
@@ -6557,6 +6558,11 @@
             '<label for="snLocation">Sted <span style="font-weight:400;color:var(--text-400);">(valgfritt)</span></label>' +
             '<input type="text" id="snLocation" placeholder="F.eks. Guldbergaunet" maxlength="100" autocomplete="off" value="' + escapeHtml(ev.location || '') + '">' +
           '</div>' +
+          '<div class="form-group" id="snDistanceGroup" style="' + (isMatch && ev.is_home === false ? '' : 'display:none;') + '">' +
+            '<label for="snDistanceKm">Avstand enveis (km) <span style="font-weight:400;color:var(--text-400);">(valgfritt)</span></label>' +
+            '<input type="number" id="snDistanceKm" min="0" max="999" inputmode="numeric" placeholder="Beregnes automatisk" value="' + (ev.distance_km != null ? ev.distance_km : '') + '">' +
+            (ev.distance_km != null && ev.location_lat ? '<div class="sn-hint"><i class="fas fa-calculator" style="margin-right:4px;color:var(--primary);"></i>Automatisk beregnet' + (reverseKommuneLookup(ev.location_lat, ev.location_lon) ? ' fra ' + escapeHtml(reverseKommuneLookup(ev.location_lat, ev.location_lon)) : '') + '</div>' : '') +
+          '</div>' +
           '<div class="form-group">' +
             '<label for="snNotes">Notat <span style="font-weight:400;color:var(--text-400);">(valgfritt)</span></label>' +
             '<textarea id="snNotes" placeholder="Ekstra info, m\u00f8tetid, utstyr\u2026" rows="2">' + escapeHtml(ev.notes || '') + '</textarea>' +
@@ -6592,6 +6598,10 @@
       toggleBtns[t].addEventListener('click', function() {
         for (var j = 0; j < toggleBtns.length; j++) toggleBtns[j].classList.remove('active');
         this.classList.add('active');
+        var distGroup = $('snDistanceGroup');
+        if (distGroup) {
+          distGroup.style.display = (this.getAttribute('data-val') === 'false') ? '' : 'none';
+        }
       });
     }
 
@@ -6625,6 +6635,19 @@
       var activeToggle = root.querySelector('.sn-toggle-btn.active');
       var isHomeVal = activeToggle ? (activeToggle.getAttribute('data-val') === 'true') : true;
 
+      var distKmVal = null;
+      if (isMatchNow) {
+        if (isHomeVal) {
+          distKmVal = 0;
+        } else {
+          var dkInput = $('snDistanceKm');
+          if (dkInput && dkInput.value !== '') {
+            var parsed = Math.round(parseFloat(dkInput.value));
+            distKmVal = (!isNaN(parsed) && parsed >= 0) ? parsed : null;
+          }
+        }
+      }
+
       var fields = {
         type: typeVal,
         title: $('snTitle').value || null,
@@ -6634,7 +6657,8 @@
         opponent: isMatchNow ? ($('snOpponent').value || null) : null,
         is_home: isMatchNow ? isHomeVal : null,
         notes: $('snNotes').value || null,
-        sub_team: (isMatchNow && $('snSubTeam') && parseInt($('snSubTeam').value)) ? parseInt($('snSubTeam').value) : null
+        sub_team: (isMatchNow && $('snSubTeam') && parseInt($('snSubTeam').value)) ? parseInt($('snSubTeam').value) : null,
+        distance_km: distKmVal
       };
 
       var result;
@@ -6708,6 +6732,19 @@
     if (isMatch && ev.opponent) html += detailRow('Motstander', ev.opponent);
     if (isMatch) html += detailRow('Hjemme/Borte', ev.is_home ? 'Hjemme' : 'Borte');
     if (ev.location) html += detailRow('Sted', ev.location);
+    if (isMatch && ev.is_home === false) {
+      if (ev.distance_km != null) {
+        var kmText = ev.distance_km + ' km';
+        if (ev.location_lat && ev.location_lon && ev.distance_km > 0) {
+          var kmKommune = reverseKommuneLookup(ev.location_lat, ev.location_lon);
+          if (kmKommune) kmText += ' (fra ' + kmKommune + ')';
+        }
+        html += detailRow('Avstand', kmText);
+      } else {
+        html += '<div class="sn-detail-row"><div class="sn-detail-label">Avstand</div>' +
+          '<div class="sn-detail-value" style="color:var(--warning, #eab308);">Ikke beregnet</div></div>';
+      }
+    }
     if (ev.format) html += detailRow('Format', formatLabel(ev.format));
     if (ev.sub_team && currentSeason && (currentSeason.sub_team_count || 1) > 1) {
       html += '<div class="sn-detail-row"><div class="sn-detail-label">' + escapeHtml('Lag') + '</div><div class="sn-detail-value"><span class="sn-st-badge sn-st-' + ev.sub_team + '">' + escapeHtml(getSubTeamName(currentSeason, ev.sub_team)) + '</span></div></div>';
