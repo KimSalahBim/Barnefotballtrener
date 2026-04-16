@@ -234,7 +234,9 @@
     var names = season.sub_team_names || [];
     var result = [];
     for (var i = 0; i < count; i++) {
-      result.push(names[i] || ('Lag ' + String.fromCharCode(65 + i)));
+      var entry = names[i];
+      var name = typeof entry === 'string' ? entry : (entry && entry.name) || '';
+      result.push(name || ('Lag ' + String.fromCharCode(65 + i)));
     }
     return result;
   }
@@ -246,6 +248,16 @@
 
   function getSubTeamColor(idx) {
     return SUB_TEAM_COLORS[(idx - 1) % SUB_TEAM_COLORS.length] || '#64748b';
+  }
+
+  function getSubTeamJersey(season, subTeamIdx) {
+    if (!season || !season.sub_team_names) return { home: null, away: null };
+    var entry = season.sub_team_names[subTeamIdx - 1];
+    if (!entry || typeof entry === 'string') return { home: null, away: null };
+    return {
+      home: entry.jersey_home || null,
+      away: entry.jersey_away || null
+    };
   }
 
   function buildKommuneDatalist() {
@@ -1968,7 +1980,10 @@
         goals: 0,
         assists: 0,
         relevantMatches: 0,    // matches where player was in squad (or no tropp used)
-        relevantTrainings: 0   // trainings where attendance was registered for player
+        relevantTrainings: 0,  // trainings where attendance was registered for player
+        totalKm: 0,
+        homeMatches: 0,
+        awayMatches: 0
       };
     }
 
@@ -1977,8 +1992,10 @@
 
     // Event type map
     var eventTypeMap = {};
+    var eventLookup = {};
     for (var e = 0; e < events.length; e++) {
       eventTypeMap[events[e].id] = events[e].type;
+      eventLookup[events[e].id] = events[e];
     }
 
     // Per-player relevant event counting (for fair denominator)
@@ -2009,6 +2026,12 @@
       if ((evType === 'match' || evType === 'cup_match') && row.in_squad === false) continue; // two-team: skip matches player was not in squad for
       if (evType === 'match' || evType === 'cup_match') {
         playerMap[row.player_id].matchesAttended++;
+        var kmEv = eventLookup[row.event_id];
+        if (kmEv) {
+          if (kmEv.distance_km != null) playerMap[row.player_id].totalKm += kmEv.distance_km;
+          if (kmEv.is_home === true) playerMap[row.player_id].homeMatches++;
+          else if (kmEv.is_home === false) playerMap[row.player_id].awayMatches++;
+        }
       } else if (evType === 'training') {
         playerMap[row.player_id].trainingsAttended++;
       }
@@ -2083,7 +2106,8 @@
       topAssisters: topAssisters,
       totalGoals: totalGoalsCount,
       totalAssists: totalAssists,
-      matchesWithMinutesData: Object.keys(eventsWithMinutesSet).length
+      matchesWithMinutesData: Object.keys(eventsWithMinutesSet).length,
+      hasKmData: events.some(function(e) { return e.distance_km != null; })
     };
   }
 
@@ -2102,9 +2126,9 @@
     var activeTab = null;
     if (snView === 'dashboard') {
       activeTab = dashTab;
-    } else if (snView === 'event-detail' || snView === 'create-event' || snView === 'edit-event' || snView === 'embedded-kampdag' || snView === 'embedded-workout' || snView === 'create-series' || snView === 'fotball-import') {
+    } else if (snView === 'event-detail' || snView === 'create-event' || snView === 'edit-event' || snView === 'embedded-kampdag' || snView === 'embedded-workout' || snView === 'create-series' || snView === 'fotball-import' || snView === 'distribution') {
       activeTab = 'calendar';
-    } else if (snView === 'roster-import' || snView === 'roster-add-manual' || snView === 'roster-assign') {
+    } else if (snView === 'roster-import' || snView === 'roster-add-manual' || snView === 'roster-assign' || snView === 'constraints') {
       activeTab = 'roster';
     } else if (snView === 'roster-edit-player' || snView === 'player-stats') {
       activeTab = dashTab; // came from roster or stats tab
@@ -2156,6 +2180,8 @@
       case 'create-series': renderCreateSeries(root); break;
       case 'player-stats': renderPlayerStats(root); break;
       case 'fotball-import': renderFotballImport(root); break;
+      case 'constraints': renderConstraintsEditor(root); break;
+      case 'distribution': renderDistributionView(root); break;
       case 'embedded-kampdag': renderEmbeddedKampdag(root); break;
       case 'embedded-workout': renderEmbeddedWorkout(root); break;
       default:               renderSeasonList(root);   break;
@@ -2494,10 +2520,17 @@
     var nameInputs = '';
     if (stCount > 1) {
       for (var n = 0; n < stCount; n++) {
+        var jersey = getSubTeamJersey(s, n + 1);
         nameInputs +=
-          '<div class="sn-name-row">' +
-            '<div class="sn-color-dot" style="background:' + getSubTeamColor(n + 1) + ';"></div>' +
-            '<input class="sn-name-input" type="text" id="snTeamName' + n + '" value="' + escapeHtml(stNames[n] || '') + '" placeholder="Lag ' + String.fromCharCode(65 + n) + '" maxlength="30">' +
+          '<div style="margin-bottom:12px;">' +
+            '<div class="sn-name-row">' +
+              '<div class="sn-color-dot" style="background:' + getSubTeamColor(n + 1) + ';"></div>' +
+              '<input class="sn-name-input" type="text" id="snTeamName' + n + '" value="' + escapeHtml(stNames[n] || '') + '" placeholder="Lag ' + String.fromCharCode(65 + n) + '" maxlength="30">' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;margin-left:22px;margin-top:4px;">' +
+              '<input type="text" id="snJerseyHome' + n + '" value="' + escapeHtml(jersey.home || '') + '" placeholder="Drakt hjemme" maxlength="20" style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;color:var(--text-700);">' +
+              '<input type="text" id="snJerseyAway' + n + '" value="' + escapeHtml(jersey.away || '') + '" placeholder="Drakt borte" maxlength="20" style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;color:var(--text-700);">' +
+            '</div>' +
           '</div>';
       }
     }
@@ -2609,8 +2642,8 @@
           // Team names (hidden when count=1)
           '<div class="sn-cond-section' + (stCount <= 1 ? ' hidden' : '') + '" id="snEditNamesSection" style="border-top:2px solid var(--border);margin-top:14px;padding-top:16px;">' +
             '<div class="form-group">' +
-              '<label>Lagnavn</label>' +
-              '<div class="sn-hint" style="margin-bottom:8px;">Valgfritt. Brukes i stall, kamper og statistikk.</div>' +
+              '<label>Lagnavn og drakt</label>' +
+              '<div class="sn-hint" style="margin-bottom:8px;">Valgfritt. Draktfarge brukes i sesongfordelingen.</div>' +
               '<div id="snTeamNameInputs">' + nameInputs + '</div>' +
             '</div>' +
           '</div>' +
@@ -2674,10 +2707,17 @@
         var html = '';
         for (var i = 0; i < val; i++) {
           var existing = stNames[i] || '';
+          var exJersey = getSubTeamJersey(s, i + 1);
           html +=
-            '<div class="sn-name-row">' +
-              '<div class="sn-color-dot" style="background:' + getSubTeamColor(i + 1) + ';"></div>' +
-              '<input class="sn-name-input" type="text" id="snTeamName' + i + '" value="' + escapeHtml(existing) + '" placeholder="Lag ' + String.fromCharCode(65 + i) + '" maxlength="30">' +
+            '<div style="margin-bottom:12px;">' +
+              '<div class="sn-name-row">' +
+                '<div class="sn-color-dot" style="background:' + getSubTeamColor(i + 1) + ';"></div>' +
+                '<input class="sn-name-input" type="text" id="snTeamName' + i + '" value="' + escapeHtml(existing) + '" placeholder="Lag ' + String.fromCharCode(65 + i) + '" maxlength="30">' +
+              '</div>' +
+              '<div style="display:flex;gap:8px;margin-left:22px;margin-top:4px;">' +
+                '<input type="text" id="snJerseyHome' + i + '" value="' + escapeHtml(exJersey.home || '') + '" placeholder="Drakt hjemme" maxlength="20" style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;color:var(--text-700);">' +
+                '<input type="text" id="snJerseyAway' + i + '" value="' + escapeHtml(exJersey.away || '') + '" placeholder="Drakt borte" maxlength="20" style="flex:1;padding:6px 10px;font-size:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;color:var(--text-700);">' +
+              '</div>' +
             '</div>';
         }
         container.innerHTML = html;
@@ -2713,13 +2753,29 @@
       // Read team names
       var teamNames = null;
       if (newCount > 1) {
-        teamNames = [];
+        var tnEntries = [];
+        var hasAnyContent = false;
+        var hasAnyJersey = false;
         for (var tn = 0; tn < newCount; tn++) {
           var inp = $('snTeamName' + tn);
-          teamNames.push(inp ? (inp.value || '').trim() : '');
+          var tName = inp ? (inp.value || '').trim() : '';
+          var jhInp = $('snJerseyHome' + tn);
+          var jaInp = $('snJerseyAway' + tn);
+          var jh = jhInp ? (jhInp.value || '').trim() : '';
+          var ja = jaInp ? (jaInp.value || '').trim() : '';
+          if (tName || jh || ja) hasAnyContent = true;
+          if (jh || ja) hasAnyJersey = true;
+          tnEntries.push({ name: tName, jh: jh, ja: ja });
         }
-        // Only save if at least one name is non-empty
-        if (teamNames.every(function(n) { return !n; })) teamNames = null;
+        if (hasAnyContent) {
+          if (hasAnyJersey) {
+            teamNames = tnEntries.map(function(e) {
+              return { name: e.name, jersey_home: e.jh || null, jersey_away: e.ja || null };
+            });
+          } else {
+            teamNames = tnEntries.map(function(e) { return e.name; });
+          }
+        }
       }
 
       var editHomeLocation = ($('snEditHomeLocation') ? $('snEditHomeLocation').value : '').trim() || null;
@@ -3362,6 +3418,9 @@
           '<button class="btn-secondary" id="snAddSeries" style="flex:1; font-size:13px;"><i class="fas fa-redo" style="margin-right:5px;"></i>Treningsserie</button>' +
           '<button class="btn-secondary" id="snImportFotball" style="flex:1; font-size:13px;"><i class="fas fa-file-import" style="margin-right:5px;"></i>Importer kamper</button>' +
         '</div>' +
+        (currentSeason && (currentSeason.sub_team_count || 1) > 1 && currentSeason.sub_team_mode === 'rotate' && events.filter(function(e) { return e.type === 'match' || e.type === 'cup_match'; }).length >= 2 && seasonPlayers.filter(function(p) { return p.active; }).length >= 2
+          ? '<button class="btn-primary" id="snOpenDistribution" style="width:100%;margin-top:8px;font-size:14px;"><i class="fas fa-magic" style="margin-right:6px;"></i>Fordel spillere jevnt</button>'
+          : '') +
       '</div>';
 
     // Split events
@@ -3436,6 +3495,12 @@
     var addSeries = $('snAddSeries');
     if (addSeries) addSeries.addEventListener('click', function() {
       snView = 'create-series';
+      render();
+    });
+
+    var distBtn = $('snOpenDistribution');
+    if (distBtn) distBtn.addEventListener('click', function() {
+      snView = 'distribution';
       render();
     });
 
@@ -3566,6 +3631,8 @@
         '</div>' +
         (hasSubTeams && active.length >= 2 ?
           '<button class="btn-secondary" id="snAssignPlayers" style="width:100%;margin-top:8px;font-size:13px;"><i class="fas fa-random" style="margin-right:5px;"></i>Fordel spillere p\u00e5 lag</button>' : '') +
+        (stCount > 1 && active.length >= 2 ?
+          '<button class="btn-secondary" id="snOpenConstraints" style="width:100%;margin-top:6px;font-size:13px;"><i class="fas fa-sliders-h" style="margin-right:5px;"></i>F\u00f8ringer for fordeling</button>' : '') +
       '</div>';
 
     // Filter tabs (only for fixed sub-teams)
@@ -3669,6 +3736,12 @@
     });
 
     // Assign players to sub-teams
+    var constraintsBtn = $('snOpenConstraints');
+    if (constraintsBtn) constraintsBtn.addEventListener('click', function() {
+      snView = 'constraints';
+      render();
+    });
+
     var assignBtn = $('snAssignPlayers');
     if (assignBtn) assignBtn.addEventListener('click', function() {
       snView = 'roster-assign';
@@ -4143,6 +4216,374 @@
     '</div>';
   }
 
+  // =========================================================================
+  //  VIEW: CONSTRAINTS EDITOR (Føringer for fordeling)
+  // =========================================================================
+
+  var DISTRIBUTION_PROFILES = [
+    { id: 'balanced',      label: 'Balansert',          desc: 'Balanserer km, hjemme/borte, antall kamper og lagvariasjon.' },
+    { id: 'fair_driving',  label: 'Rettferdig kj\u00f8ring', desc: 'Prioriterer jevn reisebelastning mellom spillerne.' },
+    { id: 'varied_teams',  label: 'Varierte lag',       desc: 'Alle spiller med alle \u2014 nye lagsammensetninger hver runde.' },
+    { id: 'stable_teams',  label: 'Faste lag',          desc: 'Beholder lagene mest mulig stabile gjennom sesongen.' }
+  ];
+
+  function renderConstraintsEditor(root) {
+    if (!currentSeason) { goToDashboard(); return; }
+    var s = currentSeason;
+    var config = s.distribution_config || {};
+    if (!s.distribution_config) s.distribution_config = config;
+    var currentProfile = config.profile || 'balanced';
+    var constraints = config.constraints || {};
+
+    var activePlayers = seasonPlayers.filter(function(p) { return p.active; });
+
+    // Helper: sync UI state back to config before re-render or save
+    function syncUiToConfig() {
+      var sel = root.querySelector('[data-profile].selected');
+      if (sel) config.profile = sel.getAttribute('data-profile');
+      if (!config.constraints || !config.constraints.coach_child) return;
+      var mc = $('snMinChildren');
+      var mco = $('snMinCoaches');
+      if (mc) config.constraints.coach_child.min_children_per_game = parseInt(mc.value) || 0;
+      if (mco) config.constraints.coach_child.min_coaches_per_game = parseInt(mco.value) || 0;
+    }
+
+    // --- PROFILE SELECTOR ---
+    var profileHtml = '<div class="sn-section">Fordelingsprofil</div>' +
+      '<div class="settings-card" style="padding:12px;">';
+    for (var pi = 0; pi < DISTRIBUTION_PROFILES.length; pi++) {
+      var prof = DISTRIBUTION_PROFILES[pi];
+      var isActive = (prof.id === currentProfile);
+      profileHtml +=
+        '<div class="sn-mode-card' + (isActive ? ' selected' : '') + '" data-profile="' + prof.id + '" style="margin-bottom:8px;">' +
+          '<div class="sn-mode-check">\u2713</div>' +
+          '<div>' +
+            '<div class="sn-mode-title">' + prof.label + '</div>' +
+            '<div class="sn-mode-desc">' + prof.desc + '</div>' +
+          '</div>' +
+        '</div>';
+    }
+    profileHtml += '</div>';
+
+    // --- COACH CHILD SECTION ---
+    var coachChild = constraints.coach_child || { coaches: {}, min_coaches_per_game: 2, min_children_per_game: 2 };
+    var coaches = coachChild.coaches || {};
+    var coachNames = Object.keys(coaches);
+
+    var coachHtml = '<div class="sn-section">Trenerbarn</div>' +
+      '<div class="settings-card" style="padding:12px;">' +
+        '<div class="sn-hint" style="margin-bottom:10px;">Marker hvilke spillere som er barn av trenere. Algoritmen s\u00f8rger for at trenerbarna fordeles jevnt p\u00e5 lagene.</div>';
+
+    if (coachNames.length === 0) {
+      coachHtml += '<div style="text-align:center;color:var(--text-400);font-size:13px;padding:12px 0;">Ingen trenere lagt til enn\u00e5.</div>';
+    } else {
+      for (var ci = 0; ci < coachNames.length; ci++) {
+        var cName = coachNames[ci];
+        var cPlayerIds = coaches[cName] || [];
+        coachHtml +=
+          '<div class="sn-coach-block" data-coach="' + escapeHtml(cName) + '" style="border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:8px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+              '<span style="font-weight:600;font-size:14px;">' + escapeHtml(cName) + '</span>' +
+              '<button type="button" class="sn-remove-coach" data-coach="' + escapeHtml(cName) + '" style="background:none;border:none;color:var(--error,#ef4444);font-size:12px;cursor:pointer;padding:4px 8px;">Fjern</button>' +
+            '</div>';
+        for (var cp = 0; cp < activePlayers.length; cp++) {
+          var ap = activePlayers[cp];
+          var isChecked = cPlayerIds.indexOf(ap.player_id) !== -1;
+          coachHtml +=
+            '<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;cursor:pointer;">' +
+              '<input type="checkbox" class="sn-cc-check" data-coach="' + escapeHtml(cName) + '" data-pid="' + escapeHtml(ap.player_id) + '"' + (isChecked ? ' checked' : '') + '>' +
+              renderSeasonAvatar(ap.player_id, ap.name, 24) +
+              '<span>' + escapeHtml(ap.name) + '</span>' +
+            '</label>';
+        }
+        coachHtml += '</div>';
+      }
+    }
+
+    coachHtml +=
+      '<div style="display:flex;gap:8px;margin-top:8px;">' +
+        '<input type="text" id="snNewCoachName" placeholder="Trenernavn" maxlength="30" style="flex:1;padding:8px 10px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;">' +
+        '<button class="btn-secondary" id="snAddCoach" style="font-size:13px;padding:8px 12px;flex-shrink:0;">Legg til</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:12px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light,#f1f5f9);">' +
+        '<div class="form-group" style="flex:1;margin:0;">' +
+          '<label style="font-size:12px;">Min. trenerbarn per lag</label>' +
+          '<input type="number" id="snMinChildren" min="0" max="10" value="' + (coachChild.min_children_per_game || 2) + '" style="padding:6px 10px;font-size:13px;">' +
+        '</div>' +
+        '<div class="form-group" style="flex:1;margin:0;">' +
+          '<label style="font-size:12px;">Min. trenere repr. per lag</label>' +
+          '<input type="number" id="snMinCoaches" min="0" max="10" value="' + (coachChild.min_coaches_per_game || 2) + '" style="padding:6px 10px;font-size:13px;">' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+    // --- ALWAYS TOGETHER ---
+    var alwaysTogether = constraints.always_together || [];
+    var alwaysHtml = '<div class="sn-section">Alltid sammen</div>' +
+      '<div class="settings-card" style="padding:12px;">' +
+        '<div class="sn-hint" style="margin-bottom:10px;">S\u00f8sken eller spillere som alltid skal v\u00e6re p\u00e5 samme lag.</div>' +
+        '<div id="snAlwaysList">';
+    for (var ai = 0; ai < alwaysTogether.length; ai++) {
+      var pair = alwaysTogether[ai];
+      var pairNames = pair.map(function(pid) {
+        var sp = activePlayers.find(function(p) { return p.player_id === pid; });
+        return sp ? sp.name : pid;
+      }).join(' + ');
+      alwaysHtml +=
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light,#f1f5f9);">' +
+          '<span style="font-size:13px;">' + escapeHtml(pairNames) + '</span>' +
+          '<button type="button" class="sn-remove-pair" data-type="always" data-idx="' + ai + '" style="background:none;border:none;color:var(--error,#ef4444);font-size:12px;cursor:pointer;padding:4px 8px;">Fjern</button>' +
+        '</div>';
+    }
+    alwaysHtml += '</div>' +
+      '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;">' +
+        '<select id="snAlwaysP1" style="flex:1;padding:6px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;">' +
+          '<option value="">Spiller 1</option>';
+    for (var a1 = 0; a1 < activePlayers.length; a1++) {
+      alwaysHtml += '<option value="' + escapeHtml(activePlayers[a1].player_id) + '">' + escapeHtml(activePlayers[a1].name) + '</option>';
+    }
+    alwaysHtml += '</select>' +
+        '<select id="snAlwaysP2" style="flex:1;padding:6px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;">' +
+          '<option value="">Spiller 2</option>';
+    for (var a2 = 0; a2 < activePlayers.length; a2++) {
+      alwaysHtml += '<option value="' + escapeHtml(activePlayers[a2].player_id) + '">' + escapeHtml(activePlayers[a2].name) + '</option>';
+    }
+    alwaysHtml += '</select>' +
+        '<button class="btn-secondary" id="snAddAlways" style="font-size:12px;padding:6px 10px;flex-shrink:0;">Legg til</button>' +
+      '</div>' +
+    '</div>';
+
+    // --- NEVER TOGETHER ---
+    var neverTogether = constraints.never_together || [];
+    var neverHtml = '<div class="sn-section">Aldri sammen</div>' +
+      '<div class="settings-card" style="padding:12px;">' +
+        '<div class="sn-hint" style="margin-bottom:10px;">Spillere som ikke skal v\u00e6re p\u00e5 samme lag.</div>' +
+        '<div id="snNeverList">';
+    for (var ni = 0; ni < neverTogether.length; ni++) {
+      var npair = neverTogether[ni];
+      var npairNames = npair.map(function(pid) {
+        var sp = activePlayers.find(function(p) { return p.player_id === pid; });
+        return sp ? sp.name : pid;
+      }).join(' + ');
+      neverHtml +=
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light,#f1f5f9);">' +
+          '<span style="font-size:13px;">' + escapeHtml(npairNames) + '</span>' +
+          '<button type="button" class="sn-remove-pair" data-type="never" data-idx="' + ni + '" style="background:none;border:none;color:var(--error,#ef4444);font-size:12px;cursor:pointer;padding:4px 8px;">Fjern</button>' +
+        '</div>';
+    }
+    neverHtml += '</div>' +
+      '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;">' +
+        '<select id="snNeverP1" style="flex:1;padding:6px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;">' +
+          '<option value="">Spiller 1</option>';
+    for (var n1 = 0; n1 < activePlayers.length; n1++) {
+      neverHtml += '<option value="' + escapeHtml(activePlayers[n1].player_id) + '">' + escapeHtml(activePlayers[n1].name) + '</option>';
+    }
+    neverHtml += '</select>' +
+        '<select id="snNeverP2" style="flex:1;padding:6px;font-size:13px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;">' +
+          '<option value="">Spiller 2</option>';
+    for (var n2 = 0; n2 < activePlayers.length; n2++) {
+      neverHtml += '<option value="' + escapeHtml(activePlayers[n2].player_id) + '">' + escapeHtml(activePlayers[n2].name) + '</option>';
+    }
+    neverHtml += '</select>' +
+        '<button class="btn-secondary" id="snAddNever" style="font-size:12px;padding:6px 10px;flex-shrink:0;">Legg til</button>' +
+      '</div>' +
+    '</div>';
+
+    // --- ASSEMBLE ---
+    root.innerHTML =
+      '<div class="settings-card">' +
+        '<div class="sn-dash-header">' +
+          '<button class="sn-back" id="snBackFromConstraints"><i class="fas fa-chevron-left"></i> Stall</button>' +
+          '<span class="sn-dash-title">F\u00f8ringer</span>' +
+        '</div>' +
+      '</div>' +
+      profileHtml +
+      coachHtml +
+      alwaysHtml +
+      neverHtml +
+      '<button class="btn-primary" id="snSaveConstraints" style="width:100%;margin-top:16px;"><i class="fas fa-save" style="margin-right:5px;"></i>Lagre f\u00f8ringer</button>';
+
+    // --- BIND HANDLERS ---
+
+    $('snBackFromConstraints').addEventListener('click', function() {
+      dashTab = 'roster';
+      snView = 'dashboard';
+      render();
+    });
+
+    // Profile cards
+    var profileCards = root.querySelectorAll('[data-profile]');
+    for (var pc = 0; pc < profileCards.length; pc++) {
+      profileCards[pc].addEventListener('click', function() {
+        for (var j = 0; j < profileCards.length; j++) profileCards[j].classList.remove('selected');
+        this.classList.add('selected');
+      });
+    }
+
+    // Add coach
+    if ($('snAddCoach')) $('snAddCoach').addEventListener('click', function() {
+      syncUiToConfig();
+      var nameInput = $('snNewCoachName');
+      var name = nameInput ? (nameInput.value || '').trim() : '';
+      if (!name) { notify('Skriv et trenernavn.', 'warning'); return; }
+      if (!config.constraints) config.constraints = {};
+      if (!config.constraints.coach_child) {
+        var mcVal = parseInt(($('snMinChildren') ? $('snMinChildren').value : '2')) || 2;
+        var mcoVal = parseInt(($('snMinCoaches') ? $('snMinCoaches').value : '2')) || 2;
+        config.constraints.coach_child = { coaches: {}, min_coaches_per_game: mcoVal, min_children_per_game: mcVal };
+      }
+      if (config.constraints.coach_child.coaches[name]) { notify('Treneren finnes allerede.', 'warning'); return; }
+      config.constraints.coach_child.coaches[name] = [];
+      s.distribution_config = config;
+      renderConstraintsEditor(root);
+    });
+
+    // Remove coach
+    var removeCoachBtns = root.querySelectorAll('.sn-remove-coach');
+    for (var rc = 0; rc < removeCoachBtns.length; rc++) {
+      removeCoachBtns[rc].addEventListener('click', function() {
+        syncUiToConfig();
+        var cName = this.getAttribute('data-coach');
+        if (config.constraints && config.constraints.coach_child && config.constraints.coach_child.coaches) {
+          delete config.constraints.coach_child.coaches[cName];
+          s.distribution_config = config;
+          renderConstraintsEditor(root);
+        }
+      });
+    }
+
+    // Coach child checkboxes (no re-render needed, just update in memory)
+    var ccChecks = root.querySelectorAll('.sn-cc-check');
+    for (var cc = 0; cc < ccChecks.length; cc++) {
+      ccChecks[cc].addEventListener('change', function() {
+        var cName = this.getAttribute('data-coach');
+        var pid = this.getAttribute('data-pid');
+        if (!config.constraints || !config.constraints.coach_child) return;
+        var arr = config.constraints.coach_child.coaches[cName];
+        if (!arr) return;
+        if (this.checked) {
+          if (arr.indexOf(pid) === -1) arr.push(pid);
+        } else {
+          var idx = arr.indexOf(pid);
+          if (idx !== -1) arr.splice(idx, 1);
+        }
+        s.distribution_config = config;
+      });
+    }
+
+    // Add always together
+    if ($('snAddAlways')) $('snAddAlways').addEventListener('click', function() {
+      syncUiToConfig();
+      var p1 = $('snAlwaysP1').value;
+      var p2 = $('snAlwaysP2').value;
+      if (!p1 || !p2 || p1 === p2) { notify('Velg to ulike spillere.', 'warning'); return; }
+      if (!config.constraints) config.constraints = {};
+      if (!config.constraints.always_together) config.constraints.always_together = [];
+      var exists = config.constraints.always_together.some(function(pair) {
+        return (pair.indexOf(p1) !== -1 && pair.indexOf(p2) !== -1);
+      });
+      if (exists) { notify('Paret finnes allerede.', 'warning'); return; }
+      config.constraints.always_together.push([p1, p2]);
+      s.distribution_config = config;
+      renderConstraintsEditor(root);
+    });
+
+    // Add never together
+    if ($('snAddNever')) $('snAddNever').addEventListener('click', function() {
+      syncUiToConfig();
+      var p1 = $('snNeverP1').value;
+      var p2 = $('snNeverP2').value;
+      if (!p1 || !p2 || p1 === p2) { notify('Velg to ulike spillere.', 'warning'); return; }
+      if (!config.constraints) config.constraints = {};
+      if (!config.constraints.never_together) config.constraints.never_together = [];
+      var exists = config.constraints.never_together.some(function(pair) {
+        return (pair.indexOf(p1) !== -1 && pair.indexOf(p2) !== -1);
+      });
+      if (exists) { notify('Paret finnes allerede.', 'warning'); return; }
+      config.constraints.never_together.push([p1, p2]);
+      s.distribution_config = config;
+      renderConstraintsEditor(root);
+    });
+
+    // Remove pairs (always/never)
+    var removePairBtns = root.querySelectorAll('.sn-remove-pair');
+    for (var rp = 0; rp < removePairBtns.length; rp++) {
+      removePairBtns[rp].addEventListener('click', function() {
+        syncUiToConfig();
+        var type = this.getAttribute('data-type');
+        var idx = parseInt(this.getAttribute('data-idx'));
+        if (!config.constraints) return;
+        var arr = type === 'always' ? config.constraints.always_together : config.constraints.never_together;
+        if (arr && idx >= 0 && idx < arr.length) {
+          arr.splice(idx, 1);
+          s.distribution_config = config;
+          renderConstraintsEditor(root);
+        }
+      });
+    }
+
+    // Save
+    $('snSaveConstraints').addEventListener('click', async function() {
+      var btn = $('snSaveConstraints');
+      btn.disabled = true;
+      btn.textContent = 'Lagrer\u2026';
+
+      syncUiToConfig();
+
+      var updated = await updateSeason(s.id, { distribution_config: config });
+      if (updated) {
+        currentSeason = updated;
+        var idx = seasons.findIndex(function(x) { return x.id === updated.id; });
+        if (idx !== -1) seasons[idx] = Object.assign(seasons[idx], updated);
+      }
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save" style="margin-right:5px;"></i>Lagre f\u00f8ringer';
+    });
+  }
+
+  // =========================================================================
+  //  VIEW: DISTRIBUTION (Fordeling — bridge to sesong-fordeling.js)
+  // =========================================================================
+
+  function renderDistributionView(root) {
+    if (!currentSeason || !window.sesongFordeling || !window.sesongFordeling.initUI) {
+      root.innerHTML = '<div style="padding:20px; text-align:center;">Feil: sesong-fordeling.js ikke lastet.</div>';
+      return;
+    }
+
+    root.innerHTML = '<div id="snDistContainer"></div>';
+    var container = document.getElementById('snDistContainer');
+    if (!container) return;
+
+    window.sesongFordeling.initUI(container, {
+      season: currentSeason,
+      events: events,
+      seasonPlayers: seasonPlayers,
+      helpers: {
+        renderSeasonAvatar: renderSeasonAvatar,
+        getSubTeamNames: getSubTeamNames,
+        getSubTeamName: getSubTeamName,
+        getSubTeamColor: getSubTeamColor,
+        escapeHtml: escapeHtml,
+        notify: notify,
+        getSb: getSb,
+        getOwnerUid: getOwnerUid
+      },
+      onClose: function() {
+        snView = 'dashboard';
+        dashTab = 'calendar';
+        render();
+      },
+      onSaved: function() {
+        loadEvents(currentSeason.id).then(function() {
+          snView = 'dashboard';
+          dashTab = 'calendar';
+          render();
+        });
+      }
+    });
+  }
+
   function renderStatsTab() {
     var stCount = (currentSeason && currentSeason.sub_team_count) || 1;
     var hasSubTeams = stCount > 1 && (currentSeason.sub_team_mode === 'fixed');
@@ -4297,10 +4738,12 @@
     html += '<div class="sn-section">Oppm\u00f8te</div>';
     html += '<div class="settings-card" style="padding:0; overflow-x:auto;">';
     html += '<table class="sn-stat-table">';
+    var showKm = stats.hasKmData;
     html += '<thead><tr>' +
       '<th>Spiller</th>' +
       '<th>Tr</th>' +
       '<th>Ka</th>' +
+      (showKm ? '<th>Km</th>' : '') +
       '<th>Min</th>' +
       '<th>Oppm.</th>' +
     '</tr></thead>';
@@ -4339,6 +4782,7 @@
         '<td class="sn-pname"><div style="display:flex;align-items:center;gap:8px;">' + renderSeasonAvatar(pl.player.player_id, pl.player.name, 28) + '<span>' + escapeHtml(pl.player.name) + statStBadge + '</span></div></td>' +
         '<td>' + pl.trainingsAttended + '</td>' +
         '<td>' + pl.matchesAttended + '</td>' +
+        (showKm ? '<td>' + (pl.totalKm > 0 ? pl.totalKm : '\u2014') + '</td>' : '') +
         '<td>' + (function() {
           if (!pl.minutesPlayed) return '\u2014';
           var minPct = maxMinutes > 0 ? Math.round((pl.minutesPlayed / maxMinutes) * 100) : 0;
@@ -4355,6 +4799,31 @@
     }
 
     html += '</tbody></table></div>';
+
+    // ── KM FAIRNESS ──
+    if (showKm) {
+      var kmValues = p.filter(function(x) { return x.totalKm > 0; }).map(function(x) { return x.totalKm; });
+      if (kmValues.length >= 3) {
+        var kmMin = Math.min.apply(null, kmValues);
+        var kmMax = Math.max.apply(null, kmValues);
+        var kmAvg = Math.round(kmValues.reduce(function(a, b) { return a + b; }, 0) / kmValues.length);
+        var kmSpread = kmMax - kmMin;
+
+        var kmFairClass, kmFairText;
+        if (kmSpread <= 20) {
+          kmFairClass = 'sn-fair-good';
+          kmFairText = '\u2705 Jevnt fordelt reising (' + kmSpread + ' km spread)';
+        } else if (kmSpread <= 50) {
+          kmFairClass = 'sn-fair-ok';
+          kmFairText = '\u26a0\ufe0f Noe ujevn reising (' + kmSpread + ' km spread)';
+        } else {
+          kmFairClass = 'sn-fair-bad';
+          kmFairText = '\u26a0\ufe0f Stor forskjell i reising (' + kmSpread + ' km spread)';
+        }
+        html += '<div style="text-align:center; margin:10px 0;"><span class="sn-fair-badge ' + kmFairClass + '">' + kmFairText + '</span></div>';
+        html += '<div style="text-align:center; font-size:11px; color:var(--text-400); margin-bottom:8px;">Snitt: ' + kmAvg + ' km \u00b7 Min: ' + kmMin + ' km \u00b7 Maks: ' + kmMax + ' km</div>';
+      }
+    }
 
     // ── PLAYING TIME FAIRNESS ──
     if (playersWithMinutes >= 3 && stats.matchesWithMinutesData >= 2) {
