@@ -1057,7 +1057,6 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   function swapBenchToField(si, benchPid, fieldSlot) {
-    console.log('[DIAG] swapBenchToField called:', { si, benchPid, fieldSlot });
     ensureSlotOverride(si);
     const m = kdSlotOverrides[si];
     const fieldPid = m.slots[fieldSlot];
@@ -1070,33 +1069,27 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     // with the new start locked. Returns true to tell caller that regeneration
     // happened (so caller skips its own render).
     if (si === 0 && lastBest) {
-      console.log('[DIAG] in seg 0 branch. lastBest exists. Checking guards...');
       // Guard 1: do not regenerate while match timer is active.
+      // generateKampdagPlan would call stopMatchTimer() and wipe timer state.
+      // Under active play, seg 0 is history — user is just making a visual note.
       if (kdTimerInterval || kdTimerStart) {
-        console.log('[DIAG] BLOCKED by timer guard', { kdTimerInterval, kdTimerStart });
-        return false;
+        return false;  // caller will re-render the visual override
       }
-      // Guard 2: format-change guard
+      // Guard 2: if the UI format has changed since the last plan was generated,
+      // do not regenerate. The locked lineup would be sized for the old format
+      // but the new plan would use the new format, causing UI/data inconsistency.
+      // User must press "Generer plan" to sync state first.
       const currentFormat = parseInt($('kdFormat')?.value, 10) || 7;
-      console.log('[DIAG] Format check:', { currentFormat, lastP });
       if (currentFormat !== lastP) {
-        console.log('[DIAG] BLOCKED by format guard');
-        return false;
+        return false;  // caller re-renders the visual override; plan stays on old format
       }
       const lockedLineup = Object.values(m.slots).filter(Boolean);
-      console.log('[DIAG] lockedLineup:', lockedLineup, 'length:', lockedLineup.length, 'lastP:', lastP);
       if (lockedLineup.length === lastP) {
-        console.log('[DIAG] Calling generateKampdagPlan with lock...');
         generateKampdagPlan({ 0: lockedLineup });
-        console.log('[DIAG] generateKampdagPlan returned. Regeneration done.');
-        return true;
-      } else {
-        console.log('[DIAG] BLOCKED: lockedLineup.length !== lastP');
+        return true;  // caller should NOT re-render (regeneration already rendered)
       }
-    } else {
-      console.log('[DIAG] Not in seg 0 branch:', { si, lastBestExists: !!lastBest });
     }
-    return false;
+    return false;  // caller should re-render normally
   }
 
   function resetSlotOverride(si) {
