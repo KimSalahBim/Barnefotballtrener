@@ -1102,6 +1102,35 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
   }
 
+  // Full reset: clears plan, overrides, timer, and UI output.
+  // Use when the UI is in a confused state that single-segment resets cannot fix
+  // (e.g. stale state after formation change following bench-swap).
+  // Mirrors the team:changed handler so behavior stays consistent.
+  function resetKampdagPlan() {
+    if (!confirm('Nullstill hele planen? Dette fjerner bytteplan og alle justeringer.')) return;
+    try {
+      if (kdTimerInterval || kdTimerStart) stopMatchTimer();
+      lastBest = null;
+      lastPresent = [];
+      lastPlanText = '';
+      lastFormation = null;
+      lastFormationKey = '';
+      lastUseFormation = false;
+      lastPositions = {};
+      kdSlotOverrides = {};
+      const lineupEl = $('kdLineup');
+      const planEl = $('kdPlan');
+      const metaEl = $('kdMeta');
+      const startBtn = $('kdStartMatch');
+      if (lineupEl) lineupEl.innerHTML = '';
+      if (planEl) planEl.innerHTML = '';
+      if (metaEl) metaEl.textContent = '';
+      if (startBtn) startBtn.style.display = 'none';
+    } catch (err) {
+      console.error('[Kampdag] Error in resetKampdagPlan:', err);
+    }
+  }
+
   function copySlotToNext(si) {
     if (!lastBest || si >= lastBest.segments.length - 1 || !kdSlotOverrides[si]) return;
     const slots = getActiveSlots();
@@ -2505,6 +2534,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           <div class="kd-dark-output">
             <h3 class="kd-dark-heading">Startoppstilling \u00b7 ${lastFormationKey}
               ${hasAnyOverride ? `<button class="kd-reset-all-btn" id="kdResetAllSlots">\u21ba Tilbakestill alle</button>` : ''}
+              <button class="kd-reset-all-btn" id="kdResetPlan" style="margin-left:8px;background:#7f1d1d;border-color:#991b1b;color:#fecaca;">Nullstill plan</button>
             </h3>
             <div class="kd-pitch-card">
               <div class="kd-pitch-card-header">
@@ -2605,6 +2635,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       // Bind action buttons (delegation-safe, re-binds each render)
       const resetAllBtn = document.getElementById('kdResetAllSlots');
       if (resetAllBtn) resetAllBtn.addEventListener('click', resetAllSlotOverrides);
+      const resetPlanBtn = document.getElementById('kdResetPlan');
+      if (resetPlanBtn) resetPlanBtn.addEventListener('click', resetKampdagPlan);
       document.querySelectorAll('[data-action="kdreset"]').forEach(b => {
         b.addEventListener('click', (e) => { e.stopPropagation(); resetSlotOverride(parseInt(b.dataset.seg)); });
       });
