@@ -1131,32 +1131,41 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     }
   }
 
-  function copySlotToNext(si) {
+  function copySlotToAll(si) {
     if (!lastBest || si >= lastBest.segments.length - 1 || !kdSlotOverrides[si]) return;
     const slots = getActiveSlots();
     if (!slots) return;
     const src = kdSlotOverrides[si];
-    const nextLineup = new Set(lastBest.segments[si + 1].lineup);
-    ensureSlotOverride(si + 1);
-    const tgt = kdSlotOverrides[si + 1];
-    // Copy field positions where player is still in next lineup
-    for (const [sk, pid] of Object.entries(src.slots)) {
-      const slot = slots.find(s => s.key === sk);
-      if (!slot || slot.zone === 'K') continue;
-      if (nextLineup.has(pid)) {
-        // Clear player from any other slot first
-        for (const [tk, tv] of Object.entries(tgt.slots)) { if (tv === pid && tk !== sk) tgt.slots[tk] = null; }
-        tgt.slots[sk] = pid;
+
+    // Iterate through ALL subsequent segments, propagating slot overrides.
+    // For each target segment:
+    //   - Players in src that are also in target's algorithm lineup: placed in same slot as src
+    //   - Other slots: filled with remaining players from target's lineup (arbitrary order)
+    //   - Keeper slot is never touched
+    // Trainer intention wins over F/M/A preferences.
+    for (let ti = si + 1; ti < lastBest.segments.length; ti++) {
+      const targetLineup = new Set(lastBest.segments[ti].lineup);
+      ensureSlotOverride(ti);
+      const tgt = kdSlotOverrides[ti];
+      // Copy field positions where player is still in target lineup
+      for (const [sk, pid] of Object.entries(src.slots)) {
+        const slot = slots.find(s => s.key === sk);
+        if (!slot || slot.zone === 'K') continue;
+        if (targetLineup.has(pid)) {
+          // Clear player from any other slot first
+          for (const [tk, tv] of Object.entries(tgt.slots)) { if (tv === pid && tk !== sk) tgt.slots[tk] = null; }
+          tgt.slots[sk] = pid;
+        }
       }
-    }
-    // Fill empty slots with unplaced players
-    for (const [sk, sv] of Object.entries(tgt.slots)) {
-      if (!sv || !nextLineup.has(sv)) {
-        const unused = [...nextLineup].filter(p => !Object.values(tgt.slots).includes(p) && p !== lastBest.segments[si + 1].keeperId);
-        if (unused.length) tgt.slots[sk] = unused[0];
+      // Fill empty slots with unplaced players
+      for (const [sk, sv] of Object.entries(tgt.slots)) {
+        if (!sv || !targetLineup.has(sv)) {
+          const unused = [...targetLineup].filter(p => !Object.values(tgt.slots).includes(p) && p !== lastBest.segments[ti].keeperId);
+          if (unused.length) tgt.slots[sk] = unused[0];
+        }
       }
+      tgt.bench = lastPresent.filter(p => !lastBest.segments[ti].lineup.includes(p.id)).map(p => p.id);
     }
-    tgt.bench = lastPresent.filter(p => !lastBest.segments[si + 1].lineup.includes(p.id)).map(p => p.id);
     renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
   }
 
@@ -2542,7 +2551,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
                   ${ov0 ? '<span class="kd-override-badge">\u270f\ufe0f Tilpasset</span>' : ''}
                 </div>
                 <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                  ${ov0 && best.segments.length > 1 ? `<button class="kd-copy-btn" data-action="kdcopy" data-seg="0">Kopier til neste</button>` : ''}
+                  ${ov0 && best.segments.length > 1 ? `<button class="kd-copy-btn" data-action="kdcopy" data-seg="0">Kopier til hele kampen</button>` : ''}
                   ${ov0 ? `<button class="kd-reset-btn" data-action="kdreset" data-seg="0">\u21ba</button>` : ''}
                   
                 </div>
@@ -2610,7 +2619,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
                 ${ov ? '<span class="kd-override-badge">\u270f\ufe0f Tilpasset</span>' : ''}
               </div>
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                ${ov && !isLast ? `<button class="kd-copy-btn" data-action="kdcopy" data-seg="${idx}">Kopier til neste</button>` : ''}
+                ${ov && !isLast ? `<button class="kd-copy-btn" data-action="kdcopy" data-seg="${idx}">Kopier til hele kampen</button>` : ''}
                 ${ov ? `<button class="kd-reset-btn" data-action="kdreset" data-seg="${idx}">\u21ba</button>` : ''}
                 
               </div>
@@ -2641,7 +2650,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         b.addEventListener('click', (e) => { e.stopPropagation(); resetSlotOverride(parseInt(b.dataset.seg)); });
       });
       document.querySelectorAll('[data-action="kdcopy"]').forEach(b => {
-        b.addEventListener('click', (e) => { e.stopPropagation(); copySlotToNext(parseInt(b.dataset.seg)); });
+        b.addEventListener('click', (e) => { e.stopPropagation(); copySlotToAll(parseInt(b.dataset.seg)); });
       });
 
     } else {
