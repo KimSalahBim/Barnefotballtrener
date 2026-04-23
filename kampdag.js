@@ -60,6 +60,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   let lastFormationKey = '';    // formation label at generation time
   let lastUseFormation = false; // whether formation was active at generation
   let lastPositions = {};       // position preferences snapshot at generation
+  let kdDragWarning = null;     // { playerName, undoFn } when drag placed a later-half keeper
 
   // Exposed pill helper (set from bindKampdagUI, used by kampdagPrefill)
   let _activateDurPill = null;
@@ -275,6 +276,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       lastUseFormation = false;
       lastPositions = {};
       kdSlotOverrides = {};
+      kdDragWarning = null;
       // Clear output areas
       const lineupEl = $('kdLineup');
       const planEl = $('kdPlan');
@@ -1058,12 +1060,84 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
   function swapBenchToField(si, benchPid, fieldSlot) {
     ensureSlotOverride(si);
+    // Clear any stale drag warning from a previous drag. The later-keeper check
+    // below will re-set it if conditions apply. This covers:
+    //   - drags where si !== 0 (warning only relevant for seg 0)
+    //   - drags where lastBest is null (no plan yet, warning not applicable)
+    //   - drags of non-keeper players (warning already cleared in old else-branch,
+    //     but this makes the invariant explicit)
+    kdDragWarning = null;
     const m = kdSlotOverrides[si];
     const fieldPid = m.slots[fieldSlot];
+
+    // Snapshot state BEFORE swap so we can build an undo function if we end up
+    // warning the trainer. The undo must restore m.slots[fieldSlot] to fieldPid
+    // (or delete the override entirely if the swap was the only change).
+    const prevSlotPid = fieldPid;
+    const prevBench = m.bench.slice();
+
     m.slots[fieldSlot] = benchPid;
     const bi = m.bench.indexOf(benchPid);
     if (bi !== -1) m.bench.splice(bi, 1);
     if (fieldPid) m.bench.push(fieldPid);
+
+    // Check if benchPid is a keeper in a LATER half of the match.
+    // If so, locking her onto the field in seg 0 will likely cause 60-minute
+    // playing time due to keeperOutfieldSegs pre-assignment. Store a warning
+    // so the caller can render it inline with an Angre-knapp.
+    if (si === 0 && lastBest) {
+      const T = lastT || 60;
+      const timeline = buildKeeperTimeline(T);
+      const isLaterKeeper = timeline.some(k => k.keeperId === benchPid && k.start > 0);
+      if (isLaterKeeper) {
+        const playerName = (lastPresent.find(p => p.id === benchPid) || {}).name || 'Spilleren';
+        // Capture closure vars for undo
+        const undoSi = si;
+        const undoSlot = fieldSlot;
+        const undoPrevSlotPid = prevSlotPid;
+        const undoBenchPid = benchPid;
+        kdDragWarning = {
+          playerName,
+          undoFn: function() {
+            // Reverse the swap: restore fieldSlot to previous player, put benchPid back on bench
+            const mm = kdSlotOverrides[undoSi];
+            if (!mm) return;
+            mm.slots[undoSlot] = undoPrevSlotPid;
+            // Remove undoBenchPid from bench wherever it is (in case regeneration already re-placed it)
+            const ci = mm.bench.indexOf(undoBenchPid);
+            if (ci !== -1) mm.bench.splice(ci, 1);
+            // Remove prevSlotPid from bench if it was put there
+            if (undoPrevSlotPid) {
+              const pi = mm.bench.indexOf(undoPrevSlotPid);
+              if (pi !== -1) mm.bench.splice(pi, 1);
+            }
+            // Put benchPid back on bench
+            mm.bench.push(undoBenchPid);
+            // If slots is now identical to default, drop the override entirely
+            const def = buildDefaultSlotMap(undoSi);
+            const slotsEqual = Object.keys(def.slots).every(k => def.slots[k] === mm.slots[k]);
+            if (slotsEqual) delete kdSlotOverrides[undoSi];
+            kdDragWarning = null;
+            // Regenerate so the plan returns to its pre-swap state
+            const currentFormat = parseInt($('kdFormat')?.value, 10) || 7;
+            if (currentFormat === lastP) {
+              const ov0 = kdSlotOverrides[0];
+              if (ov0) {
+                const lockedLineup = Object.values(ov0.slots).filter(Boolean);
+                if (lockedLineup.length === lastP) {
+                  generateKampdagPlan({ 0: lockedLineup });
+                  return;
+                }
+              }
+              // No override: regenerate without a lock
+              generateKampdagPlan();
+              return;
+            }
+            renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
+          }
+        };
+      }
+    }
 
     // NEW: When a bench-swap happens in segment 0, regenerate the whole plan
     // with the new start locked. Returns true to tell caller that regeneration
@@ -1097,8 +1171,16 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
   }
 
+  // Exposed for inline Angre-knapp in drag-warning banner
+  window.kampdagDragUndo = function() {
+    if (kdDragWarning && typeof kdDragWarning.undoFn === 'function') {
+      kdDragWarning.undoFn();
+    }
+  };
+
   function resetAllSlotOverrides() {
     kdSlotOverrides = {};
+    kdDragWarning = null;
     renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
   }
 
@@ -1118,6 +1200,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       lastUseFormation = false;
       lastPositions = {};
       kdSlotOverrides = {};
+      kdDragWarning = null;
       const lineupEl = $('kdLineup');
       const planEl = $('kdPlan');
       const metaEl = $('kdMeta');
@@ -2057,6 +2140,26 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         // Arrange ring: first `benchSize` slots are the sitting players, rest are playing players
         // This makes sitting = outfield[0..benchSize-1] at p=0
         ringOrder = [...lockedSitting, ...lockedOutfield];
+      } else {
+        // No lock: place later-half keepers LAST in the ring. The bench window
+        // at p=0 comes from ringOrder[0..benchSize-1], so if a later-half keeper
+        // were first in the ring she'd start on the bench — confusing for the
+        // trainer since she's already committed as keeper for the next half.
+        // Sorting later-half keepers to the end makes them start ON the field
+        // and sit out a later period instead. Total playing time per player
+        // in the half is unchanged (with benchSize=1, each player sits
+        // exactly once per cycle).
+        const laterKeepers = new Set(
+          keeperTimeline
+            .filter(k => k.keeperId && k.start > kSeg.start)
+            .map(k => k.keeperId)
+        );
+        if (laterKeepers.size > 0) {
+          ringOrder = [
+            ...outfield.filter(id => !laterKeepers.has(id)),
+            ...outfield.filter(id => laterKeepers.has(id))
+          ];
+        }
       }
 
       // Build rotation: slide bench window through player ring
@@ -2562,6 +2665,19 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
               <div class="kd-bench-area"><span class="kd-bench-label">Benk:</span>${benchHtml0 || '<span style="color:#64748b;font-size:10px;">Ingen</span>'}</div>
             </div>
 
+            ${kdDragWarning ? `
+            <div class="kd-drag-warning" role="alert">
+              <span class="kd-drag-warning-icon">⚠️</span>
+              <span class="kd-drag-warning-text"><strong>${kdDragWarning.playerName}</strong> er planlagt som keeper senere i kampen. Låst som utespiller i starten kan føre til svært ulik spilletid.</span>
+              <button type="button" class="kd-drag-warning-undo" onclick="window.kampdagDragUndo()">Angre</button>
+            </div>
+            ` : ''}
+            ${(best && best.nkDiff > 8) ? `
+            <div class="kd-nkdiff-warning" role="alert">
+              <span class="kd-nkdiff-warning-icon">⚠️</span>
+              <span class="kd-nkdiff-warning-text">Spilletiden er ujevnt fordelt (avvik ${best.nkDiff} min). Trykk "Nullstill plan" eller juster spillerne manuelt for å rette opp.</span>
+            </div>
+            ` : ''}
             <h3 class="kd-dark-heading" style="margin-top:16px;">Beregnet spilletid${hasBenchSwap ? ' (justert)' : ''}</h3>
             ${timelineChartHtml}
           </div>`;
