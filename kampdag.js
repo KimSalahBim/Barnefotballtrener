@@ -2378,12 +2378,26 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       ? keeperTimeline
       : [{ start: 0, end: T }];
 
-    const lengths = [];
+    // Build the same integer-rounded boundaries the real algorithm would use,
+    // then measure actual segment lengths between them.
+    const boundaries = new Set([0, T]);
+    for (const p of periods) {
+      boundaries.add(p.start);
+      boundaries.add(p.end);
+    }
     for (const p of periods) {
       const L = p.end - p.start;
       if (L <= 0) continue;
       const nSegs = Math.max(1, Math.round(L / intervalMin));
-      lengths.push(L / nSegs);
+      for (let k = 1; k < nSegs; k++) {
+        boundaries.add(Math.round(p.start + L * k / nSegs));
+      }
+    }
+    const sortedBounds = Array.from(boundaries).sort((a, b) => a - b);
+    const lengths = [];
+    for (let i = 0; i < sortedBounds.length - 1; i++) {
+      const dt = sortedBounds[i + 1] - sortedBounds[i];
+      if (dt > 0) lengths.push(dt);
     }
 
     if (!lengths.length) return { minLen: intervalMin, maxLen: intervalMin, uniform: true };
@@ -2414,17 +2428,24 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     const { minLen, maxLen, uniform } = computeActualInterval(T, requested, keeperTimeline);
 
-    // Format helper: integer if whole, else one decimal
-    const fmt = (n) => (Math.abs(n - Math.round(n)) < 0.05) ? String(Math.round(n)) : n.toFixed(1);
+    // Segments are integers after Math.round — format as whole numbers
+    const fmt = (n) => String(Math.round(n));
 
-    if (!uniform) {
-      previewEl.textContent = `Faktisk intervall: ${fmt(minLen)}\u2013${fmt(maxLen)} min (varierer mellom omganger)`;
-      previewEl.style.color = 'var(--text-600)';
-    } else if (Math.abs(minLen - requested) < 0.05) {
+    if (uniform && Math.abs(minLen - requested) < 0.5) {
+      // Exact match: coach's requested interval is achieved
       previewEl.textContent = `Intervall: ${fmt(minLen)} min \u2713`;
       previewEl.style.color = 'var(--success)';
-    } else {
+    } else if (uniform) {
+      // All segments equal but differ from requested (rounded to keeper-divisor)
       previewEl.textContent = `Faktisk intervall: ${fmt(minLen)} min (tilpasses keeper-bytter)`;
+      previewEl.style.color = 'var(--text-600)';
+    } else if ((maxLen - minLen) <= 1.5) {
+      // Adjacent-integer alternation within periods (e.g., 7/8)
+      previewEl.textContent = `Faktisk intervall: ${fmt(minLen)}\u2013${fmt(maxLen)} min (tilpasses keeper-bytter)`;
+      previewEl.style.color = 'var(--text-600)';
+    } else {
+      // Genuinely varies between keeper periods (asymmetric split)
+      previewEl.textContent = `Faktisk intervall: ${fmt(minLen)}\u2013${fmt(maxLen)} min (varierer mellom omganger)`;
       previewEl.style.color = 'var(--text-600)';
     }
   }
