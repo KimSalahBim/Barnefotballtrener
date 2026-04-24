@@ -374,6 +374,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     }
     renderKampdagPlayers();
     refreshKeeperUI();
+    autoFillKeeperMinutes();
     updateKampdagCounts();
   });
 
