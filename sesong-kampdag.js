@@ -943,6 +943,33 @@
     renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
   }
 
+  function resetKampdagPlan() {
+    if (!confirm('Nullstill hele planen? Dette fjerner bytteplan og alle justeringer.')) return;
+    try {
+      if (kdTimerInterval || kdTimerStart) stopMatchTimer();
+      lastBest = null;
+      lastPresent = [];
+      lastPlanText = '';
+      lastFormation = null;
+      lastFormationKey = '';
+      lastUseFormation = false;
+      lastPositions = {};
+      kdSlotOverrides = {};
+      const lineupEl = $('skdLineup');
+      const planEl = $('skdPlan');
+      const metaEl = $('skdMeta');
+      const startBtn = $('skdStartMatch');
+      const saveBtn = $('skdSavePlan');
+      if (lineupEl) lineupEl.innerHTML = '';
+      if (planEl) planEl.innerHTML = '';
+      if (metaEl) metaEl.textContent = '';
+      if (startBtn) startBtn.style.display = 'none';
+      if (saveBtn) saveBtn.style.display = 'none';
+    } catch (err) {
+      console.error('[sesong-kampdag] Error in resetKampdagPlan:', err);
+    }
+  }
+
   function copySlotToAll(si) {
     if (!lastBest || si >= lastBest.segments.length - 1 || !kdSlotOverrides[si]) return;
     const slots = getActiveSlots();
@@ -981,10 +1008,20 @@
     const mins = {};
     lastPresent.forEach(p => { mins[p.id] = 0; });
     for (let i = 0; i < lastBest.segments.length; i++) {
-      const dt = lastBest.segments[i].end - lastBest.segments[i].start;
-      const sm = getSlotMap(i);
-      for (const pid of Object.values(sm.slots).filter(Boolean)) {
-        mins[pid] = (mins[pid] || 0) + dt;
+      const seg = lastBest.segments[i];
+      const dt = seg.end - seg.start;
+      if (kdSlotOverrides[i]) {
+        // Overrides present: use slot-based counting (user may have changed lineup)
+        const sm = getSlotMap(i);
+        for (const pid of Object.values(sm.slots).filter(Boolean)) {
+          mins[pid] = (mins[pid] || 0) + dt;
+        }
+      } else {
+        // No overrides: use algorithm lineup directly (always correct,
+        // avoids silent player drops when slot layout has fewer positions than lineup)
+        for (const pid of seg.lineup) {
+          mins[pid] = (mins[pid] || 0) + dt;
+        }
       }
     }
     return mins;
@@ -1988,6 +2025,7 @@
     const previewEl = $('skdIntervalPreview');
     if (!previewEl) return;
 
+    // Only show preview when in interval mode
     if (kdFrequency !== 'interval') {
       previewEl.textContent = '';
       return;
@@ -2274,6 +2312,14 @@
     lastPresent = present;
     lastP = P;
     lastT = T;
+
+    // Validate formation matches current format (prevents stale key from wrong format)
+    const fmtOpts = FORMATIONS[P];
+    if (fmtOpts && kdFormationKey && !fmtOpts[kdFormationKey]) {
+      kdFormationKey = getDefaultFormationKey(P);
+      kdFormation = fmtOpts[kdFormationKey] || Object.values(fmtOpts)[0];
+    }
+
     lastFormation = kdFormation ? kdFormation.slice() : null;
     lastFormationKey = kdFormationKey || '';
     lastUseFormation = !!(kdFormationOn && kdFormation);
@@ -2361,7 +2407,10 @@
           const segEnd = best.segments[si + 1] ? best.segments[si + 1].start : T;
           const sm = getSlotMap(si);
           const onField = new Set(Object.values(sm.slots).filter(Boolean));
-          if (!onField.has(m.id)) {
+          // Also check algorithm lineup for non-overridden segments
+          // (slot layout may have fewer positions than lineup size)
+          const inLineup = !kdSlotOverrides[si] && seg.lineup.includes(m.id);
+          if (!onField.has(m.id) && !inLineup) {
             segs.push({ pct: ((segEnd - seg.start) / T * 100), color: 'transparent' });
             continue;
           }
@@ -2413,7 +2462,7 @@
 
       const bubbleCls = { F: 'kd-bb-f', M: 'kd-bb-m', A: 'kd-bb-a', K: 'kd-bb-k' };
 
-      // First segment \u2192 startoppstilling in kdLineup
+      // First segment \u2192 startoppstilling in skdLineup
       if (lineupEl) {
         const sm0 = getSlotMap(0);
         const ov0 = hasSlotOverrides(0);
@@ -2441,6 +2490,7 @@
           <div class="kd-dark-output">
             <h3 class="kd-dark-heading">Startoppstilling \u00b7 ${lastFormationKey}
               ${hasAnyOverride ? `<button class="kd-reset-all-btn" id="skdResetAllSlots">\u21ba Tilbakestill alle</button>` : ''}
+              <button class="kd-reset-all-btn" id="skdResetPlan" style="margin-left:8px;background:#7f1d1d;border-color:#991b1b;color:#fecaca;">Nullstill plan</button>
             </h3>
             <div class="kd-pitch-card">
               <div class="kd-pitch-card-header">
@@ -2448,7 +2498,7 @@
                   ${ov0 ? '<span class="kd-override-badge">\u270f\ufe0f Tilpasset</span>' : ''}
                 </div>
                 <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                  ${ov0 && best.segments.length > 1 ? `<button class="kd-copy-btn" data-action="skdcopy" data-seg="0">Kopier til alle</button>` : ''}
+                  ${ov0 && best.segments.length > 1 ? `<button class="kd-copy-btn" data-action="skdcopy" data-seg="0">Kopier til hele kampen</button>` : ''}
                   ${ov0 ? `<button class="kd-reset-btn" data-action="skdreset" data-seg="0">\u21ba</button>` : ''}
                   
                 </div>
@@ -2467,7 +2517,7 @@
         lineupEl.classList.remove('results-container');
       }
 
-      // Remaining segments \u2192 bytteplan in kdPlan
+      // Remaining segments \u2192 bytteplan in skdPlan
       if (planEl) {
         let cardsHtml = '';
         for (let idx = 1; idx < best.segments.length; idx++) {
@@ -2516,7 +2566,7 @@
                 ${ov ? '<span class="kd-override-badge">\u270f\ufe0f Tilpasset</span>' : ''}
               </div>
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                ${ov && !isLast ? `<button class="kd-copy-btn" data-action="skdcopy" data-seg="${idx}">Kopier til alle</button>` : ''}
+                ${ov && !isLast ? `<button class="kd-copy-btn" data-action="skdcopy" data-seg="${idx}">Kopier til hele kampen</button>` : ''}
                 ${ov ? `<button class="kd-reset-btn" data-action="skdreset" data-seg="${idx}">\u21ba</button>` : ''}
                 
               </div>
@@ -2541,6 +2591,8 @@
       // Bind action buttons (delegation-safe, re-binds each render)
       const resetAllBtn = document.getElementById('skdResetAllSlots');
       if (resetAllBtn) resetAllBtn.addEventListener('click', resetAllSlotOverrides);
+      const resetPlanBtn = document.getElementById('skdResetPlan');
+      if (resetPlanBtn) resetPlanBtn.addEventListener('click', resetKampdagPlan);
       document.querySelectorAll('[data-action="skdreset"]').forEach(b => {
         b.addEventListener('click', (e) => { e.stopPropagation(); resetSlotOverride(parseInt(b.dataset.seg)); });
       });
@@ -2865,7 +2917,8 @@
           const segEnd = best.segments[si+1] ? best.segments[si+1].start : T;
           const sm = getSlotMap(si);
           const onField = new Set(Object.values(sm.slots).filter(Boolean));
-          if (!onField.has(m.id)) { segs.push({pct:((segEnd-seg.start)/T*100),c:'transparent'}); continue; }
+          const inLineup = !kdSlotOverrides[si] && seg.lineup.includes(m.id);
+          if (!onField.has(m.id) && !inLineup) { segs.push({pct:((segEnd-seg.start)/T*100),c:'transparent'}); continue; }
           let color = zc.X;
           for (const s of slots) { if (sm.slots[s.key] === m.id) { color = zc[s.zone] || zc.X; break; } }
           segs.push({pct:((segEnd-seg.start)/T*100),c:color});
@@ -3364,6 +3417,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
       bindKampdagUI();
       renderKampdagPlayers();
       refreshKeeperUI();
+      autoFillKeeperMinutes();
       updateKampdagCounts();
 
       // Back button
