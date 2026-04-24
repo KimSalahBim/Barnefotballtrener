@@ -527,9 +527,6 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     if (minutesElForPreview) {
       minutesElForPreview.addEventListener('input', updateIntervalPreview);
     }
-    if (keeperCountEl) {
-      keeperCountEl.addEventListener('change', updateIntervalPreview);
-    }
     for (let i = 1; i <= 4; i++) {
       const kmin = $(`kdKeeperMin${i}`);
       if (kmin) kmin.addEventListener('input', updateIntervalPreview);
@@ -634,8 +631,14 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     // ── Keeper counter buttons ──
     var keeperMinusBtn = $('kdKeeperMinus');
     var keeperPlusBtn = $('kdKeeperPlus');
-    if (keeperMinusBtn) keeperMinusBtn.addEventListener('click', function() { updateKeeperCounter(-1); });
-    if (keeperPlusBtn) keeperPlusBtn.addEventListener('click', function() { updateKeeperCounter(1); });
+    if (keeperMinusBtn) keeperMinusBtn.addEventListener('click', function() {
+      updateKeeperCounter(-1);
+      requestAnimationFrame(updateIntervalPreview);
+    });
+    if (keeperPlusBtn) keeperPlusBtn.addEventListener('click', function() {
+      updateKeeperCounter(1);
+      requestAnimationFrame(updateIntervalPreview);
+    });
     // Initialiser disabled-state (starter alltid på 1)
     if (keeperMinusBtn) keeperMinusBtn.disabled = true;
 
