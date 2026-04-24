@@ -86,7 +86,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   // Frequency state
-  let kdFrequency = 'equal';   // 'equal' or 'calm'
+  let kdFrequency = 'equal';       // 'equal', 'interval' or 'calm'
+  let kdIntervalMin = 8;           // Minutes between subs (interval mode only)
+  let kdIntervalAdjust = false;    // Opt-in: let algo adjust n_segs +/-2 for fairness
 
   // Timer state
   let kdTimerInterval = null;
@@ -250,8 +252,9 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   //   Strong stickiness -> holds players on field/bench longer.
   //   High splitHalf -> avoids creating short segments.
   const FREQ_PARAMS = {
-    equal: { mode: 'equal', sticky: 'mild',   swapSplitHalf: 4 },
-    calm:  { mode: 'calm',  sticky: 'strong', swapSplitHalf: 5 },
+    equal:    { mode: 'equal',    sticky: 'mild',   swapSplitHalf: 4 },
+    interval: { mode: 'interval', sticky: null,     swapSplitHalf: 0 },
+    calm:     { mode: 'calm',     sticky: 'strong', swapSplitHalf: 5 },
   };
 
   // ------------------------------
@@ -481,13 +484,39 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
 
     // Frequency buttons
     const freqContainer = $('kdFreqOptions');
+    const intervalPanel = $('kdIntervalPanel');
     if (freqContainer) {
       freqContainer.querySelectorAll('.kd-freq-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           freqContainer.querySelectorAll('.kd-freq-btn').forEach(b => b.classList.remove('kd-freq-active'));
           btn.classList.add('kd-freq-active');
           kdFrequency = btn.getAttribute('data-freq') || 'equal';
+          if (intervalPanel) intervalPanel.style.display = (kdFrequency === 'interval') ? 'flex' : 'none';
         });
+      });
+    }
+
+    // Interval inputs (Fast intervall mode)
+    const intervalInput = $('kdIntervalMin');
+    if (intervalInput) {
+      const minutesElForInit = $('kdMinutes');
+      const curT = parseInt(minutesElForInit?.value, 10) || 60;
+      const smartDefault = Math.max(4, Math.min(12, Math.round(curT / 8)));
+      intervalInput.value = smartDefault;
+      kdIntervalMin = smartDefault;
+      intervalInput.addEventListener('input', () => {
+        const v = parseInt(intervalInput.value, 10);
+        if (!isNaN(v) && v >= 3 && v <= 30) {
+          kdIntervalMin = v;
+        }
+      });
+    }
+    const intervalAdjust = $('kdIntervalAdjust');
+    if (intervalAdjust) {
+      intervalAdjust.checked = false;
+      kdIntervalAdjust = false;
+      intervalAdjust.addEventListener('change', () => {
+        kdIntervalAdjust = !!intervalAdjust.checked;
       });
     }
 
@@ -2223,6 +2252,97 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
   }
 
   // ------------------------------
+  // Fast intervall (interval mode) helpers
+  // ------------------------------
+
+  /**
+   * Build segment boundaries by distributing evenly within each keeper period.
+   * Keeper-swap times are mandatory boundaries.
+   *
+   * When adjustForBalance is true, for each period tries n_segs in
+   * [target-2 .. target+2] and keeps the one giving best estimated fairness
+   * (via quick sim with 6 seeds), with a small deviation penalty.
+   */
+  function buildIntervalSegmentTimes(T, intervalMin, keeperTimeline, players, P, N, adjustForBalance) {
+    const periods = (keeperTimeline && keeperTimeline.length)
+      ? keeperTimeline
+      : [{ start: 0, end: T, keeperId: null }];
+
+    const nsegsPerPeriod = periods.map(p => {
+      const L = p.end - p.start;
+      return L > 0 ? Math.max(1, Math.round(L / intervalMin)) : 0;
+    });
+
+    if (adjustForBalance && players && players.length && P && N) {
+      for (let pi = 0; pi < periods.length; pi++) {
+        const target = nsegsPerPeriod[pi];
+        if (target < 1) continue;
+        const L = periods[pi].end - periods[pi].start;
+        if (L <= 0) continue;
+
+        const minN = Math.max(1, target - 2);
+        const maxN = target + 2;
+        let bestN = target;
+        let bestScore = Infinity;
+
+        for (let candN = minN; candN <= maxN; candN++) {
+          if (candN > 0 && L / candN < 3) continue; // min segment length
+
+          const testNsegs = nsegsPerPeriod.slice();
+          testNsegs[pi] = candN;
+          const testTimes = buildIntervalBoundariesFromNsegs(T, periods, testNsegs);
+          const estDiff = estimateIntervalFairness(players, testTimes, P, keeperTimeline);
+          const deviation = Math.abs(candN - target);
+          const score = estDiff + deviation * 0.5;
+          if (score < bestScore) {
+            bestScore = score;
+            bestN = candN;
+          }
+        }
+        nsegsPerPeriod[pi] = bestN;
+      }
+    }
+
+    return buildIntervalBoundariesFromNsegs(T, periods, nsegsPerPeriod);
+  }
+
+  // Build sorted boundary list given nsegs-per-period.
+  function buildIntervalBoundariesFromNsegs(T, periods, nsegsPerPeriod) {
+    const boundaries = new Set([0, T]);
+    for (const p of periods) {
+      boundaries.add(p.start);
+      boundaries.add(p.end);
+    }
+    for (let i = 0; i < periods.length; i++) {
+      const p = periods[i];
+      const L = p.end - p.start;
+      const n = nsegsPerPeriod[i];
+      if (L <= 0 || n <= 1) continue;
+      for (let k = 1; k < n; k++) {
+        boundaries.add(Math.round(p.start + L * k / n));
+      }
+    }
+    return Array.from(boundaries).sort((a, b) => a - b);
+  }
+
+  // Quick fairness estimator for adjustForBalance loop. 6 seeds, median nkDiff.
+  function estimateIntervalFairness(players, times, P, keeperTimeline) {
+    const SEEDS = 6;
+    const diffs = [];
+    const baseSeed = 1731 * (times.length + 1);
+    for (let s = 0; s < SEEDS; s++) {
+      const res = greedyAssign(players, times, P, keeperTimeline,
+                               baseSeed + s * 100003, null);
+      const nonKeepers = players.map(p => p.id).filter(id => !res.keeperSet.has(id));
+      const vals = nonKeepers.map(id => res.minutes[id]);
+      if (vals.length) diffs.push(Math.max(...vals) - Math.min(...vals));
+    }
+    if (!diffs.length) return 0;
+    diffs.sort((a, b) => a - b);
+    return diffs[Math.floor(diffs.length / 2)];
+  }
+
+  // ------------------------------
   // MAIN
   // ------------------------------
   function generateKampdagPlan(lockedSegments) {
@@ -2377,6 +2497,50 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
             if (isBetter(candidate, best)) best = candidate;
           }
         }
+      }
+    } else if (fp.mode === 'interval') {
+      // Fast intervall: fixed boundaries per keeper period, no stickyMode,
+      // no addIndividualSwaps (preserves interval promise).
+      const clampedInterval = Math.max(3, Math.min(Math.floor(T / 2), kdIntervalMin || 8));
+      const times = buildIntervalSegmentTimes(
+        T, clampedInterval, keeperTimeline, present, P, N, kdIntervalAdjust
+      );
+
+      for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
+        const runSeed = seed + attempt * 99991;
+        const res = greedyAssign(present, times, P, keeperTimeline, runSeed, null);
+
+        const segClone = res.segments.map(s => ({
+          start: s.start, end: s.end, dt: s.dt,
+          lineup: s.lineup.slice(), keeperId: s.keeperId
+        }));
+        const minClone = Object.assign({}, res.minutes);
+        // NOTE: intentionally NOT calling addIndividualSwaps here
+
+        const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
+        const nkVals = nonKeepers.map(id => minClone[id]);
+        const nkDiff = nkVals.length ? Math.max(...nkVals) - Math.min(...nkVals) : 0;
+        const kIds = present.map(p => p.id).filter(id => res.keeperSet.has(id));
+        const kVals = kIds.map(id => minClone[id]);
+        const kDiff = kVals.length >= 2 ? Math.max(...kVals) - Math.min(...kVals) : 0;
+        const allTimes = uniqSorted(segClone.map(s => s.start).concat([T]));
+
+        const candidate = {
+          segments: segClone,
+          minutes: minClone,
+          keeperMinutes: res.keeperMinutes,
+          times: allTimes,
+          nkDiff,
+          kDiff,
+          swaps: []
+        };
+
+        const candidateScore = kDiff * 2 + nkDiff;
+        const bestScore = best ? (best.kDiff || 0) * 2 + best.nkDiff : Infinity;
+        if (!best || candidateScore < bestScore) {
+          best = candidate;
+        }
+        if (kDiff <= 2 && nkDiff <= 2) break;
       }
     } else {
       // Calm mode: keep existing logic unchanged
