@@ -492,6 +492,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
           btn.classList.add('kd-freq-active');
           kdFrequency = btn.getAttribute('data-freq') || 'equal';
           if (intervalPanel) intervalPanel.style.display = (kdFrequency === 'interval') ? 'flex' : 'none';
+          updateIntervalPreview();
         });
       });
     }
@@ -509,6 +510,7 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
         if (!isNaN(v) && v >= 3 && v <= 30) {
           kdIntervalMin = v;
         }
+        updateIntervalPreview();
       });
     }
     const intervalAdjust = $('kdIntervalAdjust');
@@ -518,6 +520,19 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       intervalAdjust.addEventListener('change', () => {
         kdIntervalAdjust = !!intervalAdjust.checked;
       });
+    }
+
+    // Keep preview in sync when kamptid or keeper settings change
+    const minutesElForPreview = $('kdMinutes');
+    if (minutesElForPreview) {
+      minutesElForPreview.addEventListener('input', updateIntervalPreview);
+    }
+    if (keeperCountEl) {
+      keeperCountEl.addEventListener('change', updateIntervalPreview);
+    }
+    for (let i = 1; i <= 4; i++) {
+      const kmin = $(`kdKeeperMin${i}`);
+      if (kmin) kmin.addEventListener('input', updateIntervalPreview);
     }
 
     // ── Helper: activate duration pill by value ──
@@ -2340,6 +2355,74 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     if (!diffs.length) return 0;
     diffs.sort((a, b) => a - b);
     return diffs[Math.floor(diffs.length / 2)];
+  }
+
+  // ------------------------------
+  // Fast intervall preview helper
+  // ------------------------------
+
+  /**
+   * Compute actual interval(s) that will be used given requested interval,
+   * match duration, and keeper timeline. Mirrors buildIntervalSegmentTimes'
+   * nsegsPerPeriod logic but returns just the resulting segment lengths.
+   *
+   * Returns { minLen, maxLen, uniform } where uniform=true means all periods
+   * have the same effective interval.
+   */
+  function computeActualInterval(T, intervalMin, keeperTimeline) {
+    const periods = (keeperTimeline && keeperTimeline.length)
+      ? keeperTimeline
+      : [{ start: 0, end: T }];
+
+    const lengths = [];
+    for (const p of periods) {
+      const L = p.end - p.start;
+      if (L <= 0) continue;
+      const nSegs = Math.max(1, Math.round(L / intervalMin));
+      lengths.push(L / nSegs);
+    }
+
+    if (!lengths.length) return { minLen: intervalMin, maxLen: intervalMin, uniform: true };
+
+    const minLen = Math.min(...lengths);
+    const maxLen = Math.max(...lengths);
+    const uniform = (maxLen - minLen) < 0.5;
+    return { minLen, maxLen, uniform };
+  }
+
+  /**
+   * Update the live preview text in kdIntervalPreview.
+   * Called reactively on input/change events.
+   */
+  function updateIntervalPreview() {
+    const previewEl = $('kdIntervalPreview');
+    if (!previewEl) return;
+
+    // Only show preview when in interval mode
+    if (kdFrequency !== 'interval') {
+      previewEl.textContent = '';
+      return;
+    }
+
+    const T = clamp(parseInt($('kdMinutes')?.value, 10) || 48, 10, 200);
+    const requested = Math.max(3, Math.min(Math.floor(T / 2), kdIntervalMin || 8));
+    const keeperTimeline = buildKeeperTimeline(T);
+
+    const { minLen, maxLen, uniform } = computeActualInterval(T, requested, keeperTimeline);
+
+    // Format helper: integer if whole, else one decimal
+    const fmt = (n) => (Math.abs(n - Math.round(n)) < 0.05) ? String(Math.round(n)) : n.toFixed(1);
+
+    if (!uniform) {
+      previewEl.textContent = `Faktisk intervall: ${fmt(minLen)}\u2013${fmt(maxLen)} min (varierer mellom omganger)`;
+      previewEl.style.color = 'var(--text-600)';
+    } else if (Math.abs(minLen - requested) < 0.05) {
+      previewEl.textContent = `Intervall: ${fmt(minLen)} min \u2713`;
+      previewEl.style.color = 'var(--success)';
+    } else {
+      previewEl.textContent = `Faktisk intervall: ${fmt(minLen)} min (tilpasses keeper-bytter)`;
+      previewEl.style.color = 'var(--text-600)';
+    }
   }
 
   // ------------------------------

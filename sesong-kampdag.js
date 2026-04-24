@@ -393,6 +393,7 @@
           btn.classList.add('kd-freq-active');
           kdFrequency = btn.getAttribute('data-freq') || 'equal';
           if (intervalPanel) intervalPanel.style.display = (kdFrequency === 'interval') ? 'flex' : 'none';
+          updateIntervalPreview();
         });
       });
     }
@@ -410,6 +411,7 @@
         if (!isNaN(v) && v >= 3 && v <= 30) {
           kdIntervalMin = v;
         }
+        updateIntervalPreview();
       });
     }
     const intervalAdjust = $('skdIntervalAdjust');
@@ -419,6 +421,19 @@
       intervalAdjust.addEventListener('change', () => {
         kdIntervalAdjust = !!intervalAdjust.checked;
       });
+    }
+
+    // Keep preview in sync when kamptid or keeper settings change
+    const minutesElForPreview = $('skdMinutes');
+    if (minutesElForPreview) {
+      minutesElForPreview.addEventListener('input', updateIntervalPreview);
+    }
+    if (keeperCountEl) {
+      keeperCountEl.addEventListener('change', updateIntervalPreview);
+    }
+    for (let i = 1; i <= 4; i++) {
+      const kmin = $(`skdKeeperMin${i}`);
+      if (kmin) kmin.addEventListener('input', updateIntervalPreview);
     }
 
     // Formation always on: hide toggle switch, show panel for non-3v3
@@ -1924,6 +1939,67 @@
   }
 
   // ------------------------------
+  // Fast intervall preview helper
+  // ------------------------------
+
+  /**
+   * Compute actual interval(s) that will be used given requested interval,
+   * match duration, and keeper timeline.
+   */
+  function computeActualInterval(T, intervalMin, keeperTimeline) {
+    const periods = (keeperTimeline && keeperTimeline.length)
+      ? keeperTimeline
+      : [{ start: 0, end: T }];
+
+    const lengths = [];
+    for (const p of periods) {
+      const L = p.end - p.start;
+      if (L <= 0) continue;
+      const nSegs = Math.max(1, Math.round(L / intervalMin));
+      lengths.push(L / nSegs);
+    }
+
+    if (!lengths.length) return { minLen: intervalMin, maxLen: intervalMin, uniform: true };
+
+    const minLen = Math.min(...lengths);
+    const maxLen = Math.max(...lengths);
+    const uniform = (maxLen - minLen) < 0.5;
+    return { minLen, maxLen, uniform };
+  }
+
+  /**
+   * Update the live preview text in skdIntervalPreview.
+   */
+  function updateIntervalPreview() {
+    const previewEl = $('skdIntervalPreview');
+    if (!previewEl) return;
+
+    if (kdFrequency !== 'interval') {
+      previewEl.textContent = '';
+      return;
+    }
+
+    const T = clamp(parseInt($('skdMinutes')?.value, 10) || 48, 10, 200);
+    const requested = Math.max(3, Math.min(Math.floor(T / 2), kdIntervalMin || 8));
+    const keeperTimeline = buildKeeperTimeline(T);
+
+    const { minLen, maxLen, uniform } = computeActualInterval(T, requested, keeperTimeline);
+
+    const fmt = (n) => (Math.abs(n - Math.round(n)) < 0.05) ? String(Math.round(n)) : n.toFixed(1);
+
+    if (!uniform) {
+      previewEl.textContent = `Faktisk intervall: ${fmt(minLen)}\u2013${fmt(maxLen)} min (varierer mellom omganger)`;
+      previewEl.style.color = 'var(--text-600)';
+    } else if (Math.abs(minLen - requested) < 0.05) {
+      previewEl.textContent = `Intervall: ${fmt(minLen)} min \u2713`;
+      previewEl.style.color = 'var(--success)';
+    } else {
+      previewEl.textContent = `Faktisk intervall: ${fmt(minLen)} min (tilpasses keeper-bytter)`;
+      previewEl.style.color = 'var(--text-600)';
+    }
+  }
+
+  // ------------------------------
   // MAIN
   // ------------------------------
   function generateKampdagPlan() {
@@ -3146,7 +3222,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
             '<button type="button" class="btn-secondary kd-freq-btn" data-freq="calm" style="flex:1; font-size:11px; padding:7px 3px;">\ud83e\uddd8 Rolig bytte<br><span class="small-text" style="opacity:1; color:var(--text-600);">F\u00e6rre bytter</span></button>' +
           '</div>' +
         '</div>' +
-        '<div id="skdIntervalPanel" class="settings-row" style="display:none; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; padding:10px 12px; background:var(--bg); border-radius:10px;">' +
+        '<div id="skdIntervalPanel" class="settings-row" style="display:none; gap:10px 12px; align-items:center; flex-wrap:wrap; margin-top:10px; padding:10px 12px; background:var(--bg); border-radius:10px;">' +
           '<label for="skdIntervalMin" style="font-weight:700; font-size:13px;">Bytt hvert</label>' +
           '<input id="skdIntervalMin" type="number" class="input" min="3" max="30" value="8" style="width:70px;">' +
           '<span class="small-text">min</span>' +
@@ -3154,6 +3230,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
             '<input id="skdIntervalAdjust" type="checkbox">' +
             '<span>Tilpass for balanse</span>' +
           '</label>' +
+          '<div id="skdIntervalPreview" class="small-text" style="flex-basis:100%; font-size:11px; opacity:0.85; min-height:14px;"></div>' +
         '</div>' +
         '<div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">' +
           '<button id="skdSelectAll" class="btn-secondary" type="button">Velg alle</button>' +
