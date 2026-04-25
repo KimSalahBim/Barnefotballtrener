@@ -508,8 +508,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
       kdIntervalMin = smartDefault;
       intervalInput.addEventListener('input', () => {
         const v = parseInt(intervalInput.value, 10);
-        if (!isNaN(v) && v >= 3 && v <= 30) {
-          kdIntervalMin = v;
+        if (!isNaN(v) && v >= 3) {
+          kdIntervalMin = clamp(v, 3, 60);
         }
         updateIntervalPreview();
       });

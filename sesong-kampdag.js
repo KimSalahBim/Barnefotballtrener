@@ -70,6 +70,9 @@
   let kdDragWarning = null;     // { playerName, undoFn } when drag placed a later-half keeper
   const KD_DRAG_THRESHOLD = 8;
 
+  // Exposed pill helper (set from bindKampdagUI, used by external callers)
+  let _activateDurPill = null;
+
   // Formation state
   let kdFormationOn = true;
   let kdFormation = null;       // e.g. [2,3,1]
@@ -275,6 +278,8 @@
         const defaultMinutes = { 3: 20, 5: 40, 7: 60, 9: 70, 11: 80 };
         if (defaultMinutes[fmt]) {
           minutesEl.value = defaultMinutes[fmt];
+          // Sync dur-pill UI to match auto-set value
+          if (typeof activateDurPill === 'function') activateDurPill(defaultMinutes[fmt]);
           // Programmatic value change doesn't fire 'input' event,
           // so we must call the same functions manually:
           autoFillKeeperMinutes();
@@ -409,8 +414,8 @@
       kdIntervalMin = smartDefault;
       intervalInput.addEventListener('input', () => {
         const v = parseInt(intervalInput.value, 10);
-        if (!isNaN(v) && v >= 3 && v <= 30) {
-          kdIntervalMin = v;
+        if (!isNaN(v) && v >= 3) {
+          kdIntervalMin = clamp(v, 3, 60);
         }
         updateIntervalPreview();
       });
@@ -436,6 +441,116 @@
       const kmin = $(`skdKeeperMin${i}`);
       if (kmin) kmin.addEventListener('input', updateIntervalPreview);
     }
+
+    // ── Helper: activate duration pill by value ──
+    _activateDurPill = activateDurPill;
+    function activateDurPill(min) {
+      var durPillsEl = document.getElementById('skdDurPills');
+      if (!durPillsEl) return;
+      var matched = false;
+      durPillsEl.querySelectorAll('.kd-dur-pill').forEach(function(b) {
+        var isMatch = parseInt(b.dataset.min, 10) === min;
+        b.classList.toggle('kd-pill-active', isMatch);
+        if (isMatch) matched = true;
+      });
+      var customRow = document.getElementById('skdDurCustomRow');
+      if (!matched) {
+        // Ingen fast pill matcher (f.eks. 20 min for 3-er) — vis custom input
+        durPillsEl.querySelectorAll('.kd-dur-pill').forEach(function(b) {
+          b.classList.toggle('kd-pill-active', parseInt(b.dataset.min, 10) === 0);
+        });
+        if (customRow) customRow.style.display = 'block';
+      } else {
+        if (customRow) customRow.style.display = 'none';
+      }
+      var el = $('skdMinutes');
+      if (el) {
+        el.value = min;
+        el.dispatchEvent(new Event('input'));
+      }
+    }
+
+    // ── Helper: update keeper counter display ──
+    function updateKeeperCounter(delta) {
+      var kcEl = $('skdKeeperCount');
+      var display = $('skdKeeperCountDisplay');
+      var current = clamp(parseInt(kcEl ? kcEl.value : '1', 10), 0, 4);
+      var next = clamp(current + delta, 1, 4);
+      if (kcEl) kcEl.value = String(next);
+      if (display) display.textContent = String(next);
+      var minusBtn = $('skdKeeperMinus');
+      var plusBtn = $('skdKeeperPlus');
+      if (minusBtn) minusBtn.disabled = (next <= 1);
+      if (plusBtn) plusBtn.disabled = (next >= 4);
+      refreshKeeperUI();
+      autoFillKeeperMinutes();
+      updateKeeperSummary();
+    }
+
+    // ── Format pills ──
+    var formatPillsEl = document.getElementById('skdFormatPills');
+    if (formatPillsEl) {
+      formatPillsEl.addEventListener('click', function(e) {
+        var btn = e.target.closest('.kd-pill[data-format]');
+        if (!btn) return;
+        formatPillsEl.querySelectorAll('.kd-pill').forEach(function(b) {
+          b.classList.remove('kd-pill-active');
+        });
+        btn.classList.add('kd-pill-active');
+        var fmt = btn.dataset.format;
+        var formatEl2 = $('skdFormat');
+        if (formatEl2) {
+          formatEl2.value = fmt;
+          formatEl2.dispatchEvent(new Event('change'));
+        }
+        var durMap = { '3': 20, '5': 40, '7': 60, '9': 70, '11': 80 };
+        var autoMin = durMap[fmt];
+        if (autoMin) activateDurPill(autoMin);
+        refreshKeeperUI();
+        updateKampdagCounts();
+      });
+    }
+
+    // ── Duration pills ──
+    var durPillsEl2 = document.getElementById('skdDurPills');
+    if (durPillsEl2) {
+      durPillsEl2.addEventListener('click', function(e) {
+        var btn = e.target.closest('.kd-dur-pill[data-min]');
+        if (!btn) return;
+        durPillsEl2.querySelectorAll('.kd-dur-pill').forEach(function(b) {
+          b.classList.remove('kd-pill-active');
+        });
+        btn.classList.add('kd-pill-active');
+        var customRow = document.getElementById('skdDurCustomRow');
+        var min = parseInt(btn.dataset.min, 10);
+        if (min === 0) {
+          if (customRow) customRow.style.display = 'block';
+          var inp = $('skdMinutes');
+          if (inp) inp.focus();
+        } else {
+          if (customRow) customRow.style.display = 'none';
+          var el = $('skdMinutes');
+          if (el) {
+            el.value = min;
+            el.dispatchEvent(new Event('input'));
+          }
+        }
+      });
+    }
+
+    // ── Keeper counter buttons ──
+    var keeperMinusBtn = $('skdKeeperMinus');
+    var keeperPlusBtn = $('skdKeeperPlus');
+    if (keeperMinusBtn) keeperMinusBtn.addEventListener('click', function() {
+      updateKeeperCounter(-1);
+      requestAnimationFrame(updateIntervalPreview);
+    });
+    if (keeperPlusBtn) keeperPlusBtn.addEventListener('click', function() {
+      updateKeeperCounter(1);
+      requestAnimationFrame(updateIntervalPreview);
+    });
+    // Initialiser disabled-state (starter alltid på 1)
+    if (keeperMinusBtn) keeperMinusBtn.disabled = true;
 
     // ── Keeper panel focusout refresh ──
     const keeperPanel = $('skdKeeperPanel');
@@ -594,6 +709,10 @@
     const kcEl = $('skdKeeperCount');
     if (kcEl && parseInt(kcEl.value, 10) < 1) {
       kcEl.value = '1';
+      const display = $('skdKeeperCountDisplay');
+      if (display) display.textContent = '1';
+      const minusBtn = $('skdKeeperMinus');
+      if (minusBtn) minusBtn.disabled = true;
       autoFillKeeperMinutes();
     }
 
@@ -752,45 +871,10 @@
   }
 
   function updateCoverage() {
+    // Sonedekning visualization disabled - matches kampdag (which has no coverage UI).
+    // Element kept hidden in DOM; function is a no-op for parity.
     const el = $('skdCoverage');
-    if (!el || !kdFormation) { if (el) el.style.display = 'none'; return; }
-
-    const present = getPresentPlayers();
-    const posMap = getPositionsMap();
-    const counts = { F: 0, M: 0, A: 0 };
-    present.forEach(p => {
-      const pos = posMap[p.id] || new Set(['F', 'M', 'A']);
-      if (pos.has('F')) counts.F++;
-      if (pos.has('M')) counts.M++;
-      if (pos.has('A')) counts.A++;
-    });
-
-    const needs = { F: kdFormation[0], M: kdFormation[1], A: kdFormation[2] };
-    const zones = [
-      { key: 'F', name: 'Forsvar', need: needs.F, have: counts.F, color: '#16a34a' },
-      { key: 'M', name: 'Midtbane', need: needs.M, have: counts.M, color: '#456C4B' },
-      { key: 'A', name: 'Angrep', need: needs.A, have: counts.A, color: '#dc2626' },
-    ].filter(z => z.need > 0);
-
-    const warn = zones.some(z => z.have < z.need);
-    el.style.display = 'block';
-    el.style.background = warn ? 'var(--warning-dim)' : 'var(--success-dim)';
-    el.style.color = warn ? 'var(--warning)' : 'var(--success)';
-
-    el.innerHTML = `<div style="font-weight:500; margin-bottom:6px;">${warn ? '\u26a0 ' : ''}Sonedekning for ${kdFormationKey}</div>` +
-      zones.map(z => {
-        const pct = Math.min(100, Math.round((z.have / Math.max(1, present.length)) * 100));
-        const low = z.have < z.need;
-        return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;">
-          <span style="width:8px;height:8px;border-radius:50%;background:${z.color};flex-shrink:0;"></span>
-          <span style="width:72px;">${z.name} (${z.need})</span>
-          <div style="flex:1;height:6px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:${low ? 'var(--warning)' : z.color};border-radius:3px;"></div>
-          </div>
-          <span style="width:32px;text-align:right;font-weight:500;${low ? 'color:var(--warning);' : ''}">${z.have}${low ? ' \u26a0' : ''}</span>
-        </div>`;
-      }).join('') +
-      (warn ? `<div style="margin-top:6px;font-size:12px;">Noen spillere vil bli plassert utenfor preferanse.</div>` : '');
+    if (el) el.style.display = 'none';
   }
 
   // Assign positions to a lineup based on formation + preferences
@@ -3532,9 +3616,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
   // ============================================================
   function buildSkdHtml(format, minutes, opponent, isHome) {
     var title = opponent ? ('vs ' + escapeHtml(opponent)) : 'Bytteplan';
+    var fmtPills = [3,5,7,9,11].map(function(f) {
+      var sub = (f === 3) ? '<span class="kd-pill-sub">ingen K</span>' : '';
+      var active = (f === format) ? ' kd-pill-active' : '';
+      return '<button type="button" class="kd-pill' + active + '" data-format="' + f + '">' + f + '-er' + sub + '</button>';
+    }).join('');
     var fmtOpts = [3,5,7,9,11].map(function(f) {
       return '<option value="' + f + '"' + (f === format ? ' selected' : '') + '>' + f + '-er' + (f === 3 ? ' (ingen keeper)' : '') + '</option>';
     }).join('');
+    var durOptions = [40, 60, 70, 80];
+    var durPills = durOptions.map(function(m) {
+      var active = (m === minutes) ? ' kd-pill-active' : '';
+      return '<button type="button" class="kd-dur-pill' + active + '" data-min="' + m + '">' + m + ' min</button>';
+    }).join('') + '<button type="button" class="kd-dur-pill' + (durOptions.indexOf(minutes) === -1 ? ' kd-pill-active' : '') + '" data-min="0">Annet</button>';
+    var customRowDisplay = (durOptions.indexOf(minutes) === -1) ? 'block' : 'none';
 
     return '' +
       '<div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">' +
@@ -3542,32 +3637,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
         '<div style="font-weight:700; font-size:16px;">' + title + '</div>' +
       '</div>' +
 
-      '<div class="settings-card">' +
-        '<div class="settings-row" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">' +
-          '<div style="flex:1; min-width:220px;">' +
-            '<label for="skdFormat" style="display:block; font-weight:500; margin-bottom:6px;">Format</label>' +
-            '<select id="skdFormat" class="input" style="width:100%;">' + fmtOpts + '</select>' +
-          '</div>' +
-          '<div style="flex:1; min-width:220px;">' +
-            '<label for="skdMinutes" style="display:block; font-weight:500; margin-bottom:6px;">Kampvarighet (min)</label>' +
-            '<input id="skdMinutes" type="number" class="input" value="' + minutes + '" min="10" max="200" style="width:100%;">' +
-          '</div>' +
-          '<div style="flex:1; min-width:220px;">' +
-            '<div style="font-weight:500; margin-bottom:6px;">Auto</div>' +
-            '<div id="skdAutoInfo" class="small-text" style="opacity:0.85;">Velg oppm\u00f8te f\u00f8rst.</div>' +
-          '</div>' +
+      '<div class="settings-card kd-top-card">' +
+
+        '<div class="kd-label">Format</div>' +
+        '<div class="kd-pill-group" id="skdFormatPills">' + fmtPills + '</div>' +
+        '<select id="skdFormat" style="display:none;">' + fmtOpts + '</select>' +
+
+        '<div class="kd-divider"></div>' +
+
+        '<div class="kd-label">Kampvarighet</div>' +
+        '<div class="kd-dur-group" id="skdDurPills">' + durPills + '</div>' +
+        '<div id="skdDurCustomRow" style="display:' + customRowDisplay + '; margin-top:6px;">' +
+          '<input id="skdMinutes" type="number" class="input kd-dur-custom-input" value="' + minutes + '" min="10" max="200">' +
         '</div>' +
-        '<div class="settings-row" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px;">' +
-          '<div style="font-weight:500; font-size:13px; min-width:100px;">Byttemodus</div>' +
-          '<div id="skdFreqOptions" style="display:flex; gap:6px; flex:1;">' +
-            '<button type="button" class="btn-secondary kd-freq-btn kd-freq-active" data-freq="equal" style="flex:1; font-size:11px; padding:7px 3px;">\u2696\ufe0f Lik spilletid<br><span class="small-text" style="opacity:0.9;">Rettferdig</span></button>' +
-            '<button type="button" class="btn-secondary kd-freq-btn" data-freq="interval" style="flex:1; font-size:11px; padding:7px 3px;">\u23f1\ufe0f Fast intervall<br><span class="small-text" style="opacity:1; color:var(--text-600);">Forutsigbar</span></button>' +
-            '<button type="button" class="btn-secondary kd-freq-btn" data-freq="calm" style="flex:1; font-size:11px; padding:7px 3px;">\ud83e\uddd8 Rolig bytte<br><span class="small-text" style="opacity:1; color:var(--text-600);">F\u00e6rre bytter</span></button>' +
-          '</div>' +
+
+        '<div class="kd-auto-badge" id="skdAutoInfo">Velg oppm\u00f8te f\u00f8rst.</div>' +
+
+        '<div class="kd-divider"></div>' +
+
+        '<div class="kd-label">Byttemodus</div>' +
+        '<div id="skdFreqOptions" style="display:flex; gap:8px;">' +
+          '<button type="button" class="kd-mode-chip kd-freq-btn kd-freq-active" data-freq="equal">' +
+            '<span class="kd-chip-icon">\u2696\ufe0f</span>' +
+            '<span class="kd-chip-text">Lik spilletid<span class="kd-chip-sub">Rettferdig</span></span>' +
+          '</button>' +
+          '<button type="button" class="kd-mode-chip kd-freq-btn" data-freq="interval">' +
+            '<span class="kd-chip-icon">\u23f1\ufe0f</span>' +
+            '<span class="kd-chip-text">Fast intervall<span class="kd-chip-sub">Forutsigbar</span></span>' +
+          '</button>' +
+          '<button type="button" class="kd-mode-chip kd-freq-btn" data-freq="calm">' +
+            '<span class="kd-chip-icon">\ud83e\uddd8</span>' +
+            '<span class="kd-chip-text">Rolig bytte<span class="kd-chip-sub">F\u00e6rre bytter</span></span>' +
+          '</button>' +
         '</div>' +
+
         '<div id="skdIntervalPanel" class="settings-row" style="display:none; gap:10px 12px; align-items:center; flex-wrap:wrap; margin-top:10px; padding:10px 12px; background:var(--bg); border-radius:10px;">' +
           '<label for="skdIntervalMin" style="font-weight:700; font-size:13px;">Bytt hvert</label>' +
-          '<input id="skdIntervalMin" type="number" class="input" min="3" max="30" value="8" style="width:70px;">' +
+          '<input id="skdIntervalMin" type="number" class="input" min="3" max="60" value="8" style="width:70px;">' +
           '<span class="small-text">min</span>' +
           '<label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-left:auto; cursor:pointer;">' +
             '<input id="skdIntervalAdjust" type="checkbox">' +
@@ -3575,9 +3681,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
           '</label>' +
           '<div id="skdIntervalPreview" class="small-text" style="flex-basis:100%; font-size:11px; opacity:0.85; min-height:14px;"></div>' +
         '</div>' +
-        '<div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">' +
-          '<button id="skdSelectAll" class="btn-secondary" type="button">Velg alle</button>' +
-          '<button id="skdDeselectAll" class="btn-secondary" type="button">Fjern alle</button>' +
+
+        '<div style="display:flex; gap:8px; margin-top:12px;">' +
+          '<button id="skdSelectAll" class="btn-secondary" type="button" style="flex:1; padding:6px 10px; font-size:13px;">Velg alle</button>' +
+          '<button id="skdDeselectAll" class="btn-secondary" type="button" style="flex:1; padding:6px 10px; font-size:13px;">Fjern alle</button>' +
         '</div>' +
       '</div>' +
 
@@ -3586,45 +3693,67 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 
       '<div class="settings-card" style="margin-top:8px; padding:8px 12px;">' +
         '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
-          '<div><div style="font-weight:500; font-size:14px;">Formasjoner og roller</div>' +
-          '<div class="small-text" style="opacity:0.8; font-size:11px;">Vis posisjoner (F/M/A) i bytteplan, banevisning og PDF.</div></div>' +
+          '<div>' +
+            '<div style="font-weight:700; font-size:14px;">Formasjoner og roller</div>' +
+            '<div class="small-text" style="opacity:0.8; font-size:11px; line-height:1.2;">Vis posisjoner (F/M/A) i bytteplan, banevisning og PDF.</div>' +
+          '</div>' +
           '<label class="switch"><input id="skdFormationToggle" type="checkbox"><span class="slider"></span></label>' +
         '</div>' +
         '<div id="skdFormationPanel" style="display:none; margin-top:10px;">' +
           '<div id="skdFormationGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>' +
-          '<div style="margin-top:12px;">' +
-            '<div style="font-weight:500; font-size:13px; margin-bottom:6px;">Posisjonspreferanse</div>' +
-            '<div class="small-text" style="opacity:0.8; margin-bottom:8px;">Sett posisjoner i Spillere-fanen (F/M/A).</div>' +
-            '<div id="skdPositionList" style="display:grid; grid-template-columns:1fr 1fr; gap:4px;"></div>' +
-          '</div>' +
-          '<div id="skdCoverage" style="margin-top:10px; padding:10px 12px; border-radius:10px; font-size:12px; display:none;"></div>' +
+          '<div id="skdPositionList" style="display:none;"></div>' +
+          '<div id="skdCoverage" style="display:none;"></div>' +
         '</div>' +
       '</div>' +
 
-      '<div class="settings-card" style="margin-top:8px; padding:8px 12px;">' +
-        '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
-          '<div><div style="font-weight:500; font-size:14px;">Manuell keeper</div>' +
-          '<div id="skdKeeperHint" class="small-text" style="opacity:0.8; font-size:11px;">Velg hvem som st\u00e5r i m\u00e5l og hvor lenge.</div></div>' +
-          '<label class="switch"><input id="skdManualKeeper" type="checkbox"><span class="slider"></span></label>' +
+      '<div class="settings-card" style="margin-top:8px; padding:12px 14px;">' +
+        '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">' +
+          '<div>' +
+            '<div style="font-weight:700; font-size:14px;">Keepere</div>' +
+            '<div id="skdKeeperHint" class="small-text" style="opacity:0.8; font-size:11px; line-height:1.2;">Velg hvem som st\u00e5r i m\u00e5l og hvor lenge.</div>' +
+          '</div>' +
+          '<div class="kd-counter">' +
+            '<button type="button" class="kd-counter-btn" id="skdKeeperMinus">\u2212</button>' +
+            '<span id="skdKeeperCountDisplay">1</span>' +
+            '<button type="button" class="kd-counter-btn" id="skdKeeperPlus">+</button>' +
+          '</div>' +
         '</div>' +
-        '<div id="skdKeeperPanel" style="display:none; margin-top:10px;">' +
-          '<div class="settings-row" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">' +
-            '<div style="min-width:240px;"><label for="skdKeeperCount" style="display:block; font-weight:500; margin-bottom:6px;">Antall keepere</label>' +
-            '<select id="skdKeeperCount" class="input" style="width:100%;"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>' +
-            '<div style="flex:1; min-width:240px;"><label style="display:block; font-weight:500; margin-bottom:6px;">Oppsummering</label>' +
-            '<div id="skdKeeperSummary" class="small-text" style="opacity:0.85;">\u2013</div></div>' +
+        '<select id="skdKeeperCount" style="display:none;"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>' +
+        '<input id="skdManualKeeper" type="checkbox" style="display:none;" checked>' +
+
+        '<div id="skdKeeperPanel">' +
+          '<div style="display:flex; flex-direction:column; gap:7px;">' +
+            '<div class="kd-keeper-row" data-row="1" style="display:flex;">' +
+              '<div class="kd-keeper-avatar">\ud83e\udde4</div>' +
+              '<select id="skdKeeper1" class="kd-keeper-select"></select>' +
+              '<input id="skdKeeperMin1" type="number" class="kd-keeper-min-input" value="0" min="0">' +
+              '<span class="kd-keeper-min-label">min</span>' +
+            '</div>' +
+            '<div class="kd-keeper-row" data-row="2" style="display:none;">' +
+              '<div class="kd-keeper-avatar">\ud83e\udde4</div>' +
+              '<select id="skdKeeper2" class="kd-keeper-select"></select>' +
+              '<input id="skdKeeperMin2" type="number" class="kd-keeper-min-input" value="0" min="0">' +
+              '<span class="kd-keeper-min-label">min</span>' +
+            '</div>' +
+            '<div class="kd-keeper-row" data-row="3" style="display:none;">' +
+              '<div class="kd-keeper-avatar">\ud83e\udde4</div>' +
+              '<select id="skdKeeper3" class="kd-keeper-select"></select>' +
+              '<input id="skdKeeperMin3" type="number" class="kd-keeper-min-input" value="0" min="0">' +
+              '<span class="kd-keeper-min-label">min</span>' +
+            '</div>' +
+            '<div class="kd-keeper-row" data-row="4" style="display:none;">' +
+              '<div class="kd-keeper-avatar">\ud83e\udde4</div>' +
+              '<select id="skdKeeper4" class="kd-keeper-select"></select>' +
+              '<input id="skdKeeperMin4" type="number" class="kd-keeper-min-input" value="0" min="0">' +
+              '<span class="kd-keeper-min-label">min</span>' +
+            '</div>' +
           '</div>' +
-          '<div class="kd-keeper-rows" style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">' +
-            '<div class="kd-keeper-row" data-row="1" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper1" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin1" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
-            '<div class="kd-keeper-row" data-row="2" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper2" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin2" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
-            '<div class="kd-keeper-row" data-row="3" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper3" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin3" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
-            '<div class="kd-keeper-row" data-row="4" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper4" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin4" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
-          '</div>' +
+          '<div id="skdKeeperSummary" class="small-text" style="margin-top:6px; text-align:right; opacity:0.7;">\u2013</div>' +
         '</div>' +
       '</div>' +
 
       '<div class="settings-card" style="margin-top:14px;">' +
-        '<div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap;">' +
+        '<div class="settings-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
           '<button id="skdGenerate" class="btn-primary" type="button"><i class="fas fa-wand-magic-sparkles"></i> Generer plan</button>' +
           '<button id="skdCopy" class="btn-secondary" type="button"><i class="fas fa-copy"></i> Kopier plan</button>' +
           '<button id="skdExportPdf" class="btn-secondary" type="button"><i class="fas fa-file-pdf"></i> Lagre som PDF</button>' +
