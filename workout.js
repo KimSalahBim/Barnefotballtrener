@@ -136,27 +136,6 @@
     return [];
   }
 
-  /**
-   * Filtrer øvelser basert på aldersgruppe og valgfritt tema.
-   * Returnerer sortert liste: relevante først, deretter resten.
-   */
-  function filterExercisesByContext(ageGroup, themeId) {
-    const results = { primary: [], secondary: [], other: [] };
-    for (const ex of EXERCISES) {
-      if (ex.category === 'special') continue;
-      const ageMatch = !ageGroup || (ex.ages && ex.ages.includes(ageGroup));
-      const themeMatch = themeId && ex.themes && ex.themes.includes(themeId);
-
-      if (ageMatch && themeMatch) {
-        results.primary.push(ex);
-      } else if (ageMatch) {
-        results.secondary.push(ex);
-      } else {
-        results.other.push(ex);
-      }
-    }
-    return results;
-  }
 
   /**
    * Beregn NFF-tidsfordeling for en liste med blokker.
@@ -706,11 +685,6 @@
     return s;
   }
 
-  function pickRandomExerciseKey() {
-    const candidates = EXERCISES.filter(x => !x.isCustom && x.category !== 'special');
-    const idx = Math.floor(Math.random() * candidates.length);
-    return candidates[idx]?.key || 'ssg';
-  }
 
   // -------------------------
   // Storage (tåler Tracking Prevention / private mode)
@@ -851,21 +825,7 @@
     saveFavorites(favs);
     return favs;
   }
-  function getSortedExercises() {
-    const freq = loadFrequency();
-    const sorted = [...EXERCISES];
-    // Drikkepause always first (index 0), then sort rest by frequency desc
-    const drink = sorted.findIndex(e => e.key === 'drink');
-    const drinkEx = drink >= 0 ? sorted.splice(drink, 1)[0] : null;
-    sorted.sort((a, b) => {
-      const fa = freq[a.key] || 0;
-      const fb = freq[b.key] || 0;
-      if (fb !== fa) return fb - fa;
-      return a.label.localeCompare(b.label, 'nb');
-    });
-    if (drinkEx) sorted.unshift(drinkEx);
-    return sorted;
-  }
+
 
   function defaultStore() {
     return { schemaVersion: SCHEMA_VERSION, templates: [] };
@@ -885,10 +845,6 @@
   }
   function _woGetTeamId() {
     return window._bftTeamId || (window.__BF_getTeamId ? window.__BF_getTeamId() : 'default');
-  }
-  function _woGetSeasonId() {
-    // Heuristikk: bruk aktiv sesong hvis tilgjengelig
-    try { return window._bftCurrentSeasonId || null; } catch { return null; }
   }
 
   // In-memory cache (populated async, rendered sync)
@@ -1425,42 +1381,6 @@
     countEl.textContent = String(state.selected.size);
   }
 
-  function optionHtml(selectedKey) {
-    // Build grouped dropdown with <optgroup>
-    const freq = loadFrequency();
-    const drink = EXERCISES.find(e => e.key === 'drink');
-    const custom = EXERCISES.find(e => e.key === 'custom');
-    let html = '';
-    // Drikkepause always first
-    if (drink) {
-      const sel = drink.key === selectedKey ? 'selected' : '';
-      html += '<option value="' + escapeHtml(drink.key) + '" ' + sel + '>' + escapeHtml(drink.label) + '</option>';
-    }
-    // Grouped exercises
-    for (const cat of EXERCISE_CATEGORIES) {
-      const exs = EXERCISES.filter(e => e.category === cat.id);
-      if (!exs.length) continue;
-      // Sort by frequency within category
-      exs.sort((a, b) => {
-        const fa = freq[a.key] || 0;
-        const fb = freq[b.key] || 0;
-        if (fb !== fa) return fb - fa;
-        return a.label.localeCompare(b.label, 'nb');
-      });
-      html += '<optgroup label="' + escapeHtml(catLabel(cat, state.ageGroup)) + '">';
-      for (const x of exs) {
-        const sel = x.key === selectedKey ? 'selected' : '';
-        html += '<option value="' + escapeHtml(x.key) + '" ' + sel + '>' + escapeHtml(x.label) + '</option>';
-      }
-      html += '</optgroup>';
-    }
-    // Skriv inn selv last
-    if (custom) {
-      const sel = custom.key === selectedKey ? 'selected' : '';
-      html += '<option value="' + escapeHtml(custom.key) + '" ' + sel + '>' + escapeHtml(custom.label) + '</option>';
-    }
-    return html;
-  }
 
   function renderExerciseEditor(blockId, track, ex) {
     const idp = `wo_${blockId}_${track}`;
@@ -2300,30 +2220,6 @@
   // -------------------------
   // Templates
   // -------------------------
-  function serializeTemplateFromState() {
-    const title = String($('woTitle')?.value || '').trim();
-    const date = String($('woDate')?.value || '').trim();
-
-    const blocks = state.blocks.map(b => {
-      if (b.kind === 'parallel') {
-        return {
-          id: uuid('tplb_'), // new ids to avoid collision when loading
-          kind: 'parallel',
-          a: { ...b.a },
-          b: { ...b.b }
-        };
-      }
-      return { id: uuid('tplb_'), kind: 'single', a: { ...b.a } };
-    });
-
-    return {
-      id: uuid('tpl_'),
-      title: title || (date ? `Trening ${date}` : 'Ny treningsøkt'),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      blocks
-    };
-  }
 
   function applyTemplateToState(tpl) {
     if (!tpl || !Array.isArray(tpl.blocks)) return;
@@ -2729,29 +2625,6 @@ function handleWorkoutFileInputChange(evt) {
   reader.readAsText(file);
 }
 
-function serializeWorkoutFromState() {
-    const title = String($('woTitle')?.value || '').trim();
-    const date = String($('woDate')?.value || '').trim();
-
-    const blocks = state.blocks.map(b => {
-      // new ids to avoid collision with draft mapping
-      const bid = uuid('wb_');
-      if (b.kind === 'parallel') {
-        return { id: bid, kind: 'parallel', a: { ...b.a }, b: { ...b.b } };
-      }
-      return { id: bid, kind: 'single', a: { ...b.a } };
-    });
-
-    return {
-      id: uuid('w_'),
-      title: title || (date ? `Trening ${date}` : 'Treningsøkt'),
-      date: date || '',
-      usePlayers: !!state.usePlayers,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      blocks
-    };
-  }
 
   function applyWorkoutToState(w) {
     if (!w || !Array.isArray(w.blocks)) return;
