@@ -4250,7 +4250,8 @@
 
     // --- PROFILE SELECTOR ---
     var profileHtml = '<div class="sn-section">Fordelingsprofil</div>' +
-      '<div class="settings-card" style="padding:12px;">';
+      '<div class="settings-card" style="padding:12px;">' +
+        '<div class="sn-hint" style="margin-bottom:10px;">Velg hva som er viktigst for din sesong. De fleste velger Balansert. Profilen styrer hvordan algoritmen vekter km, hjemme/borte, antall kamper og lagvariasjon.</div>';
     for (var pi = 0; pi < DISTRIBUTION_PROFILES.length; pi++) {
       var prof = DISTRIBUTION_PROFILES[pi];
       var isActive = (prof.id === currentProfile);
@@ -4272,7 +4273,7 @@
 
     var coachHtml = '<div class="sn-section">Trenerbarn</div>' +
       '<div class="settings-card" style="padding:12px;">' +
-        '<div class="sn-hint" style="margin-bottom:10px;">Marker hvilke spillere som er barn av trenere. Algoritmen s\u00f8rger for at trenerbarna fordeles jevnt p\u00e5 lagene.</div>';
+        '<div class="sn-hint" style="margin-bottom:10px;">Legg til trenere og velg hvilke spillere som er deres barn. Algoritmen s\u00f8rger for at hvert lag har nok trenerbarn p\u00e5 kampdagen, slik at en ansvarlig voksen alltid f\u00f8lger laget.</div>';
 
     if (coachNames.length === 0) {
       coachHtml += '<div style="text-align:center;color:var(--text-400);font-size:13px;padding:12px 0;">Ingen trenere lagt til enn\u00e5.</div>';
@@ -4321,7 +4322,7 @@
     var alwaysTogether = constraints.always_together || [];
     var alwaysHtml = '<div class="sn-section">Alltid sammen</div>' +
       '<div class="settings-card" style="padding:12px;">' +
-        '<div class="sn-hint" style="margin-bottom:10px;">S\u00f8sken eller spillere som alltid skal v\u00e6re p\u00e5 samme lag.</div>' +
+        '<div class="sn-hint" style="margin-bottom:10px;">S\u00f8sken eller spillere som alltid skal v\u00e6re p\u00e5 samme lag. Typisk brukt for tvillinger eller n\u00e6re venner. Du kan overstyre manuelt etter fordeling.</div>' +
         '<div id="snAlwaysList">';
     for (var ai = 0; ai < alwaysTogether.length; ai++) {
       var pair = alwaysTogether[ai];
@@ -4357,7 +4358,7 @@
     var neverTogether = constraints.never_together || [];
     var neverHtml = '<div class="sn-section">Aldri sammen</div>' +
       '<div class="settings-card" style="padding:12px;">' +
-        '<div class="sn-hint" style="margin-bottom:10px;">Spillere som ikke skal v\u00e6re p\u00e5 samme lag.</div>' +
+        '<div class="sn-hint" style="margin-bottom:10px;">Spillere som ikke b\u00f8r v\u00e6re p\u00e5 samme lag. Brukes n\u00e5r to spillere fungerer bedre n\u00e5r de er p\u00e5 forskjellige lag. Du kan overstyre manuelt etter fordeling.</div>' +
         '<div id="snNeverList">';
     for (var ni = 0; ni < neverTogether.length; ni++) {
       var npair = neverTogether[ni];
