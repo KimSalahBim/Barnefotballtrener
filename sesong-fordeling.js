@@ -914,13 +914,17 @@
       '</div>';
 
     // --- PRE-VALIDATION WARNINGS ---
-    if (result._preWarnings && result._preWarnings.length > 0) {
+    var hasPreWarnings = result._preWarnings && result._preWarnings.length > 0;
+    var hasFailedDays = result._failedDays > 0;
+    if (hasPreWarnings || hasFailedDays) {
       html += '<div style="margin-top:8px;padding:10px 14px;border-radius:var(--radius-md);background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);">';
-      for (var pw = 0; pw < result._preWarnings.length; pw++) {
-        html += '<div style="font-size:13px;color:var(--text-800);padding:3px 0;"><i class="fas fa-exclamation-circle" style="color:var(--error,#ef4444);margin-right:6px;"></i>' + h.escapeHtml(result._preWarnings[pw]) + '</div>';
+      if (hasPreWarnings) {
+        for (var pw = 0; pw < result._preWarnings.length; pw++) {
+          html += '<div style="font-size:13px;color:var(--text-800);padding:3px 0;"><i class="fas fa-exclamation-circle" style="color:var(--error,#ef4444);margin-right:6px;"></i>' + h.escapeHtml(result._preWarnings[pw]) + '</div>';
+        }
       }
-      if (result._failedDays > 0) {
-        html += '<div style="font-size:13px;font-weight:600;color:var(--error,#ef4444);padding:6px 0 0;">' + result._failedDays + ' av ' + result.matchDays.length + ' kampdager kunne ikke fordeles. Rett opp f\u00f8ringene og beregn p\u00e5 nytt.</div>';
+      if (hasFailedDays) {
+        html += '<div style="font-size:13px;font-weight:600;color:var(--error,#ef4444);padding:' + (hasPreWarnings ? '6px 0 0' : '3px 0') + ';">' + result._failedDays + ' av ' + result.matchDays.length + ' kampdager kunne ikke fordeles. Sjekk f\u00f8ringene og beregn p\u00e5 nytt.</div>';
       }
       html += '</div>';
     }
@@ -1003,22 +1007,17 @@
   //  DRAG-AND-DROP HANDLERS
   // =========================================================================
 
+  var _sfStartX = 0, _sfStartY = 0, _sfDragActive = false;
+  var SF_DRAG_THRESHOLD = 8;
+
   function sfDragStart(e) {
     var chip = e.target.closest('.sf-chip[data-pid]');
     if (!chip) return;
-    e.preventDefault();
-    _sfDragPid = chip.getAttribute('data-pid');
-    chip.classList.add('sf-dragging-src');
-
-    // Create ghost
-    _sfGhost = document.createElement('div');
-    _sfGhost.className = 'sf-ghost';
-    _sfGhost.innerHTML = chip.innerHTML;
-    document.body.appendChild(_sfGhost);
-
     var pt = e.touches ? e.touches[0] : e;
-    _sfGhost.style.left = (pt.clientX - 40) + 'px';
-    _sfGhost.style.top = (pt.clientY - 20) + 'px';
+    _sfStartX = pt.clientX;
+    _sfStartY = pt.clientY;
+    _sfDragPid = chip.getAttribute('data-pid');
+    _sfDragActive = false;
 
     // Bind document-level listeners for this drag session
     document.addEventListener('touchmove', sfDragMove, { passive: false });
@@ -1028,9 +1027,29 @@
   }
 
   function sfDragMove(e) {
-    if (!_sfDragPid || !_sfGhost) return;
-    e.preventDefault();
+    if (!_sfDragPid) return;
     var pt = e.touches ? e.touches[0] : e;
+
+    // Activate drag only after threshold (prevents scroll interference)
+    if (!_sfDragActive) {
+      var dx = pt.clientX - _sfStartX;
+      var dy = pt.clientY - _sfStartY;
+      if (Math.abs(dx) + Math.abs(dy) < SF_DRAG_THRESHOLD) return;
+      _sfDragActive = true;
+      e.preventDefault();
+
+      // Create ghost and mark source
+      var chip = document.querySelector('.sf-chip[data-pid="' + _sfDragPid + '"]');
+      if (chip) chip.classList.add('sf-dragging-src');
+
+      _sfGhost = document.createElement('div');
+      _sfGhost.className = 'sf-ghost';
+      if (chip) _sfGhost.innerHTML = chip.innerHTML;
+      document.body.appendChild(_sfGhost);
+    }
+
+    if (!_sfGhost) return;
+    e.preventDefault();
     _sfGhost.style.left = (pt.clientX - 40) + 'px';
     _sfGhost.style.top = (pt.clientY - 20) + 'px';
 
@@ -1057,11 +1076,19 @@
     // Remove ghost
     if (_sfGhost) { _sfGhost.remove(); _sfGhost = null; }
 
-    // Process drop
-    if (_sfOverZone) {
+    // Process drop (skip if dropped on current team)
+    if (_sfOverZone && _sfDragActive) {
       _sfOverZone.classList.remove('sf-drag-over');
       var newTeam = parseInt(_sfOverZone.getAttribute('data-drop-team'), 10);
-      handlePlayerChange(_sfDragPid, newTeam);
+      // Find current team
+      var curAssign = _distResult && _distResult.matchDays[_distDayIdx]
+        ? _distResult.assignments[_distResult.matchDays[_distDayIdx].eventIds[0]] || {}
+        : {};
+      var curTeam = curAssign[_sfDragPid];
+      if (curTeam === undefined) curTeam = 0;
+      if (newTeam !== curTeam) handlePlayerChange(_sfDragPid, newTeam);
+    } else if (_sfOverZone) {
+      _sfOverZone.classList.remove('sf-drag-over');
     }
 
     _sfOverZone = null;
@@ -1612,10 +1639,12 @@
         .update({ distribution_config: distConfig })
         .eq('id', seasonId)
         .eq('user_id', uid);
-      if (configRes.error) console.error('[sesong-fordeling] config save error:', configRes.error);
-
-      // Update local season object so banner reflects immediately
-      opts.season.distribution_config = distConfig;
+      if (configRes.error) {
+        console.error('[sesong-fordeling] config save error:', configRes.error);
+      } else {
+        // Update local season object so banner reflects immediately
+        opts.season.distribution_config = distConfig;
+      }
 
       return true;
     } catch (e) {

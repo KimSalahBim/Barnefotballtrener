@@ -3417,7 +3417,7 @@
       var lastDist = distConfig.last_distributed_at;
       var hasHome = !!(s.home_lat && s.home_lon);
       var matchCount = events.filter(function(e) { return e.type === 'match' || e.type === 'cup_match'; }).length;
-      var activeCount = seasonPlayers.filter(function(p) { return p.active; }).length;
+      var activeCount = seasonPlayers.filter(function(p) { return p.active !== false; }).length;
 
       if (!lastDist) {
         // STATE A: Not distributed yet
@@ -4571,8 +4571,16 @@
       coachToggles[ct].addEventListener('click', function(e) {
         if (e.target.closest('.sn-remove-coach')) return;
         var cName = this.getAttribute('data-coach-toggle');
-        var list = root.querySelector('[data-coach-list="' + cName + '"]');
-        var chevron = root.querySelector('[data-coach-chevron="' + cName + '"]');
+        // Find elements by iterating (safe for names with special characters)
+        var list = null, chevron = null;
+        var allLists = root.querySelectorAll('[data-coach-list]');
+        for (var li = 0; li < allLists.length; li++) {
+          if (allLists[li].getAttribute('data-coach-list') === cName) { list = allLists[li]; break; }
+        }
+        var allChevrons = root.querySelectorAll('[data-coach-chevron]');
+        for (var ci = 0; ci < allChevrons.length; ci++) {
+          if (allChevrons[ci].getAttribute('data-coach-chevron') === cName) { chevron = allChevrons[ci]; break; }
+        }
         if (list) {
           var isOpen = list.style.display !== 'none';
           list.style.display = isOpen ? 'none' : 'block';
