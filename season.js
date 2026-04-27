@@ -3408,7 +3408,98 @@
 
   function renderCalendarTab() {
     var s = currentSeason;
-    var html =
+
+    // ── DISTRIBUTION BANNER ──
+    var distBanner = '';
+    var isRotate = s && (s.sub_team_count || 1) > 1 && s.sub_team_mode === 'rotate';
+    if (isRotate) {
+      var distConfig = s.distribution_config || {};
+      var lastDist = distConfig.last_distributed_at;
+      var hasHome = !!(s.home_lat && s.home_lon);
+      var matchCount = events.filter(function(e) { return e.type === 'match' || e.type === 'cup_match'; }).length;
+      var activeCount = seasonPlayers.filter(function(p) { return p.active; }).length;
+
+      if (!lastDist) {
+        // STATE A: Not distributed yet
+        distBanner =
+          '<div style="background:linear-gradient(135deg,var(--primary),#2a4530);color:#fff;border-radius:var(--radius-lg,12px);padding:16px 18px;margin-bottom:12px;">' +
+            '<div style="display:flex;align-items:flex-start;gap:12px;">' +
+              '<span style="font-size:1.5rem;flex-shrink:0;">\uD83D\uDD00</span>' +
+              '<div style="flex:1;">' +
+                '<div style="font-weight:700;font-size:15px;margin-bottom:4px;">Sesongfordeling</div>' +
+                '<div style="font-size:12px;opacity:.85;line-height:1.5;margin-bottom:12px;">Fordel spillere jevnt p\u00e5 lag gjennom hele sesongen. Algoritmen balanserer reisevei, hjemme/borte og antall kamper.' +
+                  (!hasHome ? '<br><br>\u26a0\ufe0f Sett hjemmebane i sesong-innstillinger for km-beregning.' : '') +
+                '</div>' +
+                '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                  (matchCount >= 2 && activeCount >= 2
+                    ? '<button class="btn-primary" id="snDistBannerGo" style="font-size:13px;padding:8px 16px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;">Fordel spillere jevnt \u2192</button>'
+                    : '<span style="font-size:12px;opacity:.7;">Legg til minst 2 kamper og 2 spillere for \u00e5 fordele.</span>') +
+                  '<button class="btn-secondary" id="snDistBannerConstraints" style="font-size:12px;padding:6px 14px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.25);color:rgba(255,255,255,.9);">Sett opp f\u00f8ringer</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      } else {
+        // Check if outdated (new match events added after last distribution)
+        var isOutdated = false;
+        for (var oi = 0; oi < events.length; oi++) {
+          var evCreated = events[oi].created_at;
+          if (evCreated && (events[oi].type === 'match' || events[oi].type === 'cup_match') && evCreated > lastDist) {
+            isOutdated = true;
+            break;
+          }
+        }
+
+        var lastStats = distConfig.last_stats || {};
+        var profileLabel = { balanced:'Balansert', fair_driving:'Rettferdig kj\u00f8ring', varied_teams:'Varierte lag', stable_teams:'Faste lag' }[distConfig.profile] || 'Balansert';
+
+        if (isOutdated) {
+          // STATE C: Outdated
+          var newMatchCount = 0;
+          for (var ni = 0; ni < events.length; ni++) {
+            if ((events[ni].type === 'match' || events[ni].type === 'cup_match') && events[ni].created_at && events[ni].created_at > lastDist) newMatchCount++;
+          }
+          distBanner =
+            '<div style="background:rgba(234,179,8,.08);border:1.5px solid rgba(234,179,8,.3);border-radius:var(--radius-lg,12px);padding:14px 16px;margin-bottom:12px;">' +
+              '<div style="display:flex;align-items:flex-start;gap:10px;">' +
+                '<span style="font-size:1.2rem;flex-shrink:0;">\u26a0\ufe0f</span>' +
+                '<div style="flex:1;">' +
+                  '<div style="font-weight:700;font-size:14px;color:var(--text-800);margin-bottom:4px;">Fordeling kan v\u00e6re utdatert</div>' +
+                  '<div style="font-size:12px;color:var(--text-600);margin-bottom:10px;">' + newMatchCount + ' nye kamp' + (newMatchCount !== 1 ? 'er' : '') + ' lagt til siden sist. Beregn p\u00e5 nytt for \u00e5 inkludere dem.</div>' +
+                  '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                    '<button class="btn-primary" id="snDistBannerGo" style="font-size:13px;padding:8px 16px;">Beregn p\u00e5 nytt</button>' +
+                    '<button class="btn-secondary" id="snDistBannerView" style="font-size:12px;padding:6px 14px;">Se n\u00e5v\u00e6rende</button>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+        } else {
+          // STATE B: Distributed and up to date
+          distBanner =
+            '<div style="background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-lg,12px);padding:14px 16px;margin-bottom:12px;">' +
+              '<div style="display:flex;align-items:center;gap:10px;">' +
+                '<span style="font-size:1.2rem;flex-shrink:0;">\u2705</span>' +
+                '<div style="flex:1;">' +
+                  '<div style="font-weight:600;font-size:14px;color:var(--text-800);">' +
+                    'Sesongfordeling \u00b7 ' + escapeHtml(profileLabel) +
+                  '</div>' +
+                  '<div style="font-size:12px;color:var(--text-500);margin-top:2px;">' +
+                    (lastStats.match_days || '?') + ' kampdager' +
+                    (lastStats.km_spread != null ? ' \u00b7 Km\u2011spread: ' + lastStats.km_spread + ' km' : '') +
+                    (lastStats.games_spread != null ? ' \u00b7 Kamp\u2011spread: ' + lastStats.games_spread : '') +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+              '<div style="display:flex;gap:8px;margin-top:10px;">' +
+                '<button class="btn-secondary" id="snDistBannerView" style="flex:1;font-size:12px;padding:6px 14px;">Se fordeling</button>' +
+                '<button class="btn-secondary" id="snDistBannerGo" style="flex:1;font-size:12px;padding:6px 14px;">Beregn p\u00e5 nytt</button>' +
+              '</div>' +
+            '</div>';
+        }
+      }
+    }
+
+    var html = distBanner +
       '<div class="settings-card" style="padding-top:12px;">' +
         '<div class="sn-actions">' +
           '<button class="btn-primary" id="snAddMatch"><i class="fas fa-futbol" style="margin-right:5px;"></i>Legg til kamp</button>' +
@@ -3418,9 +3509,6 @@
           '<button class="btn-secondary" id="snAddSeries" style="flex:1; font-size:13px;"><i class="fas fa-redo" style="margin-right:5px;"></i>Treningsserie</button>' +
           '<button class="btn-secondary" id="snImportFotball" style="flex:1; font-size:13px;"><i class="fas fa-file-import" style="margin-right:5px;"></i>Importer kamper</button>' +
         '</div>' +
-        (currentSeason && (currentSeason.sub_team_count || 1) > 1 && currentSeason.sub_team_mode === 'rotate' && events.filter(function(e) { return e.type === 'match' || e.type === 'cup_match'; }).length >= 2 && seasonPlayers.filter(function(p) { return p.active; }).length >= 2
-          ? '<button class="btn-primary" id="snOpenDistribution" style="width:100%;margin-top:8px;font-size:14px;"><i class="fas fa-magic" style="margin-right:6px;"></i>Fordel spillere jevnt</button>'
-          : '') +
       '</div>';
 
     // Split events
@@ -3498,9 +3586,19 @@
       render();
     });
 
-    var distBtn = $('snOpenDistribution');
-    if (distBtn) distBtn.addEventListener('click', function() {
+    var distBannerGo = $('snDistBannerGo');
+    if (distBannerGo) distBannerGo.addEventListener('click', function() {
       snView = 'distribution';
+      render();
+    });
+    var distBannerView = $('snDistBannerView');
+    if (distBannerView) distBannerView.addEventListener('click', function() {
+      snView = 'distribution';
+      render();
+    });
+    var distBannerConstraints = $('snDistBannerConstraints');
+    if (distBannerConstraints) distBannerConstraints.addEventListener('click', function() {
+      snView = 'constraints';
       render();
     });
 

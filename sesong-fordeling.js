@@ -1521,6 +1521,33 @@
           if (res.error) throw res.error;
         }
       }
+      // Save timestamp + summary stats to distribution_config
+      var distConfig = opts.season.distribution_config || {};
+      distConfig.last_distributed_at = new Date().toISOString();
+
+      // Compute summary stats
+      var allStats = _distResult ? _distResult.stats : {};
+      var kmArr = [], gamesArr = [];
+      var activeSp = opts.seasonPlayers.filter(function(p) { return p.active !== false; });
+      for (var si = 0; si < activeSp.length; si++) {
+        var st = allStats[activeSp[si].player_id];
+        if (st) { kmArr.push(st.totalKm); gamesArr.push(st.totalGames); }
+      }
+      distConfig.last_stats = {
+        match_days: _distResult ? _distResult.matchDays.length : 0,
+        km_spread: kmArr.length >= 2 ? Math.max.apply(null, kmArr) - Math.min.apply(null, kmArr) : 0,
+        games_spread: gamesArr.length >= 2 ? Math.max.apply(null, gamesArr) - Math.min.apply(null, gamesArr) : 0
+      };
+
+      var configRes = await sb.from('seasons')
+        .update({ distribution_config: distConfig })
+        .eq('id', seasonId)
+        .eq('user_id', uid);
+      if (configRes.error) console.error('[sesong-fordeling] config save error:', configRes.error);
+
+      // Update local season object so banner reflects immediately
+      opts.season.distribution_config = distConfig;
+
       return true;
     } catch (e) {
       console.error('[sesong-fordeling] save error:', e);
