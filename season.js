@@ -4281,12 +4281,26 @@
       for (var ci = 0; ci < coachNames.length; ci++) {
         var cName = coachNames[ci];
         var cPlayerIds = coaches[cName] || [];
+        var checkedCount = cPlayerIds.length;
+        var checkedNames = cPlayerIds.map(function(pid) {
+          var sp = activePlayers.find(function(p) { return p.player_id === pid; });
+          return sp ? sp.name : '';
+        }).filter(Boolean).join(', ');
         coachHtml +=
-          '<div class="sn-coach-block" data-coach="' + escapeHtml(cName) + '" style="border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:8px;">' +
-            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-              '<span style="font-weight:600;font-size:14px;">' + escapeHtml(cName) + '</span>' +
-              '<button type="button" class="sn-remove-coach" data-coach="' + escapeHtml(cName) + '" style="background:none;border:none;color:var(--error,#ef4444);font-size:12px;cursor:pointer;padding:4px 8px;">Fjern</button>' +
-            '</div>';
+          '<div class="sn-coach-block" data-coach="' + escapeHtml(cName) + '" style="border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:8px;">' +
+            '<div data-coach-toggle="' + escapeHtml(cName) + '" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;cursor:pointer;">' +
+              '<div style="flex:1;">' +
+                '<span style="font-weight:600;font-size:14px;">' + escapeHtml(cName) + '</span>' +
+                '<div style="font-size:11px;color:var(--text-400);margin-top:2px;">' +
+                  (checkedCount > 0 ? checkedCount + ' barn: ' + escapeHtml(checkedNames) : 'Ingen barn valgt') +
+                '</div>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:8px;">' +
+                '<button type="button" class="sn-remove-coach" data-coach="' + escapeHtml(cName) + '" style="background:none;border:none;color:var(--error,#ef4444);font-size:12px;cursor:pointer;padding:4px 8px;">Fjern</button>' +
+                '<i class="fas fa-chevron-down" data-coach-chevron="' + escapeHtml(cName) + '" style="font-size:12px;color:var(--text-400);transition:transform 0.2s;"></i>' +
+              '</div>' +
+            '</div>' +
+            '<div data-coach-list="' + escapeHtml(cName) + '" style="display:none;padding:4px 12px 10px;border-top:1px solid var(--border-light,#f1f5f9);">';
         for (var cp = 0; cp < activePlayers.length; cp++) {
           var ap = activePlayers[cp];
           var isChecked = cPlayerIds.indexOf(ap.player_id) !== -1;
@@ -4297,7 +4311,7 @@
               '<span>' + escapeHtml(ap.name) + '</span>' +
             '</label>';
         }
-        coachHtml += '</div>';
+        coachHtml += '</div></div>';
       }
     }
 
@@ -4449,6 +4463,22 @@
           delete config.constraints.coach_child.coaches[cName];
           s.distribution_config = config;
           renderConstraintsEditor(root);
+        }
+      });
+    }
+
+    // Coach toggle (expand/collapse player list)
+    var coachToggles = root.querySelectorAll('[data-coach-toggle]');
+    for (var ct = 0; ct < coachToggles.length; ct++) {
+      coachToggles[ct].addEventListener('click', function(e) {
+        if (e.target.closest('.sn-remove-coach')) return;
+        var cName = this.getAttribute('data-coach-toggle');
+        var list = root.querySelector('[data-coach-list="' + cName + '"]');
+        var chevron = root.querySelector('[data-coach-chevron="' + cName + '"]');
+        if (list) {
+          var isOpen = list.style.display !== 'none';
+          list.style.display = isOpen ? 'none' : 'block';
+          if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
         }
       });
     }

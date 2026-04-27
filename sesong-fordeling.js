@@ -866,7 +866,18 @@
 
     // Run algorithm after DOM update
     setTimeout(function() {
+      var preWarnings = validateConstraints(opts.season, opts.seasonPlayers);
       _distResult = runDistribution(opts.season, opts.events, opts.seasonPlayers);
+
+      // Count failed days
+      var failedDays = 0;
+      for (var fd = 0; fd < _distResult.matchDays.length; fd++) {
+        var fda = _distResult.assignments[_distResult.matchDays[fd].eventIds[0]];
+        if (!fda || Object.keys(fda).length === 0) failedDays++;
+      }
+      _distResult._preWarnings = preWarnings;
+      _distResult._failedDays = failedDays;
+
       renderDistributionResult(container);
     }, 50);
   }
@@ -898,6 +909,18 @@
           (result.lockedCount > 0 ? '<span>\u00b7 ' + result.lockedCount + ' l\u00e5st</span>' : '') +
         '</div>' +
       '</div>';
+
+    // --- PRE-VALIDATION WARNINGS ---
+    if (result._preWarnings && result._preWarnings.length > 0) {
+      html += '<div style="margin-top:8px;padding:10px 14px;border-radius:var(--radius-md);background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);">';
+      for (var pw = 0; pw < result._preWarnings.length; pw++) {
+        html += '<div style="font-size:13px;color:var(--text-800);padding:3px 0;"><i class="fas fa-exclamation-circle" style="color:var(--error,#ef4444);margin-right:6px;"></i>' + h.escapeHtml(result._preWarnings[pw]) + '</div>';
+      }
+      if (result._failedDays > 0) {
+        html += '<div style="font-size:13px;font-weight:600;color:var(--error,#ef4444);padding:6px 0 0;">' + result._failedDays + ' av ' + result.matchDays.length + ' kampdager kunne ikke fordeles. Rett opp f\u00f8ringene og beregn p\u00e5 nytt.</div>';
+      }
+      html += '</div>';
+    }
 
     // --- DATE STRIP ---
     if (matchDays.length > 0) {
@@ -1368,6 +1391,68 @@
     recalcStats();
     renderDay();
     renderStatsSection();
+  }
+
+  /**
+   * Validate constraints before running algorithm.
+   * Returns array of warning strings explaining why constraints may be impossible.
+   */
+  function validateConstraints(season, seasonPlayers) {
+    var warnings = [];
+    var config = (season.distribution_config || {}).constraints || {};
+    var subTeamCount = season.sub_team_count || 2;
+    var activePlayers = seasonPlayers.filter(function(p) { return p.active !== false; });
+
+    var cc = config.coach_child;
+    if (cc && cc.coaches) {
+      var coachNames = Object.keys(cc.coaches);
+      var totalChildren = 0;
+      for (var cn = 0; cn < coachNames.length; cn++) {
+        totalChildren += (cc.coaches[coachNames[cn]] || []).length;
+      }
+
+      var minCoaches = cc.min_coaches_per_game || 0;
+      if (minCoaches > coachNames.length) {
+        warnings.push('Du krever ' + minCoaches + ' trenere representert per lag, men bare ' + coachNames.length + ' trener' + (coachNames.length === 1 ? '' : 'e') + ' er definert. Legg til flere trenere eller senk kravet.');
+      }
+
+      var minChildren = cc.min_children_per_game || 0;
+      if (minChildren > 0 && totalChildren === 0) {
+        warnings.push('Du krever ' + minChildren + ' trenerbarn per lag, men ingen barn er valgt. Huk av spillere under hver trener.');
+      }
+
+      if (minChildren * subTeamCount > totalChildren && totalChildren > 0) {
+        warnings.push('Du krever ' + minChildren + ' trenerbarn per lag (\u00d7' + subTeamCount + ' lag = ' + (minChildren * subTeamCount) + '), men bare ' + totalChildren + ' trenerbarn er definert.');
+      }
+
+      var at = config.always_together || [];
+      if (minCoaches >= 2 && coachNames.length >= 2) {
+        for (var a = 0; a < at.length; a++) {
+          var group = at[a];
+          var groupCoaches = {};
+          for (var g = 0; g < group.length; g++) {
+            for (var cn2 = 0; cn2 < coachNames.length; cn2++) {
+              if ((cc.coaches[coachNames[cn2]] || []).indexOf(group[g]) !== -1) {
+                groupCoaches[coachNames[cn2]] = true;
+              }
+            }
+          }
+          if (Object.keys(groupCoaches).length >= 2) {
+            var gNames = group.map(function(pid) {
+              var sp = activePlayers.find(function(p) { return p.player_id === pid; });
+              return sp ? sp.name : pid;
+            });
+            warnings.push(gNames.join(' og ') + ' er satt til alltid sammen, men tilh\u00f8rer ulike trenere. Dette kan gj\u00f8re det vanskelig \u00e5 oppfylle trener-kravet p\u00e5 andre lag.');
+          }
+        }
+      }
+    }
+
+    if (activePlayers.length < subTeamCount * 2) {
+      warnings.push('Bare ' + activePlayers.length + ' aktive spillere for ' + subTeamCount + ' lag. Legg til flere spillere.');
+    }
+
+    return warnings;
   }
 
   /**
