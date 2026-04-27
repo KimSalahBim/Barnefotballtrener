@@ -819,6 +819,9 @@
   var _distOpts = null;
   var _distContainer = null;
   var _distModified = false;
+  var _sfDragPid = null;
+  var _sfGhost = null;
+  var _sfOverZone = null;
 
   var SHORT_MONTHS = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
 
@@ -996,6 +999,89 @@
     });
   }
 
+  // =========================================================================
+  //  DRAG-AND-DROP HANDLERS
+  // =========================================================================
+
+  function sfDragStart(e) {
+    var chip = e.target.closest('.sf-chip[data-pid]');
+    if (!chip) return;
+    e.preventDefault();
+    _sfDragPid = chip.getAttribute('data-pid');
+    chip.classList.add('sf-dragging-src');
+
+    // Create ghost
+    _sfGhost = document.createElement('div');
+    _sfGhost.className = 'sf-ghost';
+    _sfGhost.innerHTML = chip.innerHTML;
+    document.body.appendChild(_sfGhost);
+
+    var pt = e.touches ? e.touches[0] : e;
+    _sfGhost.style.left = (pt.clientX - 40) + 'px';
+    _sfGhost.style.top = (pt.clientY - 20) + 'px';
+
+    // Bind document-level listeners for this drag session
+    document.addEventListener('touchmove', sfDragMove, { passive: false });
+    document.addEventListener('mousemove', sfDragMove);
+    document.addEventListener('touchend', sfDragEnd);
+    document.addEventListener('mouseup', sfDragEnd);
+  }
+
+  function sfDragMove(e) {
+    if (!_sfDragPid || !_sfGhost) return;
+    e.preventDefault();
+    var pt = e.touches ? e.touches[0] : e;
+    _sfGhost.style.left = (pt.clientX - 40) + 'px';
+    _sfGhost.style.top = (pt.clientY - 20) + 'px';
+
+    // Detect drop zone under pointer (hide ghost to avoid self-hit)
+    _sfGhost.style.display = 'none';
+    var el = document.elementFromPoint(pt.clientX, pt.clientY);
+    _sfGhost.style.display = '';
+
+    var zone = el ? el.closest('.sf-drop-zone[data-drop-team]') : null;
+    if (zone !== _sfOverZone) {
+      if (_sfOverZone) _sfOverZone.classList.remove('sf-drag-over');
+      _sfOverZone = zone;
+      if (_sfOverZone) _sfOverZone.classList.add('sf-drag-over');
+    }
+  }
+
+  function sfDragEnd(e) {
+    if (!_sfDragPid) return;
+
+    // Clean up source styling
+    var src = document.querySelector('.sf-chip.sf-dragging-src');
+    if (src) src.classList.remove('sf-dragging-src');
+
+    // Remove ghost
+    if (_sfGhost) { _sfGhost.remove(); _sfGhost = null; }
+
+    // Process drop
+    if (_sfOverZone) {
+      _sfOverZone.classList.remove('sf-drag-over');
+      var newTeam = parseInt(_sfOverZone.getAttribute('data-drop-team'), 10);
+      handlePlayerChange(_sfDragPid, newTeam);
+    }
+
+    _sfOverZone = null;
+    _sfDragPid = null;
+
+    // Unbind document-level listeners
+    document.removeEventListener('touchmove', sfDragMove);
+    document.removeEventListener('mousemove', sfDragMove);
+    document.removeEventListener('touchend', sfDragEnd);
+    document.removeEventListener('mouseup', sfDragEnd);
+  }
+
+  function bindDragHandlers(container) {
+    var chips = container.querySelectorAll('.sf-chip[data-pid]');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].addEventListener('touchstart', sfDragStart, { passive: false });
+      chips[i].addEventListener('mousedown', sfDragStart);
+    }
+  }
+
   function renderDay() {
     var dayEl = document.getElementById('sfDayContent');
     if (!dayEl || !_distResult || !_distOpts) return;
@@ -1046,13 +1132,6 @@
       var nb = playerMap[b] ? playerMap[b].name : b;
       return na.localeCompare(nb, 'nb');
     });
-
-    // Build select options HTML (reused per player)
-    var selectOpts = '';
-    for (var so = 1; so <= subTeamCount; so++) {
-      selectOpts += '<option value="' + so + '">' + h.escapeHtml(stNames[so - 1] || ('Lag ' + String.fromCharCode(64 + so))) + '</option>';
-    }
-    selectOpts += '<option value="0">Frav\u00e6rende</option>';
 
     // Constraint warnings
     var warnings = getConstraintViolations(dayAssign, md.playingTeams, constraints, playerMap);
@@ -1112,58 +1191,48 @@
       }
       html += '</div>';
 
-      // Player list with selects
-      html += '<div style="padding:6px 0;">';
+      // Player list (draggable chips in drop zone)
+      html += '<div class="sf-drop-zone" data-drop-team="' + ti + '" style="padding:6px 0;min-height:44px;transition:background 0.15s;">';
       if (teamPlayers.length === 0) {
-        html += '<div style="padding:8px 14px;font-size:12px;color:var(--text-400);font-style:italic;">Ingen spillere tildelt</div>';
+        html += '<div style="padding:8px 14px;font-size:12px;color:var(--text-400);font-style:italic;">Dra spillere hit</div>';
       }
       for (var p = 0; p < teamPlayers.length; p++) {
         var pid2 = teamPlayers[p];
         var sp2 = playerMap[pid2];
         var pName = sp2 ? sp2.name : pid2;
-        html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 14px;font-size:13px;">' +
+        html += '<div class="sf-chip" data-pid="' + h.escapeHtml(pid2) + '" style="display:flex;align-items:center;gap:8px;padding:6px 14px;margin:2px 6px;font-size:13px;border-radius:6px;cursor:grab;user-select:none;-webkit-user-select:none;">' +
           h.renderSeasonAvatar(pid2, pName, 24) +
           '<span style="flex:1;">' + h.escapeHtml(pName) + '</span>' +
-          '<select class="sf-move" data-pid="' + h.escapeHtml(pid2) + '" style="padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:4px;font-family:inherit;color:var(--text-600);background:var(--bg-card);">' +
-            selectOpts.replace('value="' + ti + '"', 'value="' + ti + '" selected') +
-          '</select>' +
+          '<i class="fas fa-grip-vertical" style="color:var(--text-300);font-size:10px;"></i>' +
         '</div>';
       }
       html += '</div></div>';
     }
 
-    // Absent players section
-    if (absent.length > 0) {
-      html += '<div class="settings-card" style="padding:0;border-left:4px solid var(--text-300);opacity:0.7;">';
-      html += '<div style="padding:8px 14px;font-size:13px;font-weight:600;color:var(--text-400);border-bottom:1px solid var(--border-light,#f1f5f9);">Frav\u00e6rende (' + absent.length + ')</div>';
-      html += '<div style="padding:6px 0;">';
-      for (var ab = 0; ab < absent.length; ab++) {
-        var abPid = absent[ab];
-        var abSp = playerMap[abPid];
-        var abName = abSp ? abSp.name : abPid;
-        html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 14px;font-size:13px;">' +
-          h.renderSeasonAvatar(abPid, abName, 24) +
-          '<span style="flex:1;color:var(--text-400);">' + h.escapeHtml(abName) + '</span>' +
-          '<select class="sf-move" data-pid="' + h.escapeHtml(abPid) + '" style="padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:4px;font-family:inherit;color:var(--text-600);background:var(--bg-card);">' +
-            selectOpts.replace('value="0"', 'value="0" selected') +
-          '</select>' +
-        '</div>';
-      }
-      html += '</div></div>';
+    // Absent players section (always visible as drop target)
+    html += '<div class="settings-card" style="padding:0;border-left:4px solid var(--text-300);' + (absent.length === 0 ? 'opacity:0.4;' : 'opacity:0.7;') + '">';
+    html += '<div style="padding:8px 14px;font-size:13px;font-weight:600;color:var(--text-400);border-bottom:1px solid var(--border-light,#f1f5f9);">Frav\u00e6rende' + (absent.length > 0 ? ' (' + absent.length + ')' : '') + '</div>';
+    html += '<div class="sf-drop-zone" data-drop-team="0" style="padding:6px 0;min-height:44px;transition:background 0.15s;">';
+    if (absent.length === 0) {
+      html += '<div style="padding:8px 14px;font-size:12px;color:var(--text-300);font-style:italic;">Dra spillere hit for \u00e5 melde frav\u00e6r</div>';
     }
+    for (var ab = 0; ab < absent.length; ab++) {
+      var abPid = absent[ab];
+      var abSp = playerMap[abPid];
+      var abName = abSp ? abSp.name : abPid;
+      html += '<div class="sf-chip" data-pid="' + h.escapeHtml(abPid) + '" style="display:flex;align-items:center;gap:8px;padding:6px 14px;margin:2px 6px;font-size:13px;border-radius:6px;cursor:grab;user-select:none;-webkit-user-select:none;">' +
+        h.renderSeasonAvatar(abPid, abName, 24) +
+        '<span style="flex:1;color:var(--text-400);">' + h.escapeHtml(abName) + '</span>' +
+        '<i class="fas fa-grip-vertical" style="color:var(--text-300);font-size:10px;"></i>' +
+      '</div>';
+    }
+    html += '</div></div>';
 
     html += '</div>';
     dayEl.innerHTML = html;
 
-    // Bind select change handlers
-    var selects = dayEl.querySelectorAll('.sf-move');
-    for (var si2 = 0; si2 < selects.length; si2++) {
-      selects[si2].addEventListener('change', function() {
-        var changePid = this.getAttribute('data-pid');
-        var newTeam = parseInt(this.value, 10);
-        handlePlayerChange(changePid, newTeam);
-      });
-    }
+    // Bind drag handlers
+    bindDragHandlers(dayEl);
   }
 
   // =========================================================================

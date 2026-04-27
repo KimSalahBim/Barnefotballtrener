@@ -277,3 +277,9 @@
 .sn-loan-suggestion { background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.2); border-radius:var(--radius-md); padding:10px 14px; margin-top:10px; font-size:13px; color:#92400e; }
 .sn-loan-suggestion strong { color:#78350f; }
 .sn-loan-suggestion button { margin-top:6px; padding:4px 10px; font-size:12px; }
+
+/* Drag-drop distribution */
+.sf-chip:active { cursor: grabbing; }
+.sf-dragging-src { opacity: 0.3 !important; }
+.sf-drag-over { background: rgba(69,108,75,0.08) !important; }
+.sf-ghost { position: fixed; pointer-events: none; z-index: 9999; opacity: 0.85; background: var(--bg-card,#fff); border: 1.5px solid var(--primary); border-radius: 8px; padding: 6px 12px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px; max-width: 200px; }
