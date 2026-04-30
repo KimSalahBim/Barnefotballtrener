@@ -3990,3 +3990,63 @@ html, body {
   background: var(--bg);
   color: var(--text-700);
 }
+
+/* Kampdag drag-warning banner (later-half keeper dragged to seg 0 field) */
+.kd-drag-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 10px;
+  color: #fef3c7;
+  font-size: 13px;
+  line-height: 1.4;
+  flex-wrap: wrap;
+}
+.kd-drag-warning-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.kd-drag-warning-text {
+  flex: 1;
+  min-width: 200px;
+}
+.kd-drag-warning-undo {
+  background: #fbbf24;
+  color: #1f1501;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.kd-drag-warning-undo:hover {
+  background: #f59e0b;
+}
+
+/* Kampdag nkDiff-warning banner (high playing time spread after regeneration) */
+.kd-nkdiff-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 10px;
+  color: #fecaca;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.kd-nkdiff-warning-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.kd-nkdiff-warning-text {
+  flex: 1;
+}

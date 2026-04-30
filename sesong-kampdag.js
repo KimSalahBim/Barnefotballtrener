@@ -67,7 +67,11 @@
   // Drag & drop slot override state
   let kdSlotOverrides = {};     // { segIdx: { slots: {slotKey: playerId}, bench: [playerId] } }
   let kdDragState = null;
+  let kdDragWarning = null;     // { playerName, undoFn } when drag placed a later-half keeper
   const KD_DRAG_THRESHOLD = 8;
+
+  // Exposed pill helper (set from bindKampdagUI, used by external callers)
+  let _activateDurPill = null;
 
   // Formation state
   let kdFormationOn = true;
@@ -85,7 +89,9 @@
   }
 
   // Frequency state
-  let kdFrequency = 'equal';   // 'equal' or 'calm'
+  let kdFrequency = 'equal';       // 'equal', 'interval' or 'calm'
+  let kdIntervalMin = 8;           // Minutes between subs (interval mode only)
+  let kdIntervalAdjust = false;    // Opt-in: let algo adjust n_segs +/-2 for fairness
 
   // Timer state
   let kdTimerInterval = null;
@@ -249,8 +255,9 @@
   //   Strong stickiness -> holds players on field/bench longer.
   //   High splitHalf -> avoids creating short segments.
   const FREQ_PARAMS = {
-    equal: { mode: 'equal', sticky: 'mild',   swapSplitHalf: 4 },
-    calm:  { mode: 'calm',  sticky: 'strong', swapSplitHalf: 5 },
+    equal:    { mode: 'equal',    sticky: 'mild',   swapSplitHalf: 4 },
+    interval: { mode: 'interval', sticky: null,     swapSplitHalf: 0 },
+    calm:     { mode: 'calm',     sticky: 'strong', swapSplitHalf: 5 },
   };
 
   function bindKampdagUI() {
@@ -271,6 +278,8 @@
         const defaultMinutes = { 3: 20, 5: 40, 7: 60, 9: 70, 11: 80 };
         if (defaultMinutes[fmt]) {
           minutesEl.value = defaultMinutes[fmt];
+          // Sync dur-pill UI to match auto-set value
+          if (typeof activateDurPill === 'function') activateDurPill(defaultMinutes[fmt]);
           // Programmatic value change doesn't fire 'input' event,
           // so we must call the same functions manually:
           autoFillKeeperMinutes();
@@ -382,12 +391,175 @@
 
     // Frequency buttons
     const freqContainer = $('skdFreqOptions');
+    const intervalPanel = $('skdIntervalPanel');
     if (freqContainer) {
       freqContainer.querySelectorAll('.kd-freq-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           freqContainer.querySelectorAll('.kd-freq-btn').forEach(b => b.classList.remove('kd-freq-active'));
           btn.classList.add('kd-freq-active');
           kdFrequency = btn.getAttribute('data-freq') || 'equal';
+          if (intervalPanel) intervalPanel.style.display = (kdFrequency === 'interval') ? 'flex' : 'none';
+          updateIntervalPreview();
+        });
+      });
+    }
+
+    // Interval inputs (Fast intervall mode)
+    const intervalInput = $('skdIntervalMin');
+    if (intervalInput) {
+      const minutesElForInit = $('skdMinutes');
+      const curT = parseInt(minutesElForInit?.value, 10) || 60;
+      const smartDefault = Math.max(4, Math.min(12, Math.round(curT / 8)));
+      intervalInput.value = smartDefault;
+      kdIntervalMin = smartDefault;
+      intervalInput.addEventListener('input', () => {
+        const v = parseInt(intervalInput.value, 10);
+        if (!isNaN(v) && v >= 3) {
+          kdIntervalMin = clamp(v, 3, 60);
+        }
+        updateIntervalPreview();
+      });
+    }
+    const intervalAdjust = $('skdIntervalAdjust');
+    if (intervalAdjust) {
+      intervalAdjust.checked = false;
+      kdIntervalAdjust = false;
+      intervalAdjust.addEventListener('change', () => {
+        kdIntervalAdjust = !!intervalAdjust.checked;
+      });
+    }
+
+    // Keep preview in sync when kamptid or keeper settings change
+    const minutesElForPreview = $('skdMinutes');
+    if (minutesElForPreview) {
+      minutesElForPreview.addEventListener('input', updateIntervalPreview);
+    }
+    if (keeperCountEl) {
+      keeperCountEl.addEventListener('change', updateIntervalPreview);
+    }
+    for (let i = 1; i <= 4; i++) {
+      const kmin = $(`skdKeeperMin${i}`);
+      if (kmin) kmin.addEventListener('input', updateIntervalPreview);
+    }
+
+    // ── Helper: activate duration pill by value ──
+    _activateDurPill = activateDurPill;
+    function activateDurPill(min) {
+      var durPillsEl = document.getElementById('skdDurPills');
+      if (!durPillsEl) return;
+      var matched = false;
+      durPillsEl.querySelectorAll('.kd-dur-pill').forEach(function(b) {
+        var isMatch = parseInt(b.dataset.min, 10) === min;
+        b.classList.toggle('kd-pill-active', isMatch);
+        if (isMatch) matched = true;
+      });
+      var customRow = document.getElementById('skdDurCustomRow');
+      if (!matched) {
+        // Ingen fast pill matcher (f.eks. 20 min for 3-er) — vis custom input
+        durPillsEl.querySelectorAll('.kd-dur-pill').forEach(function(b) {
+          b.classList.toggle('kd-pill-active', parseInt(b.dataset.min, 10) === 0);
+        });
+        if (customRow) customRow.style.display = 'block';
+      } else {
+        if (customRow) customRow.style.display = 'none';
+      }
+      var el = $('skdMinutes');
+      if (el) {
+        el.value = min;
+        el.dispatchEvent(new Event('input'));
+      }
+    }
+
+    // ── Helper: update keeper counter display ──
+    function updateKeeperCounter(delta) {
+      var kcEl = $('skdKeeperCount');
+      var display = $('skdKeeperCountDisplay');
+      var current = clamp(parseInt(kcEl ? kcEl.value : '1', 10), 0, 4);
+      var next = clamp(current + delta, 1, 4);
+      if (kcEl) kcEl.value = String(next);
+      if (display) display.textContent = String(next);
+      var minusBtn = $('skdKeeperMinus');
+      var plusBtn = $('skdKeeperPlus');
+      if (minusBtn) minusBtn.disabled = (next <= 1);
+      if (plusBtn) plusBtn.disabled = (next >= 4);
+      refreshKeeperUI();
+      autoFillKeeperMinutes();
+      updateKeeperSummary();
+    }
+
+    // ── Format pills ──
+    var formatPillsEl = document.getElementById('skdFormatPills');
+    if (formatPillsEl) {
+      formatPillsEl.addEventListener('click', function(e) {
+        var btn = e.target.closest('.kd-pill[data-format]');
+        if (!btn) return;
+        formatPillsEl.querySelectorAll('.kd-pill').forEach(function(b) {
+          b.classList.remove('kd-pill-active');
+        });
+        btn.classList.add('kd-pill-active');
+        var fmt = btn.dataset.format;
+        var formatEl2 = $('skdFormat');
+        if (formatEl2) {
+          formatEl2.value = fmt;
+          formatEl2.dispatchEvent(new Event('change'));
+        }
+        var durMap = { '3': 20, '5': 40, '7': 60, '9': 70, '11': 80 };
+        var autoMin = durMap[fmt];
+        if (autoMin) activateDurPill(autoMin);
+        refreshKeeperUI();
+        updateKampdagCounts();
+      });
+    }
+
+    // ── Duration pills ──
+    var durPillsEl2 = document.getElementById('skdDurPills');
+    if (durPillsEl2) {
+      durPillsEl2.addEventListener('click', function(e) {
+        var btn = e.target.closest('.kd-dur-pill[data-min]');
+        if (!btn) return;
+        durPillsEl2.querySelectorAll('.kd-dur-pill').forEach(function(b) {
+          b.classList.remove('kd-pill-active');
+        });
+        btn.classList.add('kd-pill-active');
+        var customRow = document.getElementById('skdDurCustomRow');
+        var min = parseInt(btn.dataset.min, 10);
+        if (min === 0) {
+          if (customRow) customRow.style.display = 'block';
+          var inp = $('skdMinutes');
+          if (inp) inp.focus();
+        } else {
+          if (customRow) customRow.style.display = 'none';
+          var el = $('skdMinutes');
+          if (el) {
+            el.value = min;
+            el.dispatchEvent(new Event('input'));
+          }
+        }
+      });
+    }
+
+    // ── Keeper counter buttons ──
+    var keeperMinusBtn = $('skdKeeperMinus');
+    var keeperPlusBtn = $('skdKeeperPlus');
+    if (keeperMinusBtn) keeperMinusBtn.addEventListener('click', function() {
+      updateKeeperCounter(-1);
+      requestAnimationFrame(updateIntervalPreview);
+    });
+    if (keeperPlusBtn) keeperPlusBtn.addEventListener('click', function() {
+      updateKeeperCounter(1);
+      requestAnimationFrame(updateIntervalPreview);
+    });
+    // Initialiser disabled-state (starter alltid på 1)
+    if (keeperMinusBtn) keeperMinusBtn.disabled = true;
+
+    // ── Keeper panel focusout refresh ──
+    const keeperPanel = $('skdKeeperPanel');
+    if (keeperPanel && !keeperPanel.dataset.skdFocusOutBound) {
+      keeperPanel.dataset.skdFocusOutBound = '1';
+      keeperPanel.addEventListener('focusout', () => {
+        requestAnimationFrame(() => {
+          if (keeperPanel.contains(document.activeElement)) return;
+          refreshKeeperUI();
         });
       });
     }
@@ -537,6 +709,10 @@
     const kcEl = $('skdKeeperCount');
     if (kcEl && parseInt(kcEl.value, 10) < 1) {
       kcEl.value = '1';
+      const display = $('skdKeeperCountDisplay');
+      if (display) display.textContent = '1';
+      const minusBtn = $('skdKeeperMinus');
+      if (minusBtn) minusBtn.disabled = true;
       autoFillKeeperMinutes();
     }
 
@@ -695,45 +871,10 @@
   }
 
   function updateCoverage() {
+    // Sonedekning visualization disabled - matches kampdag (which has no coverage UI).
+    // Element kept hidden in DOM; function is a no-op for parity.
     const el = $('skdCoverage');
-    if (!el || !kdFormation) { if (el) el.style.display = 'none'; return; }
-
-    const present = getPresentPlayers();
-    const posMap = getPositionsMap();
-    const counts = { F: 0, M: 0, A: 0 };
-    present.forEach(p => {
-      const pos = posMap[p.id] || new Set(['F', 'M', 'A']);
-      if (pos.has('F')) counts.F++;
-      if (pos.has('M')) counts.M++;
-      if (pos.has('A')) counts.A++;
-    });
-
-    const needs = { F: kdFormation[0], M: kdFormation[1], A: kdFormation[2] };
-    const zones = [
-      { key: 'F', name: 'Forsvar', need: needs.F, have: counts.F, color: '#16a34a' },
-      { key: 'M', name: 'Midtbane', need: needs.M, have: counts.M, color: '#456C4B' },
-      { key: 'A', name: 'Angrep', need: needs.A, have: counts.A, color: '#dc2626' },
-    ].filter(z => z.need > 0);
-
-    const warn = zones.some(z => z.have < z.need);
-    el.style.display = 'block';
-    el.style.background = warn ? 'var(--warning-dim)' : 'var(--success-dim)';
-    el.style.color = warn ? 'var(--warning)' : 'var(--success)';
-
-    el.innerHTML = `<div style="font-weight:500; margin-bottom:6px;">${warn ? '\u26a0 ' : ''}Sonedekning for ${kdFormationKey}</div>` +
-      zones.map(z => {
-        const pct = Math.min(100, Math.round((z.have / Math.max(1, present.length)) * 100));
-        const low = z.have < z.need;
-        return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;">
-          <span style="width:8px;height:8px;border-radius:50%;background:${z.color};flex-shrink:0;"></span>
-          <span style="width:72px;">${z.name} (${z.need})</span>
-          <div style="flex:1;height:6px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:${low ? 'var(--warning)' : z.color};border-radius:3px;"></div>
-          </div>
-          <span style="width:32px;text-align:right;font-weight:500;${low ? 'color:var(--warning);' : ''}">${z.have}${low ? ' \u26a0' : ''}</span>
-        </div>`;
-      }).join('') +
-      (warn ? `<div style="margin-top:6px;font-size:12px;">Noen spillere vil bli plassert utenfor preferanse.</div>` : '');
+    if (el) el.style.display = 'none';
   }
 
   // Assign positions to a lineup based on formation + preferences
@@ -866,6 +1007,16 @@
 
   function hasSlotOverrides(si) { return !!kdSlotOverrides[si]; }
 
+  // Returns the effective lineup for segment si, considering manual overrides.
+  // If overrides exist (manual swaps), the override slot map is the source of truth;
+  // otherwise fall back to the algorithm's planned lineup.
+  function getEffectiveLineup(si, fallbackLineup) {
+    if (kdSlotOverrides[si]) {
+      return Object.values(kdSlotOverrides[si].slots).filter(Boolean);
+    }
+    return fallbackLineup;
+  }
+
   function ensureSlotOverride(si) {
     if (!kdSlotOverrides[si]) {
       const d = buildDefaultSlotMap(si);
@@ -881,12 +1032,110 @@
 
   function swapBenchToField(si, benchPid, fieldSlot) {
     ensureSlotOverride(si);
+    // Clear any stale drag warning from a previous drag. The later-keeper check
+    // below will re-set it if conditions apply. This covers:
+    //   - drags where si !== 0 (warning only relevant for seg 0)
+    //   - drags where lastBest is null (no plan yet, warning not applicable)
+    //   - drags of non-keeper players (warning already cleared in old else-branch,
+    //     but this makes the invariant explicit)
+    kdDragWarning = null;
     const m = kdSlotOverrides[si];
     const fieldPid = m.slots[fieldSlot];
+
+    // Snapshot state BEFORE swap so we can build an undo function if we end up
+    // warning the trainer. The undo must restore m.slots[fieldSlot] to fieldPid
+    // (or delete the override entirely if the swap was the only change).
+    const prevSlotPid = fieldPid;
+    const prevBench = m.bench.slice();
+
     m.slots[fieldSlot] = benchPid;
     const bi = m.bench.indexOf(benchPid);
     if (bi !== -1) m.bench.splice(bi, 1);
     if (fieldPid) m.bench.push(fieldPid);
+
+    // Check if benchPid is a keeper in a LATER half of the match.
+    // If so, locking her onto the field in seg 0 will likely cause 60-minute
+    // playing time due to keeperOutfieldSegs pre-assignment. Store a warning
+    // so the caller can render it inline with an Angre-knapp.
+    if (si === 0 && lastBest) {
+      const T = lastT || 60;
+      const timeline = buildKeeperTimeline(T);
+      const isLaterKeeper = timeline.some(k => k.keeperId === benchPid && k.start > 0);
+      if (isLaterKeeper) {
+        const playerName = (lastPresent.find(p => p.id === benchPid) || {}).name || 'Spilleren';
+        // Capture closure vars for undo
+        const undoSi = si;
+        const undoSlot = fieldSlot;
+        const undoPrevSlotPid = prevSlotPid;
+        const undoBenchPid = benchPid;
+        kdDragWarning = {
+          playerName,
+          undoFn: function() {
+            // Reverse the swap: restore fieldSlot to previous player, put benchPid back on bench
+            const mm = kdSlotOverrides[undoSi];
+            if (!mm) return;
+            mm.slots[undoSlot] = undoPrevSlotPid;
+            // Remove undoBenchPid from bench wherever it is (in case regeneration already re-placed it)
+            const ci = mm.bench.indexOf(undoBenchPid);
+            if (ci !== -1) mm.bench.splice(ci, 1);
+            // Remove prevSlotPid from bench if it was put there
+            if (undoPrevSlotPid) {
+              const pi = mm.bench.indexOf(undoPrevSlotPid);
+              if (pi !== -1) mm.bench.splice(pi, 1);
+            }
+            // Put benchPid back on bench
+            mm.bench.push(undoBenchPid);
+            // If slots is now identical to default, drop the override entirely
+            const def = buildDefaultSlotMap(undoSi);
+            const slotsEqual = Object.keys(def.slots).every(k => def.slots[k] === mm.slots[k]);
+            if (slotsEqual) delete kdSlotOverrides[undoSi];
+            kdDragWarning = null;
+            // Regenerate so the plan returns to its pre-swap state
+            const currentFormat = parseInt($('skdFormat')?.value, 10) || 7;
+            if (currentFormat === lastP) {
+              const ov0 = kdSlotOverrides[0];
+              if (ov0) {
+                const lockedLineup = Object.values(ov0.slots).filter(Boolean);
+                if (lockedLineup.length === lastP) {
+                  generateKampdagPlan({ 0: lockedLineup });
+                  return;
+                }
+              }
+              // No override: regenerate without a lock
+              generateKampdagPlan();
+              return;
+            }
+            renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
+          }
+        };
+      }
+    }
+
+    // NEW: When a bench-swap happens in segment 0, regenerate the whole plan
+    // with the new start locked. Returns true to tell caller that regeneration
+    // happened (so caller skips its own render).
+    if (si === 0 && lastBest) {
+      // Guard 1: do not regenerate while match timer is active.
+      // generateKampdagPlan would call stopMatchTimer() and wipe timer state.
+      // Under active play, seg 0 is history — user is just making a visual note.
+      if (kdTimerInterval || kdTimerStart) {
+        return false;  // caller will re-render the visual override
+      }
+      // Guard 2: if the UI format has changed since the last plan was generated,
+      // do not regenerate. The locked lineup would be sized for the old format
+      // but the new plan would use the new format, causing UI/data inconsistency.
+      // User must press "Generer plan" to sync state first.
+      const currentFormat = parseInt($('skdFormat')?.value, 10) || 7;
+      if (currentFormat !== lastP) {
+        return false;  // caller re-renders the visual override; plan stays on old format
+      }
+      const lockedLineup = Object.values(m.slots).filter(Boolean);
+      if (lockedLineup.length === lastP) {
+        generateKampdagPlan({ 0: lockedLineup });
+        return true;  // caller should NOT re-render (regeneration already rendered)
+      }
+    }
+    return false;  // caller should re-render normally
   }
 
   function resetSlotOverride(si) {
@@ -896,7 +1145,45 @@
 
   function resetAllSlotOverrides() {
     kdSlotOverrides = {};
+    kdDragWarning = null;
     renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
+  }
+
+  // Exposed for inline Angre-knapp in drag-warning banner.
+  // Uses a sesong-specific name to avoid collision with kampdag.js's
+  // window.kampdagDragUndo (kampdag's IIFE has its own kdDragWarning state).
+  window.sesongKampdagDragUndo = function() {
+    if (kdDragWarning && typeof kdDragWarning.undoFn === 'function') {
+      kdDragWarning.undoFn();
+    }
+  };
+
+  function resetKampdagPlan() {
+    if (!confirm('Nullstill hele planen? Dette fjerner bytteplan og alle justeringer.')) return;
+    try {
+      if (kdTimerInterval || kdTimerStart) stopMatchTimer();
+      lastBest = null;
+      lastPresent = [];
+      lastPlanText = '';
+      lastFormation = null;
+      lastFormationKey = '';
+      lastUseFormation = false;
+      lastPositions = {};
+      kdSlotOverrides = {};
+      kdDragWarning = null;
+      const lineupEl = $('skdLineup');
+      const planEl = $('skdPlan');
+      const metaEl = $('skdMeta');
+      const startBtn = $('skdStartMatch');
+      const saveBtn = $('skdSavePlan');
+      if (lineupEl) lineupEl.innerHTML = '';
+      if (planEl) planEl.innerHTML = '';
+      if (metaEl) metaEl.textContent = '';
+      if (startBtn) startBtn.style.display = 'none';
+      if (saveBtn) saveBtn.style.display = 'none';
+    } catch (err) {
+      console.error('[sesong-kampdag] Error in resetKampdagPlan:', err);
+    }
   }
 
   function copySlotToAll(si) {
@@ -905,7 +1192,12 @@
     if (!slots) return;
     const src = kdSlotOverrides[si];
 
-    // Iterate through ALL subsequent segments, propagating slot overrides
+    // Iterate through ALL subsequent segments, propagating slot overrides.
+    // For each target segment:
+    //   - Players in src that are also in target's algorithm lineup: placed in same slot as src
+    //   - Other slots: filled with remaining players from target's lineup (arbitrary order)
+    //   - Keeper slot is never touched
+    // Trainer intention wins over F/M/A preferences.
     for (let ti = si + 1; ti < lastBest.segments.length; ti++) {
       const targetLineup = new Set(lastBest.segments[ti].lineup);
       ensureSlotOverride(ti);
@@ -937,10 +1229,20 @@
     const mins = {};
     lastPresent.forEach(p => { mins[p.id] = 0; });
     for (let i = 0; i < lastBest.segments.length; i++) {
-      const dt = lastBest.segments[i].end - lastBest.segments[i].start;
-      const sm = getSlotMap(i);
-      for (const pid of Object.values(sm.slots).filter(Boolean)) {
-        mins[pid] = (mins[pid] || 0) + dt;
+      const seg = lastBest.segments[i];
+      const dt = seg.end - seg.start;
+      if (kdSlotOverrides[i]) {
+        // Overrides present: use slot-based counting (user may have changed lineup)
+        const sm = getSlotMap(i);
+        for (const pid of Object.values(sm.slots).filter(Boolean)) {
+          mins[pid] = (mins[pid] || 0) + dt;
+        }
+      } else {
+        // No overrides: use algorithm lineup directly (always correct,
+        // avoids silent player drops when slot layout has fewer positions than lineup)
+        for (const pid of seg.lineup) {
+          mins[pid] = (mins[pid] || 0) + dt;
+        }
       }
     }
     return mins;
@@ -1031,12 +1333,13 @@
         const tsk = tgt.dataset.slotkey; // field slot
         const tpid = tgt.dataset.pid;    // bench bubble
         let swapped = false;
+        let regenerated = false;  // true if swapBenchToField triggered regeneration
         if (tsk) {
           // Drop on field slot
           const ts = slots.find(s => s.key === tsk);
           if (ts && ts.zone !== 'K' && tsk !== kdDragState.slotKey) {
             if (kdDragState.isBench) {
-              swapBenchToField(kdDragState.segIdx, kdDragState.playerId, tsk);
+              regenerated = swapBenchToField(kdDragState.segIdx, kdDragState.playerId, tsk);
             } else {
               swapFieldSlots(kdDragState.segIdx, kdDragState.slotKey, tsk);
             }
@@ -1044,12 +1347,15 @@
           }
         } else if (tpid && !kdDragState.isBench && kdDragState.slotKey) {
           // Drop field player on bench bubble: swap them
-          swapBenchToField(kdDragState.segIdx, tpid, kdDragState.slotKey);
+          regenerated = swapBenchToField(kdDragState.segIdx, tpid, kdDragState.slotKey);
           swapped = true;
         }
         if (swapped) {
           try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
-          renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
+          // Only render if regeneration did not already do so
+          if (!regenerated) {
+            renderKampdagOutput(lastPresent, lastBest, lastP, lastT);
+          }
         }
       }
       cleanupDragState();
@@ -1402,13 +1708,14 @@
    * Greedy lineup assignment: at each segment, pick players furthest behind target pace.
    * Keeper is always forced on field during their keeper segments.
    */
-  function greedyAssign(playersList, times, P, keeperTimeline, seed, stickyMode) {
+  function greedyAssign(playersList, times, P, keeperTimeline, seed, stickyMode, lockedSegments) {
     const rng = makeRng(seed);
     const ids = playersList.map(p => p.id);
     const T = times[times.length - 1];
     const target = (P * T) / Math.max(1, ids.length);
     const minutes = {};
     ids.forEach(id => { minutes[id] = 0; });
+    const locks = lockedSegments || {};
 
     const keeperMins = buildKeeperMinutes(keeperTimeline, ids);
     const keeperSet = new Set(Object.keys(keeperMins).filter(id => keeperMins[id] > 0));
@@ -1490,61 +1797,78 @@
       if (dt <= 0) continue;
 
       const keeperId = keeperAtMinute(start + 0.0001, keeperTimeline);
-      const lineup = [];
+      let lineup = [];
 
-      // Keeper must be on field
-      if (keeperId && idSet.has(keeperId)) lineup.push(keeperId);
+      // CHECK FOR LOCKED SEGMENT FIRST
+      if (locks[i] && Array.isArray(locks[i]) && locks[i].length === P) {
+        // Use the locked lineup directly. Filter to known ids only for safety,
+        // then dedupe to prevent any player being counted twice in a segment.
+        const filtered = locks[i].filter(id => idSet.has(id));
+        const unique = [...new Set(filtered)];
+        if (unique.length === P) {
+          lineup = unique;
+        }
+        // If lock is malformed after filtering/dedup, lineup stays empty and normal logic runs below.
+      }
 
-      // K>=2: pre-assign keepers to their outfield segments
-      if (keeperSet.size >= 2) {
-        for (const kid of keeperSet) {
-          if (kid === keeperId || lineup.includes(kid) || lineup.length >= P) continue;
-          if (keeperOutfieldSegs[kid].has(i)) lineup.push(kid);
+      if (lineup.length === 0) {
+        // Normal greedy path (unchanged logic)
+
+        // Keeper must be on field
+        if (keeperId && idSet.has(keeperId)) lineup.push(keeperId);
+
+        // K>=2: pre-assign keepers to their outfield segments
+        if (keeperSet.size >= 2) {
+          for (const kid of keeperSet) {
+            if (kid === keeperId || lineup.includes(kid) || lineup.length >= P) continue;
+            if (keeperOutfieldSegs[kid].has(i)) lineup.push(kid);
+          }
+        }
+
+        // Calculate deficit: how far behind target pace is each player?
+        const paceTarget = target * start / T;
+        const scored = playersList
+          .filter(p => !lineup.includes(p.id))
+          .map(p => {
+            // K>=2: exclude keepers from non-assigned segments
+            if (keeperSet.size >= 2 && keeperExcludeSegs[p.id] && keeperExcludeSegs[p.id].has(i)) {
+              return { id: p.id, score: -9999 };
+            }
+
+            let effectiveMinutes = minutes[p.id];
+            // K<=1: use keeper compensation factor (original behavior)
+            if (keeperSet.has(p.id) && keeperSet.size <= 1) {
+              const futureKeeper = remainingKeeperTime(p.id, end);
+              const totalKeeperTime = keeperMins[p.id] || 0;
+              const keeperRatio = totalKeeperTime / T;
+              const factor = Math.max(0.1, 0.93 - keeperRatio * 0.83);
+              effectiveMinutes += futureKeeper * factor;
+            }
+            let deficit = paceTarget - effectiveMinutes;
+
+            // Stickiness: bonus for staying on field, penalty for leaving bench early
+            if (sp) {
+              const onStreak = onFieldStreak[p.id];
+              const offStreak = offFieldStreak[p.id];
+              if (onStreak > 0) {
+                deficit += onStreak === 1 ? sp.on1 : onStreak === 2 ? sp.on2 : sp.on3;
+              } else if (offStreak > 0) {
+                deficit += offStreak === 1 ? sp.off1 : offStreak === 2 ? sp.off2 : 0;
+              }
+            }
+
+            const jitter = (rng() - 0.5) * 0.3;
+            return { id: p.id, score: deficit + jitter };
+          })
+          .sort((a, b) => b.score - a.score);
+
+        // Fill remaining spots
+        while (lineup.length < P && scored.length) {
+          lineup.push(scored.shift().id);
         }
       }
 
-      // Calculate deficit: how far behind target pace is each player?
-      const paceTarget = target * start / T;
-      const scored = playersList
-        .filter(p => !lineup.includes(p.id))
-        .map(p => {
-          // K>=2: exclude keepers from non-assigned segments
-          if (keeperSet.size >= 2 && keeperExcludeSegs[p.id] && keeperExcludeSegs[p.id].has(i)) {
-            return { id: p.id, score: -9999 };
-          }
-
-          let effectiveMinutes = minutes[p.id];
-          // K<=1: use keeper compensation factor (original behavior)
-          if (keeperSet.has(p.id) && keeperSet.size <= 1) {
-            const futureKeeper = remainingKeeperTime(p.id, end);
-            const totalKeeperTime = keeperMins[p.id] || 0;
-            const keeperRatio = totalKeeperTime / T;
-            const factor = Math.max(0.1, 0.93 - keeperRatio * 0.83);
-            effectiveMinutes += futureKeeper * factor;
-          }
-          let deficit = paceTarget - effectiveMinutes;
-
-          // Stickiness: bonus for staying on field, penalty for leaving bench early
-          if (sp) {
-            const onStreak = onFieldStreak[p.id];
-            const offStreak = offFieldStreak[p.id];
-            if (onStreak > 0) {
-              deficit += onStreak === 1 ? sp.on1 : onStreak === 2 ? sp.on2 : sp.on3;
-            } else if (offStreak > 0) {
-              deficit += offStreak === 1 ? sp.off1 : offStreak === 2 ? sp.off2 : 0;
-            }
-          }
-
-          const jitter = (rng() - 0.5) * 0.3;
-          return { id: p.id, score: deficit + jitter };
-        })
-        .sort((a, b) => b.score - a.score);
-
-      // Fill remaining spots
-      while (lineup.length < P && scored.length) {
-        lineup.push(scored.shift().id);
-      }
-
+      // Update minutes and streaks (SAME for locked and unlocked segments)
       lineup.forEach(id => { minutes[id] += dt; });
 
       // Update on/off field streaks
@@ -1572,12 +1896,13 @@
    * Max maxSwaps individual swaps. Returns the swaps and updated minutes.
    * Segments are physically split so rendering works without changes.
    */
-  function addIndividualSwaps(segments, minutes, keeperMinutes, playersList, P, maxSwaps, splitHalf) {
+  function addIndividualSwaps(segments, minutes, keeperMinutes, playersList, P, maxSwaps, splitHalf, lockedSegments) {
     const ids = playersList.map(p => p.id);
     const keeperSet = new Set(Object.keys(keeperMinutes).filter(id => keeperMinutes[id] > 0));
     const nonKeepers = ids.filter(id => !keeperSet.has(id));
     const keepers = ids.filter(id => keeperSet.has(id));
     const swapsAdded = [];
+    const locks = lockedSegments || {};
 
     const minSplitHalf = Math.max(3, splitHalf || 4);
     const minSplitDt = minSplitHalf * 2;
@@ -1592,6 +1917,7 @@
       const segIndices = segments.map((_, i) => i)
         .sort((a, b) => (segments[b].end - segments[b].start) - (segments[a].end - segments[a].start));
       for (const idx of segIndices) {
+        if (locks[idx]) continue;  // Skip locked segments
         const seg = segments[idx];
         if (!seg.lineup.includes(from) || seg.lineup.includes(to) || seg.keeperId === from) continue;
         const dt = seg.end - seg.start;
@@ -1619,10 +1945,12 @@
       const gap = minutes[from] - minutes[to];
       let bestSwap = null, bestImp = 0;
       for (let i = 0; i < segments.length; i++) {
+        if (locks[i]) continue;  // Never touch locked segments
         const s1 = segments[i];
         if (!s1.lineup.includes(from) || s1.lineup.includes(to) || s1.keeperId === from) continue;
         for (let j = 0; j < segments.length; j++) {
           if (i === j) continue;
+          if (locks[j]) continue;  // Never touch locked segments
           const s2 = segments[j];
           if (!s2.lineup.includes(to) || s2.lineup.includes(from) || s2.keeperId === to) continue;
           const d1 = s1.end - s1.start, d2 = s2.end - s2.start;
@@ -1703,9 +2031,10 @@
 
   function _gcd(a, b) { return b === 0 ? a : _gcd(b, a % b); }
 
-  function buildCyclicCandidate(playersList, P, T, keeperTimeline) {
+  function buildCyclicCandidate(playersList, P, T, keeperTimeline, lockedSegments) {
     const keeperIds = new Set(keeperTimeline.filter(k => k.keeperId).map(k => k.keeperId));
     const keeperCount = keeperIds.size;
+    const locks = lockedSegments || {};
 
     // Qualification: skip when cyclic is unlikely to help
     if (keeperCount >= 3) return null;
@@ -1725,6 +2054,8 @@
 
     // Build segments per keeper interval
     const segments = [];
+    let segIdx = 0;  // track segment index across intervals for lock matching
+
     for (const kSeg of intervals) {
       const halfDur = kSeg.end - kSeg.start;
       const outfield = allIds.filter(id => id !== kSeg.keeperId);
@@ -1734,7 +2065,18 @@
       if (benchSize <= 0) {
         // Everyone plays this half
         const lineup = kSeg.keeperId ? [kSeg.keeperId, ...outfield] : [...outfield];
+
+        // If this first global segment is locked, verify lineup matches (must contain same players)
+        if (segIdx === 0 && locks[0]) {
+          const lockSet = new Set(locks[0]);
+          const lineupSet = new Set(lineup);
+          if (lineup.length !== locks[0].length || [...lockSet].some(id => !lineupSet.has(id))) {
+            return null;  // Cannot satisfy lock
+          }
+        }
+
         segments.push({ start: kSeg.start, end: kSeg.end, dt: halfDur, lineup, keeperId: kSeg.keeperId });
+        segIdx++;
         continue;
       }
 
@@ -1744,17 +2086,60 @@
       const periodLen = halfDur / cycleLen;
       if (periodLen < minSegLen || cycleLen > 6) return null;
 
+      // LOCK HANDLING: if the first segment of this interval (= segIdx=0 globally) is locked,
+      // reorder the outfield ring so that the bench window at p=0 matches the lock's bench set.
+      let ringOrder = outfield;
+      if (segIdx === 0 && locks[0]) {
+        const lockedLineup = locks[0];
+        const keeperInLock = kSeg.keeperId;
+
+        // Extract outfield-locked (remove keeper if present)
+        const lockedOutfield = lockedLineup.filter(id => id !== keeperInLock);
+        if (lockedOutfield.length !== outfieldSpots) return null;
+
+        // Determine who should sit at p=0: outfield - lockedOutfield
+        const lockedPlaying = new Set(lockedOutfield);
+        const lockedSitting = outfield.filter(id => !lockedPlaying.has(id));
+
+        if (lockedSitting.length !== benchSize) return null;  // Shouldn't happen
+
+        // Arrange ring: first `benchSize` slots are the sitting players, rest are playing players
+        // This makes sitting = outfield[0..benchSize-1] at p=0
+        ringOrder = [...lockedSitting, ...lockedOutfield];
+      } else {
+        // No lock: place later-half keepers LAST in the ring. The bench window
+        // at p=0 comes from ringOrder[0..benchSize-1], so if a later-half keeper
+        // were first in the ring she'd start on the bench — confusing for the
+        // trainer since she's already committed as keeper for the next half.
+        // Sorting later-half keepers to the end makes them start ON the field
+        // and sit out a later period instead. Total playing time per player
+        // in the half is unchanged (with benchSize=1, each player sits
+        // exactly once per cycle).
+        const laterKeepers = new Set(
+          keeperTimeline
+            .filter(k => k.keeperId && k.start > kSeg.start)
+            .map(k => k.keeperId)
+        );
+        if (laterKeepers.size > 0) {
+          ringOrder = [
+            ...outfield.filter(id => !laterKeepers.has(id)),
+            ...outfield.filter(id => laterKeepers.has(id))
+          ];
+        }
+      }
+
       // Build rotation: slide bench window through player ring
       for (let p = 0; p < cycleLen; p++) {
         const sitting = new Set();
         for (let b = 0; b < benchSize; b++) {
-          sitting.add(outfield[(p * benchSize + b) % outfield.length]);
+          sitting.add(ringOrder[(p * benchSize + b) % ringOrder.length]);
         }
-        const playing = outfield.filter(id => !sitting.has(id));
+        const playing = ringOrder.filter(id => !sitting.has(id));
         const start = Math.round(kSeg.start + p * periodLen);
         const end = Math.round(kSeg.start + (p + 1) * periodLen);
         const lineup = kSeg.keeperId ? [kSeg.keeperId, ...playing] : [...playing];
         segments.push({ start, end, dt: end - start, lineup, keeperId: kSeg.keeperId });
+        segIdx++;
       }
     }
 
@@ -1804,14 +2189,191 @@
   }
 
   // ------------------------------
+  // Fast intervall (interval mode) helpers
+  // ------------------------------
+
+  /**
+   * Build segment boundaries by distributing evenly within each keeper period.
+   * Keeper-swap times are mandatory boundaries.
+   *
+   * When adjustForBalance is true, for each period tries n_segs in
+   * [target-2 .. target+2] and keeps the one giving best estimated fairness
+   * (via quick sim with 6 seeds), with a small deviation penalty.
+   */
+  function buildIntervalSegmentTimes(T, intervalMin, keeperTimeline, players, P, N, adjustForBalance) {
+    const periods = (keeperTimeline && keeperTimeline.length)
+      ? keeperTimeline
+      : [{ start: 0, end: T, keeperId: null }];
+
+    const nsegsPerPeriod = periods.map(p => {
+      const L = p.end - p.start;
+      return L > 0 ? Math.max(1, Math.round(L / intervalMin)) : 0;
+    });
+
+    if (adjustForBalance && players && players.length && P && N) {
+      for (let pi = 0; pi < periods.length; pi++) {
+        const target = nsegsPerPeriod[pi];
+        if (target < 1) continue;
+        const L = periods[pi].end - periods[pi].start;
+        if (L <= 0) continue;
+
+        const minN = Math.max(1, target - 2);
+        const maxN = target + 2;
+        let bestN = target;
+        let bestScore = Infinity;
+
+        for (let candN = minN; candN <= maxN; candN++) {
+          if (candN > 0 && L / candN < 3) continue; // min segment length
+
+          const testNsegs = nsegsPerPeriod.slice();
+          testNsegs[pi] = candN;
+          const testTimes = buildIntervalBoundariesFromNsegs(T, periods, testNsegs);
+          const estDiff = estimateIntervalFairness(players, testTimes, P, keeperTimeline);
+          const deviation = Math.abs(candN - target);
+          const score = estDiff + deviation * 0.5;
+          if (score < bestScore) {
+            bestScore = score;
+            bestN = candN;
+          }
+        }
+        nsegsPerPeriod[pi] = bestN;
+      }
+    }
+
+    return buildIntervalBoundariesFromNsegs(T, periods, nsegsPerPeriod);
+  }
+
+  // Build sorted boundary list given nsegs-per-period.
+  function buildIntervalBoundariesFromNsegs(T, periods, nsegsPerPeriod) {
+    const boundaries = new Set([0, T]);
+    for (const p of periods) {
+      boundaries.add(p.start);
+      boundaries.add(p.end);
+    }
+    for (let i = 0; i < periods.length; i++) {
+      const p = periods[i];
+      const L = p.end - p.start;
+      const n = nsegsPerPeriod[i];
+      if (L <= 0 || n <= 1) continue;
+      for (let k = 1; k < n; k++) {
+        boundaries.add(Math.round(p.start + L * k / n));
+      }
+    }
+    return Array.from(boundaries).sort((a, b) => a - b);
+  }
+
+  // Quick fairness estimator for adjustForBalance loop. 6 seeds, median nkDiff.
+  function estimateIntervalFairness(players, times, P, keeperTimeline) {
+    const SEEDS = 6;
+    const diffs = [];
+    const baseSeed = 1731 * (times.length + 1);
+    for (let s = 0; s < SEEDS; s++) {
+      const res = greedyAssign(players, times, P, keeperTimeline,
+                               baseSeed + s * 100003, null);
+      const nonKeepers = players.map(p => p.id).filter(id => !res.keeperSet.has(id));
+      const vals = nonKeepers.map(id => res.minutes[id]);
+      if (vals.length) diffs.push(Math.max(...vals) - Math.min(...vals));
+    }
+    if (!diffs.length) return 0;
+    diffs.sort((a, b) => a - b);
+    return diffs[Math.floor(diffs.length / 2)];
+  }
+
+  // ------------------------------
+  // Fast intervall preview helper
+  // ------------------------------
+
+  /**
+   * Compute actual interval(s) that will be used given requested interval,
+   * match duration, and keeper timeline.
+   */
+  function computeActualInterval(T, intervalMin, keeperTimeline) {
+    const periods = (keeperTimeline && keeperTimeline.length)
+      ? keeperTimeline
+      : [{ start: 0, end: T }];
+
+    // Build the same integer-rounded boundaries the real algorithm would use,
+    // then measure actual segment lengths between them.
+    const boundaries = new Set([0, T]);
+    for (const p of periods) {
+      boundaries.add(p.start);
+      boundaries.add(p.end);
+    }
+    for (const p of periods) {
+      const L = p.end - p.start;
+      if (L <= 0) continue;
+      const nSegs = Math.max(1, Math.round(L / intervalMin));
+      for (let k = 1; k < nSegs; k++) {
+        boundaries.add(Math.round(p.start + L * k / nSegs));
+      }
+    }
+    const sortedBounds = Array.from(boundaries).sort((a, b) => a - b);
+    const lengths = [];
+    for (let i = 0; i < sortedBounds.length - 1; i++) {
+      const dt = sortedBounds[i + 1] - sortedBounds[i];
+      if (dt > 0) lengths.push(dt);
+    }
+
+    if (!lengths.length) return { minLen: intervalMin, maxLen: intervalMin, uniform: true };
+
+    const minLen = Math.min(...lengths);
+    const maxLen = Math.max(...lengths);
+    const uniform = (maxLen - minLen) < 0.5;
+    return { minLen, maxLen, uniform };
+  }
+
+  /**
+   * Update the live preview text in skdIntervalPreview.
+   */
+  function updateIntervalPreview() {
+    const previewEl = $('skdIntervalPreview');
+    if (!previewEl) return;
+
+    // Only show preview when in interval mode
+    if (kdFrequency !== 'interval') {
+      previewEl.textContent = '';
+      return;
+    }
+
+    const T = clamp(parseInt($('skdMinutes')?.value, 10) || 48, 10, 200);
+    const requested = Math.max(3, Math.min(Math.floor(T / 2), kdIntervalMin || 8));
+    const keeperTimeline = buildKeeperTimeline(T);
+
+    const { minLen, maxLen, uniform } = computeActualInterval(T, requested, keeperTimeline);
+
+    // Segments are integers after Math.round — format as whole numbers
+    const fmt = (n) => String(Math.round(n));
+
+    if (uniform && Math.abs(minLen - requested) < 0.5) {
+      // Exact match: coach's requested interval is achieved
+      previewEl.textContent = `Intervall: ${fmt(minLen)} min \u2713`;
+      previewEl.style.color = 'var(--success)';
+    } else if (uniform) {
+      // All segments equal but differ from requested (rounded to keeper-divisor)
+      previewEl.textContent = `Faktisk intervall: ${fmt(minLen)} min (tilpasses keeper-bytter)`;
+      previewEl.style.color = 'var(--text-600)';
+    } else if ((maxLen - minLen) <= 1.5) {
+      // Adjacent-integer alternation within periods (e.g., 7/8)
+      previewEl.textContent = `Faktisk intervall: ${fmt(minLen)}\u2013${fmt(maxLen)} min (tilpasses keeper-bytter)`;
+      previewEl.style.color = 'var(--text-600)';
+    } else {
+      // Genuinely varies between keeper periods (asymmetric split)
+      previewEl.textContent = `Faktisk intervall: ${fmt(minLen)}\u2013${fmt(maxLen)} min (varierer mellom omganger)`;
+      previewEl.style.color = 'var(--text-600)';
+    }
+  }
+
+  // ------------------------------
   // MAIN
   // ------------------------------
-  function generateKampdagPlan() {
+  function generateKampdagPlan(lockedSegments) {
    try {
     const present = getPresentPlayers();
     const format = parseInt($('skdFormat')?.value, 10) || 7;
     const T = clamp(parseInt($('skdMinutes')?.value, 10) || 48, 10, 200);
     const P = format;
+    const locks = lockedSegments || {};
+    const hasLocks = Object.keys(locks).length > 0;
 
     const lineupEl = $('skdLineup');
     const planEl = $('skdPlan');
@@ -1868,14 +2430,14 @@
 
         for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
           const runSeed = seed + attempt * 99991;
-          const res = greedyAssign(present, times, P, keeperTimeline, runSeed, stickyMode);
+          const res = greedyAssign(present, times, P, keeperTimeline, runSeed, stickyMode, locks);
 
           const segClone = res.segments.map(s => ({
             start: s.start, end: s.end, dt: s.dt,
             lineup: s.lineup.slice(), keeperId: s.keeperId
           }));
           const minClone = Object.assign({}, res.minutes);
-          const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, maxSwaps, fp.swapSplitHalf);
+          const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, maxSwaps, fp.swapSplitHalf, locks);
 
           const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
           const nkVals = nonKeepers.map(id => minClone[id]);
@@ -1914,7 +2476,7 @@
       // Cyclic rotation candidate: deterministic bench-window rotation.
       // Competes with greedy via same comparator  -  wins when it produces
       // cleaner plans (fewer lineup changes, equal-length periods).
-      const cyclicPlan = buildCyclicCandidate(present, P, T, keeperTimeline);
+      const cyclicPlan = buildCyclicCandidate(present, P, T, keeperTimeline, locks);
       if (cyclicPlan && (!best || isBetter(cyclicPlan, best))) {
         best = cyclicPlan;
       }
@@ -1928,13 +2490,13 @@
           const stickyMode = (P === 3) ? null : (times.length - 1 >= 4 ? (fp.sticky || null) : null);
           for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
             const runSeed = seed + attempt * 99991;
-            const res = greedyAssign(present, times, P, keeperTimeline, runSeed, stickyMode);
+            const res = greedyAssign(present, times, P, keeperTimeline, runSeed, stickyMode, locks);
             const segClone = res.segments.map(s => ({
               start: s.start, end: s.end, dt: s.dt,
               lineup: s.lineup.slice(), keeperId: s.keeperId
             }));
             const minClone = Object.assign({}, res.minutes);
-            const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, 3, fp.swapSplitHalf);
+            const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, 3, fp.swapSplitHalf, locks);
             const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
             const nkVals = nonKeepers.map(id => minClone[id]);
             const nkDiff = nkVals.length ? Math.max(...nkVals) - Math.min(...nkVals) : 0;
@@ -1957,6 +2519,50 @@
           }
         }
       }
+    } else if (fp.mode === 'interval') {
+      // Fast intervall: fixed boundaries per keeper period, no stickyMode,
+      // no addIndividualSwaps (preserves interval promise).
+      const clampedInterval = Math.max(3, Math.min(Math.floor(T / 2), kdIntervalMin || 8));
+      const times = buildIntervalSegmentTimes(
+        T, clampedInterval, keeperTimeline, present, P, N, kdIntervalAdjust
+      );
+
+      for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
+        const runSeed = seed + attempt * 99991;
+        const res = greedyAssign(present, times, P, keeperTimeline, runSeed, null);
+
+        const segClone = res.segments.map(s => ({
+          start: s.start, end: s.end, dt: s.dt,
+          lineup: s.lineup.slice(), keeperId: s.keeperId
+        }));
+        const minClone = Object.assign({}, res.minutes);
+        // NOTE: intentionally NOT calling addIndividualSwaps here
+
+        const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
+        const nkVals = nonKeepers.map(id => minClone[id]);
+        const nkDiff = nkVals.length ? Math.max(...nkVals) - Math.min(...nkVals) : 0;
+        const kIds = present.map(p => p.id).filter(id => res.keeperSet.has(id));
+        const kVals = kIds.map(id => minClone[id]);
+        const kDiff = kVals.length >= 2 ? Math.max(...kVals) - Math.min(...kVals) : 0;
+        const allTimes = uniqSorted(segClone.map(s => s.start).concat([T]));
+
+        const candidate = {
+          segments: segClone,
+          minutes: minClone,
+          keeperMinutes: res.keeperMinutes,
+          times: allTimes,
+          nkDiff,
+          kDiff,
+          swaps: []
+        };
+
+        const candidateScore = kDiff * 2 + nkDiff;
+        const bestScore = best ? (best.kDiff || 0) * 2 + best.nkDiff : Infinity;
+        if (!best || candidateScore < bestScore) {
+          best = candidate;
+        }
+        if (kDiff <= 2 && nkDiff <= 2) break;
+      }
     } else {
       // Calm mode: keep existing logic unchanged
       const nsegs = chooseOptimalSegments(T, P, N, fp.mode);
@@ -1966,14 +2572,14 @@
 
       for (let attempt = 0; attempt < NUM_ATTEMPTS; attempt++) {
         const runSeed = seed + attempt * 99991;
-        const res = greedyAssign(present, times, P, keeperTimeline, runSeed, stickyMode);
+        const res = greedyAssign(present, times, P, keeperTimeline, runSeed, stickyMode, locks);
 
         const segClone = res.segments.map(s => ({
           start: s.start, end: s.end, dt: s.dt,
           lineup: s.lineup.slice(), keeperId: s.keeperId
         }));
         const minClone = Object.assign({}, res.minutes);
-        const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, maxSwaps, fp.swapSplitHalf);
+        const swaps = addIndividualSwaps(segClone, minClone, res.keeperMinutes, present, P, maxSwaps, fp.swapSplitHalf, locks);
 
         const nonKeepers = present.map(p => p.id).filter(id => !res.keeperSet.has(id));
         const nkVals = nonKeepers.map(id => minClone[id]);
@@ -2012,6 +2618,14 @@
     lastPresent = present;
     lastP = P;
     lastT = T;
+
+    // Validate formation matches current format (prevents stale key from wrong format)
+    const fmtOpts = FORMATIONS[P];
+    if (fmtOpts && kdFormationKey && !fmtOpts[kdFormationKey]) {
+      kdFormationKey = getDefaultFormationKey(P);
+      kdFormation = fmtOpts[kdFormationKey] || Object.values(fmtOpts)[0];
+    }
+
     lastFormation = kdFormation ? kdFormation.slice() : null;
     lastFormationKey = kdFormationKey || '';
     lastUseFormation = !!(kdFormationOn && kdFormation);
@@ -2021,8 +2635,51 @@
       lastPositions[pid] = new Set(zones);
     }
 
-    // Clear any previous drag & drop overrides
-    kdSlotOverrides = {};
+    // Clear drag & drop overrides. Two cases:
+    // - No lock: clear everything (existing behavior).
+    // - Lock: clear all overrides EXCEPT seg 0. The user's seg 0 positions
+    //   must remain visible. Overrides in seg 1+ were tied to the OLD plan's
+    //   lineups and are now inconsistent with the regenerated plan — they
+    //   must be cleared to avoid ghost players in the UI.
+    if (!hasLocks) {
+      kdSlotOverrides = {};
+    } else {
+      const preserved0 = kdSlotOverrides[0];
+      kdSlotOverrides = {};
+      if (preserved0) kdSlotOverrides[0] = preserved0;
+    }
+
+    // Runtime assertions (temporary — remove after stable for 2 weeks)
+    try {
+      if (hasLocks && best && best.segments && best.segments[0]) {
+        const locked0 = locks[0];
+        const produced0 = best.segments[0].lineup;
+        if (locked0 && Array.isArray(locked0)) {
+          const lockedSet = new Set(locked0);
+          const producedSet = new Set(produced0);
+          const presentIds = new Set(present.map(p => p.id));
+          // Ignore "missing" players who are no longer in present — the lock
+          // filter in greedyAssign correctly dropped them and used normal path.
+          const missing = locked0.filter(id => !producedSet.has(id) && presentIds.has(id));
+          const extra = produced0.filter(id => !lockedSet.has(id));
+          if (missing.length || extra.length) {
+            console.warn('[sesong-kampdag] ASSERT FAIL: locked seg 0 lineup not respected.', {
+              missing, extra, locked: locked0, produced: produced0
+            });
+          }
+        }
+        // Sum-check: total playing time = P * T
+        const totalMins = Object.values(best.minutes).reduce((a, b) => a + b, 0);
+        const expected = P * T;
+        if (Math.abs(totalMins - expected) > 1) {
+          console.warn('[sesong-kampdag] ASSERT FAIL: total minutes mismatch.', {
+            totalMins, expected, diff: totalMins - expected
+          });
+        }
+      }
+    } catch (assertErr) {
+      console.warn('[sesong-kampdag] Runtime assertion error:', assertErr);
+    }
 
     renderKampdagOutput(present, best, P, T);
 
@@ -2099,7 +2756,10 @@
           const segEnd = best.segments[si + 1] ? best.segments[si + 1].start : T;
           const sm = getSlotMap(si);
           const onField = new Set(Object.values(sm.slots).filter(Boolean));
-          if (!onField.has(m.id)) {
+          // Use effective lineup (override-aware) so manual swaps are reflected
+          const effLineup = getEffectiveLineup(si, seg.lineup);
+          const inLineup = effLineup.includes(m.id);
+          if (!onField.has(m.id) && !inLineup) {
             segs.push({ pct: ((segEnd - seg.start) / T * 100), color: 'transparent' });
             continue;
           }
@@ -2151,7 +2811,7 @@
 
       const bubbleCls = { F: 'kd-bb-f', M: 'kd-bb-m', A: 'kd-bb-a', K: 'kd-bb-k' };
 
-      // First segment \u2192 startoppstilling in kdLineup
+      // First segment \u2192 startoppstilling in skdLineup
       if (lineupEl) {
         const sm0 = getSlotMap(0);
         const ov0 = hasSlotOverrides(0);
@@ -2179,6 +2839,7 @@
           <div class="kd-dark-output">
             <h3 class="kd-dark-heading">Startoppstilling \u00b7 ${lastFormationKey}
               ${hasAnyOverride ? `<button class="kd-reset-all-btn" id="skdResetAllSlots">\u21ba Tilbakestill alle</button>` : ''}
+              <button class="kd-reset-all-btn" id="skdResetPlan" style="margin-left:8px;background:#7f1d1d;border-color:#991b1b;color:#fecaca;">Nullstill plan</button>
             </h3>
             <div class="kd-pitch-card">
               <div class="kd-pitch-card-header">
@@ -2186,7 +2847,7 @@
                   ${ov0 ? '<span class="kd-override-badge">\u270f\ufe0f Tilpasset</span>' : ''}
                 </div>
                 <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                  ${ov0 && best.segments.length > 1 ? `<button class="kd-copy-btn" data-action="skdcopy" data-seg="0">Kopier til alle</button>` : ''}
+                  ${ov0 && best.segments.length > 1 ? `<button class="kd-copy-btn" data-action="skdcopy" data-seg="0">Kopier til hele kampen</button>` : ''}
                   ${ov0 ? `<button class="kd-reset-btn" data-action="skdreset" data-seg="0">\u21ba</button>` : ''}
                   
                 </div>
@@ -2197,6 +2858,19 @@
               <div class="kd-bench-area"><span class="kd-bench-label">Benk:</span>${benchHtml0 || '<span style="color:#64748b;font-size:10px;">Ingen</span>'}</div>
             </div>
 
+            ${kdDragWarning ? `
+            <div class="kd-drag-warning" role="alert">
+              <span class="kd-drag-warning-icon">⚠️</span>
+              <span class="kd-drag-warning-text"><strong>${kdDragWarning.playerName}</strong> er planlagt som keeper senere i kampen. Låst som utespiller i starten kan føre til svært ulik spilletid.</span>
+              <button type="button" class="kd-drag-warning-undo" onclick="window.sesongKampdagDragUndo()">Angre</button>
+            </div>
+            ` : ''}
+            ${(best && best.nkDiff > 8) ? `
+            <div class="kd-nkdiff-warning" role="alert">
+              <span class="kd-nkdiff-warning-icon">⚠️</span>
+              <span class="kd-nkdiff-warning-text">Spilletiden er ujevnt fordelt (avvik ${best.nkDiff} min). Trykk "Nullstill plan" eller juster spillerne manuelt for å rette opp.</span>
+            </div>
+            ` : ''}
             <h3 class="kd-dark-heading" style="margin-top:16px;">Beregnet spilletid${hasBenchSwap ? ' (justert)' : ''}</h3>
             ${timelineChartHtml}
           </div>`;
@@ -2205,7 +2879,7 @@
         lineupEl.classList.remove('results-container');
       }
 
-      // Remaining segments \u2192 bytteplan in kdPlan
+      // Remaining segments \u2192 bytteplan in skdPlan
       if (planEl) {
         let cardsHtml = '';
         for (let idx = 1; idx < best.segments.length; idx++) {
@@ -2216,9 +2890,10 @@
           const kn = seg.keeperId ? escapeHtml(idToName[seg.keeperId] || seg.keeperId) : '';
           const isLast = idx === best.segments.length - 1;
           const ov = hasSlotOverrides(idx);
-          const prevLineup = new Set(best.segments[idx - 1].lineup);
-          const newIds = new Set(seg.lineup.filter(id => !prevLineup.has(id)));
-          const outIds = [...prevLineup].filter(id => !seg.lineup.includes(id));
+          const prevLineup = new Set(getEffectiveLineup(idx - 1, best.segments[idx - 1].lineup));
+          const curLineup = getEffectiveLineup(idx, seg.lineup);
+          const newIds = new Set(curLineup.filter(id => !prevLineup.has(id)));
+          const outIds = [...prevLineup].filter(id => !curLineup.includes(id));
 
           const slotsHtml = slots.map(slot => {
             const pid = sm.slots[slot.key];
@@ -2254,7 +2929,7 @@
                 ${ov ? '<span class="kd-override-badge">\u270f\ufe0f Tilpasset</span>' : ''}
               </div>
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                ${ov && !isLast ? `<button class="kd-copy-btn" data-action="skdcopy" data-seg="${idx}">Kopier til alle</button>` : ''}
+                ${ov && !isLast ? `<button class="kd-copy-btn" data-action="skdcopy" data-seg="${idx}">Kopier til hele kampen</button>` : ''}
                 ${ov ? `<button class="kd-reset-btn" data-action="skdreset" data-seg="${idx}">\u21ba</button>` : ''}
                 
               </div>
@@ -2279,6 +2954,8 @@
       // Bind action buttons (delegation-safe, re-binds each render)
       const resetAllBtn = document.getElementById('skdResetAllSlots');
       if (resetAllBtn) resetAllBtn.addEventListener('click', resetAllSlotOverrides);
+      const resetPlanBtn = document.getElementById('skdResetPlan');
+      if (resetPlanBtn) resetPlanBtn.addEventListener('click', resetKampdagPlan);
       document.querySelectorAll('[data-action="skdreset"]').forEach(b => {
         b.addEventListener('click', (e) => { e.stopPropagation(); resetSlotOverride(parseInt(b.dataset.seg)); });
       });
@@ -2356,7 +3033,8 @@
     let prev = new Set();
 
     segments.forEach((seg, idx) => {
-      const cur = new Set(seg.lineup);
+      // Use effective lineup so manual swap-overrides are reflected
+      const cur = new Set(getEffectiveLineup(idx, seg.lineup));
       const ins = [];
       const outs = [];
 
@@ -2465,9 +3143,11 @@
         if (idx === 0) {
           lines.push('  Start (ingen bytter)');
         } else {
-          const prev = new Set(best.segments[idx - 1].lineup);
-          const ins = seg.lineup.filter(id => !prev.has(id));
-          const outs = best.segments[idx - 1].lineup.filter(id => !new Set(seg.lineup).has(id));
+          const prevEff = getEffectiveLineup(idx - 1, best.segments[idx - 1].lineup);
+          const curEff = getEffectiveLineup(idx, seg.lineup);
+          const prev = new Set(prevEff);
+          const ins = curEff.filter(id => !prev.has(id));
+          const outs = prevEff.filter(id => !new Set(curEff).has(id));
           ins.forEach(id => lines.push(`  Inn: ${idToName[id] || id}`));
           outs.forEach(id => lines.push(`  Ut: ${idToName[id] || id}`));
         }
@@ -2603,7 +3283,9 @@
           const segEnd = best.segments[si+1] ? best.segments[si+1].start : T;
           const sm = getSlotMap(si);
           const onField = new Set(Object.values(sm.slots).filter(Boolean));
-          if (!onField.has(m.id)) { segs.push({pct:((segEnd-seg.start)/T*100),c:'transparent'}); continue; }
+          const effLineup = getEffectiveLineup(si, seg.lineup);
+          const inLineup = effLineup.includes(m.id);
+          if (!onField.has(m.id) && !inLineup) { segs.push({pct:((segEnd-seg.start)/T*100),c:'transparent'}); continue; }
           let color = zc.X;
           for (const s of slots) { if (sm.slots[s.key] === m.id) { color = zc[s.zone] || zc.X; break; } }
           segs.push({pct:((segEnd-seg.start)/T*100),c:color});
@@ -2637,9 +3319,10 @@
       const periodEnd = nextSeg ? nextSeg.start : T;
       const keeperName = seg.keeperId ? escapeHtml(idToName[seg.keeperId]||seg.keeperId) : '';
       const isFirst = idx === 0;
-      const prevLineup = !isFirst ? new Set(best.segments[idx-1].lineup) : new Set();
-      const newIds = isFirst ? new Set() : new Set(seg.lineup.filter(id => !prevLineup.has(id)));
-      const outIds = isFirst ? [] : [...prevLineup].filter(id => !seg.lineup.includes(id));
+      const prevLineup = !isFirst ? new Set(getEffectiveLineup(idx-1, best.segments[idx-1].lineup)) : new Set();
+      const curLineup = getEffectiveLineup(idx, seg.lineup);
+      const newIds = isFirst ? new Set() : new Set(curLineup.filter(id => !prevLineup.has(id)));
+      const outIds = isFirst ? [] : [...prevLineup].filter(id => !curLineup.includes(id));
       const ov = hasSlotOverrides(idx);
 
       let body = '';
@@ -2658,7 +3341,8 @@
         body += `<div style="font-size:8px;color:#64748b;padding:2px 10px 5px;">Benk: ${benchNames}</div>`;
       }
       if (!body) {
-        body = `<div class="zp">${seg.lineup.map(id => `<span class="zc">${escapeHtml(idToName[id]||id)}</span>`).join('')}</div>`;
+        const fallbackLineup = getEffectiveLineup(idx, seg.lineup);
+        body = `<div class="zp">${fallbackLineup.map(id => `<span class="zc">${escapeHtml(idToName[id]||id)}</span>`).join('')}</div>`;
       }
       let swaps = '';
       if (isFirst) { swaps = '<div class="note">Avspark</div>'; }
@@ -2949,9 +3633,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
   // ============================================================
   function buildSkdHtml(format, minutes, opponent, isHome) {
     var title = opponent ? ('vs ' + escapeHtml(opponent)) : 'Bytteplan';
+    var fmtPills = [3,5,7,9,11].map(function(f) {
+      var sub = (f === 3) ? '<span class="kd-pill-sub">ingen K</span>' : '';
+      var active = (f === format) ? ' kd-pill-active' : '';
+      return '<button type="button" class="kd-pill' + active + '" data-format="' + f + '">' + f + '-er' + sub + '</button>';
+    }).join('');
     var fmtOpts = [3,5,7,9,11].map(function(f) {
       return '<option value="' + f + '"' + (f === format ? ' selected' : '') + '>' + f + '-er' + (f === 3 ? ' (ingen keeper)' : '') + '</option>';
     }).join('');
+    var durOptions = [40, 50, 60, 70, 80];
+    var durPills = durOptions.map(function(m) {
+      var active = (m === minutes) ? ' kd-pill-active' : '';
+      return '<button type="button" class="kd-dur-pill' + active + '" data-min="' + m + '">' + m + ' min</button>';
+    }).join('') + '<button type="button" class="kd-dur-pill' + (durOptions.indexOf(minutes) === -1 ? ' kd-pill-active' : '') + '" data-min="0">Annet</button>';
+    var customRowDisplay = (durOptions.indexOf(minutes) === -1) ? 'block' : 'none';
 
     return '' +
       '<div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">' +
@@ -2959,31 +3654,54 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
         '<div style="font-weight:700; font-size:16px;">' + title + '</div>' +
       '</div>' +
 
-      '<div class="settings-card">' +
-        '<div class="settings-row" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">' +
-          '<div style="flex:1; min-width:220px;">' +
-            '<label for="skdFormat" style="display:block; font-weight:500; margin-bottom:6px;">Format</label>' +
-            '<select id="skdFormat" class="input" style="width:100%;">' + fmtOpts + '</select>' +
-          '</div>' +
-          '<div style="flex:1; min-width:220px;">' +
-            '<label for="skdMinutes" style="display:block; font-weight:500; margin-bottom:6px;">Kampvarighet (min)</label>' +
-            '<input id="skdMinutes" type="number" class="input" value="' + minutes + '" min="10" max="200" style="width:100%;">' +
-          '</div>' +
-          '<div style="flex:1; min-width:220px;">' +
-            '<div style="font-weight:500; margin-bottom:6px;">Auto</div>' +
-            '<div id="skdAutoInfo" class="small-text" style="opacity:0.85;">Velg oppm\u00f8te f\u00f8rst.</div>' +
-          '</div>' +
+      '<div class="settings-card kd-top-card">' +
+
+        '<div class="kd-label">Format</div>' +
+        '<div class="kd-pill-group" id="skdFormatPills">' + fmtPills + '</div>' +
+        '<select id="skdFormat" style="display:none;">' + fmtOpts + '</select>' +
+
+        '<div class="kd-divider"></div>' +
+
+        '<div class="kd-label">Kampvarighet</div>' +
+        '<div class="kd-dur-group" id="skdDurPills">' + durPills + '</div>' +
+        '<div id="skdDurCustomRow" style="display:' + customRowDisplay + '; margin-top:6px;">' +
+          '<input id="skdMinutes" type="number" class="input kd-dur-custom-input" value="' + minutes + '" min="10" max="200">' +
         '</div>' +
-        '<div class="settings-row" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px;">' +
-          '<div style="font-weight:500; font-size:13px; min-width:100px;">Byttemodus</div>' +
-          '<div id="skdFreqOptions" style="display:flex; gap:6px; flex:1;">' +
-            '<button type="button" class="btn-secondary kd-freq-btn kd-freq-active" data-freq="equal" style="flex:1; font-size:12px; padding:7px 4px;">\u2696\ufe0f Lik spilletid<br><span class="small-text" style="opacity:0.9;">Rettferdig</span></button>' +
-            '<button type="button" class="btn-secondary kd-freq-btn" data-freq="calm" style="flex:1; font-size:12px; padding:7px 4px;">\ud83e\uddd8 Rolig bytteplan<br><span class="small-text" style="opacity:1; color:var(--text-600);">F\u00e6rre bytter</span></button>' +
-          '</div>' +
+
+        '<div class="kd-auto-badge" id="skdAutoInfo">Velg oppm\u00f8te f\u00f8rst.</div>' +
+
+        '<div class="kd-divider"></div>' +
+
+        '<div class="kd-label">Byttemodus</div>' +
+        '<div id="skdFreqOptions" style="display:flex; gap:8px;">' +
+          '<button type="button" class="kd-mode-chip kd-freq-btn kd-freq-active" data-freq="equal">' +
+            '<span class="kd-chip-icon">\u2696\ufe0f</span>' +
+            '<span class="kd-chip-text">Lik spilletid<span class="kd-chip-sub">Rettferdig</span></span>' +
+          '</button>' +
+          '<button type="button" class="kd-mode-chip kd-freq-btn" data-freq="interval">' +
+            '<span class="kd-chip-icon">\u23f1\ufe0f</span>' +
+            '<span class="kd-chip-text">Fast intervall<span class="kd-chip-sub">Forutsigbar</span></span>' +
+          '</button>' +
+          '<button type="button" class="kd-mode-chip kd-freq-btn" data-freq="calm">' +
+            '<span class="kd-chip-icon">\ud83e\uddd8</span>' +
+            '<span class="kd-chip-text">Rolig bytte<span class="kd-chip-sub">F\u00e6rre bytter</span></span>' +
+          '</button>' +
         '</div>' +
-        '<div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">' +
-          '<button id="skdSelectAll" class="btn-secondary" type="button">Velg alle</button>' +
-          '<button id="skdDeselectAll" class="btn-secondary" type="button">Fjern alle</button>' +
+
+        '<div id="skdIntervalPanel" class="settings-row" style="display:none; gap:10px 12px; align-items:center; flex-wrap:wrap; margin-top:10px; padding:10px 12px; background:var(--bg); border-radius:10px;">' +
+          '<label for="skdIntervalMin" style="font-weight:700; font-size:13px;">Bytt hvert</label>' +
+          '<input id="skdIntervalMin" type="number" class="input" min="3" max="60" value="8" style="width:70px;">' +
+          '<span class="small-text">min</span>' +
+          '<label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-left:auto; cursor:pointer;">' +
+            '<input id="skdIntervalAdjust" type="checkbox">' +
+            '<span>Tilpass for balanse</span>' +
+          '</label>' +
+          '<div id="skdIntervalPreview" class="small-text" style="flex-basis:100%; font-size:11px; opacity:0.85; min-height:14px;"></div>' +
+        '</div>' +
+
+        '<div style="display:flex; gap:8px; margin-top:12px;">' +
+          '<button id="skdSelectAll" class="btn-secondary" type="button" style="flex:1; padding:6px 10px; font-size:13px;">Velg alle</button>' +
+          '<button id="skdDeselectAll" class="btn-secondary" type="button" style="flex:1; padding:6px 10px; font-size:13px;">Fjern alle</button>' +
         '</div>' +
       '</div>' +
 
@@ -2992,45 +3710,67 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 
       '<div class="settings-card" style="margin-top:8px; padding:8px 12px;">' +
         '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
-          '<div><div style="font-weight:500; font-size:14px;">Formasjoner og roller</div>' +
-          '<div class="small-text" style="opacity:0.8; font-size:11px;">Vis posisjoner (F/M/A) i bytteplan, banevisning og PDF.</div></div>' +
+          '<div>' +
+            '<div style="font-weight:700; font-size:14px;">Formasjoner og roller</div>' +
+            '<div class="small-text" style="opacity:0.8; font-size:11px; line-height:1.2;">Vis posisjoner (F/M/A) i bytteplan, banevisning og PDF.</div>' +
+          '</div>' +
           '<label class="switch"><input id="skdFormationToggle" type="checkbox"><span class="slider"></span></label>' +
         '</div>' +
         '<div id="skdFormationPanel" style="display:none; margin-top:10px;">' +
           '<div id="skdFormationGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>' +
-          '<div style="margin-top:12px;">' +
-            '<div style="font-weight:500; font-size:13px; margin-bottom:6px;">Posisjonspreferanse</div>' +
-            '<div class="small-text" style="opacity:0.8; margin-bottom:8px;">Sett posisjoner i Spillere-fanen (F/M/A).</div>' +
-            '<div id="skdPositionList" style="display:grid; grid-template-columns:1fr 1fr; gap:4px;"></div>' +
-          '</div>' +
-          '<div id="skdCoverage" style="margin-top:10px; padding:10px 12px; border-radius:10px; font-size:12px; display:none;"></div>' +
+          '<div id="skdPositionList" style="display:none;"></div>' +
+          '<div id="skdCoverage" style="display:none;"></div>' +
         '</div>' +
       '</div>' +
 
-      '<div class="settings-card" style="margin-top:8px; padding:8px 12px;">' +
-        '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
-          '<div><div style="font-weight:500; font-size:14px;">Manuell keeper</div>' +
-          '<div id="skdKeeperHint" class="small-text" style="opacity:0.8; font-size:11px;">Velg hvem som st\u00e5r i m\u00e5l og hvor lenge.</div></div>' +
-          '<label class="switch"><input id="skdManualKeeper" type="checkbox"><span class="slider"></span></label>' +
+      '<div class="settings-card" style="margin-top:8px; padding:12px 14px;">' +
+        '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">' +
+          '<div>' +
+            '<div style="font-weight:700; font-size:14px;">Keepere</div>' +
+            '<div id="skdKeeperHint" class="small-text" style="opacity:0.8; font-size:11px; line-height:1.2;">Velg hvem som st\u00e5r i m\u00e5l og hvor lenge.</div>' +
+          '</div>' +
+          '<div class="kd-counter">' +
+            '<button type="button" class="kd-counter-btn" id="skdKeeperMinus">\u2212</button>' +
+            '<span id="skdKeeperCountDisplay">1</span>' +
+            '<button type="button" class="kd-counter-btn" id="skdKeeperPlus">+</button>' +
+          '</div>' +
         '</div>' +
-        '<div id="skdKeeperPanel" style="display:none; margin-top:10px;">' +
-          '<div class="settings-row" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">' +
-            '<div style="min-width:240px;"><label for="skdKeeperCount" style="display:block; font-weight:500; margin-bottom:6px;">Antall keepere</label>' +
-            '<select id="skdKeeperCount" class="input" style="width:100%;"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>' +
-            '<div style="flex:1; min-width:240px;"><label style="display:block; font-weight:500; margin-bottom:6px;">Oppsummering</label>' +
-            '<div id="skdKeeperSummary" class="small-text" style="opacity:0.85;">\u2013</div></div>' +
+        '<select id="skdKeeperCount" style="display:none;"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>' +
+        '<input id="skdManualKeeper" type="checkbox" style="display:none;" checked>' +
+
+        '<div id="skdKeeperPanel">' +
+          '<div style="display:flex; flex-direction:column; gap:7px;">' +
+            '<div class="kd-keeper-row" data-row="1" style="display:flex;">' +
+              '<div class="kd-keeper-avatar">\ud83e\udde4</div>' +
+              '<select id="skdKeeper1" class="kd-keeper-select"></select>' +
+              '<input id="skdKeeperMin1" type="number" class="kd-keeper-min-input" value="0" min="0">' +
+              '<span class="kd-keeper-min-label">min</span>' +
+            '</div>' +
+            '<div class="kd-keeper-row" data-row="2" style="display:none;">' +
+              '<div class="kd-keeper-avatar">\ud83e\udde4</div>' +
+              '<select id="skdKeeper2" class="kd-keeper-select"></select>' +
+              '<input id="skdKeeperMin2" type="number" class="kd-keeper-min-input" value="0" min="0">' +
+              '<span class="kd-keeper-min-label">min</span>' +
+            '</div>' +
+            '<div class="kd-keeper-row" data-row="3" style="display:none;">' +
+              '<div class="kd-keeper-avatar">\ud83e\udde4</div>' +
+              '<select id="skdKeeper3" class="kd-keeper-select"></select>' +
+              '<input id="skdKeeperMin3" type="number" class="kd-keeper-min-input" value="0" min="0">' +
+              '<span class="kd-keeper-min-label">min</span>' +
+            '</div>' +
+            '<div class="kd-keeper-row" data-row="4" style="display:none;">' +
+              '<div class="kd-keeper-avatar">\ud83e\udde4</div>' +
+              '<select id="skdKeeper4" class="kd-keeper-select"></select>' +
+              '<input id="skdKeeperMin4" type="number" class="kd-keeper-min-input" value="0" min="0">' +
+              '<span class="kd-keeper-min-label">min</span>' +
+            '</div>' +
           '</div>' +
-          '<div class="kd-keeper-rows" style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">' +
-            '<div class="kd-keeper-row" data-row="1" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper1" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin1" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
-            '<div class="kd-keeper-row" data-row="2" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper2" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin2" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
-            '<div class="kd-keeper-row" data-row="3" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper3" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin3" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
-            '<div class="kd-keeper-row" data-row="4" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;"><select id="skdKeeper4" class="input" style="flex:2; min-width:220px;"></select><input id="skdKeeperMin4" type="number" class="input" value="0" min="0" style="width:120px;"><span class="small-text" style="opacity:0.8;">min</span></div>' +
-          '</div>' +
+          '<div id="skdKeeperSummary" class="small-text" style="margin-top:6px; text-align:right; opacity:0.7;">\u2013</div>' +
         '</div>' +
       '</div>' +
 
       '<div class="settings-card" style="margin-top:14px;">' +
-        '<div class="settings-row" style="display:flex; gap:10px; flex-wrap:wrap;">' +
+        '<div class="settings-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
           '<button id="skdGenerate" class="btn-primary" type="button"><i class="fas fa-wand-magic-sparkles"></i> Generer plan</button>' +
           '<button id="skdCopy" class="btn-secondary" type="button"><i class="fas fa-copy"></i> Kopier plan</button>' +
           '<button id="skdExportPdf" class="btn-secondary" type="button"><i class="fas fa-file-pdf"></i> Lagre som PDF</button>' +
@@ -3080,6 +3820,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
       lastFormation = null; lastFormationKey = ''; lastUseFormation = false; lastPositions = {};
       kdSlotOverrides = {};
       kdFormationOn = true; kdFrequency = 'equal';
+      kdIntervalMin = 8; kdIntervalAdjust = false;
       if (kdTimerInterval) { clearInterval(kdTimerInterval); kdTimerInterval = null; }
       kdTimerStart = null; kdTimerPaused = false; kdTimerPausedElapsed = 0;
 
@@ -3090,6 +3831,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
       bindKampdagUI();
       renderKampdagPlayers();
       refreshKeeperUI();
+      autoFillKeeperMinutes();
       updateKampdagCounts();
 
       // Back button

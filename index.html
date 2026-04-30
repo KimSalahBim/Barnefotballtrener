@@ -1096,6 +1096,7 @@
           <div class="kd-label">Kampvarighet</div>
           <div class="kd-dur-group" id="kdDurPills">
             <button type="button" class="kd-dur-pill" data-min="40">40 min</button>
+            <button type="button" class="kd-dur-pill" data-min="50">50 min</button>
             <button type="button" class="kd-dur-pill kd-pill-active" data-min="60">60 min</button>
             <button type="button" class="kd-dur-pill" data-min="70">70 min</button>
             <button type="button" class="kd-dur-pill" data-min="80">80 min</button>
@@ -1117,10 +1118,26 @@
               <span class="kd-chip-icon">⚖️</span>
               <span class="kd-chip-text">Lik spilletid<span class="kd-chip-sub">Rettferdig</span></span>
             </button>
+            <button type="button" class="kd-mode-chip kd-freq-btn" data-freq="interval">
+              <span class="kd-chip-icon">⏱️</span>
+              <span class="kd-chip-text">Fast intervall<span class="kd-chip-sub">Forutsigbar</span></span>
+            </button>
             <button type="button" class="kd-mode-chip kd-freq-btn" data-freq="calm">
               <span class="kd-chip-icon">🧘</span>
-              <span class="kd-chip-text">Rolig plan<span class="kd-chip-sub">Færre bytter</span></span>
+              <span class="kd-chip-text">Rolig bytte<span class="kd-chip-sub">Færre bytter</span></span>
             </button>
+          </div>
+
+          <!-- Fast intervall panel (vises kun når intervall-modus er aktiv) -->
+          <div id="kdIntervalPanel" class="settings-row" style="display:none; gap:10px 12px; align-items:center; flex-wrap:wrap; margin-top:10px; padding:10px 12px; background:var(--bg); border-radius:10px;">
+            <label for="kdIntervalMin" style="font-weight:700; font-size:13px;">Bytt hvert</label>
+            <input id="kdIntervalMin" type="number" class="input" min="3" max="60" value="8" style="width:70px;">
+            <span class="small-text">min</span>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-left:auto; cursor:pointer;">
+              <input id="kdIntervalAdjust" type="checkbox">
+              <span>Tilpass for balanse</span>
+            </label>
+            <div id="kdIntervalPreview" class="small-text" style="flex-basis:100%; font-size:11px; opacity:0.85; min-height:14px;"></div>
           </div>
 
           <!-- VELG/FJERN -->
