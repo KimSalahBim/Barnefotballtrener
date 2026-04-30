@@ -3647,7 +3647,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     var fmtOpts = [3,5,7,9,11].map(function(f) {
       return '<option value="' + f + '"' + (f === format ? ' selected' : '') + '>' + f + '-er' + (f === 3 ? ' (ingen keeper)' : '') + '</option>';
     }).join('');
-    var durOptions = [40, 60, 70, 80];
+    var durOptions = [40, 50, 60, 70, 80];
     var durPills = durOptions.map(function(m) {
       var active = (m === minutes) ? ' kd-pill-active' : '';
       return '<button type="button" class="kd-dur-pill' + active + '" data-min="' + m + '">' + m + ' min</button>';
