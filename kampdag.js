@@ -1703,14 +1703,8 @@ console.log('KAMPDAG.JS LOADING - BEFORE IIFE');
     // For K>=2: add keeper outfield window boundaries so each keeper
     // gets a dedicated outfield stint in the other keeper's half.
     // This prevents keeper time asymmetry without needing extra splits later.
-    //
-    // Skip outfield-windows when keeper periods are short (K>=3 AND period<15min):
-    // outfield distance (~21 min) flows past adjacent keeper boundaries,
-    // creating 1-2 min micro-segments. Affects 5-er+T=40+K>=3 and 7-er+T=50+K=4.
     const keepers = keeperTimeline || [];
-    const periodLen = (keepers.length > 0) ? T / keepers.length : T;
-    const skipOutfieldWindows = (keepers.length >= 3 && periodLen < 15);
-    if (keepers.length >= 2 && P && N && !skipOutfieldWindows) {
+    if (keepers.length >= 2 && P && N) {
       const target = P * T / N;
       const keeperBonus = Math.min(4, Math.max(2, Math.round(T / 20)));
       for (const kseg of keepers) {
