@@ -1007,6 +1007,16 @@
 
   function hasSlotOverrides(si) { return !!kdSlotOverrides[si]; }
 
+  // Returns the effective lineup for segment si, considering manual overrides.
+  // If overrides exist (manual swaps), the override slot map is the source of truth;
+  // otherwise fall back to the algorithm's planned lineup.
+  function getEffectiveLineup(si, fallbackLineup) {
+    if (kdSlotOverrides[si]) {
+      return Object.values(kdSlotOverrides[si].slots).filter(Boolean);
+    }
+    return fallbackLineup;
+  }
+
   function ensureSlotOverride(si) {
     if (!kdSlotOverrides[si]) {
       const d = buildDefaultSlotMap(si);
@@ -2746,9 +2756,9 @@
           const segEnd = best.segments[si + 1] ? best.segments[si + 1].start : T;
           const sm = getSlotMap(si);
           const onField = new Set(Object.values(sm.slots).filter(Boolean));
-          // Also check algorithm lineup for non-overridden segments
-          // (slot layout may have fewer positions than lineup size)
-          const inLineup = !kdSlotOverrides[si] && seg.lineup.includes(m.id);
+          // Use effective lineup (override-aware) so manual swaps are reflected
+          const effLineup = getEffectiveLineup(si, seg.lineup);
+          const inLineup = effLineup.includes(m.id);
           if (!onField.has(m.id) && !inLineup) {
             segs.push({ pct: ((segEnd - seg.start) / T * 100), color: 'transparent' });
             continue;
@@ -2880,9 +2890,10 @@
           const kn = seg.keeperId ? escapeHtml(idToName[seg.keeperId] || seg.keeperId) : '';
           const isLast = idx === best.segments.length - 1;
           const ov = hasSlotOverrides(idx);
-          const prevLineup = new Set(best.segments[idx - 1].lineup);
-          const newIds = new Set(seg.lineup.filter(id => !prevLineup.has(id)));
-          const outIds = [...prevLineup].filter(id => !seg.lineup.includes(id));
+          const prevLineup = new Set(getEffectiveLineup(idx - 1, best.segments[idx - 1].lineup));
+          const curLineup = getEffectiveLineup(idx, seg.lineup);
+          const newIds = new Set(curLineup.filter(id => !prevLineup.has(id)));
+          const outIds = [...prevLineup].filter(id => !curLineup.includes(id));
 
           const slotsHtml = slots.map(slot => {
             const pid = sm.slots[slot.key];
@@ -3022,7 +3033,8 @@
     let prev = new Set();
 
     segments.forEach((seg, idx) => {
-      const cur = new Set(seg.lineup);
+      // Use effective lineup so manual swap-overrides are reflected
+      const cur = new Set(getEffectiveLineup(idx, seg.lineup));
       const ins = [];
       const outs = [];
 
@@ -3131,9 +3143,11 @@
         if (idx === 0) {
           lines.push('  Start (ingen bytter)');
         } else {
-          const prev = new Set(best.segments[idx - 1].lineup);
-          const ins = seg.lineup.filter(id => !prev.has(id));
-          const outs = best.segments[idx - 1].lineup.filter(id => !new Set(seg.lineup).has(id));
+          const prevEff = getEffectiveLineup(idx - 1, best.segments[idx - 1].lineup);
+          const curEff = getEffectiveLineup(idx, seg.lineup);
+          const prev = new Set(prevEff);
+          const ins = curEff.filter(id => !prev.has(id));
+          const outs = prevEff.filter(id => !new Set(curEff).has(id));
           ins.forEach(id => lines.push(`  Inn: ${idToName[id] || id}`));
           outs.forEach(id => lines.push(`  Ut: ${idToName[id] || id}`));
         }
@@ -3269,7 +3283,8 @@
           const segEnd = best.segments[si+1] ? best.segments[si+1].start : T;
           const sm = getSlotMap(si);
           const onField = new Set(Object.values(sm.slots).filter(Boolean));
-          const inLineup = !kdSlotOverrides[si] && seg.lineup.includes(m.id);
+          const effLineup = getEffectiveLineup(si, seg.lineup);
+          const inLineup = effLineup.includes(m.id);
           if (!onField.has(m.id) && !inLineup) { segs.push({pct:((segEnd-seg.start)/T*100),c:'transparent'}); continue; }
           let color = zc.X;
           for (const s of slots) { if (sm.slots[s.key] === m.id) { color = zc[s.zone] || zc.X; break; } }
@@ -3304,9 +3319,10 @@
       const periodEnd = nextSeg ? nextSeg.start : T;
       const keeperName = seg.keeperId ? escapeHtml(idToName[seg.keeperId]||seg.keeperId) : '';
       const isFirst = idx === 0;
-      const prevLineup = !isFirst ? new Set(best.segments[idx-1].lineup) : new Set();
-      const newIds = isFirst ? new Set() : new Set(seg.lineup.filter(id => !prevLineup.has(id)));
-      const outIds = isFirst ? [] : [...prevLineup].filter(id => !seg.lineup.includes(id));
+      const prevLineup = !isFirst ? new Set(getEffectiveLineup(idx-1, best.segments[idx-1].lineup)) : new Set();
+      const curLineup = getEffectiveLineup(idx, seg.lineup);
+      const newIds = isFirst ? new Set() : new Set(curLineup.filter(id => !prevLineup.has(id)));
+      const outIds = isFirst ? [] : [...prevLineup].filter(id => !curLineup.includes(id));
       const ov = hasSlotOverrides(idx);
 
       let body = '';
@@ -3325,7 +3341,8 @@
         body += `<div style="font-size:8px;color:#64748b;padding:2px 10px 5px;">Benk: ${benchNames}</div>`;
       }
       if (!body) {
-        body = `<div class="zp">${seg.lineup.map(id => `<span class="zc">${escapeHtml(idToName[id]||id)}</span>`).join('')}</div>`;
+        const fallbackLineup = getEffectiveLineup(idx, seg.lineup);
+        body = `<div class="zp">${fallbackLineup.map(id => `<span class="zc">${escapeHtml(idToName[id]||id)}</span>`).join('')}</div>`;
       }
       let swaps = '';
       if (isFirst) { swaps = '<div class="note">Avspark</div>'; }
@@ -3624,7 +3641,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
     var fmtOpts = [3,5,7,9,11].map(function(f) {
       return '<option value="' + f + '"' + (f === format ? ' selected' : '') + '>' + f + '-er' + (f === 3 ? ' (ingen keeper)' : '') + '</option>';
     }).join('');
-    var durOptions = [40, 60, 70, 80];
+    var durOptions = [40, 50, 60, 70, 80];
     var durPills = durOptions.map(function(m) {
       var active = (m === minutes) ? ' kd-pill-active' : '';
       return '<button type="button" class="kd-dur-pill' + active + '" data-min="' + m + '">' + m + ' min</button>';
