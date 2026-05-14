@@ -960,6 +960,7 @@
     // --- RENDER CURRENT DAY AND STATS ---
     renderDay();
     renderStatsSection();
+    bindProfileSwitchButtons();
 
     // --- BIND HANDLERS ---
     document.getElementById('sfBack').addEventListener('click', function() {
@@ -1446,7 +1447,11 @@
       if (kmSpread > 50) {
         var currentProfile = ((_distOpts.season.distribution_config || {}).profile) || 'balanced';
         if (currentProfile !== 'fair_driving') {
-          html += '<div style="text-align:center;font-size:12px;color:var(--text-500);margin:-4px 0 8px;">Pr\u00f8v profilen \u00abRettferdig kj\u00f8ring\u00bb for bedre km-fordeling</div>';
+          html += '<div style="text-align:center;margin:-2px 0 8px;">' +
+            '<button class="btn-secondary sf-try-profile" data-profile="fair_driving" style="font-size:12px;padding:5px 14px;">Pr\u00f8v \u00abRettferdig kj\u00f8ring\u00bb \u2192</button>' +
+          '</div>';
+        } else {
+          html += '<div style="text-align:center;font-size:12px;color:var(--text-500);margin:-2px 0 8px;">Profilen \u00abRettferdig kj\u00f8ring\u00bb er allerede aktiv. Km-forskjellen skyldes ujevn kampfordeling mellom lagene.</div>';
         }
       }
     }
@@ -1460,11 +1465,32 @@
       var gText = gSpread <= 2 ? '\u2705 Jevnt antall kamper' : gSpread <= 4 ? '\u26a0\ufe0f Noe ujevnt' : '\u26a0\ufe0f Stor forskjell i kamper';
       html += '<div style="text-align:center;margin:4px 0 10px;"><span class="sn-fair-badge ' + gClass + '">' + gText + ' (' + gSpread + ')</span></div>';
       if (gSpread > 4) {
-        html += '<div style="text-align:center;font-size:12px;color:var(--text-500);margin:-4px 0 8px;">Noen kampdager har bare \u00e9tt lag. Disse spillerne f\u00e5r f\u00e6rre kamper totalt.</div>';
+        var soloCount = 0;
+        for (var sc = 0; sc < _distResult.matchDays.length; sc++) {
+          if (_distResult.matchDays[sc].playingTeams.length < (_distOpts.season.sub_team_count || 2)) soloCount++;
+        }
+        html += '<div style="text-align:center;font-size:12px;color:var(--text-500);margin:-2px 0 8px;">' +
+          (soloCount > 0 ? soloCount + ' kampdager har bare \u00e9tt lag. ' : '') +
+          'Noen spillere f\u00e5r f\u00e6rre kamper totalt.' +
+        '</div>';
       }
     }
 
     el.innerHTML = html;
+  }
+
+  function bindProfileSwitchButtons() {
+    var btns = document.querySelectorAll('.sf-try-profile');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function() {
+        var newProfile = this.getAttribute('data-profile');
+        if (!_distOpts || !_distOpts.season) return;
+        var config = _distOpts.season.distribution_config || {};
+        config.profile = newProfile;
+        _distOpts.season.distribution_config = config;
+        if (_distContainer) initUI(_distContainer, _distOpts);
+      });
+    }
   }
 
   /**
@@ -1496,6 +1522,7 @@
     recalcStats();
     renderDay();
     renderStatsSection();
+    bindProfileSwitchButtons();
   }
 
   /**
