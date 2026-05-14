@@ -613,8 +613,9 @@
               var oldMax = da2[maxP], oldMin = da2[minP];
               da2[maxP] = oldMin;
               da2[minP] = oldMax;
-              // Validate constraints
-              if (checkConstraints(da2, md.playingTeams, constraints, subTeamCount)) {
+              // Validate constraints (skip coach_child — already optimized in hill-climbing)
+              var eqConstraints = { always_together: constraints.always_together, never_together: constraints.never_together };
+              if (checkConstraints(da2, md.playingTeams, eqConstraints, subTeamCount)) {
                 swapped = true;
                 break;
               }
