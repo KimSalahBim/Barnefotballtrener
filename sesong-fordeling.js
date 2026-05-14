@@ -560,6 +560,76 @@
   }
 
   /**
+   * Post-processing: equalize games-per-player by swapping players
+   * between playing and non-playing teams on solo days.
+   * Reduces games-spread to 0-1 at the cost of potentially higher km-spread.
+   */
+  function equalizeGames(dayAssignments, matchDays, allPlayerIds, constraints, subTeamCount) {
+    for (var iter = 0; iter < 500; iter++) {
+      // Count games per player
+      var games = {};
+      for (var i = 0; i < allPlayerIds.length; i++) games[allPlayerIds[i]] = 0;
+      for (var d = 0; d < matchDays.length; d++) {
+        var da = dayAssignments[d];
+        if (!da) continue;
+        for (var pid in da) {
+          if (games[pid] !== undefined && matchDays[d].teamEvents[da[pid]]) games[pid]++;
+        }
+      }
+
+      // Find max and min
+      var maxG = 0, minG = Infinity;
+      for (var pid in games) {
+        if (games[pid] > maxG) maxG = games[pid];
+        if (games[pid] < minG) minG = games[pid];
+      }
+      if (maxG - minG <= 1) break;
+
+      // Collect players at extremes
+      var maxPids = [], minPids = [];
+      for (var pid2 in games) {
+        if (games[pid2] === maxG) maxPids.push(pid2);
+        if (games[pid2] === minG) minPids.push(pid2);
+      }
+
+      // Shuffle to avoid systematic bias
+      for (var si = minPids.length - 1; si > 0; si--) {
+        var sj = Math.floor(Math.random() * (si + 1));
+        var tmp = minPids[si]; minPids[si] = minPids[sj]; minPids[sj] = tmp;
+      }
+
+      var swapped = false;
+      for (var mi = 0; mi < minPids.length && !swapped; mi++) {
+        for (var mx = 0; mx < maxPids.length && !swapped; mx++) {
+          var minP = minPids[mi], maxP = maxPids[mx];
+          for (var d2 = 0; d2 < matchDays.length; d2++) {
+            var da2 = dayAssignments[d2];
+            if (!da2 || !da2[maxP] || !da2[minP]) continue;
+            var md = matchDays[d2];
+            var maxPlays = !!md.teamEvents[da2[maxP]];
+            var minPlays = !!md.teamEvents[da2[minP]];
+            if (maxPlays && !minPlays) {
+              // Swap teams
+              var oldMax = da2[maxP], oldMin = da2[minP];
+              da2[maxP] = oldMin;
+              da2[minP] = oldMax;
+              // Validate constraints
+              if (checkConstraints(da2, md.playingTeams, constraints, subTeamCount)) {
+                swapped = true;
+                break;
+              }
+              // Revert if constraints violated
+              da2[maxP] = oldMax;
+              da2[minP] = oldMin;
+            }
+          }
+        }
+      }
+      if (!swapped) break;
+    }
+  }
+
+  /**
    * Main entry point: run the distribution algorithm.
    *
    * @param {Object} season - Current season object (with distribution_config)
@@ -763,6 +833,9 @@
         });
       }
     }
+
+    // Post-processing: equalize games per player (swap between playing/non-playing teams)
+    equalizeGames(bestAssignments, matchDays, allPlayerIds, constraints, subTeamCount);
 
     // Final stats with full teammate tracking (skipped during optimization for performance)
     var finalStats = calcAllStats(bestAssignments, matchDays, allPlayerIds);
