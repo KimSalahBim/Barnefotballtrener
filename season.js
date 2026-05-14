@@ -3319,7 +3319,7 @@
       '<div class="settings-card" style="margin-bottom:12px;">' +
         '<div class="sn-dash-header">' +
           '<button class="sn-back" id="snBackFromDash"><i class="fas fa-chevron-left"></i> Sesonger</button>' +
-          '<button style="background:none; border:none; font-size:16px; color:var(--text-400); cursor:pointer; padding:6px 8px; margin-left:auto; border-radius:var(--radius-sm);" id="snEditSeason" title="Rediger sesong"><i class="fas fa-pen"></i></button>' +
+          '<button style="background:var(--bg,#f3f6f3); border:1.5px solid var(--border); font-size:13px; color:var(--text-600); cursor:pointer; padding:6px 14px; margin-left:auto; border-radius:var(--radius-md); font-family:inherit; display:flex; align-items:center; gap:5px;" id="snEditSeason" title="Rediger sesong"><i class="fas fa-pen" style="font-size:11px;"></i>Rediger</button>' +
         '</div>' +
         '<div class="sn-dash-title" style="font-size:22px; font-weight:700; margin:4px 0 2px;">' + escapeHtml(s.name) + '</div>' +
         '<div class="sn-dash-meta">' + escapeHtml(metaParts.join(' \u00B7 ')) + '</div>' +
@@ -4398,7 +4398,8 @@
                 '<i class="fas fa-chevron-down" data-coach-chevron="' + escapeHtml(cName) + '" style="font-size:12px;color:var(--text-400);transition:transform 0.2s;"></i>' +
               '</div>' +
             '</div>' +
-            '<div data-coach-list="' + escapeHtml(cName) + '" style="display:none;padding:4px 12px 10px;border-top:1px solid var(--border-light,#f1f5f9);">';
+            '<div data-coach-list="' + escapeHtml(cName) + '" style="display:none;padding:4px 12px 10px;border-top:1px solid var(--border-light,#f1f5f9);">' +
+              '<div style="font-size:12px;font-weight:600;color:var(--text-500);padding:6px 0 4px;">Velg ' + escapeHtml(cName) + ' sine barn:</div>';
         for (var cp = 0; cp < activePlayers.length; cp++) {
           var ap = activePlayers[cp];
           var isChecked = cPlayerIds.indexOf(ap.player_id) !== -1;
@@ -4422,10 +4423,12 @@
         '<div class="form-group" style="flex:1;margin:0;">' +
           '<label style="font-size:12px;">Min. trenerbarn per lag</label>' +
           '<input type="number" id="snMinChildren" min="0" max="10" value="' + (coachChild.min_children_per_game || 2) + '" style="padding:6px 10px;font-size:13px;">' +
+          '<div class="sn-hint" style="margin-top:4px;">Antall trenerbarn som M\u00c5 v\u00e6re p\u00e5 hvert lag</div>' +
         '</div>' +
         '<div class="form-group" style="flex:1;margin:0;">' +
           '<label style="font-size:12px;">Min. trenere repr. per lag</label>' +
           '<input type="number" id="snMinCoaches" min="0" max="10" value="' + (coachChild.min_coaches_per_game || 2) + '" style="padding:6px 10px;font-size:13px;">' +
+          '<div class="sn-hint" style="margin-top:4px;">Antall ulike trenere som M\u00c5 ha barn med p\u00e5 hvert lag</div>' +
         '</div>' +
       '</div>' +
     '</div>';

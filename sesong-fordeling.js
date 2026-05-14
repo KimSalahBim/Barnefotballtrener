@@ -1443,6 +1443,12 @@
       var kmClass = kmSpread <= 20 ? 'sn-fair-good' : kmSpread <= 50 ? 'sn-fair-ok' : 'sn-fair-bad';
       var kmText = kmSpread <= 20 ? '\u2705 Jevnt fordelt reising' : kmSpread <= 50 ? '\u26a0\ufe0f Noe ujevn reising' : '\u26a0\ufe0f Stor forskjell i reising';
       html += '<div style="text-align:center;margin:10px 0;"><span class="sn-fair-badge ' + kmClass + '">' + kmText + ' (' + kmSpread + ' km)</span></div>';
+      if (kmSpread > 50) {
+        var currentProfile = ((_distOpts.season.distribution_config || {}).profile) || 'balanced';
+        if (currentProfile !== 'fair_driving') {
+          html += '<div style="text-align:center;font-size:12px;color:var(--text-500);margin:-4px 0 8px;">Pr\u00f8v profilen \u00abRettferdig kj\u00f8ring\u00bb for bedre km-fordeling</div>';
+        }
+      }
     }
 
     // Games fairness
@@ -1453,6 +1459,9 @@
       var gClass = gSpread <= 2 ? 'sn-fair-good' : gSpread <= 4 ? 'sn-fair-ok' : 'sn-fair-bad';
       var gText = gSpread <= 2 ? '\u2705 Jevnt antall kamper' : gSpread <= 4 ? '\u26a0\ufe0f Noe ujevnt' : '\u26a0\ufe0f Stor forskjell i kamper';
       html += '<div style="text-align:center;margin:4px 0 10px;"><span class="sn-fair-badge ' + gClass + '">' + gText + ' (' + gSpread + ')</span></div>';
+      if (gSpread > 4) {
+        html += '<div style="text-align:center;font-size:12px;color:var(--text-500);margin:-4px 0 8px;">Noen kampdager har bare \u00e9tt lag. Disse spillerne f\u00e5r f\u00e6rre kamper totalt.</div>';
+      }
     }
 
     el.innerHTML = html;
