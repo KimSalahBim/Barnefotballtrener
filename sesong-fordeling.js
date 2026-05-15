@@ -560,6 +560,10 @@
   }
 
   function equalizeGames(dayAssignments, matchDays, allPlayerIds, constraints, subTeamCount) {
+    console.log('[EQ] Start: days=' + matchDays.length + ' players=' + allPlayerIds.length);
+    var soloDays = 0;
+    for (var sd = 0; sd < matchDays.length; sd++) { if (matchDays[sd].playingTeams.length < subTeamCount) soloDays++; }
+    console.log('[EQ] Solo days: ' + soloDays + '/' + matchDays.length);
     var at = constraints.always_together || [];
     var nt = constraints.never_together || [];
 
@@ -598,6 +602,7 @@
         if (g2 > maxG) maxG = g2;
         if (g2 < minG) minG = g2;
       }
+      console.log('[EQ] Pass ' + pass + ': spread=' + (maxG - minG) + ' (' + minG + '-' + maxG + ')');
       if (maxG - minG <= 1) break;
 
       var improved = false;
@@ -699,8 +704,18 @@
         improved = true;
       }
 
-      if (!improved) break;
+      if (!improved) { console.log('[EQ] No improvement, stopping at pass ' + pass); break; }
     }
+    // Final count
+    var fGames = {};
+    for (var fi = 0; fi < allPlayerIds.length; fi++) fGames[allPlayerIds[fi]] = 0;
+    for (var fd = 0; fd < matchDays.length; fd++) {
+      var fda = dayAssignments[fd]; if (!fda) continue;
+      for (var fp in fda) { if (fGames[fp] !== undefined && matchDays[fd].teamEvents[fda[fp]]) fGames[fp]++; }
+    }
+    var fMin = Infinity, fMax = 0;
+    for (var fk in fGames) { if (fGames[fk] < fMin) fMin = fGames[fk]; if (fGames[fk] > fMax) fMax = fGames[fk]; }
+    console.log('[EQ] FINAL: ' + fMin + '-' + fMax + ' (spread ' + (fMax - fMin) + ')');
   }
 
   /**
