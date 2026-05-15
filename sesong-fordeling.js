@@ -559,13 +559,27 @@
     return result;
   }
 
-  /**
-   * Post-processing: equalize games-per-player by swapping players
-   * between playing and non-playing teams on solo days.
-   * Reduces games-spread to 0-1 at the cost of potentially higher km-spread.
-   */
   function equalizeGames(dayAssignments, matchDays, allPlayerIds, constraints, subTeamCount) {
-    for (var iter = 0; iter < 500; iter++) {
+    var at = constraints.always_together || [];
+    var nt = constraints.never_together || [];
+
+    // Build always_together group lookup: pid -> group array
+    var atGroup = {};
+    for (var a = 0; a < at.length; a++) {
+      for (var g = 0; g < at[a].length; g++) atGroup[at[a][g]] = at[a];
+    }
+
+    // Build never_together peer lookup: pid -> [peer pids]
+    var ntPeers = {};
+    for (var n = 0; n < nt.length; n++) {
+      if (nt[n].length < 2) continue;
+      if (!ntPeers[nt[n][0]]) ntPeers[nt[n][0]] = [];
+      if (!ntPeers[nt[n][1]]) ntPeers[nt[n][1]] = [];
+      ntPeers[nt[n][0]].push(nt[n][1]);
+      ntPeers[nt[n][1]].push(nt[n][0]);
+    }
+
+    for (var pass = 0; pass < 20; pass++) {
       // Count games per player
       var games = {};
       for (var i = 0; i < allPlayerIds.length; i++) games[allPlayerIds[i]] = 0;
@@ -577,56 +591,115 @@
         }
       }
 
-      // Find max and min
+      // Check spread
       var maxG = 0, minG = Infinity;
-      for (var pid in games) {
-        if (games[pid] > maxG) maxG = games[pid];
-        if (games[pid] < minG) minG = games[pid];
+      for (var p = 0; p < allPlayerIds.length; p++) {
+        var g2 = games[allPlayerIds[p]];
+        if (g2 > maxG) maxG = g2;
+        if (g2 < minG) minG = g2;
       }
       if (maxG - minG <= 1) break;
 
-      // Collect players at extremes
-      var maxPids = [], minPids = [];
-      for (var pid2 in games) {
-        if (games[pid2] === maxG) maxPids.push(pid2);
-        if (games[pid2] === minG) minPids.push(pid2);
-      }
+      var improved = false;
 
-      // Shuffle to avoid systematic bias
-      for (var si = minPids.length - 1; si > 0; si--) {
+      // Shuffle day order to avoid bias
+      var dayOrder = [];
+      for (var do1 = 0; do1 < matchDays.length; do1++) dayOrder.push(do1);
+      for (var si = dayOrder.length - 1; si > 0; si--) {
         var sj = Math.floor(Math.random() * (si + 1));
-        var tmp = minPids[si]; minPids[si] = minPids[sj]; minPids[sj] = tmp;
+        var tmp = dayOrder[si]; dayOrder[si] = dayOrder[sj]; dayOrder[sj] = tmp;
       }
 
-      var swapped = false;
-      for (var mi = 0; mi < minPids.length && !swapped; mi++) {
-        for (var mx = 0; mx < maxPids.length && !swapped; mx++) {
-          var minP = minPids[mi], maxP = maxPids[mx];
-          for (var d2 = 0; d2 < matchDays.length; d2++) {
-            var da2 = dayAssignments[d2];
-            if (!da2 || !da2[maxP] || !da2[minP]) continue;
-            var md = matchDays[d2];
-            var maxPlays = !!md.teamEvents[da2[maxP]];
-            var minPlays = !!md.teamEvents[da2[minP]];
-            if (maxPlays && !minPlays) {
-              // Swap teams
-              var oldMax = da2[maxP], oldMin = da2[minP];
-              da2[maxP] = oldMin;
-              da2[minP] = oldMax;
-              // Validate constraints (skip coach_child — already optimized in hill-climbing)
-              var eqConstraints = { always_together: constraints.always_together, never_together: constraints.never_together };
-              if (checkConstraints(da2, md.playingTeams, eqConstraints, subTeamCount)) {
-                swapped = true;
-                break;
-              }
-              // Revert if constraints violated
-              da2[maxP] = oldMax;
-              da2[minP] = oldMin;
+      for (var di = 0; di < dayOrder.length; di++) {
+        var dayIdx = dayOrder[di];
+        var md = matchDays[dayIdx];
+        if (md.playingTeams.length >= subTeamCount) continue;
+
+        var da2 = dayAssignments[dayIdx];
+        if (!da2) continue;
+
+        var playingTeam = md.playingTeams[0];
+        var nonPlayingTeam = null;
+        for (var npid in da2) {
+          if (da2[npid] !== playingTeam) { nonPlayingTeam = da2[npid]; break; }
+        }
+        if (!nonPlayingTeam) continue;
+
+        var dayPids = Object.keys(da2);
+        var playCount = 0;
+        for (var pc = 0; pc < dayPids.length; pc++) {
+          if (da2[dayPids[pc]] === playingTeam) playCount++;
+        }
+
+        // Sort by games ascending (fewest games first)
+        dayPids.sort(function(a2, b) { return games[a2] - games[b]; });
+
+        // Greedy fill: start all on non-playing, add fewest-games first
+        var newDa = {};
+        for (var np = 0; np < dayPids.length; np++) newDa[dayPids[np]] = nonPlayingTeam;
+
+        var filled = 0;
+        var placed = {};
+
+        for (var ci = 0; ci < dayPids.length && filled < playCount; ci++) {
+          var cand = dayPids[ci];
+          if (placed[cand]) continue;
+
+          // Check never_together: any peer already on playing team?
+          var blocked = false;
+          if (ntPeers[cand]) {
+            for (var ni = 0; ni < ntPeers[cand].length; ni++) {
+              if (newDa[ntPeers[cand][ni]] === playingTeam) { blocked = true; break; }
             }
           }
+          if (blocked) continue;
+
+          // If in always_together group, place entire group
+          var grp = atGroup[cand];
+          if (grp) {
+            var grpAvail = grp.filter(function(gp) { return newDa[gp] !== undefined && !placed[gp]; });
+            if (filled + grpAvail.length > playCount) continue;
+            var grpBlocked = false;
+            for (var gi = 0; gi < grpAvail.length && !grpBlocked; gi++) {
+              if (ntPeers[grpAvail[gi]]) {
+                for (var ni2 = 0; ni2 < ntPeers[grpAvail[gi]].length; ni2++) {
+                  if (newDa[ntPeers[grpAvail[gi]][ni2]] === playingTeam) { grpBlocked = true; break; }
+                }
+              }
+            }
+            if (grpBlocked) continue;
+            for (var gi2 = 0; gi2 < grpAvail.length; gi2++) {
+              newDa[grpAvail[gi2]] = playingTeam;
+              placed[grpAvail[gi2]] = true;
+              filled++;
+            }
+          } else {
+            newDa[cand] = playingTeam;
+            placed[cand] = true;
+            filled++;
+          }
         }
+
+        if (filled < playCount) continue;
+
+        var changed = false;
+        for (var chk in newDa) {
+          if (newDa[chk] !== da2[chk]) { changed = true; break; }
+        }
+        if (!changed) continue;
+
+        // Update games counts incrementally
+        for (var old in da2) {
+          if (games[old] !== undefined && md.teamEvents[da2[old]]) games[old]--;
+        }
+        dayAssignments[dayIdx] = newDa;
+        for (var nw in newDa) {
+          if (games[nw] !== undefined && md.teamEvents[newDa[nw]]) games[nw]++;
+        }
+        improved = true;
       }
-      if (!swapped) break;
+
+      if (!improved) break;
     }
   }
 
