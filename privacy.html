@@ -41,7 +41,7 @@
 
     <h3>2.3 Spillerdata</h3>
     <p>
-      Spillerlister lagres i vår database (Supabase, EU/Frankfurt) knyttet til din bruker-ID.
+      Spillerlister lagres i vår database (Supabase, London i Storbritannia) knyttet til din bruker-ID.
       For hver spiller lagres: fornavn, ferdighetsnivå (1â€“6), om spilleren kan stå i mål,
       og om spilleren er aktiv. Spillerdata synkroniseres også til nettleserens lokale lagring
       for raskere oppstart og offline-bruk.
@@ -63,7 +63,7 @@
     <h3>2.4 Sesongdata</h3>
     <p>
       Sesongmodulen lagrer data knyttet til sesonger, kamper og treninger i vår database
-      (Supabase, EU/Frankfurt). Dette inkluderer:
+      (Supabase, London i Storbritannia). Dette inkluderer:
     </p>
     <ul>
       <li><strong>Sesonginfo:</strong> navn, format, start- og sluttdato.</li>
@@ -87,7 +87,7 @@
 
     <h3>2.5 Annet appinnhold</h3>
     <p>
-      Lagoppsett, treningsøkter, konkurransedata og ligaer lagres i vår database (Supabase, EU/Frankfurt)
+      Lagoppsett, treningsøkter, konkurransedata og ligaer lagres i vår database (Supabase, London i Storbritannia)
       og synkroniseres på tvers av enheter. En lokal kopi lagres også i nettleseren (localStorage) for
       raskere tilgang. Ved sletting av konto fjernes alle data fra serveren.
     </p>
@@ -176,7 +176,7 @@
       <tr style="border-bottom:1px solid #eee;">
         <td style="padding:6px;">Supabase</td>
         <td style="padding:6px;">Autentisering, bruker-ID, prøvetilgang, lagring av spiller- og sesongdata</td>
-        <td style="padding:6px;">EU (Frankfurt)</td>
+        <td style="padding:6px;">Storbritannia (London)</td>
       </tr>
       <tr style="border-bottom:1px solid #eee;">
         <td style="padding:6px;">Stripe</td>
@@ -200,7 +200,10 @@
       </tr>
     </table>
     <p>
-      Spiller- og sesongdata lagres i Supabase sitt EU-datasenter (Frankfurt) og overføres ikke til land utenfor EU/EØS.
+      Spiller- og sesongdata lagres i Supabase sitt datasenter i London i Storbritannia.
+      Storbritannia er ikke EU- eller EØS-medlem, men Europakommisjonen har fastslått at landet har
+      et tilstrekkelig beskyttelsesnivå. Overføringen skjer på grunnlag av denne adekvansbeslutningen
+      etter GDPR artikkel 45, fornyet 19. desember 2025.
       For øvrige tjenester med servere i USA skjer overføring med Standard Contractual Clauses (SCCs)
       som overføringsgrunnlag i tråd med GDPR kapittel V.
     </p>

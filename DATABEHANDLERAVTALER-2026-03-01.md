@@ -21,10 +21,10 @@ underleverandører som behandler personopplysninger på vegne av virksomheten.
 |---|---|
 | Tjeneste | Database (PostgreSQL), autentisering (Google OAuth), Row Level Security |
 | Data som behandles | Brukerkontoer (e-post, user_id), spillerfornavn, lagdata, sesongdata, oppmøte |
-| Dataregion | EU (eu-west-2, Frankfurt) |
+| Dataregion | eu-west-2, som er London i Storbritannia (ikke Frankfurt, rettet 23.09.2026) |
 | DPA | https://supabase.com/legal/dpa |
 | Akseptert dato | 23. januar 2026 (prosjekt opprettet) |
-| Overføringsgrunnlag | Data forblir i EU. Supabase Inc. (USA) har tilgang til infrastruktur under SCCs |
+| Overføringsgrunnlag | Storbritannia: Europakommisjonens adekvansbeslutning etter GDPR art. 45, fornyet 19. desember 2025 og gyldig til 27. desember 2031. Supabase Inc. (USA) har tilgang til infrastruktur under SCCs |
 | Sub-processors | https://supabase.com/legal/subprocessors |
 | Merknader | RLS sikrer at brukere kun ser egne data |
 
